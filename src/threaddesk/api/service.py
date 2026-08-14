@@ -4,6 +4,8 @@ from threaddesk.core.errors import InvalidState, NotFound
 from threaddesk.core.events import EventBus
 from threaddesk.core.models import STATUSES, Snapshot, Thread, ThreadContext, new_id, new_thread, now_iso
 from threaddesk.core.secrets import reject_secrets
+from threaddesk.services.grok_bridge import build_packet as build_grok_packet
+from threaddesk.services.grok_bridge import command_for as grok_command
 from threaddesk.services.prompt_generator import generate as generate_prompt
 from threaddesk.storage.json_store import JsonStore
 
@@ -221,6 +223,27 @@ class ThreadService:
         self.bus.emit("handoff.written", {"thread_id": thread.id, "path": str(path)})
         payload["path"] = str(path)
         return payload
+
+    def grok(
+        self,
+        mode: str = "brainstorm",
+        variant: str = "detailed",
+        key: str | None = None,
+    ) -> dict:
+        """Write a Grok Build packet. Does not start grok."""
+        thread = self._target(key)
+        packet = build_grok_packet(thread, mode=mode, variant=variant)
+        reject_secrets(packet["prompt"])
+        prompt_path = self.store.root / "grok-prompt.md"
+        json_path = self.store.root / "grok.json"
+        prompt_path.write_text(packet["prompt"] + "\n", encoding="utf-8")
+        packet["prompt_path"] = str(prompt_path)
+        packet["command"] = grok_command(prompt_path, packet["mode"])
+        packet["path"] = str(json_path)
+        packet["ran"] = False
+        self.store._write_json(json_path, packet)
+        self.bus.emit("grok.packet", {"thread_id": thread.id, "mode": packet["mode"], "path": str(json_path)})
+        return packet
 
     def restore(self, snap_id: str) -> Thread:
         snap = self.store.get_snapshot(snap_id)

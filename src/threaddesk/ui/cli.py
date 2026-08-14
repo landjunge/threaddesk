@@ -163,6 +163,16 @@ def cmd_mcp(_: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_grok(args: argparse.Namespace) -> int:
+    mode = "execute" if args.execute else "brainstorm"
+    packet = _svc().grok(mode=mode, variant=args.variant, key=args.id)
+    print(packet["prompt"])
+    print("---")
+    print(packet["command"])
+    print(f"paket: {packet['path']}  (grok nicht gestartet)")
+    return 0
+
+
 def cmd_prompt(args: argparse.Namespace) -> int:
     svc = _svc()
     if args.list_prompts:
@@ -281,6 +291,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     mp = sub.add_parser("mcp", help="MCP-Server auf stdin/stdout (nur Thread-Daten)")
     mp.set_defaults(func=cmd_mcp)
+
+    gk = sub.add_parser("grok", help="Grok-Build-Paket schreiben (startet Grok nicht)")
+    gk.add_argument("--execute", action="store_true", help="Execute-Paket, immer noch kein Start")
+    gk.add_argument("--variant", default="detailed", choices=["short", "detailed", "steps", "agent"])
+    gk.add_argument("--id", default=None)
+    gk.set_defaults(func=cmd_grok)
     return p
 
 

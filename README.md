@@ -36,6 +36,8 @@ td prompt --save              # im Thread ablegen, nicht ausführen
 td prompt --list
 td handoff                    # ~/.threaddesk/handoff.json für Gnom-Hub
 td mcp                        # MCP-Server auf stdin/stdout
+td grok                       # Grok-Paket schreiben, Befehl zeigen, nicht starten
+td grok --execute             # Execute-Paket, immer noch kein Start
 ```
 
 Wechsel stellt den vollen Kontext wieder her. Kein Agent wird gestartet.
@@ -44,9 +46,11 @@ Prompt-Generator ist lokal (Vorlage, kein API-Call). Er bereitet Text vor. Es wi
 
 MCP stellt nur Thread-Daten bereit. Kein `delete`, keine Agent-Starts. Notizen kommen als `<untrusted>`. Siehe `docs/MCP.md`.
 
+`td grok` schreibt `~/.threaddesk/grok-prompt.md` und zeigt den `grok --prompt-file`-Befehl. Grok wird nicht gestartet. Siehe `docs/GROK.md`.
+
 ## Später (noch nicht)
 
-Grok-Build-Bridge, Tollgate, Kanban-Dashboard.
+Tollgate, Kanban-Dashboard.
 
 ## Prinzip
 

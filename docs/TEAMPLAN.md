@@ -33,7 +33,8 @@ Alles andere (Kanban, Prompt-Generator, MCP, Grok Build, Tollgate, Dashboard) ko
 | 3 | Polish, Fehlerbehandlung, erste echte Nutzung | Alltags-tauglich |
 | 4a | Prompt-Generator (lokal, kein Execute) | fertig |
 | 4b | MCP stdio + Handoff | fertig |
-| 4c | Grok Build → Tollgate → Dashboard | Erweiterung |
+| 4c | Grok-Build-Bridge (Paket, kein Start) | fertig |
+| 4+ | Tollgate → Dashboard | später |
 
 ## 5. Erfolgskriterium
 

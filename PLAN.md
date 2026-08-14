@@ -45,7 +45,7 @@ core / storage / ui / services / api
 | 3 | Polish, Fehler, echte Nutzung | Alltag — in Arbeit: Status, Notiz-Append, Dateipfade, Titel/Nummer-Switch, --yes |
 | 4a | Prompt-Generator (lokal, kein Execute) | fertig |
 | 4b | MCP stdio + Handoff (kein delete, untrusted wrap) | fertig |
-| 4c | Grok-Build-Bridge (Paket schreiben, Grok nicht starten) | danach |
+| 4c | Grok-Build-Bridge (Paket schreiben, Grok nicht starten) | fertig |
 | 4+ | Tollgate → Dashboard | später |
 
 ## Sicherheit (von Anfang an)

@@ -92,6 +92,18 @@ TOOLS = [
         "description": "Write a local handoff JSON for Gnom-Hub. Does not start Gnom-Hub.",
         "inputSchema": {"type": "object", "properties": {"id": {"type": "string"}}},
     },
+    {
+        "name": "export_grok",
+        "description": "Write a local Grok Build packet. Does not start grok.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "string"},
+                "mode": {"type": "string", "enum": ["brainstorm", "execute"]},
+                "variant": {"type": "string", "enum": ["short", "detailed", "steps", "agent"]},
+            },
+        },
+    },
 ]
 
 
@@ -168,4 +180,10 @@ class McpBridge:
             }
         if name == "export_handoff":
             return self.svc.handoff(args.get("id"))
+        if name == "export_grok":
+            return self.svc.grok(
+                str(args.get("mode") or "brainstorm"),
+                str(args.get("variant") or "detailed"),
+                args.get("id"),
+            )
         raise ThreadDeskError(f"unbekanntes tool: {name}")
