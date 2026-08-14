@@ -9,7 +9,7 @@ STATUSES = ("idea", "active", "paused", "done", "archived")
 
 
 def now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    return datetime.now(timezone.utc).isoformat()
 
 
 def new_id() -> str:

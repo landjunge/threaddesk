@@ -51,3 +51,48 @@ def test_reject_secrets(svc: ThreadService) -> None:
 def test_prefix_resolve(svc: ThreadService) -> None:
     t = svc.create("X")
     assert svc.get(t.id[:6]).id == t.id
+
+
+def test_title_and_index_resolve(svc: ThreadService) -> None:
+    svc.create("Gnom Hub")
+    b = svc.create("Tollgate Safety")
+    assert svc.get("tollgate").id == b.id
+    assert svc.get("1").title == "Tollgate Safety"
+    assert svc.get("2").title == "Gnom Hub"
+
+
+def test_append_note_and_files(svc: ThreadService) -> None:
+    svc.create("Arbeit")
+    svc.set_note("eins")
+    svc.set_note("zwei", append=True)
+    assert svc.current().context.notes == "eins\nzwei"
+    svc.add_file("/tmp/plan.md")
+    svc.add_file("/tmp/plan.md")
+    assert svc.current().context.files == ["/tmp/plan.md"]
+    svc.remove_file("/tmp/plan.md")
+    assert svc.current().context.files == []
+
+
+def test_status_and_unarchive(svc: ThreadService) -> None:
+    t = svc.create("S")
+    svc.set_status("active")
+    assert svc.current().status == "active"
+    svc.archive(t.id)
+    svc.unarchive(t.id)
+    assert svc.get(t.id).status == "paused"
+
+
+def test_switch_ten_threads_under_two_seconds(svc: ThreadService) -> None:
+    import time
+
+    ids = [svc.create(f"T{i}").id for i in range(10)]
+    for i, tid in enumerate(ids):
+        svc.switch(tid)
+        svc.set_note(f"stand {i}")
+        svc.snapshot(f"s{i}")
+    t0 = time.perf_counter()
+    for tid in reversed(ids):
+        got = svc.switch(tid)
+        assert got.context.notes.startswith("stand")
+        assert got.current_snapshot_id
+    assert time.perf_counter() - t0 < 2.0

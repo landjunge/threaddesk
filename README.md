@@ -18,16 +18,18 @@ Daten liegen unter `~/.threaddesk/` (JSON, lokal).
 
 ```bash
 td new "Gnom-Hub Switcher"
-td list
-td switch <id-or-prefix>
-td current
-td note "Wir bleiben beim strikten MVP."
+td list                 # Nummer + ID + Status
+td switch 1             # Nummer, ID, Prefix oder Titel
+td current              # voller Kontext
+td note "Stand heute"
+td note -a "nächster Schritt"
+td status active        # idea | active | paused | done
+td files add ~/threaddesk/PLAN.md
 td snap save "vor-umbau"
 td snap list
 td snap load <snap-id>
-td rename <id> "Neuer Titel"
-td archive <id>
-td delete <id>          # nur archivierte
+td archive 1
+td delete 1 --yes       # nur archivierte
 ```
 
 Wechsel stellt den vollen Kontext wieder her. Kein Agent wird gestartet.

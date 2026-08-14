@@ -12,10 +12,22 @@ def _svc() -> ThreadService:
     return ThreadService()
 
 
-def _fmt(thread: Thread, current_id: str | None) -> str:
+def _fmt(thread: Thread, current_id: str | None, index: int | None = None) -> str:
     mark = "*" if thread.id == current_id else " "
     snap = thread.current_snapshot_id or "-"
-    return f"{mark} {thread.id}  [{thread.status:8}]  {thread.title}  snap={snap}"
+    num = f"{index:>2}." if index is not None else "   "
+    return f"{mark}{num} {thread.id}  [{thread.status:8}]  {thread.title}  snap={snap}"
+
+
+def _print_context(thread: Thread) -> None:
+    print(f"beschreibung: {thread.description or '-'}")
+    print(f"status: {thread.status}  snap: {thread.current_snapshot_id or '-'}")
+    if thread.context.files:
+        print("--- dateien ---")
+        for path in thread.context.files:
+            print(f"  {path}")
+    print("--- notizen ---")
+    print(thread.context.notes or "(leer)")
 
 
 def cmd_new(args: argparse.Namespace) -> int:
@@ -31,17 +43,17 @@ def cmd_list(args: argparse.Namespace) -> int:
     if not rows:
         print("keine threads")
         return 0
-    for t in rows:
-        print(_fmt(t, current))
+    for i, t in enumerate(rows, 1):
+        print(_fmt(t, current, i))
     return 0
 
 
 def cmd_switch(args: argparse.Namespace) -> int:
+    if not args.id:
+        return cmd_list(argparse.Namespace(all=False))
     thread = _svc().switch(args.id)
     print(f"aktiv: {thread.id}  {thread.title}")
-    if thread.context.notes:
-        print("--- notizen ---")
-        print(thread.context.notes)
+    _print_context(thread)
     return 0
 
 
@@ -50,16 +62,48 @@ def cmd_current(_: argparse.Namespace) -> int:
     if thread is None:
         print("kein aktiver thread")
         return 1
-    print(_fmt(thread, thread.id))
-    print(f"beschreibung: {thread.description or '-'}")
-    print("--- notizen ---")
-    print(thread.context.notes or "(leer)")
+    print(_fmt(thread, thread.id, None))
+    _print_context(thread)
     return 0
 
 
 def cmd_note(args: argparse.Namespace) -> int:
-    thread = _svc().set_note(args.text, args.id)
+    thread = _svc().set_note(args.text, args.id, append=args.append)
     print(f"notiz gesetzt: {thread.id}")
+    return 0
+
+
+def cmd_describe(args: argparse.Namespace) -> int:
+    thread = _svc().set_description(args.text, args.id)
+    print(f"beschreibung gesetzt: {thread.id}")
+    return 0
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    thread = _svc().set_status(args.status, args.id)
+    print(f"status {thread.status}: {thread.id}")
+    return 0
+
+
+def cmd_files(args: argparse.Namespace) -> int:
+    svc = _svc()
+    if args.files_cmd == "ls":
+        thread = svc.get(args.id) if args.id else svc.current()
+        if thread is None:
+            print("kein aktiver thread", file=sys.stderr)
+            return 1
+        if not thread.context.files:
+            print("keine dateien")
+            return 0
+        for path in thread.context.files:
+            print(path)
+        return 0
+    if args.files_cmd == "add":
+        thread = svc.add_file(args.path, args.id)
+        print(f"datei: {args.path}  ({thread.id})")
+        return 0
+    thread = svc.remove_file(args.path, args.id)
+    print(f"entfernt: {args.path}  ({thread.id})")
     return 0
 
 
@@ -75,7 +119,16 @@ def cmd_archive(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_unarchive(args: argparse.Namespace) -> int:
+    thread = _svc().unarchive(args.id)
+    print(f"wieder offen (paused): {thread.id}")
+    return 0
+
+
 def cmd_delete(args: argparse.Namespace) -> int:
+    if not args.yes:
+        print("löschen nur mit --yes (vorher td archive)", file=sys.stderr)
+        return 2
     _svc().delete(args.id)
     print(f"gelöscht: {args.id}")
     return 0
@@ -116,17 +169,42 @@ def build_parser() -> argparse.ArgumentParser:
     ls.add_argument("-a", "--all", action="store_true", help="inkl. archivierte")
     ls.set_defaults(func=cmd_list)
 
-    sw = sub.add_parser("switch", help="Thread aktivieren, Kontext wiederherstellen")
-    sw.add_argument("id")
+    sw = sub.add_parser("switch", help="Thread aktivieren (id, Nummer oder Titel)")
+    sw.add_argument("id", nargs="?", help="ohne Argument: Liste")
     sw.set_defaults(func=cmd_switch)
 
-    cu = sub.add_parser("current", help="Aktiven Thread zeigen")
+    cu = sub.add_parser("current", help="Aktiven Thread inkl. Kontext zeigen")
     cu.set_defaults(func=cmd_current)
 
-    nt = sub.add_parser("note", help="Notiz am (aktiven) Thread setzen")
+    nt = sub.add_parser("note", help="Notiz setzen (überschreibt, außer -a)")
     nt.add_argument("text")
     nt.add_argument("--id", default=None)
+    nt.add_argument("-a", "--append", action="store_true")
     nt.set_defaults(func=cmd_note)
+
+    ds = sub.add_parser("describe", help="Beschreibung setzen")
+    ds.add_argument("text")
+    ds.add_argument("--id", default=None)
+    ds.set_defaults(func=cmd_describe)
+
+    st = sub.add_parser("status", help="idea | active | paused | done")
+    st.add_argument("status")
+    st.add_argument("--id", default=None)
+    st.set_defaults(func=cmd_status)
+
+    fl = sub.add_parser("files", help="Dateipfade im Kontext (kein Inhalt)")
+    fls = fl.add_subparsers(dest="files_cmd", required=True)
+    fls.add_parser("ls").set_defaults(func=cmd_files, id=None)
+    fa = fls.add_parser("add")
+    fa.add_argument("path")
+    fa.add_argument("--id", default=None)
+    fa.set_defaults(func=cmd_files)
+    fr = fls.add_parser("rm")
+    fr.add_argument("path")
+    fr.add_argument("--id", default=None)
+    fr.set_defaults(func=cmd_files)
+    # ls needs optional --id
+    fls.choices["ls"].add_argument("--id", default=None)
 
     rn = sub.add_parser("rename", help="Thread umbenennen")
     rn.add_argument("id")
@@ -137,8 +215,13 @@ def build_parser() -> argparse.ArgumentParser:
     ar.add_argument("id")
     ar.set_defaults(func=cmd_archive)
 
+    ua = sub.add_parser("unarchive", help="Archiv holen (wird paused)")
+    ua.add_argument("id")
+    ua.set_defaults(func=cmd_unarchive)
+
     de = sub.add_parser("delete", help="Archivierten Thread löschen")
     de.add_argument("id")
+    de.add_argument("--yes", action="store_true")
     de.set_defaults(func=cmd_delete)
 
     ss = sub.add_parser("snap", help="Snapshots")

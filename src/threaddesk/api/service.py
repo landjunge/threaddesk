@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from threaddesk.core.errors import InvalidState, NotFound
 from threaddesk.core.events import EventBus
-from threaddesk.core.models import Snapshot, Thread, ThreadContext, new_id, new_thread, now_iso
+from threaddesk.core.models import STATUSES, Snapshot, Thread, ThreadContext, new_id, new_thread, now_iso
 from threaddesk.core.secrets import reject_secrets
 from threaddesk.storage.json_store import JsonStore
 
@@ -56,12 +56,64 @@ class ThreadService:
         self.bus.emit("thread.renamed", {"id": thread.id})
         return thread
 
-    def set_note(self, text: str, key: str | None = None) -> Thread:
-        reject_secrets(text)
+    def _target(self, key: str | None = None) -> Thread:
         thread = self.get(key) if key else self.current()
         if thread is None:
             raise InvalidState("Kein aktiver Thread. td switch <id>")
-        thread.context.notes = text
+        return thread
+
+    def set_note(self, text: str, key: str | None = None, append: bool = False) -> Thread:
+        reject_secrets(text)
+        thread = self._target(key)
+        if append and thread.context.notes:
+            thread.context.notes = thread.context.notes.rstrip() + "\n" + text
+        else:
+            thread.context.notes = text
+        thread.updated_at = now_iso()
+        self.store.save_thread(thread)
+        self.bus.emit("thread.updated", {"id": thread.id})
+        return thread
+
+    def set_description(self, text: str, key: str | None = None) -> Thread:
+        reject_secrets(text)
+        thread = self._target(key)
+        thread.description = text.strip()
+        thread.updated_at = now_iso()
+        self.store.save_thread(thread)
+        self.bus.emit("thread.updated", {"id": thread.id})
+        return thread
+
+    def set_status(self, status: str, key: str | None = None) -> Thread:
+        status = status.strip().lower()
+        if status == "archived":
+            raise InvalidState("Zum Archivieren: td archive")
+        if status not in STATUSES:
+            raise InvalidState(f"Status muss einer von {', '.join(STATUSES)} sein.")
+        thread = self._target(key)
+        if thread.status == "archived":
+            raise InvalidState("Archivierter Thread: erst td unarchive.")
+        thread.status = status
+        thread.updated_at = now_iso()
+        self.store.save_thread(thread)
+        self.bus.emit("thread.updated", {"id": thread.id})
+        return thread
+
+    def add_file(self, path: str, key: str | None = None) -> Thread:
+        reject_secrets(path)
+        path = path.strip()
+        if not path:
+            raise InvalidState("Pfad fehlt.")
+        thread = self._target(key)
+        if path not in thread.context.files:
+            thread.context.files.append(path)
+        thread.updated_at = now_iso()
+        self.store.save_thread(thread)
+        self.bus.emit("thread.updated", {"id": thread.id})
+        return thread
+
+    def remove_file(self, path: str, key: str | None = None) -> Thread:
+        thread = self._target(key)
+        thread.context.files = [p for p in thread.context.files if p != path]
         thread.updated_at = now_iso()
         self.store.save_thread(thread)
         self.bus.emit("thread.updated", {"id": thread.id})
@@ -75,6 +127,16 @@ class ThreadService:
         if self.store.get_current_id() == thread.id:
             self.store.set_current_id(None)
         self.bus.emit("thread.archived", {"id": thread.id})
+        return thread
+
+    def unarchive(self, key: str) -> Thread:
+        thread = self.get(key)
+        if thread.status != "archived":
+            raise InvalidState("Thread ist nicht archiviert.")
+        thread.status = "paused"
+        thread.updated_at = now_iso()
+        self.store.save_thread(thread)
+        self.bus.emit("thread.updated", {"id": thread.id})
         return thread
 
     def delete(self, key: str) -> None:
@@ -96,7 +158,7 @@ class ThreadService:
             thread_id=thread.id,
             created_at=now_iso(),
             label=label.strip(),
-            context=thread.context,
+            context=ThreadContext.from_dict(thread.context.to_dict()),
         )
         self.store.save_snapshot(snap)
         thread.current_snapshot_id = snap.id
@@ -127,14 +189,27 @@ class ThreadService:
         key = (key or "").strip()
         if not key:
             raise NotFound("Thread-ID fehlt.")
+        if key.isdigit():
+            rows = self.list(include_archived=False)
+            idx = int(key)
+            if 1 <= idx <= len(rows):
+                return rows[idx - 1].id
         try:
             self.store.get_thread(key)
             return key
         except NotFound:
             pass
-        matches = [t for t in self.store.list_threads(include_archived=True) if t.id.startswith(key)]
-        if len(matches) == 1:
-            return matches[0].id
-        if not matches:
+        all_threads = self.store.list_threads(include_archived=True)
+        by_id = [t for t in all_threads if t.id.startswith(key)]
+        if len(by_id) == 1:
+            return by_id[0].id
+        needle = key.lower()
+        by_title = [t for t in all_threads if needle in t.title.lower()]
+        if len(by_title) == 1:
+            return by_title[0].id
+        if not by_id and not by_title:
             raise NotFound(f"Thread nicht gefunden: {key}")
-        raise InvalidState(f"Mehrdeutig: {key} → {', '.join(t.id for t in matches)}")
+        hits = by_id or by_title
+        raise InvalidState(
+            "Mehrdeutig: " + ", ".join(f"{t.id} ({t.title})" for t in hits)
+        )

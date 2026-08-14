@@ -36,7 +36,7 @@ class JsonStore:
             thread = Thread.from_dict(self._read_json(path))
             if include_archived or thread.status != "archived":
                 items.append(thread)
-        items.sort(key=lambda t: t.updated_at, reverse=True)
+        items.sort(key=lambda t: (t.updated_at, t.id), reverse=True)
         return items
 
     def get_thread(self, thread_id: str) -> Thread:
