@@ -1,1 +1,3 @@
-# Phase 4+: prompt generator, MCP, Grok Build, Tollgate — empty on purpose.
+from threaddesk.services.prompt_generator import TARGETS, VARIANTS, generate
+
+__all__ = ["TARGETS", "VARIANTS", "generate"]

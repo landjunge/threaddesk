@@ -30,13 +30,19 @@ td snap list
 td snap load <snap-id>
 td archive 1
 td delete 1 --yes       # nur archivierte
+td prompt                    # aus aktuellem Thread, Ziel grok
+td prompt --target gnom --variant short
+td prompt --save              # im Thread ablegen, nicht ausführen
+td prompt --list
 ```
 
 Wechsel stellt den vollen Kontext wieder her. Kein Agent wird gestartet.
 
-## Was bewusst fehlt (Phase 4+)
+Prompt-Generator ist lokal (Vorlage, kein API-Call). Er bereitet Text vor. Es wird niemand angerufen.
 
-Kanban, Prompt-Generator, MCP, Grok-Build-Bridge, Tollgate, Dashboard.
+## Später (noch nicht)
+
+MCP, Grok-Build-Bridge, Tollgate, Kanban-Dashboard.
 
 ## Prinzip
 

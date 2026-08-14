@@ -150,6 +150,23 @@ def cmd_snap_list(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_prompt(args: argparse.Namespace) -> int:
+    svc = _svc()
+    if args.list_prompts:
+        items = svc.prompts(args.id)
+        if not items:
+            print("keine gespeicherten prompts")
+            return 0
+        for item in items:
+            print(f"{item.get('id')}  {item.get('created_at')}  {item.get('target')}/{item.get('variant')}")
+        return 0
+    text = svc.prompt(args.target, args.variant, args.id, save=args.save)
+    print(text)
+    if args.save:
+        print("\n--- gespeichert im thread ---")
+    return 0
+
+
 def cmd_snap_load(args: argparse.Namespace) -> int:
     thread = _svc().restore(args.snap_id)
     print(f"wiederhergestellt: {thread.id}  snap={thread.current_snapshot_id}")
@@ -236,6 +253,14 @@ def build_parser() -> argparse.ArgumentParser:
     ld = ssub.add_parser("load", help="Snapshot laden")
     ld.add_argument("snap_id")
     ld.set_defaults(func=cmd_snap_load)
+
+    pr = sub.add_parser("prompt", help="Prompt aus Thread-Kontext bauen (führt nichts aus)")
+    pr.add_argument("--target", default="grok", choices=["grok", "gnom", "generic"])
+    pr.add_argument("--variant", default="detailed", choices=["short", "detailed", "steps", "agent"])
+    pr.add_argument("--save", action="store_true", help="im Thread speichern")
+    pr.add_argument("--id", default=None)
+    pr.add_argument("--list", dest="list_prompts", action="store_true")
+    pr.set_defaults(func=cmd_prompt)
     return p
 
 

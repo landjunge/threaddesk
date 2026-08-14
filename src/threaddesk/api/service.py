@@ -4,6 +4,7 @@ from threaddesk.core.errors import InvalidState, NotFound
 from threaddesk.core.events import EventBus
 from threaddesk.core.models import STATUSES, Snapshot, Thread, ThreadContext, new_id, new_thread, now_iso
 from threaddesk.core.secrets import reject_secrets
+from threaddesk.services.prompt_generator import generate as generate_prompt
 from threaddesk.storage.json_store import JsonStore
 
 
@@ -172,6 +173,34 @@ class ThreadService:
         if thread is None:
             raise InvalidState("Kein aktiver Thread.")
         return self.store.list_snapshots(thread.id)
+
+    def prompt(
+        self,
+        target: str = "grok",
+        variant: str = "detailed",
+        key: str | None = None,
+        save: bool = False,
+    ) -> str:
+        thread = self._target(key)
+        text = generate_prompt(thread, target=target, variant=variant)
+        reject_secrets(text)
+        if save:
+            thread.context.prompts.append(
+                {
+                    "id": new_id(),
+                    "created_at": now_iso(),
+                    "target": target,
+                    "variant": variant,
+                    "text": text,
+                }
+            )
+            thread.updated_at = now_iso()
+            self.store.save_thread(thread)
+            self.bus.emit("prompt.saved", {"thread_id": thread.id, "target": target})
+        return text
+
+    def prompts(self, key: str | None = None) -> list[dict]:
+        return list(self._target(key).context.prompts)
 
     def restore(self, snap_id: str) -> Thread:
         snap = self.store.get_snapshot(snap_id)

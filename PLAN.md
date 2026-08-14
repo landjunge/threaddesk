@@ -43,7 +43,8 @@ core / storage / ui / services / api
 | 1 | Core + Storage + Events | Fundament |
 | 2 | CLI + Switcher + Snapshot | nutzbar |
 | 3 | Polish, Fehler, echte Nutzung | Alltag — in Arbeit: Status, Notiz-Append, Dateipfade, Titel/Nummer-Switch, --yes |
-| 4+ | Prompt-Generator → MCP → Grok Build → Tollgate → Dashboard | Erweiterung |
+| 4a | Prompt-Generator (lokal, kein Execute) | erster Baustein Phase 4 |
+| 4+ | MCP → Grok Build → Tollgate → Dashboard | danach |
 
 ## Sicherheit (von Anfang an)
 
