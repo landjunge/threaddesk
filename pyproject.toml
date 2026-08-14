@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "threaddesk"
+version = "0.1.0"
+description = "Local-first control layer: persistent threads for AI work. Stores context, never executes."
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "landjunge" }]
+license = { text = "MIT" }
+
+[project.scripts]
+threaddesk = "threaddesk.ui.cli:main"
+td = "threaddesk.ui.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
