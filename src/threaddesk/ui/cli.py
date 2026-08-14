@@ -173,6 +173,56 @@ def cmd_grok(args: argparse.Namespace) -> int:
     return 0
 
 
+def _print_gate(status: dict) -> None:
+    policy = status["policy"]
+    today = status["today"]
+    print(f"frozen: {'ja' if status['frozen'] else 'nein'}  tag: {status['day']}")
+    print(
+        f"execute heute: {today['execute']}/{policy['max_execute_day']}  "
+        f"pro thread: {policy['max_execute_thread_day']}"
+    )
+    print(
+        f"handoff heute: {today['handoff']}/{policy['max_handoff_day']}  "
+        f"pro thread: {policy['max_handoff_thread_day']}"
+    )
+    print(f"cooldown: {policy['cooldown_seconds']}s")
+    last = status.get("last") or {}
+    if last.get("at"):
+        print(f"zuletzt: {last.get('action')}  {last.get('thread_id')}  {last.get('at')}")
+
+
+def cmd_gate(args: argparse.Namespace) -> int:
+    svc = _svc()
+    cmd = args.gate_cmd or "status"
+    if cmd == "status":
+        _print_gate(svc.gate())
+        return 0
+    if cmd == "check":
+        got = svc.gate_check(args.action, args.id)
+        print(("ok" if got["allow"] else "block") + f"  {got['action']}")
+        if got["reason"]:
+            print(got["reason"])
+        else:
+            print(f"remaining thread={got['remaining_thread']}  day={got['remaining_day']}")
+        return 0 if got["allow"] else 2
+    if cmd == "freeze":
+        _print_gate(svc.gate_freeze(True))
+        return 0
+    if cmd == "unfreeze":
+        _print_gate(svc.gate_freeze(False))
+        return 0
+    _print_gate(
+        svc.gate_set(
+            max_execute_day=args.max_execute_day,
+            max_execute_thread_day=args.max_execute_thread_day,
+            max_handoff_day=args.max_handoff_day,
+            max_handoff_thread_day=args.max_handoff_thread_day,
+            cooldown_seconds=args.cooldown,
+        )
+    )
+    return 0
+
+
 def cmd_prompt(args: argparse.Namespace) -> int:
     svc = _svc()
     if args.list_prompts:
@@ -297,6 +347,24 @@ def build_parser() -> argparse.ArgumentParser:
     gk.add_argument("--variant", default="detailed", choices=["short", "detailed", "steps", "agent"])
     gk.add_argument("--id", default=None)
     gk.set_defaults(func=cmd_grok)
+
+    gt = sub.add_parser("gate", help="Lokaler Loop-/Tages-Schutz (kein Tollgate-Start)")
+    gts = gt.add_subparsers(dest="gate_cmd")
+    gt.set_defaults(func=cmd_gate)
+    gts.add_parser("status").set_defaults(func=cmd_gate)
+    chk = gts.add_parser("check")
+    chk.add_argument("--action", default="execute", choices=["execute", "handoff"])
+    chk.add_argument("--id", default=None)
+    chk.set_defaults(func=cmd_gate)
+    gts.add_parser("freeze").set_defaults(func=cmd_gate)
+    gts.add_parser("unfreeze").set_defaults(func=cmd_gate)
+    st = gts.add_parser("set")
+    st.add_argument("--max-execute-day", type=int, default=None)
+    st.add_argument("--max-execute-thread-day", type=int, default=None)
+    st.add_argument("--max-handoff-day", type=int, default=None)
+    st.add_argument("--max-handoff-thread-day", type=int, default=None)
+    st.add_argument("--cooldown", type=int, default=None)
+    st.set_defaults(func=cmd_gate)
     return p
 
 

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from threaddesk.core.errors import InvalidState, NotFound
+from threaddesk.core.errors import GateBlocked, InvalidState, NotFound
 from threaddesk.core.events import EventBus
 from threaddesk.core.models import STATUSES, Snapshot, Thread, ThreadContext, new_id, new_thread, now_iso
 from threaddesk.core.secrets import reject_secrets
 from threaddesk.services.grok_bridge import build_packet as build_grok_packet
 from threaddesk.services.grok_bridge import command_for as grok_command
 from threaddesk.services.prompt_generator import generate as generate_prompt
+from threaddesk.services.tollgate import LocalGate
 from threaddesk.storage.json_store import JsonStore
 
 
@@ -204,9 +205,39 @@ class ThreadService:
     def prompts(self, key: str | None = None) -> list[dict]:
         return list(self._target(key).context.prompts)
 
+    def gate(self) -> dict:
+        return self._gate().status()
+
+    def gate_check(self, action: str = "execute", key: str | None = None) -> dict:
+        thread = self._target(key)
+        return self._gate().check(action, thread.id)
+
+    def gate_set(self, **updates) -> dict:
+        status = self._gate().set_policy(**updates)
+        self.bus.emit("gate.updated", {"frozen": status["frozen"]})
+        return status
+
+    def gate_freeze(self, frozen: bool = True) -> dict:
+        status = self._gate().freeze(frozen)
+        self.bus.emit("gate.updated", {"frozen": status["frozen"]})
+        return status
+
+    def _gate(self) -> LocalGate:
+        return LocalGate(self.store.root)
+
+    def _admit(self, action: str, thread_id: str) -> None:
+        decision = self._gate().check(action, thread_id)
+        if not decision["allow"]:
+            raise GateBlocked(decision["reason"])
+
+    def _record(self, action: str, thread_id: str) -> None:
+        self._gate().record(action, thread_id)
+        self.bus.emit("gate.recorded", {"action": action, "thread_id": thread_id})
+
     def handoff(self, key: str | None = None) -> dict:
         """Write a local payload for Gnom-Hub. Does not start anything."""
         thread = self._target(key)
+        self._admit("handoff", thread.id)
         payload = {
             "kind": "threaddesk.handoff",
             "thread_id": thread.id,
@@ -220,6 +251,7 @@ class ThreadService:
         }
         path = self.store.root / "handoff.json"
         self.store._write_json(path, payload)
+        self._record("handoff", thread.id)
         self.bus.emit("handoff.written", {"thread_id": thread.id, "path": str(path)})
         payload["path"] = str(path)
         return payload
@@ -232,6 +264,8 @@ class ThreadService:
     ) -> dict:
         """Write a Grok Build packet. Does not start grok."""
         thread = self._target(key)
+        if (mode or "brainstorm").strip().lower() == "execute":
+            self._admit("execute", thread.id)
         packet = build_grok_packet(thread, mode=mode, variant=variant)
         reject_secrets(packet["prompt"])
         prompt_path = self.store.root / "grok-prompt.md"
@@ -242,6 +276,8 @@ class ThreadService:
         packet["path"] = str(json_path)
         packet["ran"] = False
         self.store._write_json(json_path, packet)
+        if packet["mode"] == "execute":
+            self._record("execute", thread.id)
         self.bus.emit("grok.packet", {"thread_id": thread.id, "mode": packet["mode"], "path": str(json_path)})
         return packet
 

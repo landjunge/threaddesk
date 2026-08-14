@@ -38,6 +38,8 @@ td handoff                    # ~/.threaddesk/handoff.json für Gnom-Hub
 td mcp                        # MCP-Server auf stdin/stdout
 td grok                       # Grok-Paket schreiben, Befehl zeigen, nicht starten
 td grok --execute             # Execute-Paket, immer noch kein Start
+td gate                       # Loop-/Tages-Schutz
+td gate freeze                # Execute/Handoff sperren
 ```
 
 Wechsel stellt den vollen Kontext wieder her. Kein Agent wird gestartet.
@@ -48,9 +50,11 @@ MCP stellt nur Thread-Daten bereit. Kein `delete`, keine Agent-Starts. Notizen k
 
 `td grok` schreibt `~/.threaddesk/grok-prompt.md` und zeigt den `grok --prompt-file`-Befehl. Grok wird nicht gestartet. Siehe `docs/GROK.md`.
 
+`td gate` ist der lokale Tollgate-Wrap: Tageslimits, Cooldown, Freeze. Brainstorm bleibt frei. Das Tollgate-Produkt wird nicht importiert und nicht gestartet. Siehe `docs/TOLLGATE.md`.
+
 ## Später (noch nicht)
 
-Tollgate, Kanban-Dashboard.
+Kanban-Dashboard.
 
 ## Prinzip
 

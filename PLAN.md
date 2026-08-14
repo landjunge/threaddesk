@@ -46,7 +46,8 @@ core / storage / ui / services / api
 | 4a | Prompt-Generator (lokal, kein Execute) | fertig |
 | 4b | MCP stdio + Handoff (kein delete, untrusted wrap) | fertig |
 | 4c | Grok-Build-Bridge (Paket schreiben, Grok nicht starten) | fertig |
-| 4+ | Tollgate → Dashboard | später |
+| 4d | Tollgate-Wrap (lokales Gate, kein Produkt-Import) | fertig |
+| 4+ | Dashboard | später |
 
 ## Sicherheit (von Anfang an)
 
@@ -54,4 +55,5 @@ core / storage / ui / services / api
 - Keine API-Keys in Thread-Dateien
 - ThreadDesk führt nichts aus
 - MCP wrappt Notizen als `<untrusted>` und hat kein delete
-- Prompt-Injection-Härten und Tollgate folgen in 4+
+- Prompt-Injection: MCP wrappt Notizen, Gate ändert sich nicht durch Notiztext
+- Tollgate-Wrap ist lokal (`td gate`). Das Produkt ~/tollgate bleibt unberührt.

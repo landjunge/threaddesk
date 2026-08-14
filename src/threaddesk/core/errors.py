@@ -12,3 +12,7 @@ class InvalidState(ThreadDeskError):
 
 class SecretRejected(ThreadDeskError):
     pass
+
+
+class GateBlocked(ThreadDeskError):
+    pass

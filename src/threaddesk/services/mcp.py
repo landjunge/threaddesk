@@ -104,6 +104,17 @@ TOOLS = [
             },
         },
     },
+    {
+        "name": "check_gate",
+        "description": "Read local loop/day gate. Cannot freeze or change policy.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "action": {"type": "string", "enum": ["execute", "handoff"]},
+                "id": {"type": "string"},
+            },
+        },
+    },
 ]
 
 
@@ -186,4 +197,8 @@ class McpBridge:
                 str(args.get("variant") or "detailed"),
                 args.get("id"),
             )
+        if name == "check_gate":
+            if args.get("action") or args.get("id"):
+                return self.svc.gate_check(str(args.get("action") or "execute"), args.get("id"))
+            return self.svc.gate()
         raise ThreadDeskError(f"unbekanntes tool: {name}")

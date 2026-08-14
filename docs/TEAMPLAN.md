@@ -34,7 +34,8 @@ Alles andere (Kanban, Prompt-Generator, MCP, Grok Build, Tollgate, Dashboard) ko
 | 4a | Prompt-Generator (lokal, kein Execute) | fertig |
 | 4b | MCP stdio + Handoff | fertig |
 | 4c | Grok-Build-Bridge (Paket, kein Start) | fertig |
-| 4+ | Tollgate → Dashboard | später |
+| 4d | Tollgate-Wrap (lokales Gate) | fertig |
+| 4+ | Dashboard | später |
 
 ## 5. Erfolgskriterium
 
