@@ -43,12 +43,15 @@ core / storage / ui / services / api
 | 1 | Core + Storage + Events | Fundament |
 | 2 | CLI + Switcher + Snapshot | nutzbar |
 | 3 | Polish, Fehler, echte Nutzung | Alltag — in Arbeit: Status, Notiz-Append, Dateipfade, Titel/Nummer-Switch, --yes |
-| 4a | Prompt-Generator (lokal, kein Execute) | erster Baustein Phase 4 |
-| 4+ | MCP → Grok Build → Tollgate → Dashboard | danach |
+| 4a | Prompt-Generator (lokal, kein Execute) | fertig |
+| 4b | MCP stdio + Handoff (kein delete, untrusted wrap) | fertig |
+| 4c | Grok-Build-Bridge (Paket schreiben, Grok nicht starten) | danach |
+| 4+ | Tollgate → Dashboard | später |
 
 ## Sicherheit (von Anfang an)
 
 - Alles lokal. Keine Cloud.
 - Keine API-Keys in Thread-Dateien
 - ThreadDesk führt nichts aus
-- Prompt-Injection und Tollgate erst, wenn MCP kommt
+- MCP wrappt Notizen als `<untrusted>` und hat kein delete
+- Prompt-Injection-Härten und Tollgate folgen in 4+

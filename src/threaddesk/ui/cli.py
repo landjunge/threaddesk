@@ -150,6 +150,19 @@ def cmd_snap_list(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_handoff(args: argparse.Namespace) -> int:
+    payload = _svc().handoff(args.id)
+    print(payload["path"])
+    return 0
+
+
+def cmd_mcp(_: argparse.Namespace) -> int:
+    from threaddesk.ui.mcp_stdio import serve
+
+    serve()
+    return 0
+
+
 def cmd_prompt(args: argparse.Namespace) -> int:
     svc = _svc()
     if args.list_prompts:
@@ -261,6 +274,13 @@ def build_parser() -> argparse.ArgumentParser:
     pr.add_argument("--id", default=None)
     pr.add_argument("--list", dest="list_prompts", action="store_true")
     pr.set_defaults(func=cmd_prompt)
+
+    ho = sub.add_parser("handoff", help="Lokales Handoff-JSON für Gnom-Hub (startet nichts)")
+    ho.add_argument("--id", default=None)
+    ho.set_defaults(func=cmd_handoff)
+
+    mp = sub.add_parser("mcp", help="MCP-Server auf stdin/stdout (nur Thread-Daten)")
+    mp.set_defaults(func=cmd_mcp)
     return p
 
 

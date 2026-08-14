@@ -31,7 +31,9 @@ Alles andere (Kanban, Prompt-Generator, MCP, Grok Build, Tollgate, Dashboard) ko
 | 1 | Core + Storage + Events | Stabiles Fundament |
 | 2 | Einfache UI + Thread-Switcher + Snapshot | Erste nutzbare Version |
 | 3 | Polish, Fehlerbehandlung, erste echte Nutzung | Alltags-tauglich |
-| 4+ | Prompt-Generator → MCP → Grok Build → Tollgate → Dashboard | Erweiterung |
+| 4a | Prompt-Generator (lokal, kein Execute) | fertig |
+| 4b | MCP stdio + Handoff | fertig |
+| 4c | Grok Build → Tollgate → Dashboard | Erweiterung |
 
 ## 5. Erfolgskriterium
 

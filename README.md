@@ -34,15 +34,19 @@ td prompt                    # aus aktuellem Thread, Ziel grok
 td prompt --target gnom --variant short
 td prompt --save              # im Thread ablegen, nicht ausführen
 td prompt --list
+td handoff                    # ~/.threaddesk/handoff.json für Gnom-Hub
+td mcp                        # MCP-Server auf stdin/stdout
 ```
 
 Wechsel stellt den vollen Kontext wieder her. Kein Agent wird gestartet.
 
 Prompt-Generator ist lokal (Vorlage, kein API-Call). Er bereitet Text vor. Es wird niemand angerufen.
 
+MCP stellt nur Thread-Daten bereit. Kein `delete`, keine Agent-Starts. Notizen kommen als `<untrusted>`. Siehe `docs/MCP.md`.
+
 ## Später (noch nicht)
 
-MCP, Grok-Build-Bridge, Tollgate, Kanban-Dashboard.
+Grok-Build-Bridge, Tollgate, Kanban-Dashboard.
 
 ## Prinzip
 

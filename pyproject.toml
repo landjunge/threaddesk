@@ -14,6 +14,7 @@ license = { text = "MIT" }
 [project.scripts]
 threaddesk = "threaddesk.ui.cli:main"
 td = "threaddesk.ui.cli:main"
+threaddesk-mcp = "threaddesk.ui.mcp_stdio:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0"]
