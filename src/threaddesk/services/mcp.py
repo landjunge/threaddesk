@@ -115,6 +115,14 @@ TOOLS = [
             },
         },
     },
+    {
+        "name": "dashboard",
+        "description": "Read-only board of threads. Writes local HTML. Starts nothing.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"include_archived": {"type": "boolean"}},
+        },
+    },
 ]
 
 
@@ -201,4 +209,8 @@ class McpBridge:
             if args.get("action") or args.get("id"):
                 return self.svc.gate_check(str(args.get("action") or "execute"), args.get("id"))
             return self.svc.gate()
+        if name == "dashboard":
+            board = self.svc.dashboard(include_archived=bool(args.get("include_archived")))
+            board.pop("text", None)
+            return board
         raise ThreadDeskError(f"unbekanntes tool: {name}")

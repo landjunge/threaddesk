@@ -47,7 +47,7 @@ core / storage / ui / services / api
 | 4b | MCP stdio + Handoff (kein delete, untrusted wrap) | fertig |
 | 4c | Grok-Build-Bridge (Paket schreiben, Grok nicht starten) | fertig |
 | 4d | Tollgate-Wrap (lokales Gate, kein Produkt-Import) | fertig |
-| 4+ | Dashboard | später |
+| 4e | Dashboard (nur Ansicht, HTML + Terminal) | fertig |
 
 ## Sicherheit (von Anfang an)
 

@@ -20,7 +20,7 @@ Beispiel für einen MCP-Client:
 }
 ```
 
-Tools: `list_threads`, `get_thread`, `current_thread`, `switch_thread`, `add_note`, `save_snapshot`, `list_snapshots`, `restore_snapshot`, `generate_prompt`, `export_handoff`, `export_grok`, `check_gate`.
+Tools: `list_threads`, `get_thread`, `current_thread`, `switch_thread`, `add_note`, `save_snapshot`, `list_snapshots`, `restore_snapshot`, `generate_prompt`, `export_handoff`, `export_grok`, `check_gate`, `dashboard`.
 
 Kein `delete` über MCP.
 

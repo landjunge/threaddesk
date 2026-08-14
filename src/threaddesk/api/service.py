@@ -4,6 +4,9 @@ from threaddesk.core.errors import GateBlocked, InvalidState, NotFound
 from threaddesk.core.events import EventBus
 from threaddesk.core.models import STATUSES, Snapshot, Thread, ThreadContext, new_id, new_thread, now_iso
 from threaddesk.core.secrets import reject_secrets
+from threaddesk.services.dashboard import build as build_dashboard
+from threaddesk.services.dashboard import render_html as render_dashboard_html
+from threaddesk.services.dashboard import render_text as render_dashboard_text
 from threaddesk.services.grok_bridge import build_packet as build_grok_packet
 from threaddesk.services.grok_bridge import command_for as grok_command
 from threaddesk.services.prompt_generator import generate as generate_prompt
@@ -233,6 +236,20 @@ class ThreadService:
     def _record(self, action: str, thread_id: str) -> None:
         self._gate().record(action, thread_id)
         self.bus.emit("gate.recorded", {"action": action, "thread_id": thread_id})
+
+    def dashboard(self, include_archived: bool = False) -> dict:
+        """Write a read-only board. Does not start a server or any agent."""
+        threads = self.list(include_archived=include_archived)
+        board = build_dashboard(threads, self.store.get_current_id(), self.gate())
+        html_path = self.store.root / "dashboard.html"
+        json_path = self.store.root / "dashboard.json"
+        html_path.write_text(render_dashboard_html(board), encoding="utf-8")
+        board["html_path"] = str(html_path)
+        board["path"] = str(json_path)
+        board["text"] = render_dashboard_text(board)
+        self.store._write_json(json_path, {k: v for k, v in board.items() if k != "text"})
+        self.bus.emit("dashboard.written", {"path": str(json_path)})
+        return board
 
     def handoff(self, key: str | None = None) -> dict:
         """Write a local payload for Gnom-Hub. Does not start anything."""

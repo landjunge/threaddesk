@@ -40,6 +40,8 @@ td grok                       # Grok-Paket schreiben, Befehl zeigen, nicht start
 td grok --execute             # Execute-Paket, immer noch kein Start
 td gate                       # Loop-/Tages-Schutz
 td gate freeze                # Execute/Handoff sperren
+td dash                       # Tafel im Terminal + ~/.threaddesk/dashboard.html
+td dash --open                # HTML lokal öffnen
 ```
 
 Wechsel stellt den vollen Kontext wieder her. Kein Agent wird gestartet.
@@ -52,9 +54,7 @@ MCP stellt nur Thread-Daten bereit. Kein `delete`, keine Agent-Starts. Notizen k
 
 `td gate` ist der lokale Tollgate-Wrap: Tageslimits, Cooldown, Freeze. Brainstorm bleibt frei. Das Tollgate-Produkt wird nicht importiert und nicht gestartet. Siehe `docs/TOLLGATE.md`.
 
-## Später (noch nicht)
-
-Kanban-Dashboard.
+`td dash` ist die lokale Tafel nach Status. Kein Server, kein Drag-and-Drop, kein Execute. Siehe `docs/DASHBOARD.md`.
 
 ## Prinzip
 

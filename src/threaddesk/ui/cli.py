@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 from threaddesk.api.service import ThreadService
 from threaddesk.core.errors import ThreadDeskError
@@ -191,6 +192,18 @@ def _print_gate(status: dict) -> None:
         print(f"zuletzt: {last.get('action')}  {last.get('thread_id')}  {last.get('at')}")
 
 
+def cmd_dash(args: argparse.Namespace) -> int:
+    board = _svc().dashboard(include_archived=args.all)
+    print(board["text"])
+    print(f"html: {board['html_path']}")
+    if args.open:
+        import webbrowser
+
+        webbrowser.open(Path(board["html_path"]).resolve().as_uri())
+        print("browser geöffnet (keine Agenten)")
+    return 0
+
+
 def cmd_gate(args: argparse.Namespace) -> int:
     svc = _svc()
     cmd = args.gate_cmd or "status"
@@ -365,6 +378,11 @@ def build_parser() -> argparse.ArgumentParser:
     st.add_argument("--max-handoff-thread-day", type=int, default=None)
     st.add_argument("--cooldown", type=int, default=None)
     st.set_defaults(func=cmd_gate)
+
+    da = sub.add_parser("dash", help="Nur-Lese-Tafel (HTML + Terminal, kein Server)")
+    da.add_argument("-a", "--all", action="store_true", help="inkl. archivierte")
+    da.add_argument("--open", action="store_true", help="HTML lokal im Browser öffnen")
+    da.set_defaults(func=cmd_dash)
     return p
 
 
