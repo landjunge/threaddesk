@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Any
@@ -8,6 +9,16 @@ from uuid import uuid4
 from threaddesk.core.errors import InvalidState
 
 STATUSES = ("idea", "active", "paused", "done", "archived")
+
+# Ids become file names, so they must never contain a path separator, a dot,
+# a glob character or whitespace. Real ids are 12 hex chars (uuid4().hex[:12]);
+# this stays deliberately permissive for hand-made ids from older stores.
+ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+
+
+def is_valid_id(value: Any) -> bool:
+    """True if value is safe to use as a store file name."""
+    return isinstance(value, str) and bool(ID_RE.match(value))
 
 
 def _require_str(data: dict[str, Any], key: str, what: str) -> str:

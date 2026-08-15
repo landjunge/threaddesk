@@ -2,7 +2,16 @@ from __future__ import annotations
 
 from threaddesk.core.errors import GateBlocked, InvalidState, NotFound
 from threaddesk.core.events import EventBus
-from threaddesk.core.models import STATUSES, Snapshot, Thread, ThreadContext, new_id, new_thread, now_iso
+from threaddesk.core.models import (
+    STATUSES,
+    Snapshot,
+    Thread,
+    ThreadContext,
+    is_valid_id,
+    new_id,
+    new_thread,
+    now_iso,
+)
 from threaddesk.core.secrets import reject_secrets
 from threaddesk.services.dashboard import build as build_dashboard
 from threaddesk.services.dashboard import render_html as render_dashboard_html
@@ -350,11 +359,14 @@ class ThreadService:
             idx = int(key)
             if 1 <= idx <= len(rows):
                 return rows[idx - 1].id
-        try:
-            self.store.get_thread(key)
-            return key
-        except NotFound:
-            pass
+        # Only a syntactically valid id may reach the filesystem. Anything else
+        # falls through to prefix/title matching on already loaded threads.
+        if is_valid_id(key):
+            try:
+                self.store.get_thread(key)
+                return key
+            except NotFound:
+                pass
         all_threads = self.store.list_threads(include_archived=True)
         by_id = [t for t in all_threads if t.id.startswith(key)]
         if len(by_id) == 1:
