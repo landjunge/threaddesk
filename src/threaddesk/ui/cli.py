@@ -37,6 +37,16 @@ def cmd_new(args: argparse.Namespace) -> int:
     return 0
 
 
+def _numbered(rows: list[Thread], active_ids: list[str]) -> list[tuple[Thread, int | None]]:
+    """Pair each row with the number ThreadService._resolve would use for it.
+
+    Numbers must match _resolve, which only indexes non-archived threads.
+    Otherwise "td list --all" and "td switch <n>" would silently disagree
+    about what number N refers to.
+    """
+    return [(t, active_ids.index(t.id) + 1 if t.id in active_ids else None) for t in rows]
+
+
 def cmd_list(args: argparse.Namespace) -> int:
     svc = _svc()
     current = svc.store.get_current_id()
@@ -44,8 +54,9 @@ def cmd_list(args: argparse.Namespace) -> int:
     if not rows:
         print("keine threads")
         return 0
-    for i, t in enumerate(rows, 1):
-        print(_fmt(t, current, i))
+    active_ids = [t.id for t in svc.list(include_archived=False)]
+    for t, index in _numbered(rows, active_ids):
+        print(_fmt(t, current, index))
     return 0
 
 

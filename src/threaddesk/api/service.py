@@ -346,6 +346,9 @@ class ThreadService:
         if not key:
             raise NotFound("Thread-ID fehlt.")
         if key.isdigit():
+            # Numbers always index the non-archived list, matching what
+            # plain `td list` shows. `td list --all` (ui/cli.cmd_list)
+            # mirrors this scope so numbers stay consistent between views.
             rows = self.list(include_archived=False)
             idx = int(key)
             if 1 <= idx <= len(rows):

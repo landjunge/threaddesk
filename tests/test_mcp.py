@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from threaddesk.api.service import ThreadService
-from threaddesk.services.mcp import McpBridge, wrap_untrusted
+from threaddesk.services.mcp import McpBridge
 from threaddesk.storage.json_store import JsonStore
 from threaddesk.ui.mcp_stdio import handle
 
