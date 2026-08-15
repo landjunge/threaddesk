@@ -1,7 +1,7 @@
 # ThreadDesk UI Plan (HTMX + Alpine.js)
 
 **Stand:** 15.08.2026  
-**Status:** Phase 1 umgesetzt (`td serve`)  
+**Status:** Phase 3 umgesetzt (`td serve` liest und schreibt)  
 **Kernprinzip:** ThreadDesk führt **niemals** etwas aus. Die UI bereitet nur vor und zeigt an.
 
 ## 1. Ziele
@@ -46,90 +46,23 @@ src/threaddesk/
 │   │       └── gate.html
 │   └── static/
 │       ├── style.css
-│       └── app.js             # nur Alpine-Initialisierung falls nötig
+│       └── app.js
 ```
 
 Alle Schreib- und Lesevorgänge laufen weiterhin **nur** über `ThreadService`.
 
-## 5. UI-Layout
-
-```
-┌──────────────────┬──────────────────────────────────────────────────────┐
-│  Thread-Liste    │  Aktueller Thread                          │
-│  (links)         │  - Titel + Status                          │
-│                  │  - Beschreibung                            │
-│  [Neu]           │  - Notizen (editierbar)                    │
-│  • Thread A *    │  - Dateien                                 │
-│  • Thread B      │  - Snapshots                               │
-│  • ...           │  - Aktionen: Snapshot speichern, etc.      │
-│                  │                                            │
-│  Gate-Status     │  Gate-Freeze Toggle                        │
-└──────────────────┴──────────────────────────────────────────────────────┘
-```
-
-## 6. Wichtige Endpunkte (HTML-Fragmente)
-
-| Methode | Pfad                        | Zweck                              | HTMX-Ziel                  |
-|---------|-----------------------------|------------------------------------|----------------------------|
-| GET     | `/`                         | Komplette Seite                    | -                          |
-| GET     | `/partials/threads`         | Thread-Liste neu rendern           | `#thread-list`             |
-| POST    | `/threads`                  | Neuen Thread anlegen               | `#thread-list` + Detail    |
-| POST    | `/threads/{id}/switch`      | Thread aktivieren                  | ganze rechte Seite         |
-| POST    | `/threads/{id}/note`        | Notiz setzen / anhängen            | `#notes`                   |
-| POST    | `/threads/{id}/status`      | Status ändern                      | Liste + Detail             |
-| POST    | `/threads/{id}/snapshot`    | Snapshot speichern                 | `#snapshots`               |
-| POST    | `/snapshots/{id}/restore`   | Snapshot laden                     | rechte Seite               |
-| GET     | `/partials/gate`            | Gate-Status                        | `#gate`                    |
-| POST    | `/gate/freeze`              | Freeze umschalten                  | `#gate`                    |
-
-Alle POST-Endpunkte geben passende HTML-Fragmente zurück (nicht nur JSON).
-
-## 7. HTMX + Alpine.js Muster
-
-**HTMX-Beispiele:**
-```html
-<!-- Thread wechseln -->
-<button hx-post="/threads/{{ id }}/switch"
-        hx-target="#main"
-        hx-swap="innerHTML">
-  {{ title }}
-</button>
-
-<!-- Notiz speichern -->
-<form hx-post="/threads/{{ id }}/note"
-      hx-target="#notes"
-      hx-swap="innerHTML">
-  ...
-</form>
-```
-
-**Alpine.js-Beispiele:**
-- Loading-State während Requests
-- „Notiz wurde gespeichert“-Feedback
-- Gate-Freeze Toggle (optimistisches UI + Server-Bestätigung)
-- Einfache Bestätigungs-Dialoge (Archive / Delete)
-
 ## 8. Implementierungs-Phasen
 
-### Phase 1 – Server-Fundament
-- [x] `ui/server.py` mit FastAPI anlegen
-- [x] `td serve` Befehl in der CLI registrieren
-- [x] `base.html` + `index.html` (statisches Gerüst)
-- [x] Ein Endpunkt `/partials/threads` der die Liste liefert
-- [x] Server startet auf `127.0.0.1:8765` (`--host` / `--port` überschreibbar)
-- [x] Read-Pfad: Thread-Detail + Gate (Anzeige) + Switch via HTMX
-
-### Phase 2 – Lesen funktioniert
-- [x] Thread-Liste links
-- [x] Aktueller Thread rechts (read-only)
-- [x] Gate-Status anzeigen
+### Phase 1 – Server-Fundament — erledigt
+### Phase 2 – Lesen — erledigt
 
 ### Phase 3 – Schreiben
-- [ ] Notiz setzen / anhängen
-- [ ] Status ändern
-- [ ] Snapshot speichern & laden
-- [ ] Neuen Thread anlegen
-- [ ] Gate Freeze
+- [x] Notiz setzen / anhängen
+- [x] Status ändern
+- [x] Snapshot speichern & laden
+- [x] Neuen Thread anlegen
+- [x] Gate Freeze
+- [x] Beschreibung speichern
 
 ### Phase 4 – Polish
 - [ ] Tastatur-Shortcuts
@@ -137,30 +70,11 @@ Alle POST-Endpunkte geben passende HTML-Fragmente zurück (nicht nur JSON).
 - [ ] Loading- und Erfolgs-Feedback
 - [ ] Bestätigungen für destruktive Aktionen
 
-## 9. Harte Regeln (nicht verhandelbar)
-
-1. Jede Write-Aktion geht über `ThreadService` → Gate-Checks bleiben aktiv.
-2. Die UI startet **niemals** gnom, grok oder irgendeinen Agenten.
-3. Handoff / Grok / Gnom bleiben „Paket schreiben + Befehl anzeigen“.
-4. CLI muss parallel weiter funktionieren.
-5. Alles bleibt unter `~/.threaddesk/`.
-6. Kein externer Zugriff – nur `localhost`.
-
-## 10. Erste konkrete nächste Schritte
-
-1. `docs/UI.md` mit diesem Plan anlegen ✅
-2. FastAPI als optionale Dependency in `pyproject.toml` aufnehmen ✅ (`pip install -e ".[ui]"`)
-3. `src/threaddesk/ui/server.py` anlegen und `td serve` verdrahten ✅
-4. Minimales `index.html` + Thread-Listen-Partial ✅
-
 Start:
 
 ```bash
 pip install -e ".[ui]"
 td serve
-# oder: td serve --host 127.0.0.1 --port 8765 --open
 ```
 
----
-
-**Nächster Schritt:** Phase 3 — Schreiben (Notiz, Status, Snapshot, Neu, Freeze).
+**Nächster Schritt:** Phase 4 — Shortcuts, Feedback, Bestätigungen.

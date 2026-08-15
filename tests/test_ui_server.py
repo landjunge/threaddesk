@@ -50,3 +50,41 @@ def test_partial_threads_and_switch(home: Path) -> None:
     assert "Alpha" in switched.text
     assert ThreadService(store=JsonStore(home)).current().id == a.id
     assert b.id != a.id
+
+
+def test_write_note_status_snapshot_and_gate(home: Path) -> None:
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from threaddesk.ui.server import create_app
+
+    client = TestClient(create_app())
+    created = client.post("/threads", data={"title": "Gamma", "description": "d"})
+    assert created.status_code == 200
+    svc = ThreadService(store=JsonStore(home))
+    thread = svc.current()
+    assert thread is not None
+    assert thread.title == "Gamma"
+
+    note = client.post(f"/threads/{thread.id}/note", data={"text": "stand heute"})
+    assert note.status_code == 200
+    assert "stand heute" in note.text
+
+    status = client.post(f"/threads/{thread.id}/status", data={"status": "active"})
+    assert status.status_code == 200
+    assert ThreadService(store=JsonStore(home)).current().status == "active"
+
+    snap = client.post(f"/threads/{thread.id}/snapshot", data={"label": "vor-umbau"})
+    assert snap.status_code == 200
+    snaps = ThreadService(store=JsonStore(home)).snapshots(thread.id)
+    assert snaps
+    assert snaps[0].label == "vor-umbau"
+
+    client.post(f"/threads/{thread.id}/note", data={"text": "anders"})
+    restored = client.post(f"/snapshots/{snaps[0].id}/restore")
+    assert restored.status_code == 200
+    assert ThreadService(store=JsonStore(home)).current().context.notes == "stand heute"
+
+    frozen = client.post("/gate/freeze", data={"frozen": "1"})
+    assert frozen.status_code == 200
+    assert ThreadService(store=JsonStore(home)).gate()["frozen"] is True
