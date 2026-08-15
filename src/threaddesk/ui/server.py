@@ -216,6 +216,14 @@ def create_app() -> FastAPI:
             {"notice": "Gnom-Paket geschrieben · nicht gestartet", "packet": packet},
         )
 
+    @app.post("/threads/{thread_id}/grok", response_class=HTMLResponse)
+    def write_grok(thread_id: str, request: Request) -> HTMLResponse:
+        packet = _svc().grok("brainstorm", "detailed", thread_id)
+        return workspace(
+            request,
+            {"notice": "Grok-Paket geschrieben · nicht gestartet", "packet": packet},
+        )
+
     @app.post("/snapshots/{snap_id}/restore", response_class=HTMLResponse)
     def restore_snapshot(snap_id: str, request: Request) -> HTMLResponse:
         thread = _svc().restore(snap_id)
