@@ -61,6 +61,7 @@ def _ctx(request: Request, extra: dict | None = None) -> dict:
         "snapshots": snapshots,
         "statuses": WRITE_STATUSES,
         "packet": extra.get("packet") or _last_packet(svc, current),
+        "prompt_preview": None,
         "error": None,
         "notice": None,
     }
@@ -154,6 +155,45 @@ def create_app() -> FastAPI:
     ) -> HTMLResponse:
         snap = _svc().snapshot(label, thread_id)
         return workspace(request, {"notice": f"Snapshot {snap.id}"})
+
+    @app.post("/threads/{thread_id}/rename", response_class=HTMLResponse)
+    def rename_thread(
+        thread_id: str,
+        request: Request,
+        title: str = Form(...),
+    ) -> HTMLResponse:
+        thread = _svc().rename(thread_id, title)
+        return workspace(request, {"notice": f"umbenannt: {thread.title}"})
+
+    @app.post("/threads/{thread_id}/files", response_class=HTMLResponse)
+    def add_file(
+        thread_id: str,
+        request: Request,
+        path: str = Form(...),
+    ) -> HTMLResponse:
+        _svc().add_file(path, thread_id)
+        return workspace(request, {"notice": f"Datei: {path.strip()}"})
+
+    @app.post("/threads/{thread_id}/files/remove", response_class=HTMLResponse)
+    def remove_file(
+        thread_id: str,
+        request: Request,
+        path: str = Form(...),
+    ) -> HTMLResponse:
+        _svc().remove_file(path, thread_id)
+        return workspace(request, {"notice": "Pfad entfernt"})
+
+    @app.post("/threads/{thread_id}/prompt", response_class=HTMLResponse)
+    def preview_prompt(
+        thread_id: str,
+        request: Request,
+        target: str = Form("gnom"),
+        variant: str = Form("detailed"),
+        save: str = Form(""),
+    ) -> HTMLResponse:
+        text = _svc().prompt(target, variant, thread_id, save=bool(save))
+        notice = "Prompt gespeichert" if save else "Prompt-Vorschau"
+        return workspace(request, {"notice": notice, "prompt_preview": text})
 
     @app.post("/threads/{thread_id}/archive", response_class=HTMLResponse)
     def archive_thread(thread_id: str, request: Request) -> HTMLResponse:

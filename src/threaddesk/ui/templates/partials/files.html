@@ -1,0 +1,33 @@
+<section id="files" class="block">
+  <h3>Dateien</h3>
+  <p class="muted">Nur Pfade merken. Kein Upload, kein Öffnen.</p>
+  {% if current.context.files %}
+  <ul class="file-list">
+    {% for path in current.context.files %}
+    <li class="file-item">
+      <code>{{ path }}</code>
+      <form
+        hx-post="/threads/{{ current.id }}/files/remove"
+        hx-target="#workspace"
+        hx-swap="innerHTML"
+        hx-confirm="Pfad entfernen?"
+      >
+        <input type="hidden" name="path" value="{{ path }}" />
+        <button type="submit" class="btn btn-ghost btn-compact">Weg</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">Keine Dateipfade.</p>
+  {% endif %}
+  <form
+    class="inline-form"
+    hx-post="/threads/{{ current.id }}/files"
+    hx-target="#workspace"
+    hx-swap="innerHTML"
+  >
+    <input type="text" name="path" required maxlength="400" placeholder="src/app.py" />
+    <button type="submit" class="btn btn-primary">Hinzufügen</button>
+  </form>
+</section>

@@ -1,9 +1,23 @@
 {% if current %}
 <article class="panel detail">
   <header class="detail-head">
-    <div>
+    <div class="title-block" x-data="{ rename: false }">
       <p class="eyebrow">Aktiver Thread</p>
       <h1>{{ current.title }}</h1>
+      <button type="button" class="btn btn-ghost btn-compact" @click="rename = !rename">
+        Umbenennen
+      </button>
+      <form
+        class="inline-form"
+        x-show="rename"
+        x-cloak
+        hx-post="/threads/{{ current.id }}/rename"
+        hx-target="#workspace"
+        hx-swap="innerHTML"
+      >
+        <input type="text" name="title" value="{{ current.title }}" required maxlength="160" />
+        <button type="submit" class="btn btn-primary">OK</button>
+      </form>
     </div>
     <span class="status status-{{ current.status }}">{{ current.status }}</span>
   </header>
@@ -53,20 +67,10 @@
 
   {% include "partials/notes.html" %}
 
-  <section class="block">
-    <h3>Dateien</h3>
-    {% if current.context.files %}
-    <ul class="files">
-      {% for path in current.context.files %}
-      <li><code>{{ path }}</code></li>
-      {% endfor %}
-    </ul>
-    {% else %}
-    <p class="muted">Keine Dateipfade. In der CLI: <code>td files add …</code></p>
-    {% endif %}
-  </section>
+  {% include "partials/files.html" %}
 
   {% include "partials/snapshots.html" %}
+  {% include "partials/prompt.html" %}
   {% include "partials/packet.html" %}
 </article>
 {% else %}

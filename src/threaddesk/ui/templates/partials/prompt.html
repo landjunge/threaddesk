@@ -1,0 +1,42 @@
+<section id="prompt" class="block">
+  <h3>Prompt</h3>
+  <p class="muted">Nur Vorschau. Startet Grok und Gnom nicht.</p>
+  <form
+    class="stack"
+    hx-post="/threads/{{ current.id }}/prompt"
+    hx-target="#workspace"
+    hx-swap="innerHTML"
+  >
+    <div class="inline-form">
+      <label class="field">
+        <span>Ziel</span>
+        <select name="target">
+          <option value="gnom" selected>gnom</option>
+          <option value="grok">grok</option>
+          <option value="generic">generic</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Variante</span>
+        <select name="variant">
+          <option value="detailed" selected>detailed</option>
+          <option value="short">short</option>
+          <option value="steps">steps</option>
+          <option value="agent">agent</option>
+        </select>
+      </label>
+    </div>
+    <label class="check">
+      <input type="checkbox" name="save" value="1" />
+      Im Thread speichern
+    </label>
+    <button type="submit" class="btn btn-primary">Vorschau</button>
+  </form>
+  {% if prompt_preview %}
+  <pre class="cmd prompt-preview" id="prompt-text">{{ prompt_preview }}</pre>
+  <button type="button" class="btn btn-ghost btn-compact" data-copy="#prompt-text">Prompt kopieren</button>
+  {% endif %}
+  {% if current.context.prompts %}
+  <p class="muted">Gespeichert: {{ current.context.prompts|length }}</p>
+  {% endif %}
+</section>
