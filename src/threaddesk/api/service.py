@@ -7,6 +7,9 @@ from threaddesk.core.secrets import reject_secrets
 from threaddesk.services.dashboard import build as build_dashboard
 from threaddesk.services.dashboard import render_html as render_dashboard_html
 from threaddesk.services.dashboard import render_text as render_dashboard_text
+from threaddesk.services.gnom_bridge import build_packet as build_gnom_packet
+from threaddesk.services.gnom_bridge import chat_body as gnom_chat_body
+from threaddesk.services.gnom_bridge import command_for as gnom_command
 from threaddesk.services.grok_bridge import build_packet as build_grok_packet
 from threaddesk.services.grok_bridge import command_for as grok_command
 from threaddesk.services.prompt_generator import generate as generate_prompt
@@ -296,6 +299,35 @@ class ThreadService:
         if packet["mode"] == "execute":
             self._record("execute", thread.id)
         self.bus.emit("grok.packet", {"thread_id": thread.id, "mode": packet["mode"], "path": str(json_path)})
+        return packet
+
+    def gnom(
+        self,
+        mode: str = "brainstorm",
+        variant: str = "detailed",
+        key: str | None = None,
+        agent: str = "GeneralAG",
+    ) -> dict:
+        """Write a Gnom-Hub packet. Does not start the hub or POST."""
+        thread = self._target(key)
+        if (mode or "brainstorm").strip().lower() == "execute":
+            self._admit("execute", thread.id)
+        packet = build_gnom_packet(thread, mode=mode, variant=variant, agent=agent)
+        reject_secrets(packet["prompt"])
+        prompt_path = self.store.root / "gnom-prompt.md"
+        chat_path = self.store.root / "gnom-chat.json"
+        json_path = self.store.root / "gnom.json"
+        prompt_path.write_text(packet["prompt"] + "\n", encoding="utf-8")
+        chat_path.write_text(gnom_chat_body(packet), encoding="utf-8")
+        packet["prompt_path"] = str(prompt_path)
+        packet["chat_path"] = str(chat_path)
+        packet["command"] = gnom_command(chat_path)
+        packet["path"] = str(json_path)
+        packet["ran"] = False
+        self.store._write_json(json_path, packet)
+        if packet["mode"] == "execute":
+            self._record("execute", thread.id)
+        self.bus.emit("gnom.packet", {"thread_id": thread.id, "mode": packet["mode"], "path": str(json_path)})
         return packet
 
     def restore(self, snap_id: str) -> Thread:

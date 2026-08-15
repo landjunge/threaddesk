@@ -174,6 +174,16 @@ def cmd_grok(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_gnom(args: argparse.Namespace) -> int:
+    mode = "execute" if args.execute else "brainstorm"
+    packet = _svc().gnom(mode=mode, variant=args.variant, key=args.id, agent=args.agent)
+    print(packet["prompt"])
+    print("---")
+    print(packet["command"])
+    print(f"paket: {packet['path']}  (gnom nicht gestartet, nichts gesendet)")
+    return 0
+
+
 def _print_gate(status: dict) -> None:
     policy = status["policy"]
     today = status["today"]
@@ -360,6 +370,13 @@ def build_parser() -> argparse.ArgumentParser:
     gk.add_argument("--variant", default="detailed", choices=["short", "detailed", "steps", "agent"])
     gk.add_argument("--id", default=None)
     gk.set_defaults(func=cmd_grok)
+
+    gn = sub.add_parser("gnom", help="Gnom-Hub-Paket schreiben (startet und sendet nichts)")
+    gn.add_argument("--execute", action="store_true", help="Execute-Paket, immer noch kein POST")
+    gn.add_argument("--variant", default="detailed", choices=["short", "detailed", "steps", "agent"])
+    gn.add_argument("--agent", default="GeneralAG")
+    gn.add_argument("--id", default=None)
+    gn.set_defaults(func=cmd_gnom)
 
     gt = sub.add_parser("gate", help="Lokaler Loop-/Tages-Schutz (kein Tollgate-Start)")
     gts = gt.add_subparsers(dest="gate_cmd")

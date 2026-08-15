@@ -105,6 +105,19 @@ TOOLS = [
         },
     },
     {
+        "name": "export_gnom",
+        "description": "Write a local Gnom-Hub packet. Does not start or POST to the hub.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "string"},
+                "mode": {"type": "string", "enum": ["brainstorm", "execute"]},
+                "variant": {"type": "string", "enum": ["short", "detailed", "steps", "agent"]},
+                "agent": {"type": "string"},
+            },
+        },
+    },
+    {
         "name": "check_gate",
         "description": "Read local loop/day gate. Cannot freeze or change policy.",
         "inputSchema": {
@@ -204,6 +217,13 @@ class McpBridge:
                 str(args.get("mode") or "brainstorm"),
                 str(args.get("variant") or "detailed"),
                 args.get("id"),
+            )
+        if name == "export_gnom":
+            return self.svc.gnom(
+                str(args.get("mode") or "brainstorm"),
+                str(args.get("variant") or "detailed"),
+                args.get("id"),
+                str(args.get("agent") or "GeneralAG"),
             )
         if name == "check_gate":
             if args.get("action") or args.get("id"):

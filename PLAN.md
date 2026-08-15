@@ -48,6 +48,7 @@ core / storage / ui / services / api
 | 4c | Grok-Build-Bridge (Paket schreiben, Grok nicht starten) | fertig |
 | 4d | Tollgate-Wrap (lokales Gate, kein Produkt-Import) | fertig |
 | 4e | Dashboard (nur Ansicht, HTML + Terminal) | fertig |
+| 5a | Gnom-Hub-Bridge (Paket + curl, kein POST) | fertig |
 
 ## Sicherheit (von Anfang an)
 
