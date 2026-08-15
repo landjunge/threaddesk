@@ -1,5 +1,6 @@
-<section id="notes" class="block">
+<section id="notes" class="block" x-data="notesMic()">
   <h3>Notizen</h3>
+  <p class="muted">Mikrofon schreibt nur Text hierher. Startet Grok nicht.</p>
   <form
     class="stack"
     hx-post="/threads/{{ current.id }}/note"
@@ -7,13 +8,25 @@
     hx-swap="innerHTML"
   >
     <textarea name="text" rows="8" placeholder="Kontext, Stand, nächster Schritt">{{ current.context.notes }}</textarea>
+    <p class="mic-interim" x-show="interim" x-cloak x-text="interim"></p>
+    <p class="banner-error" x-show="err" x-cloak x-text="err"></p>
     <div class="row-actions">
       <label class="check">
         <input type="checkbox" name="append" value="1" />
         Anhängen statt ersetzen
       </label>
-      <span class="muted">Strg+Enter speichert</span>
+      <span class="muted">Strg+Enter speichert · m = Mikrofon</span>
     </div>
-    <button type="submit" class="btn btn-primary">Notiz speichern</button>
+    <div class="inline-form">
+      <button
+        type="button"
+        class="btn btn-ghost"
+        data-mic
+        :class="{ 'is-mic': on }"
+        @click="toggle()"
+        x-text="on ? 'Stopp' : 'Mikrofon'"
+      >Mikrofon</button>
+      <button type="submit" class="btn btn-primary">Notiz speichern</button>
+    </div>
   </form>
 </section>

@@ -91,6 +91,12 @@ document.addEventListener("keydown", (event) => {
     return;
   }
 
+  if (event.key === "m") {
+    event.preventDefault();
+    document.querySelector("[data-mic]")?.click();
+    return;
+  }
+
   if (event.key >= "1" && event.key <= "9") {
     event.preventDefault();
     document.querySelector(`[data-thread-index="${event.key}"]`)?.click();
@@ -139,4 +145,94 @@ document.body.addEventListener("htmx:afterSwap", (event) => {
 
 document.body.addEventListener("htmx:sendError", () => {
   console.warn("ThreadDesk UI: Anfrage fehlgeschlagen");
+});
+
+function notesMic() {
+  return {
+    on: false,
+    err: "",
+    interim: "",
+    rec: null,
+    toggle() {
+      if (this.on) this.stop();
+      else this.start();
+    },
+    start() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) {
+        this.err = "Dieser Browser hat keine Spracheingabe.";
+        return;
+      }
+      if (!window.isSecureContext) {
+        this.err = "Mikrofon braucht einen sicheren Kontext.";
+        return;
+      }
+      this.err = "";
+      this.interim = "";
+      const rec = new SR();
+      rec.lang = "de-DE";
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.onresult = (event) => {
+        let finalText = "";
+        let live = "";
+        for (let i = event.resultIndex; i < event.results.length; i += 1) {
+          const piece = event.results[i][0].transcript;
+          if (event.results[i].isFinal) finalText += piece;
+          else live += piece;
+        }
+        this.interim = live.trim();
+        if (finalText.trim()) appendSpokenNote(finalText.trim());
+      };
+      rec.onerror = (event) => {
+        if (event.error === "not-allowed") this.err = "Mikrofon nicht erlaubt.";
+        else if (event.error === "no-speech") this.err = "";
+        else this.err = "Spracheingabe: " + event.error;
+        if (event.error !== "no-speech") this.stop();
+      };
+      rec.onend = () => {
+        if (this.on) {
+          try {
+            rec.start();
+          } catch (_err) {
+            this.stop();
+          }
+        }
+      };
+      this.rec = rec;
+      this.on = true;
+      rec.start();
+    },
+    stop() {
+      this.on = false;
+      this.interim = "";
+      const rec = this.rec;
+      this.rec = null;
+      if (rec) {
+        rec.onend = null;
+        try {
+          rec.stop();
+        } catch (_err) {
+          /* already stopped */
+        }
+      }
+    },
+    destroy() {
+      this.stop();
+    },
+  };
+}
+
+function appendSpokenNote(text) {
+  const field = document.querySelector("#notes textarea[name='text']");
+  if (!field) return;
+  const cur = field.value.replace(/\s*$/, "");
+  field.value = cur ? cur + "\n" + text : text;
+  field.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+window.notesMic = notesMic;
+
+document.addEventListener("alpine:init", () => {
+  if (window.Alpine) window.Alpine.data("notesMic", notesMic);
 });
