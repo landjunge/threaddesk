@@ -106,14 +106,13 @@ TOOLS = [
     },
     {
         "name": "export_gnom",
-        "description": "Write a local Gnom-Hub packet. Does not start or POST to the hub.",
+        "description": "Write a local gnom-hub-v1 packet. Does not start or POST to the hub.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "id": {"type": "string"},
                 "mode": {"type": "string", "enum": ["brainstorm", "execute"]},
                 "variant": {"type": "string", "enum": ["short", "detailed", "steps", "agent"]},
-                "agent": {"type": "string"},
             },
         },
     },
@@ -223,7 +222,6 @@ class McpBridge:
                 str(args.get("mode") or "brainstorm"),
                 str(args.get("variant") or "detailed"),
                 args.get("id"),
-                str(args.get("agent") or "GeneralAG"),
             )
         if name == "check_gate":
             if args.get("action") or args.get("id"):

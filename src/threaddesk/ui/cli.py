@@ -176,7 +176,7 @@ def cmd_grok(args: argparse.Namespace) -> int:
 
 def cmd_gnom(args: argparse.Namespace) -> int:
     mode = "execute" if args.execute else "brainstorm"
-    packet = _svc().gnom(mode=mode, variant=args.variant, key=args.id, agent=args.agent)
+    packet = _svc().gnom(mode=mode, variant=args.variant, key=args.id)
     print(packet["prompt"])
     print("---")
     print(packet["command"])
@@ -371,10 +371,9 @@ def build_parser() -> argparse.ArgumentParser:
     gk.add_argument("--id", default=None)
     gk.set_defaults(func=cmd_grok)
 
-    gn = sub.add_parser("gnom", help="Gnom-Hub-Paket schreiben (startet und sendet nichts)")
-    gn.add_argument("--execute", action="store_true", help="Execute-Paket, immer noch kein POST")
+    gn = sub.add_parser("gnom", help="gnom-hub-v1-Paket schreiben (startet und sendet nichts)")
+    gn.add_argument("--execute", action="store_true", help="chat + /api/execute, immer noch kein POST")
     gn.add_argument("--variant", default="detailed", choices=["short", "detailed", "steps", "agent"])
-    gn.add_argument("--agent", default="GeneralAG")
     gn.add_argument("--id", default=None)
     gn.set_defaults(func=cmd_gnom)
 

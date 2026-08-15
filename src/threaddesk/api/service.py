@@ -306,13 +306,12 @@ class ThreadService:
         mode: str = "brainstorm",
         variant: str = "detailed",
         key: str | None = None,
-        agent: str = "GeneralAG",
     ) -> dict:
-        """Write a Gnom-Hub packet. Does not start the hub or POST."""
+        """Write a gnom-hub-v1 packet. Does not start the hub or POST."""
         thread = self._target(key)
         if (mode or "brainstorm").strip().lower() == "execute":
             self._admit("execute", thread.id)
-        packet = build_gnom_packet(thread, mode=mode, variant=variant, agent=agent)
+        packet = build_gnom_packet(thread, mode=mode, variant=variant)
         reject_secrets(packet["prompt"])
         prompt_path = self.store.root / "gnom-prompt.md"
         chat_path = self.store.root / "gnom-chat.json"
@@ -321,7 +320,7 @@ class ThreadService:
         chat_path.write_text(gnom_chat_body(packet), encoding="utf-8")
         packet["prompt_path"] = str(prompt_path)
         packet["chat_path"] = str(chat_path)
-        packet["command"] = gnom_command(chat_path)
+        packet["command"] = gnom_command(chat_path, packet["mode"])
         packet["path"] = str(json_path)
         packet["ran"] = False
         self.store._write_json(json_path, packet)

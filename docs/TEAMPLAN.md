@@ -36,7 +36,7 @@ Alles andere (Kanban, Prompt-Generator, MCP, Grok Build, Tollgate, Dashboard) ko
 | 4c | Grok-Build-Bridge (Paket, kein Start) | fertig |
 | 4d | Tollgate-Wrap (lokales Gate) | fertig |
 | 4e | Dashboard (nur Ansicht) | fertig |
-| 5a | Gnom-Hub-Bridge (Paket, kein POST) | fertig |
+| 5a | Gnom-Hub-Bridge → gnom-hub-v1 | fertig |
 
 ## 5. Erfolgskriterium
 

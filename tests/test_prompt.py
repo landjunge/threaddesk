@@ -27,7 +27,7 @@ def test_prompt_contains_thread_and_does_not_execute(svc: ThreadService) -> None
 def test_prompt_save_and_variants(svc: ThreadService) -> None:
     svc.create("Gnom Desk")
     short = svc.prompt(target="gnom", variant="short", save=True)
-    assert "@bs" in short
+    assert "Send = Dialog" in short or "Send" in short
     assert svc.prompts()
     agent = svc.prompt(target="generic", variant="agent")
     assert "Nächste Aktion" in agent

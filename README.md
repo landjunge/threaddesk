@@ -42,8 +42,8 @@ td gate                       # Loop-/Tages-Schutz
 td gate freeze                # Execute/Handoff sperren
 td dash                       # Tafel im Terminal + ~/.threaddesk/dashboard.html
 td dash --open                # HTML lokal öffnen
-td gnom                       # Gnom-Paket (@bs) + curl, nichts senden
-td gnom --execute --agent CoderAG
+td gnom                       # gnom-hub-v1 Send-Paket + curl, nichts senden
+td gnom --execute             # plus /api/execute, immer noch kein POST
 ```
 
 Wechsel stellt den vollen Kontext wieder her. Kein Agent wird gestartet.
@@ -58,7 +58,7 @@ MCP stellt nur Thread-Daten bereit. Kein `delete`, keine Agent-Starts. Notizen k
 
 `td dash` ist die lokale Tafel nach Status. Kein Server, kein Drag-and-Drop, kein Execute. Siehe `docs/DASHBOARD.md`.
 
-`td gnom` schreibt das Chat-Paket für `POST /api/chat`. Gnom-Hub wird nicht gestartet und nichts gesendet. Siehe `docs/GNOM.md`.
+`td gnom` schreibt das Chat-Paket für **gnom-hub-v1** (`POST /api/chat` mit `text`). Der Hub wird nicht gestartet und nichts gesendet. Siehe `docs/GNOM.md`.
 
 ## Prinzip
 

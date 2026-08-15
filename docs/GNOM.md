@@ -1,11 +1,12 @@
-# ThreadDesk → Gnom-Hub
+# ThreadDesk → gnom-hub-v1
+
+Ziel ist **gnom-hub-v1** (`http://127.0.0.1:8080`), nicht der klassische Hub auf :3002.
 
 Schreibt ein lokales Paket. Startet den Hub nicht. Sendet nichts.
 
 ```bash
-td gnom                 # Brainstorm (@bs) + curl-Befehl
-td gnom --execute       # Execute-Paket (@GeneralAG), immer noch kein POST
-td gnom --execute --agent CoderAG
+td gnom                 # Send / Brainstorm → POST /api/chat  {"text": "…"}
+td gnom --execute       # zuerst chat, dann POST /api/execute
 td handoff              # unverändert: nur handoff.json
 ```
 
@@ -15,9 +16,11 @@ Dateien:
 - `~/.threaddesk/gnom-chat.json` — Body für `POST /api/chat`
 - `~/.threaddesk/gnom.json`
 
-Default-URL: `http://127.0.0.1:3002`. Override nur localhost: `GNOM_HUB_URL`.
+Override nur localhost: `GNOM_HUB_URL`.
 
-Brainstorm: `@bs`, kein `@AgentName`, kein `[WRITE:]` im Kopf.
-Execute: ein Agent, Gate greift, ThreadDesk macht trotzdem kein POST.
+v1-Regel: **Send = Dialog (Box 2). Execute = Worker.**  
+`td gnom` entspricht Send. `--execute` zeigt zusätzlich `/api/execute`. ThreadDesk macht kein POST.
 
-Gnom-Hub selbst bleibt unverändert.
+MCP-lite des Hubs (`GET /api/mcp/tools`, `POST /api/mcp`) bleibt unberührt. ThreadDesk ruft es nicht auf.
+
+gnom-hub-v1 selbst bleibt unverändert.

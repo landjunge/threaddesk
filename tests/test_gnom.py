@@ -19,35 +19,36 @@ def test_gnom_brainstorm_does_not_send(svc: ThreadService) -> None:
     svc.set_note("nächster Schritt: Handoff")
     packet = svc.gnom()
     assert packet["kind"] == "threaddesk.gnom"
+    assert packet["hub"] == "gnom-hub-v1"
     assert packet["mode"] == "brainstorm"
     assert packet["ran"] is False
-    assert packet["agent"] is None
     assert Path(packet["path"]).is_file()
     assert Path(packet["chat_path"]).is_file()
-    assert packet["prompt"].startswith("@bs\n")
-    assert "@GeneralAG" not in packet["prompt"].split("\n")[0]
+    assert packet["prompt"].startswith("Modus: Send")
+    assert "@bs" not in packet["prompt"]
+    assert "/api/execute" not in packet["command"]
     assert "curl" in packet["command"]
     assert "/api/chat" in packet["command"]
-    assert "127.0.0.1:3002" in packet["command"]
+    assert "127.0.0.1:8080" in packet["command"]
     chat = Path(packet["chat_path"]).read_text(encoding="utf-8")
-    assert '"sender": "user"' in chat
+    assert '"text"' in chat
+    assert "sender" not in chat
     assert "Handoff" in chat
 
 
 def test_gnom_execute_still_does_not_send(svc: ThreadService) -> None:
     svc.create("Go")
     svc.gate_set(cooldown_seconds=0)
-    packet = svc.gnom(mode="execute", agent="CoderAG")
+    packet = svc.gnom(mode="execute")
     assert packet["mode"] == "execute"
-    assert packet["agent"] == "CoderAG"
     assert packet["ran"] is False
-    assert packet["prompt"].startswith("@CoderAG")
-    assert not packet["prompt"].startswith("@bs")
-    with pytest.raises(InvalidState):
-        svc.gnom(agent="NotAnAgent")
+    assert "/api/chat" in packet["command"]
+    assert "/api/execute" in packet["command"]
+    assert packet["chat"]["text"].startswith("Modus: Execute")
     svc.gate_freeze(True)
     brain = svc.gnom(mode="brainstorm")
     assert brain["ran"] is False
+    assert "/api/execute" not in brain["command"]
     with pytest.raises(GateBlocked):
         svc.gnom(mode="execute")
 

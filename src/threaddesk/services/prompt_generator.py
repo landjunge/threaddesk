@@ -51,10 +51,10 @@ def _rules(target: str) -> str:
         )
     if target == "gnom":
         return (
-            "Auftrag an Gnom-Hub. Send bleibt Dialog. Execute nur bewusst.\n"
+            "Auftrag an gnom-hub-v1. Send = Dialog (Box 2). Execute nur bewusst.\n"
             f"{common}\n"
-            "- @bs nicht mit @AgentName mischen.\n"
-            "- [WRITE:] nicht in einem Brainstorm-Prompt."
+            "- Send ruft keine Worker auf.\n"
+            "- Worker erst nach POST /api/execute, nie von selbst."
         )
     return (
         "Du bist ein präziser Assistent für genau diesen Thread.\n"
@@ -100,7 +100,7 @@ def _steps(thread: Thread, target: str, body: str) -> str:
 def _agent(thread: Thread, target: str, body: str) -> str:
     role = {
         "grok": "Rolle: Grok Build, ein Thread, ein Auftrag.",
-        "gnom": "Rolle: ein einzelner Gnom-Hub-Agent. Kein @bs.",
+        "gnom": "Rolle: Brainstorm-Turn in gnom-hub-v1. Kein Execute.",
         "generic": "Rolle: ein spezialisierter Agent nur für diesen Thread.",
     }[target]
     return (
