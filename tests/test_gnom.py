@@ -1,10 +1,11 @@
+import shlex
 from pathlib import Path
 
 import pytest
 
 from threaddesk.api.service import ThreadService
 from threaddesk.core.errors import GateBlocked, InvalidState
-from threaddesk.services.gnom_bridge import hub_url
+from threaddesk.services.gnom_bridge import command_for, hub_url
 from threaddesk.services.mcp import McpBridge
 from threaddesk.storage.json_store import JsonStore
 
@@ -73,3 +74,61 @@ def test_mcp_export_gnom_and_localhost_only(svc: ThreadService, monkeypatch: pyt
     assert "from gnom_hub" not in source
     assert "urlopen" not in source
     assert "requests" not in source
+
+
+# --- GNOM_HUB_URL must really mean localhost -----------------------------------
+
+LOOKALIKE_URLS = [
+    "http://127.0.0.1.evil.com",
+    "http://127.0.0.1.evil.com/api/chat",
+    "http://localhost.attacker.io/x",
+    "http://127.0.0.1@evil.com",
+    "http://evil.com#127.0.0.1",
+    "http://evil.com/?h=http://127.0.0.1",
+    "https://127.0.0.1:8080",
+    "http://127.1.2.3",
+    "http://10.0.0.1",
+    "http://[::2]:8080",
+    "http://127.0.0.1:notaport",
+    "file:///etc/passwd",
+    "127.0.0.1:8080",
+]
+
+
+@pytest.mark.parametrize("url", LOOKALIKE_URLS)
+def test_hub_url_rejects_lookalike_hosts(url: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GNOM_HUB_URL", url)
+    with pytest.raises(InvalidState):
+        hub_url()
+
+
+@pytest.mark.parametrize(
+    ("given", "want"),
+    [
+        ("http://127.0.0.1:8080", "http://127.0.0.1:8080"),
+        ("http://127.0.0.1:8080/", "http://127.0.0.1:8080"),
+        ("  http://localhost:3012  ", "http://localhost:3012"),
+        ("http://127.0.0.1", "http://127.0.0.1"),
+        ("http://[::1]:8080", "http://[::1]:8080"),
+    ],
+)
+def test_hub_url_accepts_localhost_forms(
+    given: str, want: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("GNOM_HUB_URL", given)
+    assert hub_url() == want
+
+
+def test_hub_url_default_is_localhost(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GNOM_HUB_URL", raising=False)
+    assert hub_url() == "http://127.0.0.1:8080"
+
+
+def test_command_quotes_awkward_paths() -> None:
+    """A home directory with spaces or metacharacters must not break the command."""
+    cmd = command_for(Path("/tmp/my desk/gnom-chat.json"), "brainstorm", url="http://127.0.0.1:8080")
+    assert "--data-binary '@/tmp/my desk/gnom-chat.json'" in cmd
+    # The shell must hand curl exactly one argument, metacharacters included.
+    evil = command_for(Path("/tmp/$(touch pwned)/c.json"), "brainstorm", url="http://127.0.0.1:8080")
+    assert "--data-binary '@/tmp/$(touch pwned)/c.json'" in evil
+    assert shlex.split(evil)[-1] == "@/tmp/$(touch pwned)/c.json"

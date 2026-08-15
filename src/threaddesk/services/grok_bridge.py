@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shlex
 from pathlib import Path
 
 from threaddesk.core.errors import InvalidState
@@ -46,7 +47,8 @@ def build_packet(thread: Thread, mode: str = "brainstorm", variant: str = "detai
 
 
 def command_for(prompt_path: Path, mode: str) -> str:
-    path = str(prompt_path)
+    # Quoted so an awkward home directory cannot bend the printed command.
+    path = shlex.quote(str(prompt_path))
     if mode == "brainstorm":
-        return f'grok --prompt-file "{path}" --disallowed-tools "search_replace,run_terminal_cmd"'
-    return f'grok --prompt-file "{path}"'
+        return f'grok --prompt-file {path} --disallowed-tools "search_replace,run_terminal_cmd"'
+    return f"grok --prompt-file {path}"

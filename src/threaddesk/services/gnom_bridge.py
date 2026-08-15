@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from threaddesk.core.errors import InvalidState
 from threaddesk.core.models import Thread
@@ -12,13 +14,33 @@ from threaddesk.services.prompt_generator import VARIANTS, generate
 
 MODES = ("brainstorm", "execute")
 DEFAULT_URL = "http://127.0.0.1:8080"
+ALLOWED_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 
 
 def hub_url() -> str:
+    """Localhost only. Parsed, not prefix-matched.
+
+    A startswith check accepted http://127.0.0.1.evil.com and
+    http://localhost.attacker.io, so the printed curl command could have shipped
+    the whole thread context to a stranger once the user pasted it.
+    """
     raw = (os.environ.get("GNOM_HUB_URL") or DEFAULT_URL).strip().rstrip("/")
-    if not raw.startswith("http://127.0.0.1") and not raw.startswith("http://localhost"):
+    parts = urlsplit(raw)
+    if parts.scheme != "http":
+        raise InvalidState("GNOM_HUB_URL nur http auf localhost.")
+    try:
+        host = (parts.hostname or "").lower()
+        port = parts.port
+    except ValueError as exc:  # unparsable port
+        raise InvalidState("GNOM_HUB_URL hat keinen gültigen Port.") from exc
+    if host not in ALLOWED_HOSTS:
         raise InvalidState("GNOM_HUB_URL nur localhost.")
-    return raw
+    if parts.username or parts.password:
+        raise InvalidState("GNOM_HUB_URL ohne Zugangsdaten.")
+    if parts.path or parts.query or parts.fragment:
+        raise InvalidState("GNOM_HUB_URL ohne Pfad, Query oder Fragment.")
+    netloc = f"[{host}]" if ":" in host else host
+    return f"http://{netloc}:{port}" if port else f"http://{netloc}"
 
 
 def build_packet(thread: Thread, mode: str = "brainstorm", variant: str = "detailed") -> dict:
@@ -59,10 +81,12 @@ def build_packet(thread: Thread, mode: str = "brainstorm", variant: str = "detai
 
 def command_for(chat_path: Path, mode: str = "brainstorm", url: str | None = None) -> str:
     base = url or hub_url()
+    # Quote the path: a home directory with spaces or metacharacters must not
+    # turn the command we print into something else.
     chat = (
         f'curl -s -X POST {base}/api/chat '
         f'-H \'Content-Type: application/json\' '
-        f'--data-binary "@{chat_path}"'
+        f'--data-binary {shlex.quote(f"@{chat_path}")}'
     )
     if mode != "execute":
         return chat
