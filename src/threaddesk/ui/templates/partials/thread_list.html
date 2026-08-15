@@ -3,6 +3,29 @@
     <h2>Threads</h2>
     <span class="count">{{ threads|length }}</span>
   </header>
+  <div class="new-thread" x-data="{ open: false }">
+    <button type="button" class="btn btn-ghost" @click="open = !open">
+      Neu
+    </button>
+    <form
+      class="stack"
+      x-show="open"
+      x-cloak
+      hx-post="/threads"
+      hx-target="#workspace"
+      hx-swap="innerHTML"
+    >
+      <label class="field">
+        <span>Titel</span>
+        <input type="text" name="title" required maxlength="160" placeholder="Neuer Thread" />
+      </label>
+      <label class="field">
+        <span>Beschreibung</span>
+        <input type="text" name="description" maxlength="400" />
+      </label>
+      <button type="submit" class="btn btn-primary">Anlegen</button>
+    </form>
+  </div>
   {% if threads %}
   <ul class="thread-items">
     {% for t in threads %}
@@ -24,6 +47,6 @@
     {% endfor %}
   </ul>
   {% else %}
-  <p class="empty">Keine Threads. Mit <code>td new "Titel"</code> anlegen.</p>
+  <p class="empty">Keine Threads. Lege oben einen an.</p>
   {% endif %}
 </section>

@@ -8,14 +8,41 @@
     <span class="status status-{{ current.status }}">{{ current.status }}</span>
   </header>
   <p class="thread-id detail-id">{{ current.id }}</p>
+
+  <section class="block">
+    <h3>Status</h3>
+    <div class="status-row">
+      {% for s in statuses %}
+      <form
+        hx-post="/threads/{{ current.id }}/status"
+        hx-target="#workspace"
+        hx-swap="innerHTML"
+      >
+        <input type="hidden" name="status" value="{{ s }}" />
+        <button
+          type="submit"
+          class="chip{% if current.status == s %} is-on{% endif %}"
+        >{{ s }}</button>
+      </form>
+      {% endfor %}
+    </div>
+  </section>
+
   <section class="block">
     <h3>Beschreibung</h3>
-    <p class="prose">{{ current.description or "—" }}</p>
+    <form
+      class="stack"
+      hx-post="/threads/{{ current.id }}/describe"
+      hx-target="#workspace"
+      hx-swap="innerHTML"
+    >
+      <textarea name="text" rows="3" placeholder="Worum geht es?">{{ current.description }}</textarea>
+      <button type="submit" class="btn btn-primary">Speichern</button>
+    </form>
   </section>
-  <section class="block">
-    <h3>Notizen</h3>
-    <pre class="notes">{{ current.context.notes or "(leer)" }}</pre>
-  </section>
+
+  {% include "partials/notes.html" %}
+
   <section class="block">
     <h3>Dateien</h3>
     {% if current.context.files %}
@@ -25,18 +52,16 @@
       {% endfor %}
     </ul>
     {% else %}
-    <p class="muted">Keine Dateipfade.</p>
+    <p class="muted">Keine Dateipfade. In der CLI: <code>td files add …</code></p>
     {% endif %}
   </section>
-  <section class="block">
-    <h3>Snapshot</h3>
-    <p class="muted">{{ current.current_snapshot_id or "keiner" }}</p>
-  </section>
+
+  {% include "partials/snapshots.html" %}
 </article>
 {% else %}
 <article class="panel detail empty-detail">
   <p class="eyebrow">Kein aktiver Thread</p>
   <h1>Wähle links einen Thread</h1>
-  <p class="muted">Oder lege einen mit der CLI an: <code>td new "Idee"</code></p>
+  <p class="muted">Oder lege einen mit Neu an.</p>
 </article>
 {% endif %}

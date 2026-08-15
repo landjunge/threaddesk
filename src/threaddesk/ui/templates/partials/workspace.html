@@ -1,3 +1,9 @@
+{% if notice %}
+<p class="banner-ok" role="status">{{ notice }}</p>
+{% endif %}
+{% if error %}
+<p class="banner-error" role="alert">{{ error }}</p>
+{% endif %}
 <aside class="sidebar">
   {% include "partials/thread_list.html" %}
   {% include "partials/gate.html" %}
@@ -5,6 +11,3 @@
 <main id="main" class="main">
   {% include "partials/thread_detail.html" %}
 </main>
-{% if error %}
-<p class="banner-error" role="alert">{{ error }}</p>
-{% endif %}

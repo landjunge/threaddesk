@@ -1,0 +1,16 @@
+<section id="notes" class="block">
+  <h3>Notizen</h3>
+  <form
+    class="stack"
+    hx-post="/threads/{{ current.id }}/note"
+    hx-target="#workspace"
+    hx-swap="innerHTML"
+  >
+    <textarea name="text" rows="8" placeholder="Kontext, Stand, nächster Schritt">{{ current.context.notes }}</textarea>
+    <label class="check">
+      <input type="checkbox" name="append" value="1" />
+      Anhängen statt ersetzen
+    </label>
+    <button type="submit" class="btn btn-primary">Notiz speichern</button>
+  </form>
+</section>

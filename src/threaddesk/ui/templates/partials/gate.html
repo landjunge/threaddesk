@@ -19,5 +19,18 @@
       <dd>{{ gate.policy.cooldown_seconds }}s</dd>
     </div>
   </dl>
-  <p class="muted gate-hint">Nur Anzeige. Execute bleibt in der CLI.</p>
+  <form
+    hx-post="/gate/freeze"
+    hx-target="#workspace"
+    hx-swap="innerHTML"
+  >
+    {% if gate.frozen %}
+    <input type="hidden" name="frozen" value="0" />
+    <button type="submit" class="btn btn-ghost">Auftauen</button>
+    {% else %}
+    <input type="hidden" name="frozen" value="1" />
+    <button type="submit" class="btn btn-ghost">Einfrieren</button>
+    {% endif %}
+  </form>
+  <p class="muted gate-hint">Sperrt nur Execute/Handoff-Pakete. Startet nichts.</p>
 </section>

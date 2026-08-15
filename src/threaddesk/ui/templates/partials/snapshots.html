@@ -1,0 +1,33 @@
+<section id="snapshots" class="block">
+  <h3>Snapshots</h3>
+  <p class="muted">Aktuell: {{ current.current_snapshot_id or "keiner" }}</p>
+  <form
+    class="inline-form"
+    hx-post="/threads/{{ current.id }}/snapshot"
+    hx-target="#workspace"
+    hx-swap="innerHTML"
+  >
+    <input type="text" name="label" maxlength="120" placeholder="Label (optional)" />
+    <button type="submit" class="btn btn-primary">Speichern</button>
+  </form>
+  {% if snapshots %}
+  <ul class="snap-list">
+    {% for s in snapshots %}
+    <li class="snap-item">
+      <div>
+        <p class="snap-label">{{ s.label or "(ohne label)" }}</p>
+        <p class="thread-id">{{ s.id }} · {{ s.created_at }}</p>
+      </div>
+      <form
+        hx-post="/snapshots/{{ s.id }}/restore"
+        hx-target="#workspace"
+        hx-swap="innerHTML"
+        hx-confirm="Snapshot laden? Aktuelle Notizen werden überschrieben."
+      >
+        <button type="submit" class="btn btn-ghost">Laden</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
