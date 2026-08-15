@@ -42,11 +42,14 @@ td gate                       # Loop-/Tages-Schutz
 td gate freeze                # Execute/Handoff sperren
 td dash                       # Tafel im Terminal + ~/.threaddesk/dashboard.html
 td dash --open                # HTML lokal öffnen
+td serve                      # lokale UI auf http://127.0.0.1:8765 (nichts ausführen)
 td gnom                       # gnom-hub-v1 Send-Paket + curl, nichts senden
 td gnom --execute             # plus /api/execute, immer noch kein POST
 ```
 
 Wechsel stellt den vollen Kontext wieder her. Kein Agent wird gestartet.
+
+Die optionale UI (`td serve`) braucht `pip install -e ".[ui]"` (FastAPI + Jinja2). Sie spricht nur mit `ThreadService`. Siehe `docs/UI.md`.
 
 Prompt-Generator ist lokal (Vorlage, kein API-Call). Er bereitet Text vor. Es wird niemand angerufen.
 

@@ -1,7 +1,7 @@
 # ThreadDesk UI Plan (HTMX + Alpine.js)
 
 **Stand:** 15.08.2026  
-**Status:** Phase 1 bereit zum Start  
+**Status:** Phase 1 umgesetzt (`td serve`)  
 **Kernprinzip:** ThreadDesk führt **niemals** etwas aus. Die UI bereitet nur vor und zeigt an.
 
 ## 1. Ziele
@@ -112,16 +112,17 @@ Alle POST-Endpunkte geben passende HTML-Fragmente zurück (nicht nur JSON).
 ## 8. Implementierungs-Phasen
 
 ### Phase 1 – Server-Fundament
-- [ ] `ui/server.py` mit FastAPI anlegen
-- [ ] `td serve` Befehl in der CLI registrieren
-- [ ] `base.html` + `index.html` (statisches Gerüst)
-- [ ] Ein Endpunkt `/partials/threads` der die Liste liefert
-- [ ] Server startet auf `127.0.0.1:8765`
+- [x] `ui/server.py` mit FastAPI anlegen
+- [x] `td serve` Befehl in der CLI registrieren
+- [x] `base.html` + `index.html` (statisches Gerüst)
+- [x] Ein Endpunkt `/partials/threads` der die Liste liefert
+- [x] Server startet auf `127.0.0.1:8765` (`--host` / `--port` überschreibbar)
+- [x] Read-Pfad: Thread-Detail + Gate (Anzeige) + Switch via HTMX
 
 ### Phase 2 – Lesen funktioniert
-- [ ] Thread-Liste links
-- [ ] Aktueller Thread rechts (read-only)
-- [ ] Gate-Status anzeigen
+- [x] Thread-Liste links
+- [x] Aktueller Thread rechts (read-only)
+- [x] Gate-Status anzeigen
 
 ### Phase 3 – Schreiben
 - [ ] Notiz setzen / anhängen
@@ -148,10 +149,18 @@ Alle POST-Endpunkte geben passende HTML-Fragmente zurück (nicht nur JSON).
 ## 10. Erste konkrete nächste Schritte
 
 1. `docs/UI.md` mit diesem Plan anlegen ✅
-2. FastAPI als optionale Dependency in `pyproject.toml` aufnehmen
-3. `src/threaddesk/ui/server.py` anlegen und `td serve` verdrahten
-4. Minimales `index.html` + Thread-Listen-Partial
+2. FastAPI als optionale Dependency in `pyproject.toml` aufnehmen ✅ (`pip install -e ".[ui]"`)
+3. `src/threaddesk/ui/server.py` anlegen und `td serve` verdrahten ✅
+4. Minimales `index.html` + Thread-Listen-Partial ✅
+
+Start:
+
+```bash
+pip install -e ".[ui]"
+td serve
+# oder: td serve --host 127.0.0.1 --port 8765 --open
+```
 
 ---
 
-**Nächster Schritt:** Phase 1 umsetzen (Server + `td serve` + minimales HTML).
+**Nächster Schritt:** Phase 3 — Schreiben (Notiz, Status, Snapshot, Neu, Freeze).
