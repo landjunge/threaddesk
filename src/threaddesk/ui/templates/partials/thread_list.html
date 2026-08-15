@@ -1,0 +1,29 @@
+<section id="thread-list" class="panel threads">
+  <header class="panel-head">
+    <h2>Threads</h2>
+    <span class="count">{{ threads|length }}</span>
+  </header>
+  {% if threads %}
+  <ul class="thread-items">
+    {% for t in threads %}
+    <li>
+      <button
+        type="button"
+        class="thread-item{% if t.id == current_id %} is-current{% endif %}"
+        hx-post="/threads/{{ t.id }}/switch"
+        hx-target="#workspace"
+        hx-swap="innerHTML"
+      >
+        <span class="thread-meta">
+          <span class="status status-{{ t.status }}">{{ t.status }}</span>
+          <span class="thread-id">{{ t.id }}</span>
+        </span>
+        <span class="thread-title">{{ t.title }}</span>
+      </button>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="empty">Keine Threads. Mit <code>td new "Titel"</code> anlegen.</p>
+  {% endif %}
+</section>

@@ -1,0 +1,10 @@
+<aside class="sidebar">
+  {% include "partials/thread_list.html" %}
+  {% include "partials/gate.html" %}
+</aside>
+<main id="main" class="main">
+  {% include "partials/thread_detail.html" %}
+</main>
+{% if error %}
+<p class="banner-error" role="alert">{{ error }}</p>
+{% endif %}

@@ -1,0 +1,42 @@
+{% if current %}
+<article class="panel detail">
+  <header class="detail-head">
+    <div>
+      <p class="eyebrow">Aktiver Thread</p>
+      <h1>{{ current.title }}</h1>
+    </div>
+    <span class="status status-{{ current.status }}">{{ current.status }}</span>
+  </header>
+  <p class="thread-id detail-id">{{ current.id }}</p>
+  <section class="block">
+    <h3>Beschreibung</h3>
+    <p class="prose">{{ current.description or "—" }}</p>
+  </section>
+  <section class="block">
+    <h3>Notizen</h3>
+    <pre class="notes">{{ current.context.notes or "(leer)" }}</pre>
+  </section>
+  <section class="block">
+    <h3>Dateien</h3>
+    {% if current.context.files %}
+    <ul class="files">
+      {% for path in current.context.files %}
+      <li><code>{{ path }}</code></li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">Keine Dateipfade.</p>
+    {% endif %}
+  </section>
+  <section class="block">
+    <h3>Snapshot</h3>
+    <p class="muted">{{ current.current_snapshot_id or "keiner" }}</p>
+  </section>
+</article>
+{% else %}
+<article class="panel detail empty-detail">
+  <p class="eyebrow">Kein aktiver Thread</p>
+  <h1>Wähle links einen Thread</h1>
+  <p class="muted">Oder lege einen mit der CLI an: <code>td new "Idee"</code></p>
+</article>
+{% endif %}

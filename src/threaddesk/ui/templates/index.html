@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block body %}
+<div
+  id="workspace"
+  class="workspace"
+  hx-indicator="#busy"
+>
+  {% include "partials/workspace.html" %}
+</div>
+<div id="busy" class="busy" hidden>Aktualisiere…</div>
+{% endblock %}

@@ -1,1 +1,1 @@
-# Phase 2 UI lives here. CLI first. Later: local web UI.
+# CLI + local FastAPI UI (td serve). Never executes.

@@ -1,0 +1,23 @@
+<section id="gate" class="panel gate">
+  <header class="panel-head">
+    <h2>Gate</h2>
+    <span class="status {% if gate.frozen %}status-paused{% else %}status-active{% endif %}">
+      {% if gate.frozen %}frozen{% else %}offen{% endif %}
+    </span>
+  </header>
+  <dl class="gate-stats">
+    <div>
+      <dt>Execute heute</dt>
+      <dd>{{ gate.today.execute }}/{{ gate.policy.max_execute_day }}</dd>
+    </div>
+    <div>
+      <dt>Handoff heute</dt>
+      <dd>{{ gate.today.handoff }}/{{ gate.policy.max_handoff_day }}</dd>
+    </div>
+    <div>
+      <dt>Cooldown</dt>
+      <dd>{{ gate.policy.cooldown_seconds }}s</dd>
+    </div>
+  </dl>
+  <p class="muted gate-hint">Nur Anzeige. Execute bleibt in der CLI.</p>
+</section>
