@@ -132,3 +132,44 @@ def test_index_has_shortcuts_help(home: Path) -> None:
     assert "Tastatur" in res.text
     assert "data-thread-index" in res.text
     assert "Gnom-Brainstorm schreiben" in res.text
+
+
+def test_rename_files_and_prompt_preview(home: Path) -> None:
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from threaddesk.ui.server import create_app
+
+    client = TestClient(create_app())
+    client.post("/threads", data={"title": "Alt", "description": ""})
+    thread = ThreadService(store=JsonStore(home)).current()
+    assert thread is not None
+
+    renamed = client.post(f"/threads/{thread.id}/rename", data={"title": "Neu"})
+    assert renamed.status_code == 200
+    assert ThreadService(store=JsonStore(home)).current().title == "Neu"
+
+    added = client.post(f"/threads/{thread.id}/files", data={"path": "src/app.py"})
+    assert added.status_code == 200
+    assert "src/app.py" in added.text
+    assert "src/app.py" in ThreadService(store=JsonStore(home)).current().context.files
+
+    preview = client.post(
+        f"/threads/{thread.id}/prompt",
+        data={"target": "gnom", "variant": "short"},
+    )
+    assert preview.status_code == 200
+    assert "Prompt-Vorschau" in preview.text
+    assert "prompt-text" in preview.text
+    saved = client.post(
+        f"/threads/{thread.id}/prompt",
+        data={"target": "gnom", "variant": "short", "save": "1"},
+    )
+    assert saved.status_code == 200
+    assert ThreadService(store=JsonStore(home)).current().context.prompts
+
+    removed = client.post(
+        f"/threads/{thread.id}/files/remove", data={"path": "src/app.py"}
+    )
+    assert removed.status_code == 200
+    assert "src/app.py" not in ThreadService(store=JsonStore(home)).current().context.files
