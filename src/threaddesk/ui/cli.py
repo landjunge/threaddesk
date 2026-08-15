@@ -269,6 +269,21 @@ def cmd_snap_load(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_serve(args: argparse.Namespace) -> int:
+    try:
+        from threaddesk.ui.server import run
+    except ImportError:
+        print("fehlende Abhängigkeit: pip install -e \".[ui]\"", file=sys.stderr)
+        return 2
+    print(f"ThreadDesk UI  http://{args.host}:{args.port}  (führt nichts aus)")
+    if args.open:
+        import webbrowser
+
+        webbrowser.open(f"http://{args.host}:{args.port}/")
+    run(host=args.host, port=args.port)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="td", description="ThreadDesk — Kontext halten, nichts ausführen.")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -397,8 +412,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     da = sub.add_parser("dash", help="Nur-Lese-Tafel (HTML + Terminal, kein Server)")
     da.add_argument("-a", "--all", action="store_true", help="inkl. archivierte")
-    da.add_argument("--open", action="store_true", help="HTML lokal im Browser öffnen")
+    da.add_argument("--open", action="store_true", help="HTML lokal öffnen")
     da.set_defaults(func=cmd_dash)
+
+    se = sub.add_parser("serve", aliases=["ui"], help="Lokale UI auf localhost (führt nichts aus)")
+    se.add_argument("--host", default="127.0.0.1")
+    se.add_argument("--port", type=int, default=8765)
+    se.add_argument("--open", action="store_true", help="Browser öffnen")
+    se.set_defaults(func=cmd_serve)
     return p
 
 
