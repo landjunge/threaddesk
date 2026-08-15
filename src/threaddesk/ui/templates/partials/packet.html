@@ -1,0 +1,30 @@
+<section id="packet" class="block">
+  <h3>Paket</h3>
+  <p class="muted">Schreibt Dateien für gnom-hub-v1. Startet nichts und sendet nichts.</p>
+  <div class="packet-actions">
+    <form
+      hx-post="/threads/{{ current.id }}/handoff"
+      hx-target="#workspace"
+      hx-swap="innerHTML"
+    >
+      <button type="submit" class="btn btn-ghost">Handoff schreiben</button>
+    </form>
+    <form
+      hx-post="/threads/{{ current.id }}/gnom"
+      hx-target="#workspace"
+      hx-swap="innerHTML"
+    >
+      <button type="submit" class="btn btn-primary">Gnom-Brainstorm schreiben</button>
+    </form>
+  </div>
+  {% if packet and packet.thread_id == current.id %}
+  <div class="packet-card">
+    <p class="status status-paused">{{ packet.kind or "paket" }} · {{ packet.mode or "handoff" }} · nicht ausgeführt</p>
+    <p class="thread-id">{{ packet.path or packet.prompt_path or packet.chat_path }}</p>
+    {% if packet.command %}
+    <pre class="cmd" id="packet-cmd">{{ packet.command }}</pre>
+    <button type="button" class="btn btn-ghost btn-compact" data-copy="#packet-cmd">Befehl kopieren</button>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>

@@ -1,8 +1,19 @@
-{% if notice %}
-<p class="banner-ok" role="status">{{ notice }}</p>
-{% endif %}
-{% if error %}
-<p class="banner-error" role="alert">{{ error }}</p>
+{% if notice or error %}
+<div
+  class="toast-stack"
+  x-data="{ show: true }"
+  x-init="setTimeout(() => show = false, 3200)"
+  x-show="show"
+  x-cloak
+  x-transition.opacity.duration.200ms
+>
+  {% if notice %}
+  <p class="banner-ok" role="status">{{ notice }}</p>
+  {% endif %}
+  {% if error %}
+  <p class="banner-error" role="alert">{{ error }}</p>
+  {% endif %}
+</div>
 {% endif %}
 <aside class="sidebar">
   {% include "partials/thread_list.html" %}

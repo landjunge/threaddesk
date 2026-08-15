@@ -25,9 +25,32 @@
             <p class="brand-tag">Kontext halten · nichts ausführen</p>
           </div>
         </div>
-        <p class="topbar-note">Lokal · nichts ausführen</p>
+        <div class="topbar-actions">
+          <p class="topbar-note">Lokal · nichts ausführen</p>
+          <button type="button" class="btn btn-ghost btn-compact" data-help-open>
+            Tasten <kbd>?</kbd>
+          </button>
+        </div>
       </header>
       {% block body %}{% endblock %}
+    </div>
+    <div id="help" class="help" hidden>
+      <div class="help-card" role="dialog" aria-labelledby="help-title">
+        <header class="panel-head">
+          <h2 id="help-title">Tastatur</h2>
+          <button type="button" class="btn btn-ghost btn-compact" data-help-close>Schließen</button>
+        </header>
+        <dl class="help-keys">
+          <div><dt><kbd>n</kbd></dt><dd>Neuer Thread</dd></div>
+          <div><dt><kbd>j</kbd> / <kbd>k</kbd></dt><dd>Nächster / vorheriger Thread</dd></div>
+          <div><dt><kbd>1</kbd>–<kbd>9</kbd></dt><dd>Thread wählen</dd></div>
+          <div><dt><kbd>s</kbd></dt><dd>Snapshot-Feld</dd></div>
+          <div><dt><kbd>Strg</kbd>+<kbd>Enter</kbd></dt><dd>Formular speichern</dd></div>
+          <div><dt><kbd>?</kbd></dt><dd>Diese Hilfe</dd></div>
+          <div><dt><kbd>Esc</kbd></dt><dd>Schließen</dd></div>
+        </dl>
+        <p class="muted">Keine Taste startet einen Agenten.</p>
+      </div>
     </div>
   </body>
 </html>

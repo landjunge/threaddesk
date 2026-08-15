@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -12,7 +13,7 @@ from fastapi.templating import Jinja2Templates
 
 from threaddesk.api.service import ThreadService
 from threaddesk.core.errors import ThreadDeskError
-from threaddesk.core.models import STATUSES
+from threaddesk.core.models import STATUSES, Thread
 from threaddesk.storage.json_store import JsonStore
 
 HERE = Path(__file__).resolve().parent
@@ -28,10 +29,29 @@ def _svc() -> ThreadService:
     return ThreadService()
 
 
+def _last_packet(svc: ThreadService, thread: Thread | None) -> dict | None:
+    if thread is None:
+        return None
+    files = [
+        svc.store.root / name for name in ("gnom.json", "handoff.json", "grok.json")
+    ]
+    files = [p for p in files if p.exists()]
+    files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    for path in files:
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if data.get("thread_id") == thread.id:
+            return data
+    return None
+
+
 def _ctx(request: Request, extra: dict | None = None) -> dict:
     svc = _svc()
     current = svc.current()
     snapshots = svc.snapshots(current.id) if current else []
+    extra = extra or {}
     data = {
         "request": request,
         "threads": svc.list(include_archived=False),
@@ -40,11 +60,11 @@ def _ctx(request: Request, extra: dict | None = None) -> dict:
         "gate": svc.gate(),
         "snapshots": snapshots,
         "statuses": WRITE_STATUSES,
+        "packet": extra.get("packet") or _last_packet(svc, current),
         "error": None,
         "notice": None,
     }
-    if extra:
-        data.update(extra)
+    data.update(extra)
     return data
 
 
@@ -134,6 +154,27 @@ def create_app() -> FastAPI:
     ) -> HTMLResponse:
         snap = _svc().snapshot(label, thread_id)
         return workspace(request, {"notice": f"Snapshot {snap.id}"})
+
+    @app.post("/threads/{thread_id}/archive", response_class=HTMLResponse)
+    def archive_thread(thread_id: str, request: Request) -> HTMLResponse:
+        thread = _svc().archive(thread_id)
+        return workspace(request, {"notice": f"archiviert: {thread.title}"})
+
+    @app.post("/threads/{thread_id}/handoff", response_class=HTMLResponse)
+    def write_handoff(thread_id: str, request: Request) -> HTMLResponse:
+        payload = _svc().handoff(thread_id)
+        return workspace(
+            request,
+            {"notice": "Handoff geschrieben · nicht gesendet", "packet": payload},
+        )
+
+    @app.post("/threads/{thread_id}/gnom", response_class=HTMLResponse)
+    def write_gnom(thread_id: str, request: Request) -> HTMLResponse:
+        packet = _svc().gnom("brainstorm", "detailed", thread_id)
+        return workspace(
+            request,
+            {"notice": "Gnom-Paket geschrieben · nicht gestartet", "packet": packet},
+        )
 
     @app.post("/snapshots/{snap_id}/restore", response_class=HTMLResponse)
     def restore_snapshot(snap_id: str, request: Request) -> HTMLResponse:

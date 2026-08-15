@@ -4,8 +4,8 @@
     <span class="count">{{ threads|length }}</span>
   </header>
   <div class="new-thread" x-data="{ open: false }">
-    <button type="button" class="btn btn-ghost" @click="open = !open">
-      Neu
+    <button type="button" class="btn btn-ghost" data-new-thread @click="open = !open">
+      Neu <kbd>n</kbd>
     </button>
     <form
       class="stack"
@@ -17,7 +17,7 @@
     >
       <label class="field">
         <span>Titel</span>
-        <input type="text" name="title" required maxlength="160" placeholder="Neuer Thread" />
+        <input type="text" name="title" data-new-title required maxlength="160" placeholder="Neuer Thread" />
       </label>
       <label class="field">
         <span>Beschreibung</span>
@@ -33,13 +33,15 @@
       <button
         type="button"
         class="thread-item{% if t.id == current_id %} is-current{% endif %}"
+        data-thread-id="{{ t.id }}"
+        data-thread-index="{{ loop.index }}"
         hx-post="/threads/{{ t.id }}/switch"
         hx-target="#workspace"
         hx-swap="innerHTML"
       >
         <span class="thread-meta">
           <span class="status status-{{ t.status }}">{{ t.status }}</span>
-          <span class="thread-id">{{ t.id }}</span>
+          <span class="thread-index">{{ loop.index }}</span>
         </span>
         <span class="thread-title">{{ t.title }}</span>
       </button>
