@@ -23,6 +23,7 @@
     hx-post="/gate/freeze"
     hx-target="#workspace"
     hx-swap="innerHTML"
+    {% if not gate.frozen %}hx-confirm="Gate einfrieren? Execute- und Handoff-Pakete werden blockiert."{% endif %}
   >
     {% if gate.frozen %}
     <input type="hidden" name="frozen" value="0" />
@@ -32,5 +33,5 @@
     <button type="submit" class="btn btn-ghost">Einfrieren</button>
     {% endif %}
   </form>
-  <p class="muted gate-hint">Sperrt nur Execute/Handoff-Pakete. Startet nichts.</p>
+  <p class="muted gate-hint">Sperrt nur Pakete. Startet nichts.</p>
 </section>

@@ -7,7 +7,17 @@
     </div>
     <span class="status status-{{ current.status }}">{{ current.status }}</span>
   </header>
-  <p class="thread-id detail-id">{{ current.id }}</p>
+  <div class="detail-meta">
+    <p class="thread-id detail-id">{{ current.id }}</p>
+    <form
+      hx-post="/threads/{{ current.id }}/archive"
+      hx-target="#workspace"
+      hx-swap="innerHTML"
+      hx-confirm="Thread archivieren? Er verschwindet aus der Liste."
+    >
+      <button type="submit" class="btn btn-ghost btn-compact">Archivieren</button>
+    </form>
+  </div>
 
   <section class="block">
     <h3>Status</h3>
@@ -57,11 +67,12 @@
   </section>
 
   {% include "partials/snapshots.html" %}
+  {% include "partials/packet.html" %}
 </article>
 {% else %}
 <article class="panel detail empty-detail">
   <p class="eyebrow">Kein aktiver Thread</p>
   <h1>Wähle links einen Thread</h1>
-  <p class="muted">Oder lege einen mit Neu an.</p>
+  <p class="muted">Oder lege einen mit Neu an. Taste n.</p>
 </article>
 {% endif %}

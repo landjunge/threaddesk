@@ -88,3 +88,47 @@ def test_write_note_status_snapshot_and_gate(home: Path) -> None:
     frozen = client.post("/gate/freeze", data={"frozen": "1"})
     assert frozen.status_code == 200
     assert ThreadService(store=JsonStore(home)).gate()["frozen"] is True
+
+
+def test_packet_and_archive(home: Path) -> None:
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from threaddesk.ui.server import create_app
+
+    client = TestClient(create_app())
+    client.post("/threads", data={"title": "Delta", "description": "paket"})
+    svc = ThreadService(store=JsonStore(home))
+    thread = svc.current()
+    assert thread is not None
+
+    handoff = client.post(f"/threads/{thread.id}/handoff")
+    assert handoff.status_code == 200
+    assert "nicht ausgeführt" in handoff.text
+    assert (home / "handoff.json").exists()
+
+    gnom = client.post(f"/threads/{thread.id}/gnom")
+    assert gnom.status_code == 200
+    assert "threaddesk.gnom" in gnom.text
+    assert "nicht gestartet" in gnom.text
+    assert (home / "gnom.json").exists()
+    assert (home / "gnom-chat.json").exists()
+
+    archived = client.post(f"/threads/{thread.id}/archive")
+    assert archived.status_code == 200
+    assert ThreadService(store=JsonStore(home)).get(thread.id).status == "archived"
+    assert "Archivieren" not in archived.text or "Delta" not in archived.text
+
+
+def test_index_has_shortcuts_help(home: Path) -> None:
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from threaddesk.ui.server import create_app
+
+    ThreadService(store=JsonStore(home)).create("Hilfe")
+    res = TestClient(create_app()).get("/")
+    assert res.status_code == 200
+    assert "Tastatur" in res.text
+    assert "data-thread-index" in res.text
+    assert "Gnom-Brainstorm schreiben" in res.text

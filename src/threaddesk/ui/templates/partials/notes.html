@@ -7,10 +7,13 @@
     hx-swap="innerHTML"
   >
     <textarea name="text" rows="8" placeholder="Kontext, Stand, nächster Schritt">{{ current.context.notes }}</textarea>
-    <label class="check">
-      <input type="checkbox" name="append" value="1" />
-      Anhängen statt ersetzen
-    </label>
+    <div class="row-actions">
+      <label class="check">
+        <input type="checkbox" name="append" value="1" />
+        Anhängen statt ersetzen
+      </label>
+      <span class="muted">Strg+Enter speichert</span>
+    </div>
     <button type="submit" class="btn btn-primary">Notiz speichern</button>
   </form>
 </section>
