@@ -20,6 +20,14 @@ def _fmt(thread: Thread, current_id: str | None, index: int | None = None) -> st
     return f"{mark}{num} {thread.id}  [{thread.status:8}]  {thread.title}  snap={snap}"
 
 
+def _warn_skipped(svc: ThreadService) -> None:
+    """Corrupt files are skipped, not deleted. Say so instead of failing silently."""
+    skipped = svc.store.last_skipped
+    if skipped:
+        names = ", ".join(skipped)
+        print(f"warnung: {len(skipped)} unlesbare datei(en) übersprungen: {names}", file=sys.stderr)
+
+
 def _print_context(thread: Thread) -> None:
     print(f"beschreibung: {thread.description or '-'}")
     print(f"status: {thread.status}  snap: {thread.current_snapshot_id or '-'}")
@@ -43,9 +51,11 @@ def cmd_list(args: argparse.Namespace) -> int:
     rows = svc.list(include_archived=args.all)
     if not rows:
         print("keine threads")
+        _warn_skipped(svc)
         return 0
     for i, t in enumerate(rows, 1):
         print(_fmt(t, current, i))
+    _warn_skipped(svc)
     return 0
 
 
@@ -203,9 +213,11 @@ def _print_gate(status: dict) -> None:
 
 
 def cmd_dash(args: argparse.Namespace) -> int:
-    board = _svc().dashboard(include_archived=args.all)
+    svc = _svc()
+    board = svc.dashboard(include_archived=args.all)
     print(board["text"])
     print(f"html: {board['html_path']}")
+    _warn_skipped(svc)
     if args.open:
         import webbrowser
 

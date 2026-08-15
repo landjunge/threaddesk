@@ -5,7 +5,25 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
+from threaddesk.core.errors import InvalidState
+
 STATUSES = ("idea", "active", "paused", "done", "archived")
+
+
+def _require_str(data: dict[str, Any], key: str, what: str) -> str:
+    value = data.get(key)
+    if not isinstance(value, str) or not value:
+        raise InvalidState(f"{what}: Feld '{key}' fehlt oder ist kein Text.")
+    return value
+
+
+def _opt_str(data: dict[str, Any], key: str) -> str:
+    value = data.get(key)
+    return value if isinstance(value, str) else ""
+
+
+def _clean_status(value: Any) -> str:
+    return value if isinstance(value, str) and value in STATUSES else "idea"
 
 
 def now_iso() -> str:
@@ -29,13 +47,15 @@ class ThreadContext:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any] | None) -> ThreadContext:
-        data = data or {}
+        data = data if isinstance(data, dict) else {}
+        files = data.get("files")
+        prompts = data.get("prompts")
         return cls(
-            notes=data.get("notes") or "",
-            files=list(data.get("files") or []),
-            prompts=list(data.get("prompts") or []),
-            agent_state=dict(data.get("agent_state") or {}),
-            extra=dict(data.get("extra") or {}),
+            notes=_opt_str(data, "notes"),
+            files=[p for p in files if isinstance(p, str)] if isinstance(files, list) else [],
+            prompts=[p for p in prompts if isinstance(p, dict)] if isinstance(prompts, list) else [],
+            agent_state=dict(data.get("agent_state") or {}) if isinstance(data.get("agent_state"), dict) else {},
+            extra=dict(data.get("extra") or {}) if isinstance(data.get("extra"), dict) else {},
         )
 
 
@@ -58,11 +78,13 @@ class Snapshot:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Snapshot:
+        if not isinstance(data, dict):
+            raise InvalidState("Snapshot-Datei ist kein Objekt.")
         return cls(
-            id=data["id"],
-            thread_id=data["thread_id"],
-            created_at=data["created_at"],
-            label=data.get("label") or "",
+            id=_require_str(data, "id", "Snapshot-Datei"),
+            thread_id=_require_str(data, "thread_id", "Snapshot-Datei"),
+            created_at=_opt_str(data, "created_at"),
+            label=_opt_str(data, "label"),
             context=ThreadContext.from_dict(data.get("context")),
         )
 
@@ -92,15 +114,18 @@ class Thread:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Thread:
+        if not isinstance(data, dict):
+            raise InvalidState("Thread-Datei ist kein Objekt.")
+        snap = data.get("current_snapshot_id")
         return cls(
-            id=data["id"],
-            title=data["title"],
-            description=data.get("description") or "",
-            status=data.get("status") or "idea",
-            created_at=data.get("created_at") or "",
-            updated_at=data.get("updated_at") or "",
+            id=_require_str(data, "id", "Thread-Datei"),
+            title=_require_str(data, "title", "Thread-Datei"),
+            description=_opt_str(data, "description"),
+            status=_clean_status(data.get("status")),
+            created_at=_opt_str(data, "created_at"),
+            updated_at=_opt_str(data, "updated_at"),
             context=ThreadContext.from_dict(data.get("context")),
-            current_snapshot_id=data.get("current_snapshot_id"),
+            current_snapshot_id=snap if isinstance(snap, str) and snap else None,
         )
 
 
