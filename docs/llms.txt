@@ -1,0 +1,7 @@
+# ThreadDesk
+
+ThreadDesk stores persistent local threads and context. It never executes agents. Canonical: https://netzwerkpunkt.de/threaddesk
+
+Hub: https://netzwerkpunkt.de
+GitHub: https://github.com/landjunge/threaddesk
+Pages: https://landjunge.github.io/threaddesk/
