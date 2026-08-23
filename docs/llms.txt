@@ -5,3 +5,5 @@ ThreadDesk stores persistent local threads and context. It never executes agents
 Hub: https://netzwerkpunkt.de
 GitHub: https://github.com/landjunge/threaddesk
 Pages: https://landjunge.github.io/threaddesk/
+Impressum: https://netzwerkpunkt.de/impressum
+Datenschutz: https://netzwerkpunkt.de/datenschutz
