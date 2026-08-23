@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ThreadDesk — persistente Threads, ohne Execute | Netzwerkpunkt</title>
+  <meta name="description" content="Lokale Control-Layer vor Gnom-Hub. Threads, Snapshots, Switcher, Notizen. Speichert Kontext. Führt nichts aus. Brainstorm freely — Execute only when pressed." />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta name="author" content="landjunge" />
+  <link rel="canonical" href="https://netzwerkpunkt.de/threaddesk" />
+  <link rel="alternate" hreflang="de" href="https://netzwerkpunkt.de/threaddesk" />
+  <meta property="og:locale" content="de_DE" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Netzwerkpunkt" />
+  <meta property="og:title" content="ThreadDesk — persistente Threads, ohne Execute" />
+  <meta property="og:description" content="Lokale Control-Layer vor Gnom-Hub. Threads, Snapshots, Switcher, Notizen. Speichert Kontext. Führt nichts aus. Brainstorm freely — Execute only when pressed." />
+  <meta property="og:url" content="https://netzwerkpunkt.de/threaddesk" />
+  <meta name="twitter:title" content="ThreadDesk — persistente Threads, ohne Execute" />
+  <meta name="twitter:description" content="Lokale Control-Layer vor Gnom-Hub. Threads, Snapshots, Switcher, Notizen. Speichert Kontext. Führt nichts aus. Brainstorm freely — Execute only when pressed." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "ThreadDesk", "description": "Lokale Control-Layer vor Gnom-Hub. Threads, Snapshots, Switcher, Notizen. Speichert Kontext. Führt nichts aus. Brainstorm freely — Execute only when pressed.", "url": "https://netzwerkpunkt.de/threaddesk", "downloadUrl": "https://github.com/landjunge/threaddesk", "applicationCategory": "DeveloperApplication", "operatingSystem": "Linux, macOS, Windows", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"}, "author": {"@type": "Person", "name": "landjunge"}, "isPartOf": {"@type": "WebSite", "name": "Netzwerkpunkt", "url": "https://netzwerkpunkt.de"}, "sameAs": ["https://landjunge.github.io/threaddesk/", "https://github.com/landjunge/threaddesk"]}</script>
+  <style>
+:root{--bg:#0a0b0a;--fg:#eceae4;--muted:#9a9d96;--subtle:#6d716c;--line:rgba(236,234,228,.12);--accent:#d7dbd4;--accent-fg:#0a0b0a}
+*{box-sizing:border-box}html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:"IBM Plex Sans",system-ui,sans-serif}
+body{min-height:100dvh;display:flex;flex-direction:column}
+a{color:inherit}header,main,footer{width:min(1120px,100%);margin:0 auto;padding:0 20px}
+header{display:flex;justify-content:space-between;align-items:center;min-height:64px;border-bottom:1px solid var(--line)}
+.k{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--subtle)}
+h1{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(2.2rem,6vw,4.4rem);line-height:1.05;letter-spacing:-.03em;margin:20px 0 0}
+h2{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:1.35rem;margin:0}
+.claim{max-width:36rem;font-size:1.15rem;line-height:1.55;color:var(--muted);margin-top:1.1rem}
+.hero{padding:4.5rem 0 3rem}
+.cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:2rem}
+.cta a{min-height:44px;display:inline-flex;align-items:center;padding:0 18px;border-radius:4px;text-decoration:none;font-size:.95rem}
+.cta .p{background:var(--accent);color:var(--accent-fg)}
+.cta .g{border:1px solid var(--line)}
+.grid{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:0 0 4rem}
+@media(min-width:720px){.grid{grid-template-columns:repeat(3,1fr)}}
+.grid article{background:var(--bg);padding:1.5rem 1.25rem}
+.grid p{color:var(--muted);line-height:1.55;font-size:.95rem;margin:.7rem 0 0}
+.split{display:grid;gap:2.5rem;padding-bottom:4rem}
+@media(min-width:800px){.split{grid-template-columns:1.2fr .8fr}}
+dl{border-top:1px solid var(--line);margin:1rem 0 0}
+dl div{display:grid;grid-template-columns:7rem 1fr;gap:1rem;padding:.9rem 0;border-bottom:1px solid var(--line)}
+dt{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--subtle)}
+dd{margin:0}
+pre{background:#121412;border:1px solid var(--line);padding:1rem 1.1rem;overflow:auto;font-size:.85rem;border-radius:8px}
+footer{border-top:1px solid var(--line);padding:1.6rem 20px 2.4rem;color:var(--muted);font-size:.9rem;display:flex;flex-wrap:wrap;gap:.6rem 1.4rem;justify-content:space-between}
+</style>
+</head>
+<body>
+  <header>
+    <a class="k" href="https://netzwerkpunkt.de">netzwerkpunkt.de · landjunge</a>
+    <a class="k" href="https://github.com/landjunge/threaddesk">threaddesk</a>
+  </header>
+  <main>
+    <section class="hero">
+      <p class="k">Kontext · MVP</p>
+      <h1>Persistente Threads. Speichert Kontext. Führt nichts aus.</h1>
+      <p class="claim">Lokale Control-Layer vor Gnom-Hub. Threads, Snapshots, Switcher, Notizen. CLI und optionale UI. ThreadDesk bereitet vor. Gnom-Hub führt aus.</p>
+      <p class="claim">Kontext darf nicht im Chat-Fenster sterben. Wechsel stellt den vollen Stand wieder her. Kein Agent wird gestartet.</p>
+      <div class="cta">
+        <a class="p" href="https://netzwerkpunkt.de/threaddesk">Produktseite</a>
+        <a class="g" href="https://github.com/landjunge/threaddesk">GitHub</a>
+        <a class="g" href="https://threaddesk.netzwerkpunkt.de">threaddesk.netzwerkpunkt.de</a>
+      </div>
+    </section>
+    <section class="grid" aria-label="Säulen"><article><h2>Threads</h2><p>new, list, switch, note, status, files, archive. Daten unter ~/.threaddesk/, JSON, lokal.</p></article><article><h2>Snapshots</h2><p>Stand sichern und laden. Prompt-Generator lokal, ohne API-Call. Niemand wird angerufen.</p></article><article><h2>Handoff</h2><p>Pakete für Gnom-Hub und Grok schreiben. MCP liefert nur Thread-Daten. Kein Start, kein Delete.</p></article></section>
+    <section class="split">
+      <div>
+        <p class="k">Kanonisch</p>
+        <h2>Gefunden werden über netzwerkpunkt.de</h2>
+        <p class="claim">Diese GitHub-Seite ist die Dokumentation. Die Produktseite — Title, Sitemap, Schema — liegt auf <a href="https://netzwerkpunkt.de/threaddesk">netzwerkpunkt.de/threaddesk</a>.</p>
+        <pre><code>git clone https://github.com/landjunge/threaddesk.git</code></pre>
+      </div>
+      <div>
+        <p class="k">Fakten</p>
+        <dl><div><dt>Stack</dt><dd>Python · CLI · optionale UI</dd></div><div><dt>MVP</dt><dd>v0.1 — Threads, Kontext, Snapshots</dd></div><div><dt>Lizenz</dt><dd>MIT</dd></div><div><dt>Prinzip</dt><dd>Stores context. Never executes.</dd></div></dl>
+      </div>
+    </section>
+  </main>
+  <footer>
+    <span>ThreadDesk · Teil von Netzwerkpunkt</span>
+    <span><a href="https://netzwerkpunkt.de">fünf Werkzeuge</a></span>
+  </footer>
+</body>
+</html>

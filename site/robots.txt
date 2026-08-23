@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://landjunge.github.io/threaddesk/sitemap.xml
