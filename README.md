@@ -1,4 +1,5 @@
-# ThreadDesk
+<p align="center"><img src="brand/mark.svg" width="180" alt="ThreadDesk Bildmarke"></p>
+<p align="center"><img src="brand/wordmark.svg" width="520" alt="ThreadDesk"></p>
 
 <p align="center"><strong>Ein Arbeitsplatz, der den Stand deiner KI-Projekte behält.</strong></p>
 
@@ -32,7 +33,7 @@ ThreadDesk merkt sich diesen Stand. Jeder Arbeitsbereich wird zu einem eigenen T
 
 1. **Thread anlegen** – eine Idee oder Aufgabe benennen.
 2. **Stand festhalten** – Notizen, Dateien und Status ergänzen.
-3. **Weitergeben** – bei Bedarf ein Handoff für gnom-hub-v1 erzeugen.
+3. **Weitergeben** – bei Bedarf ein Handoff für Gnom-Hub-V1 erzeugen.
 
 ### Heutiger Stand – ehrlich
 
@@ -42,7 +43,7 @@ ThreadDesk merkt sich diesen Stand. Jeder Arbeitsbereich wird zu einem eigenen T
 | Kontext | Notizen, Dateien, History und Snapshots |
 | Daten | JSON unter ~/.threaddesk; lokal |
 | Oberfläche | CLI, lokale Tafel und optionale Weboberfläche |
-| Übergaben | Vorbereitete Pakete für Grok und gnom-hub-v1 |
+| Übergaben | Vorbereitete Pakete für Grok und Gnom-Hub-V1 |
 | Grenze | Kein Agentenstart und kein verstecktes Execute |
 
 [Produktseite](https://threaddesk.netzwerkpunkt.de/)
@@ -71,7 +72,7 @@ td snap save "erster Stand"
 
 ## Für Entwickler
 
-ThreadDesk ist eine lokale Control-Layer vor gnom-hub-v1. Die Grenze ist Teil des Produkts: Alle Übergaben werden vorbereitet, aber nicht automatisch gesendet oder ausgeführt.
+ThreadDesk ist eine lokale Control-Layer vor Gnom-Hub-V1. Die Grenze ist Teil des Produkts: Alle Übergaben werden vorbereitet, aber nicht automatisch gesendet oder ausgeführt.
 
 ### Wichtige Befehle
 
@@ -100,10 +101,10 @@ Produktvision, gewünschtes Verhalten und Grenzen kommen von mir. KI unterstütz
 - [Benutzeroberfläche](docs/UI.md)
 - [MCP](docs/MCP.md)
 - [Grok-Handoff](docs/GROK.md)
-- [Tollgate-Grenze](docs/TOLLGATE.md)
-- [gnom-hub-v1-Handoff](docs/GNOM.md)
+- [TollGate-Grenze](docs/TOLLGATE.md)
+- [Gnom-Hub-V1-Handoff](docs/GNOM.md)
 
 ---
 
 **ThreadDesk beantwortet eine Frage: Was ist der Stand?**
-Teil von [Netzwerkpunkt](https://netzwerkpunkt.de/) – eigenständig, local-first und ohne versteckte Ausführung.
+Teil von [NetzwerkPunkt](https://netzwerkpunkt.de/) – eigenständig, local-first und ohne versteckte Ausführung.
