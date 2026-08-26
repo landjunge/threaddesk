@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">ThreadDesk Bildmarke</title>
+  <desc id="desc">Drei verbundene Arbeitsfäden laufen geordnet in eine Schreibtischfläche.</desc>
+  <defs>
+    <linearGradient id="thread" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#d7c8ff"/>
+      <stop offset="1" stop-color="#9b78ef"/>
+    </linearGradient>
+  </defs>
+  <rect x="36" y="36" width="440" height="440" rx="104" fill="#111319"/>
+  <path d="M112 152h92c32 0 48 18 48 48v112c0 30 16 48 48 48h100" fill="none" stroke="url(#thread)" stroke-width="28" stroke-linecap="round"/>
+  <path d="M112 256h84" fill="none" stroke="#f0edf8" stroke-width="28" stroke-linecap="round"/>
+  <path d="M112 360h92c32 0 48-18 48-48V200c0-30 16-48 48-48h100" fill="none" stroke="#6f727b" stroke-width="28" stroke-linecap="round"/>
+  <circle cx="112" cy="152" r="20" fill="#b99cff"/>
+  <circle cx="112" cy="256" r="20" fill="#f0edf8"/>
+  <circle cx="112" cy="360" r="20" fill="#777b86"/>
+  <path d="M310 330h104v30c0 24-20 44-44 44h-16c-24 0-44-20-44-44z" fill="#b99cff"/>
+</svg>
