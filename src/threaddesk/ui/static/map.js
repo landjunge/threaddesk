@@ -7,6 +7,9 @@
   const empty = root.querySelector("[data-map-empty]");
   const error = root.querySelector("[data-map-error]");
   const summary = root.querySelector("[data-map-summary]");
+  const detailTitle = root.querySelector("[data-map-detail-title]");
+  const detailText = root.querySelector("[data-map-detail-text]");
+  const detailMeta = root.querySelector("[data-map-detail-meta]");
   const svgNS = "http://www.w3.org/2000/svg";
   let scale = 1;
   let offsetX = 0;
@@ -68,9 +71,28 @@
       const label = el("text", {"text-anchor": "middle", y: 5});
       label.textContent = node.title.length > 20 ? `${node.title.slice(0, 19)}…` : node.title;
       group.append(shape, label);
-      group.addEventListener("click", (event) => {
-        if (!event.shiftKey) world.querySelectorAll(".is-selected").forEach((item) => item.classList.remove("is-selected"));
+      const select = (additive = false) => {
+        if (!additive) world.querySelectorAll(".is-selected").forEach((item) => item.classList.remove("is-selected"));
         group.classList.toggle("is-selected");
+        detailTitle.textContent = node.title;
+        detailText.textContent = node.details || "Keine Details";
+        detailMeta.hidden = false;
+        detailMeta.replaceChildren();
+        [["Typ", node.kind], ["Status", node.status], ["Herkunft", node.source], ["Sichtbarkeit", node.visibility], ["Revision", node.revision]].forEach(([term, value]) => {
+          const item = document.createElement("div");
+          const dt = document.createElement("dt");
+          const dd = document.createElement("dd");
+          dt.textContent = term;
+          dd.textContent = value;
+          item.append(dt, dd);
+          detailMeta.appendChild(item);
+        });
+      };
+      group.addEventListener("click", (event) => select(event.shiftKey));
+      group.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        select(event.shiftKey);
       });
       world.appendChild(group);
     });
