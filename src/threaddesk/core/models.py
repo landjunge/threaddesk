@@ -40,6 +40,7 @@ RELATION_KINDS = (
     "follows",
     "related_to",
 )
+VISIBILITIES = ("private", "shared", "public")
 
 
 def now_iso() -> str:
@@ -147,6 +148,9 @@ class KnowledgeNode:
     details: str = ""
     created_at: str = ""
     updated_at: str = ""
+    revision: int = 1
+    source: str = "local"
+    visibility: str = "private"
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -162,6 +166,9 @@ class KnowledgeNode:
             details=data.get("details") or "",
             created_at=data.get("created_at") or "",
             updated_at=data.get("updated_at") or "",
+            revision=int(data.get("revision") or 1),
+            source=data.get("source") or "local",
+            visibility=data.get("visibility") or "private",
             metadata=dict(data.get("metadata") or {}),
         )
 
