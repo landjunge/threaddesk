@@ -197,3 +197,29 @@ def test_map_page_is_a_read_only_api_graph_view(home: Path) -> None:
 
     graph = client.get("/api/graph").json()
     assert graph["counts"] == {"nodes": 2, "relations": 1}
+
+
+def test_knowledge_page_applies_guarded_node_transition(home: Path) -> None:
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from threaddesk.ui.server import create_app
+
+    svc = ThreadService(store=JsonStore(home))
+    task = svc.create_node("task", "UI-Ablauf", status="ready")
+    client = TestClient(create_app())
+
+    page = client.get("/knowledge")
+    assert 'value="assigned"' in page.text
+    assert f'value="{task.revision}"' in page.text
+
+    changed = client.post(
+        f"/knowledge/nodes/{task.id}/transition",
+        data={"status": "assigned", "expected_revision": task.revision},
+        follow_redirects=False,
+    )
+
+    assert changed.status_code == 303
+    stored = ThreadService(store=JsonStore(home)).get_node(task.id)
+    assert stored.status == "assigned"
+    assert stored.revision == 2
