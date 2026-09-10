@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import socket
+import sys
 import threading
 import time
 from urllib.request import urlopen
@@ -27,6 +28,14 @@ def wait_until_ready(url: str, timeout: float = 15.0) -> None:
 
 
 def main() -> int:
+    if "--self-test" in sys.argv:
+        from threaddesk.ui.server import create_app
+
+        app = create_app()
+        assert app.title == "ThreadDesk"
+        print("ThreadDesk desktop package: OK")
+        return 0
+
     import webview
 
     from threaddesk.ui.server import run
