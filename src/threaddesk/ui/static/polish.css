@@ -385,7 +385,20 @@ select {
   color: var(--fg-muted);
 }
 
+.map-detail { min-height: 130px; }
+.map-detail h2 { margin: var(--space-1) 0; }
+.map-detail dl {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(100px, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+}
+.map-detail dl div { display: grid; gap: var(--space-1); }
+.map-detail dt { color: var(--fg-muted); font-size: var(--text-xs); }
+.map-detail dd { margin: 0; }
+
 @media (max-width: 720px) {
   .map-toolbar { align-items: flex-start; flex-direction: column; }
   .map-page { padding: var(--space-3); }
+  .map-detail dl { grid-template-columns: repeat(2, minmax(100px, 1fr)); }
 }
