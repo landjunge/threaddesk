@@ -7,13 +7,19 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from threaddesk.api.service import ThreadService
 from threaddesk.core.errors import ThreadDeskError
-from threaddesk.core.models import STATUSES, Thread
+from threaddesk.core.models import (
+    NODE_KINDS,
+    NODE_STATUSES,
+    RELATION_KINDS,
+    STATUSES,
+    Thread,
+)
 from threaddesk.storage.json_store import JsonStore
 
 HERE = Path(__file__).resolve().parent
@@ -88,6 +94,45 @@ def create_app() -> FastAPI:
     @app.get("/", response_class=HTMLResponse)
     def index(request: Request) -> HTMLResponse:
         return templates.TemplateResponse(request, "index.html", _ctx(request))
+
+    @app.get("/api/graph", response_class=JSONResponse)
+    def graph(kind: str | None = None, status: str | None = None) -> dict:
+        return _svc().graph(kind=kind, status=status)
+
+    @app.get("/knowledge", response_class=HTMLResponse)
+    def knowledge(request: Request) -> HTMLResponse:
+        svc = _svc()
+        return templates.TemplateResponse(
+            request,
+            "knowledge.html",
+            {
+                "request": request,
+                "nodes": svc.list_nodes(),
+                "relations": svc.list_relations(),
+                "node_kinds": NODE_KINDS,
+                "node_statuses": NODE_STATUSES,
+                "relation_kinds": RELATION_KINDS,
+            },
+        )
+
+    @app.post("/knowledge/nodes", response_class=RedirectResponse)
+    def create_knowledge_node(
+        kind: str = Form(...),
+        title: str = Form(...),
+        status: str = Form("idea"),
+        details: str = Form(""),
+    ) -> RedirectResponse:
+        _svc().create_node(kind, title, status=status, details=details)
+        return RedirectResponse("/knowledge", status_code=303)
+
+    @app.post("/knowledge/relations", response_class=RedirectResponse)
+    def create_knowledge_relation(
+        source_id: str = Form(...),
+        target_id: str = Form(...),
+        kind: str = Form(...),
+    ) -> RedirectResponse:
+        _svc().connect(source_id, target_id, kind)
+        return RedirectResponse("/knowledge", status_code=303)
 
     @app.get("/partials/threads", response_class=HTMLResponse)
     def partial_threads(request: Request) -> HTMLResponse:
