@@ -43,6 +43,42 @@ def test_graph_survives_a_fresh_service_instance(tmp_path: Path) -> None:
     assert loaded.to_dict() == decision.to_dict()
 
 
+def test_node_records_revision_source_and_visibility(svc: ThreadService) -> None:
+    node = svc.create_node(
+        "decision",
+        "Local-first bleibt verbindlich",
+        status="confirmed",
+        source="user-confirmed",
+        visibility="shared",
+    )
+
+    assert node.revision == 1
+    assert node.source == "user-confirmed"
+    assert node.visibility == "shared"
+    assert svc.get_node(node.id).to_dict() == node.to_dict()
+
+
+def test_old_node_data_gets_safe_field_defaults() -> None:
+    from threaddesk.core.models import KnowledgeNode
+
+    node = KnowledgeNode.from_dict(
+        {"id": "legacy", "kind": "project", "title": "Altbestand"}
+    )
+
+    assert node.revision == 1
+    assert node.source == "local"
+    assert node.visibility == "private"
+
+
+def test_node_rejects_invalid_provenance_fields(svc: ThreadService) -> None:
+    with pytest.raises(InvalidState):
+        svc.create_node("task", "Ohne Herkunft", source="")
+    with pytest.raises(InvalidState):
+        svc.create_node("task", "Falsche Sichtbarkeit", visibility="world")
+    with pytest.raises(SecretRejected):
+        svc.create_node("task", "Geheimnis", source="sk-abcdefghijklmnop")
+
+
 def test_connect_rejects_unknown_nodes_without_writing(svc: ThreadService) -> None:
     project = svc.create_node("project", "ThreadDesk")
 
