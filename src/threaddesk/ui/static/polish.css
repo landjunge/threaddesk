@@ -229,7 +229,7 @@ kbd {
 .toast-stack .banner-ok,
 .toast-stack .banner-error {
   margin: 0;
-  background: var(--bg-elevated);
+  background: #08131a;
 }
 
 .htmx-indicator {
@@ -358,29 +358,25 @@ select {
 
 .map-stage {
   position: relative;
+  overflow: hidden;
+  /* Feste Höhe statt min-height: sonst wächst die Bühne auf die
+     Eigenhöhe des SVG (viewBox-Seitenverhältnis) und die Karte
+     reicht über den Bildschirmrand hinaus. */
+  height: clamp(400px, 66vh, 760px);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: #04070a;
+  touch-action: none;
+  cursor: grab;
   /* Shift-Klick sammelt Knoten. Ohne dies markiert er zusätzlich
      die Beschriftungen als Text. */
   user-select: none;
   -webkit-user-select: none;
-  overflow: hidden;
-  min-height: 520px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-lg);
-  background: #050708;
-  touch-action: none;
-  cursor: grab;
 }
 
 .map-stage.is-panning { cursor: grabbing; }
 .map-canvas { width: 100%; height: 100%; display: block; }
-.map-edge { stroke: #41505a; stroke-width: 1.5; }
-.map-node { cursor: pointer; outline: none; }
-.map-node-shape { fill: #10171b; stroke: #89a8b8; stroke-width: 2; }
-.map-node[data-status="blocked"] .map-node-shape { stroke: #d27f7f; }
-.map-node[data-status="confirmed"] .map-node-shape,
-.map-node[data-status="accepted"] .map-node-shape { stroke: #7fbf9b; }
-.map-node.is-selected .map-node-shape { stroke: #fff; stroke-width: 3; }
-.map-node text { fill: #e5edf1; font: 13px var(--font); pointer-events: none; }
+
 /* `hidden` muss jede eigene display-Regel schlagen. Ohne !important
    bleibt z. B. .map-error{display:grid} liegen, deckt die Karte ab
    und schluckt jeden Klick auf einen Knoten. */
@@ -392,6 +388,180 @@ select {
   display: grid;
   place-items: center;
   color: var(--fg-muted);
+}
+
+/* --- Zustandstöne der Landkarte.
+   Die gedämpften Token aus style.css gelten für Buttons und Grundgerüst.
+   Die Karte ist der Schauplatz: leuchtende Töne auf dunklem Grund, wie der
+   Bauplan sie für die Effekt-Landkarte verlangt. Farbe ist trotzdem nie das
+   einzige Signal — Form, Glyphe und Statusmarke tragen dasselbe. --- */
+.map-page {
+  --tone-good: #3ff0a4;
+  --tone-wait: #ffc65a;
+  --tone-fresh: #52c4ff;
+  --tone-risk: #ff5f6d;
+  --tone-idle: #8fa3ad;
+  --tone-soft: #56737f;
+  --tone-bold: #b8dcec;
+}
+
+.map-backdrop { pointer-events: none; }
+
+/* --- Kanten --- */
+.map-edge {
+  fill: none;
+  stroke: var(--tone-soft);
+  stroke-linecap: round;
+  filter: url(#map-edge-glow);
+  transition: stroke-opacity .25s ease, stroke .25s ease;
+}
+.map-edge-bold  { stroke: var(--tone-bold); }
+.map-edge-good  { stroke: var(--tone-good); stroke-opacity: .85; }
+.map-edge-fresh { stroke: var(--tone-fresh); stroke-opacity: .9; }
+.map-edge-risk  { stroke: var(--tone-risk); }
+
+.map-arrow path { fill: var(--tone-soft); }
+.map-arrow-bold path  { fill: var(--tone-bold); }
+.map-arrow-good path  { fill: var(--tone-good); }
+.map-arrow-fresh path { fill: var(--tone-fresh); }
+.map-arrow-risk path  { fill: var(--tone-risk); }
+
+/* Übergaben und Reihenfolgen zeigen Fließrichtung. */
+.map-edge-flow {
+  stroke-dasharray: 9 11;
+  animation: map-flow 1.5s linear infinite;
+  filter: url(#map-edge-glow);
+}
+@keyframes map-flow { to { stroke-dashoffset: -20; } }
+
+/* --- Knoten --- */
+.map-node { cursor: pointer; outline: none; }
+.map-node-halo {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 11;
+  opacity: .26;
+  filter: url(#map-glow);
+  transition: opacity .25s ease, stroke-width .25s ease;
+}
+.map-node-shape {
+  fill: #08131a;
+  stroke: currentColor;
+  stroke-width: 2;
+  transition: fill .2s ease, stroke-width .2s ease;
+}
+.map-node-glyph {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .85;
+  pointer-events: none;
+}
+.map-node-mark { pointer-events: none; }
+.map-node-mark-disc {
+  fill: #04070a;
+  stroke: currentColor;
+  stroke-width: 1.4;
+}
+.map-node-mark-sign {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.map-label text {
+  fill: #eaf5fa;
+  font: 12px var(--font);
+  paint-order: stroke;
+  stroke: #04070a;
+  stroke-width: 3.5;
+  pointer-events: none;
+}
+
+.map-tone-good  { color: var(--tone-good); }
+.map-tone-wait  { color: var(--tone-wait); }
+.map-tone-fresh { color: var(--tone-fresh); }
+.map-tone-risk  { color: var(--tone-risk); }
+.map-tone-idle  { color: var(--tone-idle); }
+
+.map-node:hover .map-node-halo,
+.map-node:focus-visible .map-node-halo { opacity: .6; stroke-width: 15; }
+.map-node:focus-visible .map-node-shape { stroke-width: 3; }
+
+.map-node.is-selected .map-node-shape { stroke-width: 3.6; fill: #0d2029; }
+.map-node.is-selected .map-node-halo { opacity: .85; stroke-width: 18; }
+
+/* Auswahl hebt ihre Umgebung hervor und dämpft den Rest. */
+.map-page.has-selection .map-node { opacity: .32; }
+.map-page.has-selection .map-node.is-near,
+.map-page.has-selection .map-node.is-selected { opacity: 1; }
+.map-page.has-selection .map-edge { stroke-opacity: .12; }
+.map-page.has-selection .map-edge.is-linked { stroke-opacity: .95; }
+
+/* Rot pulsiert nur bei Gefahr oder Blockade. */
+.map-tone-risk .map-node-halo {
+  animation: map-alarm 1.7s ease-in-out infinite;
+}
+@keyframes map-alarm {
+  0%, 100% { opacity: .3; stroke-width: 11; }
+  50%      { opacity: .85; stroke-width: 22; }
+}
+
+/* Effekte abschaltbar — und aus, wenn das System weniger Bewegung will. */
+.map-page.effects-off .map-edge-flow {
+  animation: none;
+  stroke-dasharray: 9 11;
+  filter: none;
+}
+.map-page.effects-off .map-tone-risk .map-node-halo { animation: none; opacity: .34; }
+.map-page.effects-off .map-node-halo { filter: none; }
+.map-page.effects-off .map-edge { filter: none; }
+@media (prefers-reduced-motion: reduce) {
+  .map-edge-flow, .map-tone-risk .map-node-halo { animation: none !important; }
+}
+
+/* --- Legende --- */
+.map-legend {
+  position: absolute;
+  left: var(--space-3);
+  bottom: var(--space-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  max-width: calc(100% - var(--space-6));
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: #04070acc;
+  backdrop-filter: blur(6px);
+  list-style: none;
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+}
+.map-legend li { display: flex; align-items: center; gap: 6px; }
+.map-legend .key {
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid var(--tone-bold);
+  background: var(--bg-elevated);
+}
+.map-legend .key-circle { border-radius: 50%; }
+.map-legend .key-rect { border-radius: 3px; width: 18px; height: 11px; }
+.map-legend .key-doc { border-radius: 2px; clip-path: polygon(0 0,72% 0,100% 28%,100% 100%,0 100%); }
+.map-legend .key-hex { clip-path: polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%); }
+.map-legend .key-tone { border-radius: 50%; border-width: 0; }
+.map-legend .tone-good  { background: var(--tone-good); }
+.map-legend .tone-wait  { background: var(--tone-wait); }
+.map-legend .tone-fresh { background: var(--tone-fresh); }
+.map-legend .tone-risk  { background: var(--tone-risk); }
+
+@media (max-width: 720px) {
+  .map-legend { position: static; margin: var(--space-2); max-width: none; }
 }
 
 .map-detail { min-height: 130px; }

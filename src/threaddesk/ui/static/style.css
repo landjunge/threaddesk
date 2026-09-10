@@ -1,18 +1,22 @@
+/* Farben aus dem Netzwerkpunkt-Hub-Design (siehe docs/index.html):
+   warmes Fast-Schwarz, warmes Off-White, grauer Akzent. Alle Werkzeuge
+   teilen diese Basis; Zustandsfarben bleiben gedämpft. */
 :root {
-  --bg: #0a0a0b;
-  --bg-elevated: #121214;
-  --bg-subtle: #1a1a1e;
-  --fg: #f4f4f5;
-  --fg-muted: #a1a1aa;
-  --fg-subtle: #71717a;
+  --bg: #0a0b0a;
+  --bg-elevated: #121310;
+  --bg-subtle: #1a1b18;
+  --fg: #eceae4;
+  --fg-muted: #9a9d96;
+  --fg-subtle: #6d716c;
   --border: color-mix(in oklab, var(--fg) 12%, transparent);
   --border-strong: color-mix(in oklab, var(--fg) 22%, transparent);
-  --accent: #c8ccd4;
-  --accent-fg: #0a0a0b;
+  --accent: #d7dbd4;
+  --accent-fg: #0a0b0a;
   --ok: #7d9b7f;
   --warn: #c4a574;
-  --idle: #8b8b96;
+  --idle: #85887e;
   --done: #8aa4b5;
+  --risk: #c47b6f;
   --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-md: 12px;

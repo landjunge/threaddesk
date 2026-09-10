@@ -43,13 +43,22 @@ def live_map(tmp_path_factory):
         from threaddesk.storage.json_store import JsonStore
 
         svc = ThreadService(store=JsonStore(home))
+        # Deckt alle vier Formen und alle Zustandstöne ab.
         project = svc.create_node("project", "ThreadDesk", status="active",
                                   details="Wurzelprojekt")
         task = svc.create_node("task", "Vereinfachte Karte", status="in_progress",
                                details="Ansicht auf den Wissensgraphen")
         person = svc.create_node("person", "landjunge", status="active")
+        decision = svc.create_node("decision", "Local-first, Server optional",
+                                   status="confirmed", details="Grundsatz")
+        tool = svc.create_node("tool", "MCP-Server", status="active")
+        blocked = svc.create_node("task", "Nummerierung td list/switch",
+                                  status="blocked", details="Wartet auf PR 1")
         svc.connect(project.id, task.id, "contains")
         svc.connect(task.id, person.id, "assigned_to")
+        svc.connect(decision.id, project.id, "supports")
+        svc.connect(tool.id, project.id, "supports")
+        svc.connect(blocked.id, task.id, "blocks")
 
         port = _free_port()
         config = uvicorn.Config(create_app(), host="127.0.0.1", port=port,
@@ -62,7 +71,7 @@ def live_map(tmp_path_factory):
             time.sleep(0.05)
         if not server.started:
             pytest.skip("lokaler Server startete nicht")
-        yield f"http://127.0.0.1:{port}", 3
+        yield f"http://127.0.0.1:{port}", 6
         server.should_exit = True
         thread.join(timeout=10)
     finally:
@@ -201,8 +210,25 @@ def test_pan_follows_the_cursor(page, width):
     stage = page.locator("[data-map-stage]").bounding_box()
     before = page.evaluate(
         "() => document.querySelector('.map-node').getBoundingClientRect().x")
-    start_x = stage["x"] + stage["width"] / 2
-    start_y = stage["y"] + stage["height"] / 2
+    # Auf leerer Fläche greifen, sonst wird ein Knoten versetzt statt geschoben.
+    spot = page.evaluate(
+        """() => {
+            const box = document.querySelector('[data-map-stage]')
+                .getBoundingClientRect();
+            for (let dy = 0.12; dy < 0.9; dy += 0.06) {
+                for (let dx = 0.08; dx < 0.95; dx += 0.06) {
+                    const x = box.left + box.width * dx;
+                    const y = box.top + box.height * dy;
+                    const hit = document.elementFromPoint(x, y);
+                    if (hit && !hit.closest('.map-node')
+                        && !hit.closest('.map-legend')) return [x, y];
+                }
+            }
+            return null;
+        }"""
+    )
+    assert spot, "keine freie Fläche zum Verschieben gefunden"
+    start_x, start_y = spot
     page.mouse.move(start_x, start_y)
     page.mouse.down()
     page.mouse.move(start_x + 150, start_y, steps=10)
@@ -223,3 +249,152 @@ def test_shift_click_does_not_select_label_text(page):
     nodes.nth(1).click(modifiers=["Shift"])
     selected_text = page.evaluate("() => window.getSelection().toString()")
     assert selected_text == "", f"Shift-Klick markierte Text: {selected_text!r}"
+
+
+# --------------------------------------------------------------- Darstellung
+
+def test_shape_follows_node_kind(page):
+    """Die Form trägt den Typ: Kreis, Rechteck, Dokument, Vieleck."""
+    shapes = page.evaluate(
+        """() => Object.fromEntries([...document.querySelectorAll('.map-node')]
+            .map(g => [g.dataset.kind,
+                       [...g.classList].find(c => c.startsWith('map-node-'))]))"""
+    )
+    assert shapes["project"] == "map-node-circle"
+    assert shapes["person"] == "map-node-circle"
+    assert shapes["task"] == "map-node-rect"
+    assert shapes["decision"] == "map-node-doc"
+    assert shapes["tool"] == "map-node-hex"
+
+
+def test_status_is_readable_without_colour(page):
+    """Jeder Knoten trägt zusätzlich zur Farbe eine Statusmarke."""
+    missing = page.evaluate(
+        """() => [...document.querySelectorAll('.map-node')]
+            .filter(g => !g.querySelector('.map-node-mark-sign'))
+            .map(g => g.getAttribute('aria-label'))"""
+    )
+    assert missing == [], f"Knoten ohne Statusmarke: {missing}"
+
+
+def test_labels_are_not_truncated(page):
+    """Beschriftungen stehen unter dem Knoten und werden nicht abgeschnitten."""
+    texts = page.evaluate(
+        """() => [...document.querySelectorAll('.map-label')]
+            .map(g => [...g.querySelectorAll('text')].map(t => t.textContent).join(' '))"""
+    )
+    assert texts, "keine Beschriftungen gerendert"
+    assert not any("…" in text for text in texts), f"abgeschnitten: {texts}"
+    assert "Nummerierung td list/switch" in texts
+
+
+def test_directed_relations_carry_an_arrow(page):
+    """Übergaben und Abhängigkeiten zeigen ihre Richtung."""
+    arrows = page.evaluate(
+        """() => Object.fromEntries([...document.querySelectorAll('.map-edge')]
+            .map(p => [p.dataset.relation, Boolean(p.getAttribute('marker-end'))]))"""
+    )
+    assert arrows.get("assigned_to") is True
+    assert arrows.get("blocks") is True
+    assert arrows.get("supports") is True
+    assert arrows.get("contains") is False
+
+
+def test_chrome_uses_shared_tokens_and_map_has_its_own_tones(page):
+    """Arbeitsteilung: Grundgerüst gedämpft, Karte leuchtend.
+
+    Buttons und Rahmen folgen dem gemeinsamen Netzwerkpunkt-Design. Die
+    Landkarte ist der Schauplatz und bringt eigene, leuchtende Zustandstöne
+    mit — sonst verschwinden Zustände auf dunklem Grund.
+    """
+    values = page.evaluate(
+        """() => {
+            const map = getComputedStyle(document.querySelector('.map-page'));
+            const root = getComputedStyle(document.documentElement);
+            const read = (style, name) => style.getPropertyValue(name).trim();
+            return {
+                accent: read(root, '--accent'),
+                mutedOk: read(root, '--ok'),
+                toneGood: read(map, '--tone-good'),
+                toneRisk: read(map, '--tone-risk'),
+            };
+        }"""
+    )
+    # Grundgerüst bleibt auf dem grauen Akzent des Hub-Designs.
+    assert values["accent"].lower() == "#d7dbd4"
+    # Die Karte übernimmt ihn gerade nicht.
+    assert values["toneGood"] != values["mutedOk"]
+    assert values["toneGood"] and values["toneRisk"]
+
+
+def test_every_tone_is_visibly_distinct(page):
+    """Die vier Zustandstöne müssen sich auf der Karte klar unterscheiden."""
+    tones = page.evaluate(
+        """() => {
+            const style = getComputedStyle(document.querySelector('.map-page'));
+            return ['good', 'wait', 'fresh', 'risk', 'idle']
+                .map(name => style.getPropertyValue('--tone-' + name).trim());
+        }"""
+    )
+    assert len(set(tones)) == len(tones), f"Töne nicht eindeutig: {tones}"
+
+
+# --------------------------------------------------------------- Effekte
+
+def test_effects_can_be_switched_off(page):
+    """Effekte sind abschaltbar — der Bauplan verlangt das ausdrücklich."""
+    toggle = page.locator("[data-map-effects]")
+    page_root = page.locator(".map-page")
+    if "effects-off" in (page_root.get_attribute("class") or ""):
+        toggle.click()
+    assert "effects-off" not in (page_root.get_attribute("class") or "")
+    assert toggle.get_attribute("aria-pressed") == "true"
+    toggle.click()
+    assert "effects-off" in (page_root.get_attribute("class") or "")
+    assert toggle.get_attribute("aria-pressed") == "false"
+    animation = page.evaluate(
+        """() => {
+            const edge = document.querySelector('.map-edge-flow');
+            return edge ? getComputedStyle(edge).animationName : 'none';
+        }"""
+    )
+    assert animation == "none", f"Animation läuft trotz Abschaltung: {animation}"
+    toggle.click()
+
+
+def test_reduced_motion_stops_animation(page):
+    """Wer weniger Bewegung verlangt, bekommt keine."""
+    page.emulate_media(reduced_motion="reduce")
+    page.reload(wait_until="networkidle")
+    page.wait_for_selector(".map-node")
+    try:
+        classes = page.locator(".map-page").get_attribute("class") or ""
+        assert "effects-off" in classes, "Effekte laufen trotz reduzierter Bewegung"
+        animation = page.evaluate(
+            """() => {
+                const edge = document.querySelector('.map-edge-flow');
+                return edge ? getComputedStyle(edge).animationName : 'none';
+            }"""
+        )
+        assert animation == "none", f"Animation läuft trotzdem: {animation}"
+    finally:
+        page.emulate_media(reduced_motion="no-preference")
+        page.reload(wait_until="networkidle")
+        page.wait_for_selector(".map-node")
+
+
+def test_node_can_be_dragged(page):
+    """Knoten lassen sich versetzen, ohne die Auswahl auszulösen."""
+    page.click("[data-map-reset]")
+    page.wait_for_timeout(120)
+    node = page.locator(".map-node").first
+    box = node.bounding_box()
+    start_x = box["x"] + box["width"] / 2
+    start_y = box["y"] + box["height"] / 2
+    page.mouse.move(start_x, start_y)
+    page.mouse.down()
+    page.mouse.move(start_x + 90, start_y + 40, steps=12)
+    page.mouse.up()
+    page.wait_for_timeout(120)
+    moved = node.bounding_box()
+    assert abs(moved["x"] - box["x"]) > 30, "Knoten ließ sich nicht versetzen"

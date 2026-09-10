@@ -3,11 +3,12 @@
 <main class="map-page" data-graph-endpoint="/api/graph">
   <header class="map-toolbar">
     <div>
-      <p class="eyebrow">Projektgedächtnis · vereinfachte Karte</p>
+      <p class="eyebrow">Projektgedächtnis · Landkarte</p>
       <h1>Zusammenhänge</h1>
       <p class="muted" data-map-summary>Die Karte liest ausschließlich den Wissensgraphen.</p>
     </div>
     <div class="map-actions" aria-label="Kartensteuerung">
+      <button class="btn btn-ghost" type="button" data-map-effects aria-pressed="true">Effekte an</button>
       <button class="btn btn-ghost" type="button" data-map-zoom-out aria-label="Herauszoomen">−</button>
       <button class="btn btn-ghost" type="button" data-map-reset>Einpassen</button>
       <button class="btn btn-ghost" type="button" data-map-zoom-in aria-label="Hineinzoomen">+</button>
@@ -16,16 +17,26 @@
   <section class="map-stage" data-map-stage aria-label="Wissenslandkarte">
     <svg class="map-canvas" data-map-canvas viewBox="0 0 1000 700" role="img" aria-labelledby="map-title map-description">
       <title id="map-title">ThreadDesk Wissenslandkarte</title>
-      <desc id="map-description">Knoten und ihre gerichteten Beziehungen. Mit Mausrad zoomen und durch Ziehen verschieben.</desc>
+      <desc id="map-description">Knoten und ihre gerichteten Beziehungen. Form zeigt den Typ, Farbe den Zustand. Mit Mausrad zoomen, durch Ziehen verschieben, Knoten lassen sich versetzen.</desc>
       <g data-map-world></g>
     </svg>
     <p class="map-empty" data-map-empty hidden>Noch keine Knoten vorhanden.</p>
     <p class="map-error" data-map-error hidden>Karte konnte nicht geladen werden.</p>
+    <ul class="map-legend" aria-label="Legende">
+      <li><span class="key key-circle"></span>Projekt · Person · System</li>
+      <li><span class="key key-rect"></span>Aufgabe</li>
+      <li><span class="key key-doc"></span>Entscheidung · Wissen · Ergebnis</li>
+      <li><span class="key key-hex"></span>Werkzeug · Quelle · Ablauf</li>
+      <li><span class="key key-tone tone-good"></span>bestätigt</li>
+      <li><span class="key key-tone tone-wait"></span>wartet</li>
+      <li><span class="key key-tone tone-fresh"></span>ungeprüft</li>
+      <li><span class="key key-tone tone-risk"></span>blockiert</li>
+    </ul>
   </section>
   <section class="panel map-detail" data-map-detail aria-live="polite">
     <p class="eyebrow">Auswahl</p>
     <h2 data-map-detail-title>Kein Knoten gewählt</h2>
-    <p class="muted" data-map-detail-text>Klicke einen Knoten an oder wähle ihn mit der Tastatur.</p>
+    <p class="muted" data-map-detail-text>Klicke einen Knoten an oder wähle ihn mit der Tastatur. Shift sammelt mehrere.</p>
     <dl data-map-detail-meta hidden></dl>
   </section>
 </main>
