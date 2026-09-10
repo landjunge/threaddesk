@@ -50,23 +50,32 @@ ThreadDesk merkt sich diesen Stand. Jeder Arbeitsbereich wird zu einem eigenen T
 
 ---
 
-## Installation
+## Einfach starten
+
+### macOS
+
+1. Dieses Repository als ZIP herunterladen und entpacken.
+2. **Start ThreadDesk.command** doppelklicken.
+3. Beim ersten Mal richtet ThreadDesk sich selbst ein. Danach öffnet sich der Browser.
+
+Falls macOS den Doppelklick blockiert: Rechtsklick auf die Datei → **Öffnen**.
+
+### Windows
+
+1. ZIP herunterladen und entpacken.
+2. **Start ThreadDesk.bat** doppelklicken.
+
+### Ein Terminal-Befehl
 
 ~~~sh
-git clone https://github.com/landjunge/threaddesk.git
-cd threaddesk
-python3 -m venv .venv
-.venv/bin/pip install -e ".[dev]"
+python3 start.py
 ~~~
 
-Ein erster Thread:
+Voraussetzung ist Python 3.9 oder neuer. Die benötigte lokale Umgebung und die Oberfläche installiert ThreadDesk selbst.
 
-~~~sh
-td new "Meine Idee"
-td note "Das ist der aktuelle Stand"
-td current
-td snap save "erster Stand"
-~~~
+Ein erster Thread in der Oberfläche:
+
+Klicke auf „Neuer Thread“, gib deiner Idee einen Namen und speichere den ersten Stand.
 
 ---
 
