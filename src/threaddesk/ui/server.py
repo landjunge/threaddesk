@@ -99,16 +99,24 @@ def create_app() -> FastAPI:
     def graph(kind: str | None = None, status: str | None = None) -> dict:
         return _svc().graph(kind=kind, status=status)
 
-    @app.get("/map", response_class=HTMLResponse)\n    def map_view(request: Request) -> HTMLResponse:\n        return templates.TemplateResponse(request, "map.html", {"request": request})\n\n    @app.get("/knowledge", response_class=HTMLResponse)
+    @app.get("/map", response_class=HTMLResponse)
+    def map_view(request: Request) -> HTMLResponse:
+        return templates.TemplateResponse(request, "map.html", {"request": request})
+
+    @app.get("/knowledge", response_class=HTMLResponse)
     def knowledge(request: Request) -> HTMLResponse:
         svc = _svc()
+        nodes = svc.list_nodes()
         return templates.TemplateResponse(
             request,
             "knowledge.html",
             {
                 "request": request,
-                "nodes": svc.list_nodes(),
+                "nodes": nodes,
                 "relations": svc.list_relations(),
+                "transitions_by_node": {
+                    node.id: svc.allowed_node_transitions(node.id) for node in nodes
+                },
                 "node_kinds": NODE_KINDS,
                 "node_statuses": NODE_STATUSES,
                 "relation_kinds": RELATION_KINDS,
@@ -134,7 +142,20 @@ def create_app() -> FastAPI:
         _svc().connect(source_id, target_id, kind)
         return RedirectResponse("/knowledge", status_code=303)
 
-    @app.post(\n        "/knowledge/nodes/{node_id}/transition", response_class=RedirectResponse\n    )\n    def transition_knowledge_node(\n        node_id: str,\n        status: str = Form(...),\n        expected_revision: int = Form(...),\n    ) -> RedirectResponse:\n        _svc().transition_node(\n            node_id, status, expected_revision=expected_revision\n        )\n        return RedirectResponse("/knowledge", status_code=303)\n\n    @app.get("/partials/threads", response_class=HTMLResponse)
+    @app.post(
+        "/knowledge/nodes/{node_id}/transition", response_class=RedirectResponse
+    )
+    def transition_knowledge_node(
+        node_id: str,
+        status: str = Form(...),
+        expected_revision: int = Form(...),
+    ) -> RedirectResponse:
+        _svc().transition_node(
+            node_id, status, expected_revision=expected_revision
+        )
+        return RedirectResponse("/knowledge", status_code=303)
+
+    @app.get("/partials/threads", response_class=HTMLResponse)
     def partial_threads(request: Request) -> HTMLResponse:
         return templates.TemplateResponse(
             request, "partials/thread_list.html", _ctx(request)
