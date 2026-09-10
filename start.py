@@ -9,10 +9,18 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import webbrowser
 
 ROOT = Path(__file__).resolve().parent
 VENV = ROOT / ".venv"
 MARKER = VENV / ".threaddesk-ready"
+
+
+def open_installer() -> None:
+    """Show a friendly first-start screen instead of a terminal-only install."""
+    installer = ROOT / "installer.html"
+    if installer.exists():
+        webbrowser.open(installer.as_uri())
 
 
 def venv_python() -> Path:
@@ -45,6 +53,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--install-only", action="store_true")
     args = parser.parse_args(argv)
     try:
+        if not args.install_only:
+            open_installer()
         python = ensure_installed()
         if args.install_only:
             print("ThreadDesk ist startbereit.")
