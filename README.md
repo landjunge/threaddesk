@@ -1,6 +1,6 @@
 <p align="center"><img src="brand/mark.svg" width="180" alt="ThreadDesk Bildmarke"></p>
 <p align="center"><img src="brand/wordmark.svg" width="520" alt="ThreadDesk"></p>
-<p align="center"><a href="https://github.com/landjunge/threaddesk/archive/refs/heads/feat/knowledge-graph-core.zip"><img src="brand/download-button.svg" width="320" alt="ThreadDesk herunterladen"></a></p>
+<p align="center"><a href="https://github.com/landjunge/threaddesk/releases/tag/preview"><img src="brand/download-button.svg" width="320" alt="ThreadDesk herunterladen"></a></p>
 
 <p align="center"><strong>Ein Arbeitsplatz, der den Stand deiner KI-Projekte behält.</strong></p>
 
@@ -55,15 +55,15 @@ ThreadDesk merkt sich diesen Stand. Jeder Arbeitsbereich wird zu einem eigenen T
 
 ### macOS
 
-1. Oben auf **ThreadDesk herunterladen** klicken und die ZIP-Datei entpacken.
-2. **Start ThreadDesk.command** doppelklicken — fertig.
+1. Oben auf **ThreadDesk herunterladen** klicken.
+2. **ThreadDesk-macOS.dmg** laden und ThreadDesk nach „Programme“ ziehen — fertig.
 
 Falls macOS den Doppelklick blockiert: Rechtsklick auf die Datei → **Öffnen**.
 
 ### Windows
 
-1. Oben auf **ThreadDesk herunterladen** klicken und die ZIP-Datei entpacken.
-2. **Start ThreadDesk.bat** doppelklicken — fertig.
+1. Oben auf **ThreadDesk herunterladen** klicken.
+2. **ThreadDesk-Windows.exe** laden und doppelklicken — fertig.
 
 ### Ein Terminal-Befehl
 
@@ -71,7 +71,7 @@ Falls macOS den Doppelklick blockiert: Rechtsklick auf die Datei → **Öffnen**
 python3 start.py
 ~~~
 
-Voraussetzung ist Python 3.9 oder neuer. Die benötigte lokale Umgebung und die Oberfläche installiert ThreadDesk selbst.
+Die Desktop-Downloads enthalten Python und alle benötigten Bestandteile. Für den Terminal-Befehl ist Python 3.9 oder neuer erforderlich.
 
 Ein erster Thread in der Oberfläche:
 
