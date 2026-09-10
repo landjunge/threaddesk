@@ -11,6 +11,7 @@ from threaddesk.core.models import (
     RELATION_KINDS,
     STATUSES,
     VISIBILITIES,
+    GraphEvent,
     KnowledgeNode,
     Relation,
     Snapshot,
@@ -97,6 +98,7 @@ class ThreadService:
             metadata=metadata,
         )
         self.store.save_node(node)
+        self._record_graph_event("node.created", node.id, node.kind, node.revision)
         self.bus.emit("node.created", {"id": node.id, "kind": node.kind})
         return node
 
@@ -105,6 +107,29 @@ class ThreadService:
 
     def list_nodes(self) -> list[KnowledgeNode]:
         return self.store.list_nodes()
+
+    def list_graph_events(self) -> list[GraphEvent]:
+        return self.store.list_graph_events()
+
+    def _record_graph_event(
+        self,
+        name: str,
+        entity_id: str,
+        entity_type: str,
+        revision: int,
+        payload: dict | None = None,
+    ) -> GraphEvent:
+        event = GraphEvent(
+            id=new_id(),
+            name=name,
+            entity_id=entity_id,
+            entity_type=entity_type,
+            revision=revision,
+            occurred_at=now_iso(),
+            payload=dict(payload or {}),
+        )
+        self.store.append_graph_event(event)
+        return event
 
     def transition_node(
         self, node_id: str, status: str, *, expected_revision: int
@@ -127,10 +152,18 @@ class ThreadService:
                 f"Ungültiger Statuswechsel: {node.kind} {node.status} → {status}; "
                 f"erlaubt: {choices}."
             )
+        previous_status = node.status
         node.status = status
         node.revision += 1
         node.updated_at = now_iso()
         self.store.save_node(node)
+        self._record_graph_event(
+            "node.transitioned",
+            node.id,
+            node.kind,
+            node.revision,
+            {"from": previous_status, "to": node.status},
+        )
         self.bus.emit(
             "node.transitioned",
             {"id": node.id, "status": node.status, "revision": node.revision},
@@ -169,6 +202,9 @@ class ThreadService:
             metadata=metadata,
         )
         self.store.save_relation(relation)
+        self._record_graph_event(
+            "relation.created", relation.id, "relation", relation.revision
+        )
         self.bus.emit(
             "relation.created",
             {"id": relation.id, "source_id": source_id, "target_id": target_id},
