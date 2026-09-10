@@ -134,7 +134,7 @@ def create_app() -> FastAPI:
         _svc().connect(source_id, target_id, kind)
         return RedirectResponse("/knowledge", status_code=303)
 
-    @app.get("/partials/threads", response_class=HTMLResponse)
+    @app.post(\n        "/knowledge/nodes/{node_id}/transition", response_class=RedirectResponse\n    )\n    def transition_knowledge_node(\n        node_id: str,\n        status: str = Form(...),\n        expected_revision: int = Form(...),\n    ) -> RedirectResponse:\n        _svc().transition_node(\n            node_id, status, expected_revision=expected_revision\n        )\n        return RedirectResponse("/knowledge", status_code=303)\n\n    @app.get("/partials/threads", response_class=HTMLResponse)
     def partial_threads(request: Request) -> HTMLResponse:
         return templates.TemplateResponse(
             request, "partials/thread_list.html", _ctx(request)
