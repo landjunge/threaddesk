@@ -1,5 +1,6 @@
 <p align="center"><img src="brand/mark.svg" width="180" alt="ThreadDesk Bildmarke"></p>
 <p align="center"><img src="brand/wordmark.svg" width="520" alt="ThreadDesk"></p>
+<p align="center"><a href="https://github.com/landjunge/threaddesk/archive/refs/heads/feat/knowledge-graph-core.zip"><img src="brand/download-button.svg" width="320" alt="ThreadDesk herunterladen"></a></p>
 
 <p align="center"><strong>Ein Arbeitsplatz, der den Stand deiner KI-Projekte behält.</strong></p>
 
@@ -54,16 +55,15 @@ ThreadDesk merkt sich diesen Stand. Jeder Arbeitsbereich wird zu einem eigenen T
 
 ### macOS
 
-1. Dieses Repository als ZIP herunterladen und entpacken.
-2. **Start ThreadDesk.command** doppelklicken.
-3. Beim ersten Mal richtet ThreadDesk sich selbst ein. Danach öffnet sich der Browser.
+1. Oben auf **ThreadDesk herunterladen** klicken und die ZIP-Datei entpacken.
+2. **Start ThreadDesk.command** doppelklicken — fertig.
 
 Falls macOS den Doppelklick blockiert: Rechtsklick auf die Datei → **Öffnen**.
 
 ### Windows
 
-1. ZIP herunterladen und entpacken.
-2. **Start ThreadDesk.bat** doppelklicken.
+1. Oben auf **ThreadDesk herunterladen** klicken und die ZIP-Datei entpacken.
+2. **Start ThreadDesk.bat** doppelklicken — fertig.
 
 ### Ein Terminal-Befehl
 
@@ -97,7 +97,7 @@ ThreadDesk ist eine lokale Control-Layer vor Gnom-Hub-V1. Die Grenze ist Teil de
 | MCP-Server | td mcp |
 | Ausführung sperren | td gate freeze |
 
-Die optionale Oberfläche benötigt `pip install -e ".[ui]"`. Daten liegen unter `~/.threaddesk/`.
+Für die manuelle Entwicklerinstallation: `python3 -m pip install -e ".[dev,ui]"`. Daten liegen unter `~/.threaddesk/`.
 
 ### Wie dieses Projekt entsteht
 
