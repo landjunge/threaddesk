@@ -325,3 +325,56 @@ select {
   max-height: 280px;
   overflow: auto;
 }
+
+
+.map-page {
+  display: grid;
+  grid-template-rows: auto minmax(520px, calc(100vh - 190px));
+  gap: var(--space-4);
+  width: min(1400px, 100%);
+  margin: 0 auto;
+  padding: var(--space-5);
+}
+
+.map-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.map-actions { display: flex; gap: var(--space-2); }
+
+.map-stage {
+  position: relative;
+  overflow: hidden;
+  min-height: 520px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: #050708;
+  touch-action: none;
+  cursor: grab;
+}
+
+.map-stage.is-panning { cursor: grabbing; }
+.map-canvas { width: 100%; height: 100%; display: block; }
+.map-edge { stroke: #41505a; stroke-width: 1.5; }
+.map-node { cursor: pointer; outline: none; }
+.map-node-shape { fill: #10171b; stroke: #89a8b8; stroke-width: 2; }
+.map-node[data-status="blocked"] .map-node-shape { stroke: #d27f7f; }
+.map-node[data-status="confirmed"] .map-node-shape,
+.map-node[data-status="accepted"] .map-node-shape { stroke: #7fbf9b; }
+.map-node.is-selected .map-node-shape { stroke: #fff; stroke-width: 3; }
+.map-node text { fill: #e5edf1; font: 13px var(--font); pointer-events: none; }
+.map-empty, .map-error {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--fg-muted);
+}
+
+@media (max-width: 720px) {
+  .map-toolbar { align-items: flex-start; flex-direction: column; }
+  .map-page { padding: var(--space-3); }
+}
