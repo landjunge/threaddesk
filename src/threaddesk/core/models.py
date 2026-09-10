@@ -21,14 +21,48 @@ NODE_KINDS = (
 NODE_STATUSES = (
     "idea",
     "candidate",
+    "proposed",
     "confirmed",
     "active",
+    "ready",
+    "assigned",
+    "in_progress",
     "waiting",
     "blocked",
+    "delivered",
+    "review",
+    "unverified",
+    "verified",
+    "accepted",
+    "rejected",
+    "rework",
+    "superseded",
     "done",
     "paused",
     "archived",
 )
+NODE_TRANSITIONS = {
+    "decision": {
+        "proposed": ("confirmed", "rejected"),
+        "confirmed": ("superseded",),
+    },
+    "task": {
+        "idea": ("ready",),
+        "ready": ("assigned",),
+        "assigned": ("in_progress",),
+        "in_progress": ("blocked", "delivered"),
+        "blocked": ("in_progress",),
+        "delivered": ("review",),
+        "review": ("accepted", "rejected"),
+        "rejected": ("in_progress",),
+    },
+    "result": {
+        "delivered": ("unverified",),
+        "unverified": ("verified", "rejected", "rework"),
+        "verified": ("accepted", "rejected", "rework"),
+        "rework": ("delivered",),
+    },
+}
 RELATION_KINDS = (
     "contains",
     "depends_on",
