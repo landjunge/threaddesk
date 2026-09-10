@@ -318,3 +318,13 @@ def test_rejected_graph_write_does_not_create_event(svc: ThreadService) -> None:
         svc.transition_node(task.id, "accepted", expected_revision=task.revision)
 
     assert svc.list_graph_events() == before
+
+
+def test_allowed_transitions_are_derived_from_current_node_state(
+    svc: ThreadService,
+) -> None:
+    task = svc.create_node("task", "Bedienbarer Ablauf", status="ready")
+    project = svc.create_node("project", "ThreadDesk", status="active")
+
+    assert svc.allowed_node_transitions(task.id) == ("assigned",)
+    assert svc.allowed_node_transitions(project.id) == ()
