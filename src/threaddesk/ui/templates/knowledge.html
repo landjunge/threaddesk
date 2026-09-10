@@ -43,7 +43,16 @@
         <div class="node-main"><strong>{{ node.title }}</strong><span>{{ node.details or "Keine Details" }}</span></div>
         <span class="node-kind">{{ node.kind }}</span>
         <span class="status status-{{ node.status }}">{{ node.status }}</span>
-        <code>{{ node.id }}</code>
+        {% set transitions = transitions_by_node[node.id] %}
+        {% if transitions %}
+        <form method="post" action="/knowledge/nodes/{{ node.id }}/transition">
+          <input type="hidden" name="expected_revision" value="{{ node.revision }}" />
+          <select name="status" aria-label="Nächster Status für {{ node.title }}">
+            {% for status in transitions %}<option value="{{ status }}">{{ status }}</option>{% endfor %}
+          </select>
+          <button class="btn btn-ghost btn-compact" type="submit">Übernehmen</button>
+        </form>
+        {% else %}<code>{{ node.id }}</code>{% endif %}
       </article>
       {% endfor %}
     </div>
