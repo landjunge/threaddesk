@@ -223,3 +223,24 @@ def test_knowledge_page_applies_guarded_node_transition(home: Path) -> None:
     stored = ThreadService(store=JsonStore(home)).get_node(task.id)
     assert stored.status == "assigned"
     assert stored.revision == 2
+
+
+def test_knowledge_page_filters_nodes_and_relations(home: Path) -> None:
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from threaddesk.ui.server import create_app
+
+    svc = ThreadService(store=JsonStore(home))
+    project = svc.create_node("project", "ThreadDesk", status="active")
+    task = svc.create_node("task", "Unsichtbare Aufgabe", status="blocked")
+    svc.connect(project.id, task.id, "contains")
+
+    page = TestClient(create_app()).get("/knowledge?kind=project&status=active")
+
+    assert page.status_code == 200
+    assert "ThreadDesk" in page.text
+    assert "Unsichtbare Aufgabe" not in page.text
+    assert "contains" not in page.text
+    assert 'option value="project" selected' in page.text
+    assert 'option value="active" selected' in page.text
