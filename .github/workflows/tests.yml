@@ -23,3 +23,20 @@ jobs:
         run: python -m pytest -q
       - name: Check map JavaScript
         run: node --check src/threaddesk/ui/static/map.js
+
+  browser:
+    # Echte Bedienprüfung. Serverseitige Tests sehen nur das ausgelieferte
+    # HTML — sie bemerken nicht, wenn ein Overlay jeden Klick schluckt.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: python -m pip install -e '.[dev,ui,browser]'
+      - name: Install Chromium
+        run: python -m playwright install --with-deps chromium
+      - name: Bedienprüfung
+        run: python -m pytest tests/test_ui_browser.py -q

@@ -10,7 +10,12 @@
   const detailTitle = root.querySelector("[data-map-detail-title]");
   const detailText = root.querySelector("[data-map-detail-text]");
   const detailMeta = root.querySelector("[data-map-detail-meta]");
+  const canvas = root.querySelector("[data-map-canvas]");
   const svgNS = "http://www.w3.org/2000/svg";
+  const MIN_SCALE = 0.35;
+  const MAX_SCALE = 3;
+  const [, , VIEW_W, VIEW_H] = (canvas.getAttribute("viewBox") || "0 0 1000 700")
+    .split(/\s+/).map(Number);
   let scale = 1;
   let offsetX = 0;
   let offsetY = 0;
@@ -19,14 +24,52 @@
   const applyTransform = () => {
     world.setAttribute("transform", `translate(${offsetX} ${offsetY}) scale(${scale})`);
   };
-  const zoom = (factor) => {
-    scale = Math.max(0.35, Math.min(3, scale * factor));
+  const clamp = (value) => Math.max(MIN_SCALE, Math.min(MAX_SCALE, value));
+  // Bildschirmpixel und Kartenkoordinaten sind nicht dasselbe: die viewBox
+  // wird auf die Bühnenbreite skaliert. Ohne Umrechnung folgt die Karte dem
+  // Cursor nicht, sobald das Fenster schmaler als die viewBox ist.
+  const toUser = (clientX, clientY) => {
+    const ctm = canvas.getScreenCTM();
+    if (!ctm) return {x: VIEW_W / 2, y: VIEW_H / 2};
+    const point = canvas.createSVGPoint();
+    point.x = clientX;
+    point.y = clientY;
+    const mapped = point.matrixTransform(ctm.inverse());
+    return {x: mapped.x, y: mapped.y};
+  };
+  const pixelsPerUser = () => {
+    const ctm = canvas.getScreenCTM();
+    return ctm && ctm.a ? ctm.a : 1;
+  };
+  // Zoomt um einen festen Punkt, damit der Inhalt nicht aus dem Bild wandert.
+  const zoomAt = (factor, anchor) => {
+    const next = clamp(scale * factor);
+    if (next === scale) return;
+    offsetX = anchor.x - (next / scale) * (anchor.x - offsetX);
+    offsetY = anchor.y - (next / scale) * (anchor.y - offsetY);
+    scale = next;
     applyTransform();
   };
+  const stageCentre = () => {
+    const rect = stage.getBoundingClientRect();
+    return toUser(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  };
+  const zoom = (factor) => zoomAt(factor, stageCentre());
+  // Einpassen heißt einpassen: der ganze Graph muss sichtbar werden.
   const reset = () => {
     scale = 1;
     offsetX = 0;
     offsetY = 0;
+    applyTransform();
+    const box = world.getBBox();
+    if (!box.width || !box.height) return;
+    const padding = 32;
+    scale = clamp(Math.min(
+      (VIEW_W - padding * 2) / box.width,
+      (VIEW_H - padding * 2) / box.height,
+    ));
+    offsetX = VIEW_W / 2 - scale * (box.x + box.width / 2);
+    offsetY = VIEW_H / 2 - scale * (box.y + box.height / 2);
     applyTransform();
   };
   const el = (name, attrs = {}) => {
@@ -96,6 +139,7 @@
       });
       world.appendChild(group);
     });
+    reset();
   };
 
   root.querySelector("[data-map-zoom-in]").addEventListener("click", () => zoom(1.2));
@@ -103,23 +147,42 @@
   root.querySelector("[data-map-reset]").addEventListener("click", reset);
   stage.addEventListener("wheel", (event) => {
     event.preventDefault();
-    zoom(event.deltaY < 0 ? 1.1 : 1 / 1.1);
+    zoomAt(event.deltaY < 0 ? 1.1 : 1 / 1.1, toUser(event.clientX, event.clientY));
   }, {passive: false});
+  const DRAG_THRESHOLD = 3;
   stage.addEventListener("pointerdown", (event) => {
-    drag = {x: event.clientX, y: event.clientY, offsetX, offsetY};
-    stage.setPointerCapture(event.pointerId);
-    stage.classList.add("is-panning");
+    drag = {
+      x: event.clientX, y: event.clientY, offsetX, offsetY,
+      pointerId: event.pointerId, panning: false,
+    };
   });
   stage.addEventListener("pointermove", (event) => {
     if (!drag) return;
-    offsetX = drag.offsetX + event.clientX - drag.x;
-    offsetY = drag.offsetY + event.clientY - drag.y;
+    const dx = event.clientX - drag.x;
+    const dy = event.clientY - drag.y;
+    if (!drag.panning) {
+      if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+      // Den Zeiger erst beim echten Ziehen einfangen. Ein Capture schon beim
+      // pointerdown leitet auch den anschließenden Klick an die Bühne um —
+      // dann lässt sich kein Knoten mehr auswählen.
+      drag.panning = true;
+      stage.setPointerCapture(drag.pointerId);
+      stage.classList.add("is-panning");
+    }
+    const ratio = pixelsPerUser();
+    offsetX = drag.offsetX + dx / ratio;
+    offsetY = drag.offsetY + dy / ratio;
     applyTransform();
   });
-  stage.addEventListener("pointerup", () => {
+  const endDrag = () => {
+    if (drag && drag.panning && stage.hasPointerCapture(drag.pointerId)) {
+      stage.releasePointerCapture(drag.pointerId);
+    }
     drag = null;
     stage.classList.remove("is-panning");
-  });
+  };
+  stage.addEventListener("pointerup", endDrag);
+  stage.addEventListener("pointercancel", endDrag);
   fetch(root.dataset.graphEndpoint, {headers: {Accept: "application/json"}})
     .then((response) => {
       if (!response.ok) throw new Error("graph request failed");

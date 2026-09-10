@@ -358,6 +358,10 @@ select {
 
 .map-stage {
   position: relative;
+  /* Shift-Klick sammelt Knoten. Ohne dies markiert er zusätzlich
+     die Beschriftungen als Text. */
+  user-select: none;
+  -webkit-user-select: none;
   overflow: hidden;
   min-height: 520px;
   border: 1px solid var(--border-strong);
@@ -377,6 +381,11 @@ select {
 .map-node[data-status="accepted"] .map-node-shape { stroke: #7fbf9b; }
 .map-node.is-selected .map-node-shape { stroke: #fff; stroke-width: 3; }
 .map-node text { fill: #e5edf1; font: 13px var(--font); pointer-events: none; }
+/* `hidden` muss jede eigene display-Regel schlagen. Ohne !important
+   bleibt z. B. .map-error{display:grid} liegen, deckt die Karte ab
+   und schluckt jeden Klick auf einen Knoten. */
+[hidden] { display: none !important; }
+
 .map-empty, .map-error {
   position: absolute;
   inset: 0;

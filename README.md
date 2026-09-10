@@ -1,6 +1,6 @@
 <p align="center"><img src="brand/mark.svg" width="180" alt="ThreadDesk Bildmarke"></p>
 <p align="center"><img src="brand/wordmark.svg" width="520" alt="ThreadDesk"></p>
-<p align="center"><a href="https://github.com/landjunge/threaddesk/archive/refs/heads/feat/knowledge-graph-core.zip"><img src="brand/download-button.svg" width="320" alt="ThreadDesk herunterladen"></a></p>
+<p align="center"><a href="https://github.com/landjunge/threaddesk/archive/refs/heads/main.zip"><img src="brand/download-button.svg" width="320" alt="ThreadDesk herunterladen"></a></p>
 
 <p align="center"><strong>Ein Arbeitsplatz, der den Stand deiner KI-Projekte behält.</strong></p>
 
