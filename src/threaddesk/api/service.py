@@ -111,7 +111,7 @@ class ThreadService:
     def list_graph_events(self) -> list[GraphEvent]:
         return self.store.list_graph_events()
 
-    def _record_graph_event(
+    def allowed_node_transitions(self, node_id: str) -> tuple[str, ...]:\n        node = self.store.get_node(node_id)\n        return NODE_TRANSITIONS.get(node.kind, {}).get(node.status, ())\n\n    def _record_graph_event(
         self,
         name: str,
         entity_id: str,
