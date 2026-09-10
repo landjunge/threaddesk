@@ -41,6 +41,8 @@ def test_main_starts_ui_through_venv_python(tmp_path, monkeypatch) -> None:
     start = load_start()
     python = tmp_path / "python"
     monkeypatch.setattr(start, "ensure_installed", lambda: python)
+    installer_calls = []
+    monkeypatch.setattr(start, "open_installer", lambda: installer_calls.append(True))
     calls = []
     monkeypatch.setattr(
         start.subprocess,
@@ -49,6 +51,7 @@ def test_main_starts_ui_through_venv_python(tmp_path, monkeypatch) -> None:
     )
 
     assert start.main([]) == 0
+    assert installer_calls == [True]
     assert calls[0][0] == [
         str(python),
         "-m",
@@ -56,3 +59,15 @@ def test_main_starts_ui_through_venv_python(tmp_path, monkeypatch) -> None:
         "serve",
         "--open",
     ]
+
+
+def test_open_installer_opens_local_html(tmp_path, monkeypatch) -> None:
+    start = load_start()
+    monkeypatch.setattr(start, "ROOT", tmp_path)
+    (tmp_path / "installer.html").write_text("<!doctype html>", encoding="utf-8")
+    opened = []
+    monkeypatch.setattr(start.webbrowser, "open", lambda url: opened.append(url))
+
+    start.open_installer()
+
+    assert opened == [(tmp_path / "installer.html").as_uri()]
