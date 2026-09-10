@@ -328,3 +328,18 @@ def test_allowed_transitions_are_derived_from_current_node_state(
 
     assert svc.allowed_node_transitions(task.id) == ("assigned",)
     assert svc.allowed_node_transitions(project.id) == ()
+
+
+def test_dependency_cycle_is_rejected_without_writing(svc: ThreadService) -> None:
+    first = svc.create_node("task", "Erster Schritt", status="ready")
+    second = svc.create_node("task", "Zweiter Schritt", status="ready")
+    svc.connect(first.id, second.id, "depends_on")
+    before_events = svc.list_graph_events()
+
+    with pytest.raises(InvalidState, match="Abhängigkeitszyklus"):
+        svc.connect(second.id, first.id, "depends_on")
+    with pytest.raises(InvalidState, match="Abhängigkeitszyklus"):
+        svc.connect(first.id, first.id, "depends_on")
+
+    assert len(svc.list_relations()) == 1
+    assert svc.list_graph_events() == before_events
