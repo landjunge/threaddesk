@@ -22,6 +22,12 @@
     <p class="map-empty" data-map-empty hidden>Noch keine Knoten vorhanden.</p>
     <p class="map-error" data-map-error hidden>Karte konnte nicht geladen werden.</p>
   </section>
+  <section class="panel map-detail" data-map-detail aria-live="polite">
+    <p class="eyebrow">Auswahl</p>
+    <h2 data-map-detail-title>Kein Knoten gewählt</h2>
+    <p class="muted" data-map-detail-text>Klicke einen Knoten an oder wähle ihn mit der Tastatur.</p>
+    <dl data-map-detail-meta hidden></dl>
+  </section>
 </main>
 <script src="/static/map.js" defer></script>
 {% endblock %}
