@@ -3,7 +3,8 @@ import sys
 
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
-ROOT = Path(SPECPATH).parent.parent
+# GitHub Actions and the documented local command run PyInstaller at repo root.
+ROOT = Path.cwd()
 datas = collect_data_files("threaddesk")
 hiddenimports = collect_submodules("uvicorn") + collect_submodules("webview")
 
