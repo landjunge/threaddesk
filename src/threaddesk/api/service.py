@@ -7,6 +7,7 @@ from threaddesk.core.events import EventBus
 from threaddesk.core.models import (
     NODE_KINDS,
     NODE_STATUSES,
+    NODE_TRANSITIONS,
     RELATION_KINDS,
     STATUSES,
     VISIBILITIES,
@@ -104,6 +105,37 @@ class ThreadService:
 
     def list_nodes(self) -> list[KnowledgeNode]:
         return self.store.list_nodes()
+
+    def transition_node(
+        self, node_id: str, status: str, *, expected_revision: int
+    ) -> KnowledgeNode:
+        node = self.store.get_node(node_id)
+        status = status.strip().lower()
+        transitions = NODE_TRANSITIONS.get(node.kind)
+        if transitions is None:
+            raise InvalidState(
+                f"Statuswechsel für Knotentyp {node.kind} wird noch nicht unterstützt."
+            )
+        if node.revision != expected_revision:
+            raise InvalidState(
+                f"Veraltete Revision: erwartet {expected_revision}, aktuell {node.revision}."
+            )
+        allowed = transitions.get(node.status, ())
+        if status not in allowed:
+            choices = ", ".join(allowed) if allowed else "keiner"
+            raise InvalidState(
+                f"Ungültiger Statuswechsel: {node.kind} {node.status} → {status}; "
+                f"erlaubt: {choices}."
+            )
+        node.status = status
+        node.revision += 1
+        node.updated_at = now_iso()
+        self.store.save_node(node)
+        self.bus.emit(
+            "node.transitioned",
+            {"id": node.id, "status": node.status, "revision": node.revision},
+        )
+        return node
 
     def connect(
         self,
