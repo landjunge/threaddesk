@@ -10,6 +10,23 @@
     <a class="btn btn-ghost" href="/api/graph">Graph-JSON</a>
   </header>
 
+  <form class="panel knowledge-filter" method="get" action="/knowledge">
+    <label>Typ
+      <select name="kind">
+        <option value="">Alle</option>
+        {% for kind in node_kinds %}<option value="{{ kind }}"{% if active_kind == kind %} selected{% endif %}>{{ kind }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Status
+      <select name="status">
+        <option value="">Alle</option>
+        {% for status in node_statuses %}<option value="{{ status }}"{% if active_status == status %} selected{% endif %}>{{ status }}</option>{% endfor %}
+      </select>
+    </label>
+    <button class="btn btn-ghost" type="submit">Filtern</button>
+    <a class="btn btn-ghost" href="/knowledge">Zurücksetzen</a>
+  </form>
+
   <section class="knowledge-grid">
     <form class="panel knowledge-form" method="post" action="/knowledge/nodes">
       <div class="panel-head"><h2>Neuer Knoten</h2></div>
