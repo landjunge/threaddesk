@@ -6,6 +6,40 @@ from typing import Any
 from uuid import uuid4
 
 STATUSES = ("idea", "active", "paused", "done", "archived")
+NODE_KINDS = (
+    "project",
+    "decision",
+    "task",
+    "result",
+    "person",
+    "agent",
+    "document",
+    "tool",
+    "source",
+    "workflow",
+)
+NODE_STATUSES = (
+    "idea",
+    "candidate",
+    "confirmed",
+    "active",
+    "waiting",
+    "blocked",
+    "done",
+    "paused",
+    "archived",
+)
+RELATION_KINDS = (
+    "contains",
+    "depends_on",
+    "assigned_to",
+    "produced",
+    "supports",
+    "references",
+    "blocks",
+    "follows",
+    "related_to",
+)
 
 
 def now_iso() -> str:
@@ -101,6 +135,58 @@ class Thread:
             updated_at=data.get("updated_at") or "",
             context=ThreadContext.from_dict(data.get("context")),
             current_snapshot_id=data.get("current_snapshot_id"),
+        )
+
+
+@dataclass
+class KnowledgeNode:
+    id: str
+    kind: str
+    title: str
+    status: str = "idea"
+    details: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> KnowledgeNode:
+        return cls(
+            id=data["id"],
+            kind=data["kind"],
+            title=data["title"],
+            status=data.get("status") or "idea",
+            details=data.get("details") or "",
+            created_at=data.get("created_at") or "",
+            updated_at=data.get("updated_at") or "",
+            metadata=dict(data.get("metadata") or {}),
+        )
+
+
+@dataclass
+class Relation:
+    id: str
+    source_id: str
+    target_id: str
+    kind: str
+    created_at: str
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Relation:
+        return cls(
+            id=data["id"],
+            source_id=data["source_id"],
+            target_id=data["target_id"],
+            kind=data["kind"],
+            created_at=data.get("created_at") or "",
+            metadata=dict(data.get("metadata") or {}),
         )
 
 
