@@ -235,6 +235,32 @@ class Relation:
         )
 
 
+@dataclass(frozen=True)
+class GraphEvent:
+    id: str
+    name: str
+    entity_id: str
+    entity_type: str
+    revision: int
+    occurred_at: str
+    payload: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> GraphEvent:
+        return cls(
+            id=data["id"],
+            name=data["name"],
+            entity_id=data["entity_id"],
+            entity_type=data["entity_type"],
+            revision=int(data["revision"]),
+            occurred_at=data["occurred_at"],
+            payload=dict(data.get("payload") or {}),
+        )
+
+
 def new_thread(title: str, description: str = "") -> Thread:
     ts = now_iso()
     return Thread(
