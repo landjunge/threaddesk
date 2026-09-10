@@ -79,6 +79,62 @@ def test_node_rejects_invalid_provenance_fields(svc: ThreadService) -> None:
         svc.create_node("task", "Geheimnis", source="sk-abcdefghijklmnop")
 
 
+@pytest.mark.parametrize(
+    ("kind", "start", "target"),
+    [
+        ("decision", "proposed", "confirmed"),
+        ("task", "ready", "assigned"),
+        ("result", "unverified", "verified"),
+    ],
+)
+def test_guarded_node_status_transition(
+    svc: ThreadService, kind: str, start: str, target: str
+) -> None:
+    node = svc.create_node(kind, "Prüfobjekt", status=start)
+
+    changed = svc.transition_node(node.id, target, expected_revision=1)
+
+    assert changed.status == target
+    assert changed.revision == 2
+    assert changed.updated_at >= node.updated_at
+    assert svc.get_node(node.id).to_dict() == changed.to_dict()
+
+
+def test_node_transition_rejects_invalid_path_without_writing(
+    svc: ThreadService,
+) -> None:
+    task = svc.create_node("task", "Arbeitspaket", status="ready")
+
+    with pytest.raises(InvalidState, match="Ungültiger Statuswechsel"):
+        svc.transition_node(task.id, "accepted", expected_revision=1)
+
+    unchanged = svc.get_node(task.id)
+    assert unchanged.status == "ready"
+    assert unchanged.revision == 1
+
+
+def test_node_transition_rejects_stale_revision_without_writing(
+    svc: ThreadService,
+) -> None:
+    decision = svc.create_node("decision", "Local-first", status="proposed")
+
+    with pytest.raises(InvalidState, match="Veraltete Revision"):
+        svc.transition_node(decision.id, "confirmed", expected_revision=0)
+
+    unchanged = svc.get_node(decision.id)
+    assert unchanged.status == "proposed"
+    assert unchanged.revision == 1
+
+
+def test_node_transition_is_limited_to_first_three_workflow_types(
+    svc: ThreadService,
+) -> None:
+    project = svc.create_node("project", "ThreadDesk", status="active")
+
+    with pytest.raises(InvalidState, match="noch nicht unterstützt"):
+        svc.transition_node(project.id, "paused", expected_revision=1)
+
+
 def test_connect_rejects_unknown_nodes_without_writing(svc: ThreadService) -> None:
     project = svc.create_node("project", "ThreadDesk")
 
