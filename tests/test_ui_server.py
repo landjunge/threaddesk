@@ -194,6 +194,8 @@ def test_map_page_is_a_read_only_api_graph_view(home: Path) -> None:
     assert 'src="/static/map.js"' in page.text
     assert "Hineinzoomen" in page.text
     assert "Herauszoomen" in page.text
+    assert "data-map-detail" in page.text
+    assert 'aria-live="polite"' in page.text
 
     graph = client.get("/api/graph").json()
     assert graph["counts"] == {"nodes": 2, "relations": 1}
