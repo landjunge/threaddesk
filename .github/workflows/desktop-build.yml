@@ -8,6 +8,12 @@ on:
       - "packaging/**"
       - "pyproject.toml"
       - ".github/workflows/desktop-build.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "packaging/**"
+      - "pyproject.toml"
+      - ".github/workflows/desktop-build.yml"
   workflow_dispatch:
 
 permissions:
@@ -53,6 +59,7 @@ jobs:
 
   publish-preview:
     needs: build
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -62,10 +69,11 @@ jobs:
       - name: Publish stable preview downloads
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TARGET: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           if gh release view preview --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload preview release/* --clobber --repo "$GITHUB_REPOSITORY"
             gh release edit preview --prerelease --title "ThreadDesk Preview" --notes "Fertige Desktop-Ausgaben: herunterladen, öffnen, fertig." --repo "$GITHUB_REPOSITORY"
           else
-            gh release create preview release/* --prerelease --target "$GITHUB_SHA" --title "ThreadDesk Preview" --notes "Fertige Desktop-Ausgaben: herunterladen, öffnen, fertig." --repo "$GITHUB_REPOSITORY"
+            gh release create preview release/* --prerelease --target "$RELEASE_TARGET" --title "ThreadDesk Preview" --notes "Fertige Desktop-Ausgaben: herunterladen, öffnen, fertig." --repo "$GITHUB_REPOSITORY"
           fi
