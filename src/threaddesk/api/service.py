@@ -195,6 +195,10 @@ class ThreadService:
             raise InvalidState("Herkunft fehlt.")
         self.store.get_node(source_id)
         self.store.get_node(target_id)
+        if kind == "depends_on" and self._creates_dependency_cycle(
+            source_id, target_id
+        ):
+            raise InvalidState("Abhängigkeitszyklus erkannt; Verbindung nicht gespeichert.")
         relation = Relation(
             id=new_id(),
             source_id=source_id,
@@ -214,6 +218,27 @@ class ThreadService:
             {"id": relation.id, "source_id": source_id, "target_id": target_id},
         )
         return relation
+
+    def _creates_dependency_cycle(self, source_id: str, target_id: str) -> bool:
+        if source_id == target_id:
+            return True
+        outgoing: dict[str, set[str]] = {}
+        for relation in self.store.list_relations():
+            if relation.kind == "depends_on":
+                outgoing.setdefault(relation.source_id, set()).add(
+                    relation.target_id
+                )
+        pending = [target_id]
+        visited: set[str] = set()
+        while pending:
+            current = pending.pop()
+            if current == source_id:
+                return True
+            if current in visited:
+                continue
+            visited.add(current)
+            pending.extend(outgoing.get(current, ()))
+        return False
 
     def list_relations(self) -> list[Relation]:
         return self.store.list_relations()
