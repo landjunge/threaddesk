@@ -77,7 +77,7 @@
 
 .node-row {
   display: grid;
-  grid-template-columns: 18px minmax(180px, 1fr) 100px 100px 110px;
+  grid-template-columns: 18px minmax(180px, 1fr) 100px 100px minmax(180px, auto);
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3);
@@ -89,6 +89,8 @@
 .node-main {
   display: grid;
 }
+
+.node-row form { display: flex; align-items: center; gap: var(--space-2); }
 
 .node-main span,
 .node-kind,
