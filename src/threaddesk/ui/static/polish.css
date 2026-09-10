@@ -40,6 +40,15 @@
   gap: var(--space-4);
 }
 
+.knowledge-filter {
+  display: flex;
+  align-items: end;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.knowledge-filter label { display: grid; gap: var(--space-1); }
+
 .knowledge-form {
   display: grid;
   align-content: start;
