@@ -40,6 +40,13 @@ jobs:
         run: python -m pip install -e ".[ui,desktop]" pyinstaller
       - name: Build desktop app
         run: pyinstaller --noconfirm --clean packaging/ThreadDesk.spec
+      - name: Test packaged Windows app
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\dist\ThreadDesk.exe --self-test
+      - name: Test packaged macOS app
+        if: runner.os == 'macOS'
+        run: dist/ThreadDesk.app/Contents/MacOS/ThreadDesk --self-test
       - name: Create Windows download
         if: runner.os == 'Windows'
         shell: pwsh
@@ -47,6 +54,7 @@ jobs:
       - name: Create macOS disk image
         if: runner.os == 'macOS'
         run: |
+          codesign --deep --force --sign - dist/ThreadDesk.app
           mkdir -p dmg
           cp -R dist/ThreadDesk.app dmg/
           ln -s /Applications dmg/Applications
