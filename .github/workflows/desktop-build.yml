@@ -27,7 +27,8 @@ jobs:
         include:
           - os: windows-latest
             artifact: ThreadDesk-Windows
-          - os: macos-14
+          # Intel runner: works natively on i7 Macs and via Rosetta on Apple Silicon.
+          - os: macos-13
             artifact: ThreadDesk-macOS
     runs-on: ${{ matrix.os }}
     steps:
@@ -46,7 +47,10 @@ jobs:
         run: .\dist\ThreadDesk.exe --self-test
       - name: Test packaged macOS app
         if: runner.os == 'macOS'
-        run: dist/ThreadDesk.app/Contents/MacOS/ThreadDesk --self-test
+        run: |
+          test "$(uname -m)" = "x86_64"
+          file dist/ThreadDesk.app/Contents/MacOS/ThreadDesk | grep x86_64
+          dist/ThreadDesk.app/Contents/MacOS/ThreadDesk --self-test
       - name: Create Windows download
         if: runner.os == 'Windows'
         shell: pwsh
