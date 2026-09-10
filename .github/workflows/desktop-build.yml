@@ -28,9 +28,11 @@ jobs:
           - os: windows-latest
             artifact: ThreadDesk-Windows
           # Intel runner: works natively on i7 Macs and via Rosetta on Apple Silicon.
-          - os: macos-13
+          - os: macos-15-intel
             artifact: ThreadDesk-macOS
     runs-on: ${{ matrix.os }}
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "10.15"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
