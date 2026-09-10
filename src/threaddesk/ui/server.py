@@ -104,22 +104,34 @@ def create_app() -> FastAPI:
         return templates.TemplateResponse(request, "map.html", {"request": request})
 
     @app.get("/knowledge", response_class=HTMLResponse)
-    def knowledge(request: Request) -> HTMLResponse:
+    def knowledge(
+        request: Request, kind: str | None = None, status: str | None = None
+    ) -> HTMLResponse:
         svc = _svc()
-        nodes = svc.list_nodes()
+        graph_data = svc.graph(kind=kind, status=status)
+        node_ids = {node["id"] for node in graph_data["nodes"]}
+        nodes = [node for node in svc.list_nodes() if node.id in node_ids]
+        relation_ids = {relation["id"] for relation in graph_data["relations"]}
+        relations = [
+            relation
+            for relation in svc.list_relations()
+            if relation.id in relation_ids
+        ]
         return templates.TemplateResponse(
             request,
             "knowledge.html",
             {
                 "request": request,
                 "nodes": nodes,
-                "relations": svc.list_relations(),
+                "relations": relations,
                 "transitions_by_node": {
                     node.id: svc.allowed_node_transitions(node.id) for node in nodes
                 },
                 "node_kinds": NODE_KINDS,
                 "node_statuses": NODE_STATUSES,
                 "relation_kinds": RELATION_KINDS,
+                "active_kind": graph_data["filters"]["kind"],
+                "active_status": graph_data["filters"]["status"],
             },
         )
 
