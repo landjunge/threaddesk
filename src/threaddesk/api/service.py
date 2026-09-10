@@ -9,6 +9,7 @@ from threaddesk.core.models import (
     NODE_STATUSES,
     RELATION_KINDS,
     STATUSES,
+    VISIBILITIES,
     KnowledgeNode,
     Relation,
     Snapshot,
@@ -56,12 +57,16 @@ class ThreadService:
         *,
         status: str = "idea",
         details: str = "",
+        source: str = "local",
+        visibility: str = "private",
         metadata: dict | None = None,
     ) -> KnowledgeNode:
         kind = kind.strip().lower()
         status = status.strip().lower()
         title = reject_secrets(title).strip()
         details = reject_secrets(details).strip()
+        source = reject_secrets(source).strip()
+        visibility = visibility.strip().lower()
         metadata = dict(metadata or {})
         reject_secrets(json.dumps(metadata, ensure_ascii=False))
         if kind not in NODE_KINDS:
@@ -70,6 +75,12 @@ class ThreadService:
             raise InvalidState(f"Knotenstatus muss einer von {', '.join(NODE_STATUSES)} sein.")
         if not title:
             raise InvalidState("Titel fehlt.")
+        if not source:
+            raise InvalidState("Herkunft fehlt.")
+        if visibility not in VISIBILITIES:
+            raise InvalidState(
+                f"Sichtbarkeit muss einer von {', '.join(VISIBILITIES)} sein."
+            )
         ts = now_iso()
         node = KnowledgeNode(
             id=new_id(),
@@ -79,6 +90,9 @@ class ThreadService:
             details=details,
             created_at=ts,
             updated_at=ts,
+            revision=1,
+            source=source,
+            visibility=visibility,
             metadata=metadata,
         )
         self.store.save_node(node)
