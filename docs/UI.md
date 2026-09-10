@@ -21,9 +21,10 @@ Lesen, Schreiben, Gate, Snapshots, Shortcuts, Pakete.
 3. Dateien sind nur gemerkte Pfade — kein Upload, kein Öffnen.
 4. Prompt ist Vorschau. Kopieren ja, Starten nein.
 
-Start:
+Einfacher Start aus dem entpackten Projektordner:
 
 ```bash
-pip install -e ".[ui]"
-td serve
+python3 start.py
 ```
+
+Auf macOS kann stattdessen `Start ThreadDesk.command`, unter Windows `Start ThreadDesk.bat` doppelt angeklickt werden. Der erste Start richtet die lokale Umgebung automatisch ein.
