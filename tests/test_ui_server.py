@@ -173,3 +173,27 @@ def test_rename_files_and_prompt_preview(home: Path) -> None:
     )
     assert removed.status_code == 200
     assert "src/app.py" not in ThreadService(store=JsonStore(home)).current().context.files
+
+
+def test_map_page_is_a_read_only_api_graph_view(home: Path) -> None:
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from threaddesk.ui.server import create_app
+
+    svc = ThreadService(store=JsonStore(home))
+    project = svc.create_node("project", "ThreadDesk", status="active")
+    task = svc.create_node("task", "Karte", status="ready")
+    svc.connect(project.id, task.id, "contains")
+
+    client = TestClient(create_app())
+    page = client.get("/map")
+
+    assert page.status_code == 200
+    assert 'data-graph-endpoint="/api/graph"' in page.text
+    assert 'src="/static/map.js"' in page.text
+    assert "Hineinzoomen" in page.text
+    assert "Herauszoomen" in page.text
+
+    graph = client.get("/api/graph").json()
+    assert graph["counts"] == {"nodes": 2, "relations": 1}
