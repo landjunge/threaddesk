@@ -213,7 +213,9 @@ class Relation:
     source_id: str
     target_id: str
     kind: str
-    created_at: str
+    created_at: str = ""
+    revision: int = 1
+    source: str = "local"
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -227,6 +229,8 @@ class Relation:
             target_id=data["target_id"],
             kind=data["kind"],
             created_at=data.get("created_at") or "",
+            revision=int(data.get("revision") or 1),
+            source=data.get("source") or "local",
             metadata=dict(data.get("metadata") or {}),
         )
 
