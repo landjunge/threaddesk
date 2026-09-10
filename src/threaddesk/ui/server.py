@@ -99,7 +99,7 @@ def create_app() -> FastAPI:
     def graph(kind: str | None = None, status: str | None = None) -> dict:
         return _svc().graph(kind=kind, status=status)
 
-    @app.get("/knowledge", response_class=HTMLResponse)
+    @app.get("/map", response_class=HTMLResponse)\n    def map_view(request: Request) -> HTMLResponse:\n        return templates.TemplateResponse(request, "map.html", {"request": request})\n\n    @app.get("/knowledge", response_class=HTMLResponse)
     def knowledge(request: Request) -> HTMLResponse:
         svc = _svc()
         return templates.TemplateResponse(
