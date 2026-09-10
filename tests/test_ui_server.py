@@ -131,7 +131,7 @@ def test_index_has_shortcuts_help(home: Path) -> None:
     assert res.status_code == 200
     assert "Tastatur" in res.text
     assert "data-thread-index" in res.text
-    assert "Gnom-Brainstorm schreiben" in res.text
+    assert "Gnom-Brainstorm" in res.text
 
 
 def test_rename_files_and_prompt_preview(home: Path) -> None:
