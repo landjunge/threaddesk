@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block body %}
+<main class="knowledge-page">
+  <header class="knowledge-head">
+    <div>
+      <p class="eyebrow">Projektgedächtnis · Listenansicht</p>
+      <h1>Wissenspool</h1>
+      <p class="muted">Knoten enthalten Wissen. Linien erklären den Zusammenhang.</p>
+    </div>
+    <a class="btn btn-ghost" href="/api/graph">Graph-JSON</a>
+  </header>
+
+  <section class="knowledge-grid">
+    <form class="panel knowledge-form" method="post" action="/knowledge/nodes">
+      <div class="panel-head"><h2>Neuer Knoten</h2></div>
+      <label>Typ<select name="kind">{% for kind in node_kinds %}<option value="{{ kind }}">{{ kind }}</option>{% endfor %}</select></label>
+      <label>Titel<input name="title" required placeholder="Was soll gemerkt werden?" /></label>
+      <label>Status<select name="status">{% for status in node_statuses %}<option value="{{ status }}">{{ status }}</option>{% endfor %}</select></label>
+      <label>Details<textarea name="details" rows="4" placeholder="Kurze, bestätigte Beschreibung"></textarea></label>
+      <button class="btn btn-primary" type="submit">Knoten speichern</button>
+    </form>
+
+    <form class="panel knowledge-form" method="post" action="/knowledge/relations">
+      <div class="panel-head"><h2>Verbindung anlegen</h2></div>
+      {% if nodes|length >= 2 %}
+      <label>Von<select name="source_id">{% for node in nodes %}<option value="{{ node.id }}">{{ node.title }} · {{ node.kind }}</option>{% endfor %}</select></label>
+      <label>Verbindung<select name="kind">{% for kind in relation_kinds %}<option value="{{ kind }}">{{ kind }}</option>{% endfor %}</select></label>
+      <label>Zu<select name="target_id">{% for node in nodes %}<option value="{{ node.id }}">{{ node.title }} · {{ node.kind }}</option>{% endfor %}</select></label>
+      <button class="btn btn-primary" type="submit">Linie speichern</button>
+      {% else %}
+      <p class="muted">Für eine Verbindung werden mindestens zwei Knoten benötigt.</p>
+      {% endif %}
+    </form>
+  </section>
+
+  <section class="panel knowledge-list">
+    <div class="panel-head"><h2>Knoten</h2><span class="count">{{ nodes|length }}</span></div>
+    {% if nodes %}
+    <div class="node-table" role="list">
+      {% for node in nodes %}
+      <article class="node-row" role="listitem" data-kind="{{ node.kind }}" data-status="{{ node.status }}">
+        <span class="node-shape node-shape-{{ node.kind }}" aria-hidden="true"></span>
+        <div class="node-main"><strong>{{ node.title }}</strong><span>{{ node.details or "Keine Details" }}</span></div>
+        <span class="node-kind">{{ node.kind }}</span>
+        <span class="status status-{{ node.status }}">{{ node.status }}</span>
+        <code>{{ node.id }}</code>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}<p class="empty">Noch keine Knoten. Der erste Knoten kann ein Projekt sein.</p>{% endif %}
+  </section>
+
+  <section class="panel knowledge-list">
+    <div class="panel-head"><h2>Verbindungen</h2><span class="count">{{ relations|length }}</span></div>
+    {% if relations %}
+    <div class="relation-list">
+      {% for relation in relations %}
+      <div class="relation-row"><code>{{ relation.source_id }}</code><span>→ {{ relation.kind }} →</span><code>{{ relation.target_id }}</code></div>
+      {% endfor %}
+    </div>
+    {% else %}<p class="empty">Noch keine Verbindungen.</p>{% endif %}
+  </section>
+</main>
+{% endblock %}
