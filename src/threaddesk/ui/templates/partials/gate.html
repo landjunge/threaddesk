@@ -1,21 +1,21 @@
 <section id="gate" class="panel gate">
   <header class="panel-head">
-    <h2>Gate</h2>
+    <h2>{{ t("gate.title") }}</h2>
     <span class="status {% if gate.frozen %}status-paused{% else %}status-active{% endif %}">
-      {% if gate.frozen %}frozen{% else %}offen{% endif %}
+      {% if gate.frozen %}{{ t("gate.frozen") }}{% else %}{{ t("gate.open") }}{% endif %}
     </span>
   </header>
   <dl class="gate-stats">
     <div>
-      <dt>Execute heute</dt>
+      <dt>{{ t("gate.execute_today") }}</dt>
       <dd>{{ gate.today.execute }}/{{ gate.policy.max_execute_day }}</dd>
     </div>
     <div>
-      <dt>Handoff heute</dt>
+      <dt>{{ t("gate.handoff_today") }}</dt>
       <dd>{{ gate.today.handoff }}/{{ gate.policy.max_handoff_day }}</dd>
     </div>
     <div>
-      <dt>Cooldown</dt>
+      <dt>{{ t("gate.cooldown") }}</dt>
       <dd>{{ gate.policy.cooldown_seconds }}s</dd>
     </div>
   </dl>
@@ -23,15 +23,15 @@
     hx-post="/gate/freeze"
     hx-target="#workspace"
     hx-swap="innerHTML"
-    {% if not gate.frozen %}hx-confirm="Gate einfrieren? Execute- und Handoff-Pakete werden blockiert."{% endif %}
+    {% if not gate.frozen %}hx-confirm="{{ t('gate.confirm_freeze') }}"{% endif %}
   >
     {% if gate.frozen %}
     <input type="hidden" name="frozen" value="0" />
-    <button type="submit" class="btn btn-ghost">Auftauen</button>
+    <button type="submit" class="btn btn-ghost">{{ t("gate.thaw") }}</button>
     {% else %}
     <input type="hidden" name="frozen" value="1" />
-    <button type="submit" class="btn btn-ghost">Einfrieren</button>
+    <button type="submit" class="btn btn-ghost">{{ t("gate.freeze") }}</button>
     {% endif %}
   </form>
-  <p class="muted gate-hint">Sperrt nur Pakete. Startet nichts.</p>
+  <p class="muted gate-hint">{{ t("gate.hint") }}</p>
 </section>

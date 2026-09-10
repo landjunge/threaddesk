@@ -1,43 +1,43 @@
 <section id="packet" class="block">
-  <h3>Paket</h3>
-  <p class="muted">Schreibt Dateien. Startet Grok und gnom-hub-v1 nicht.</p>
+  <h3>{{ t("packet.title") }}</h3>
+  <p class="muted">{{ t("packet.hint") }}</p>
   <div class="packet-actions">
     <form
       hx-post="/threads/{{ current.id }}/handoff"
       hx-target="#workspace"
       hx-swap="innerHTML"
     >
-      <button type="submit" class="btn btn-ghost">Handoff schreiben</button>
+      <button type="submit" class="btn btn-ghost">{{ t("packet.write_handoff") }}</button>
     </form>
     <form
       hx-post="/threads/{{ current.id }}/gnom"
       hx-target="#workspace"
       hx-swap="innerHTML"
     >
-      <button type="submit" class="btn btn-ghost">Gnom-Brainstorm</button>
+      <button type="submit" class="btn btn-ghost">{{ t("packet.gnom") }}</button>
     </form>
     <form
       hx-post="/threads/{{ current.id }}/grok"
       hx-target="#workspace"
       hx-swap="innerHTML"
     >
-      <button type="submit" class="btn btn-primary">Grok-Brainstorm</button>
+      <button type="submit" class="btn btn-primary">{{ t("packet.grok") }}</button>
     </form>
   </div>
   {% if packet and packet.thread_id == current.id %}
   <div class="packet-card">
-    <p class="status status-paused">{{ packet.kind or "paket" }} · {{ packet.mode or "handoff" }} · nicht ausgeführt</p>
+    <p class="status status-paused">{{ packet.kind or "paket" }} · {{ packet.mode or "handoff" }} · {{ t("packet.not_executed") }}</p>
     <p class="thread-id">{{ packet.path or packet.prompt_path or packet.chat_path }}</p>
     {% if packet.prompt_path %}
     <p class="thread-id">prompt: {{ packet.prompt_path }}</p>
     {% endif %}
     {% if packet.command %}
     <pre class="cmd" id="packet-cmd">{{ packet.command }}</pre>
-    <button type="button" class="btn btn-ghost btn-compact" data-copy="#packet-cmd">Befehl kopieren</button>
+    <button type="button" class="btn btn-ghost btn-compact" data-copy="#packet-cmd">{{ t("packet.copy_command") }}</button>
     {% endif %}
     {% if packet.prompt %}
     <pre class="cmd prompt-preview" id="packet-prompt">{{ packet.prompt }}</pre>
-    <button type="button" class="btn btn-ghost btn-compact" data-copy="#packet-prompt">Prompt kopieren</button>
+    <button type="button" class="btn btn-ghost btn-compact" data-copy="#packet-prompt">{{ t("packet.copy_prompt") }}</button>
     {% endif %}
   </div>
   {% endif %}

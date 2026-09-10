@@ -1,11 +1,11 @@
 <section id="thread-list" class="panel threads">
   <header class="panel-head">
-    <h2>Threads</h2>
+    <h2>{{ t("list.title") }}</h2>
     <span class="count">{{ threads|length }}</span>
   </header>
   <div class="new-thread" x-data="{ open: false }">
     <button type="button" class="btn btn-ghost" data-new-thread @click="open = !open">
-      Neu <kbd>n</kbd>
+      {{ t("list.new") }} <kbd>n</kbd>
     </button>
     <form
       class="stack"
@@ -16,14 +16,14 @@
       hx-swap="innerHTML"
     >
       <label class="field">
-        <span>Titel</span>
-        <input type="text" name="title" data-new-title required maxlength="160" placeholder="Neuer Thread" />
+        <span>{{ t("list.title_label") }}</span>
+        <input type="text" name="title" data-new-title required maxlength="160" placeholder="{{ t('list.new_thread_placeholder') }}" />
       </label>
       <label class="field">
-        <span>Beschreibung</span>
+        <span>{{ t("list.description") }}</span>
         <input type="text" name="description" maxlength="400" />
       </label>
-      <button type="submit" class="btn btn-primary">Anlegen</button>
+      <button type="submit" class="btn btn-primary">{{ t("list.create") }}</button>
     </form>
   </div>
   {% if threads %}
@@ -49,6 +49,6 @@
     {% endfor %}
   </ul>
   {% else %}
-  <p class="empty">Keine Threads. Lege oben einen an.</p>
+  <p class="empty">{{ t("list.empty") }}</p>
   {% endif %}
 </section>

@@ -13,6 +13,23 @@
   const canvas = root.querySelector("[data-map-canvas]");
   const effectsToggle = root.querySelector("[data-map-effects]");
   const svgNS = "http://www.w3.org/2000/svg";
+  // Texte kommen aus dem Katalog des Servers, nie aus dieser Datei.
+  let STRINGS = {};
+  try {
+    STRINGS = JSON.parse(root.dataset.strings || "{}");
+  } catch (error) {
+    STRINGS = {};
+  }
+  const t = (key, values) => {
+    let text = STRINGS[key];
+    if (text === undefined) return key;
+    if (values) {
+      Object.entries(values).forEach(([name, value]) => {
+        text = text.split(`{${name}}`).join(value);
+      });
+    }
+    return text;
+  };
   const MIN_SCALE = 0.25;
   const MAX_SCALE = 4;
   const [, , VIEW_W, VIEW_H] = (canvas.getAttribute("viewBox") || "0 0 1000 700")
@@ -329,8 +346,9 @@
     canvas.querySelector("defs")?.remove();
     canvas.insertBefore(defs(), canvas.firstChild);
     empty.hidden = graph.nodes.length !== 0;
-    summary.textContent =
-      `${graph.counts.nodes} Knoten · ${graph.counts.relations} Verbindungen`;
+    summary.textContent = t("map.nodes_relations", {
+      nodes: graph.counts.nodes, relations: graph.counts.relations,
+    });
 
     world.appendChild(backdrop());
     placed = layout(graph.nodes, graph.relations);
@@ -363,11 +381,14 @@
 
     const showDetail = (node) => {
       detailTitle.textContent = node.title;
-      detailText.textContent = node.details || "Keine Details";
+      detailText.textContent = node.details || t("map.no_details");
       detailMeta.hidden = false;
       detailMeta.replaceChildren();
-      [["Typ", node.kind], ["Status", node.status], ["Herkunft", node.source],
-       ["Sichtbarkeit", node.visibility], ["Revision", node.revision]]
+      [[t("map.field_kind"), node.kind],
+       [t("map.field_status"), node.status],
+       [t("map.field_source"), node.source],
+       [t("map.field_visibility"), node.visibility],
+       [t("map.field_revision"), node.revision]]
         .forEach(([term, value]) => {
           const item = document.createElement("div");
           const dt = document.createElement("dt");
@@ -534,7 +555,7 @@
     root.classList.toggle("effects-off", !on);
     if (effectsToggle) {
       effectsToggle.setAttribute("aria-pressed", String(on));
-      effectsToggle.textContent = on ? "Effekte an" : "Effekte aus";
+      effectsToggle.textContent = on ? t("map.effects_on") : t("map.effects_off");
     }
   };
   setEffects(!calm.matches);

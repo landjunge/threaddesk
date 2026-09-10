@@ -1,21 +1,21 @@
 <section id="notes" class="block" x-data="notesMic()">
-  <h3>Notizen</h3>
-  <p class="muted">Mikrofon schreibt nur Text hierher. Startet Grok nicht.</p>
+  <h3>{{ t("notes.title") }}</h3>
+  <p class="muted">{{ t("notes.hint") }}</p>
   <form
     class="stack"
     hx-post="/threads/{{ current.id }}/note"
     hx-target="#workspace"
     hx-swap="innerHTML"
   >
-    <textarea name="text" rows="8" placeholder="Kontext, Stand, nächster Schritt">{{ current.context.notes }}</textarea>
+    <textarea name="text" rows="8" placeholder="{{ t('notes.placeholder') }}">{{ current.context.notes }}</textarea>
     <p class="mic-interim" x-show="interim" x-cloak x-text="interim"></p>
     <p class="banner-error" x-show="err" x-cloak x-text="err"></p>
     <div class="row-actions">
       <label class="check">
         <input type="checkbox" name="append" value="1" />
-        Anhängen statt ersetzen
+        {{ t("notes.append") }}
       </label>
-      <span class="muted">Strg+Enter speichert · m = Mikrofon</span>
+      <span class="muted">{{ t("notes.shortcut_hint") }}</span>
     </div>
     <div class="inline-form">
       <button
@@ -24,9 +24,9 @@
         data-mic
         :class="{ 'is-mic': on }"
         @click="toggle()"
-        x-text="on ? 'Stopp' : 'Mikrofon'"
-      >Mikrofon</button>
-      <button type="submit" class="btn btn-primary">Notiz speichern</button>
+        x-text="on ? '{{ t('notes.mic_stop') }}' : '{{ t('notes.mic') }}'"
+      >{{ t("notes.mic") }}</button>
+      <button type="submit" class="btn btn-primary">{{ t("notes.save") }}</button>
     </div>
   </form>
 </section>
