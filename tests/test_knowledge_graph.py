@@ -285,3 +285,36 @@ def test_relation_rejects_empty_or_secret_source_without_writing(
         )
 
     assert svc.list_relations() == []
+
+
+def test_graph_writes_create_persistent_append_only_events(tmp_path: Path) -> None:
+    first = ThreadService(store=JsonStore(tmp_path))
+    decision = first.create_node("decision", "Local-first", status="proposed")
+    task = first.create_node("task", "Ereignisse", status="ready")
+    relation = first.connect(decision.id, task.id, "supports")
+    changed = first.transition_node(
+        decision.id, "confirmed", expected_revision=decision.revision
+    )
+
+    events = ThreadService(store=JsonStore(tmp_path)).list_graph_events()
+
+    assert [event.name for event in events] == [
+        "node.created",
+        "node.created",
+        "relation.created",
+        "node.transitioned",
+    ]
+    assert events[2].entity_id == relation.id
+    assert events[3].revision == changed.revision
+    assert events[3].payload == {"from": "proposed", "to": "confirmed"}
+    assert len({event.id for event in events}) == 4
+
+
+def test_rejected_graph_write_does_not_create_event(svc: ThreadService) -> None:
+    task = svc.create_node("task", "Ereignisse", status="ready")
+    before = svc.list_graph_events()
+
+    with pytest.raises(InvalidState):
+        svc.transition_node(task.id, "accepted", expected_revision=task.revision)
+
+    assert svc.list_graph_events() == before
