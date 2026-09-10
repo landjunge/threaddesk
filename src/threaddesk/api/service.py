@@ -143,15 +143,19 @@ class ThreadService:
         target_id: str,
         kind: str,
         *,
+        source: str = "local",
         metadata: dict | None = None,
     ) -> Relation:
         kind = kind.strip().lower()
+        source = reject_secrets(source).strip()
         metadata = dict(metadata or {})
         reject_secrets(json.dumps(metadata, ensure_ascii=False))
         if kind not in RELATION_KINDS:
             raise InvalidState(
                 f"Verbindungstyp muss einer von {', '.join(RELATION_KINDS)} sein."
             )
+        if not source:
+            raise InvalidState("Herkunft fehlt.")
         self.store.get_node(source_id)
         self.store.get_node(target_id)
         relation = Relation(
@@ -160,6 +164,8 @@ class ThreadService:
             target_id=target_id,
             kind=kind,
             created_at=now_iso(),
+            revision=1,
+            source=source,
             metadata=metadata,
         )
         self.store.save_relation(relation)
