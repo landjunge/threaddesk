@@ -237,3 +237,51 @@ def test_knowledge_list_can_create_nodes_and_relations(
     assert "ThreadDesk" in page.text
     assert "Listenansicht" in page.text
     assert "contains" in page.text
+
+
+def test_relation_records_revision_and_source(svc: ThreadService) -> None:
+    project = svc.create_node("project", "ThreadDesk")
+    task = svc.create_node("task", "Beziehungen", status="ready")
+
+    relation = svc.connect(
+        project.id, task.id, "contains", source="user-confirmed"
+    )
+
+    assert relation.revision == 1
+    assert relation.source == "user-confirmed"
+    assert svc.list_relations()[0].to_dict() == relation.to_dict()
+
+
+def test_old_relation_data_gets_safe_field_defaults() -> None:
+    from threaddesk.core.models import Relation
+
+    relation = Relation.from_dict(
+        {
+            "id": "legacy",
+            "source_id": "a",
+            "target_id": "b",
+            "kind": "contains",
+        }
+    )
+
+    assert relation.revision == 1
+    assert relation.source == "local"
+
+
+def test_relation_rejects_empty_or_secret_source_without_writing(
+    svc: ThreadService,
+) -> None:
+    project = svc.create_node("project", "ThreadDesk")
+    task = svc.create_node("task", "Beziehungen", status="ready")
+
+    with pytest.raises(InvalidState, match="Herkunft fehlt"):
+        svc.connect(project.id, task.id, "contains", source="")
+    with pytest.raises(SecretRejected):
+        svc.connect(
+            project.id,
+            task.id,
+            "contains",
+            source="sk-abcdefghijklmnop",
+        )
+
+    assert svc.list_relations() == []
