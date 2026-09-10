@@ -1,8 +1,23 @@
 from __future__ import annotations
 
+import json
+
 from threaddesk.core.errors import GateBlocked, InvalidState, NotFound
 from threaddesk.core.events import EventBus
-from threaddesk.core.models import STATUSES, Snapshot, Thread, ThreadContext, new_id, new_thread, now_iso
+from threaddesk.core.models import (
+    NODE_KINDS,
+    NODE_STATUSES,
+    RELATION_KINDS,
+    STATUSES,
+    KnowledgeNode,
+    Relation,
+    Snapshot,
+    Thread,
+    ThreadContext,
+    new_id,
+    new_thread,
+    now_iso,
+)
 from threaddesk.core.secrets import reject_secrets
 from threaddesk.services.dashboard import build as build_dashboard
 from threaddesk.services.dashboard import render_html as render_dashboard_html
@@ -33,6 +48,118 @@ class ThreadService:
         self.bus.emit("thread.created", {"id": thread.id})
         self.bus.emit("thread.switched", {"id": thread.id})
         return thread
+
+    def create_node(
+        self,
+        kind: str,
+        title: str,
+        *,
+        status: str = "idea",
+        details: str = "",
+        metadata: dict | None = None,
+    ) -> KnowledgeNode:
+        kind = kind.strip().lower()
+        status = status.strip().lower()
+        title = reject_secrets(title).strip()
+        details = reject_secrets(details).strip()
+        metadata = dict(metadata or {})
+        reject_secrets(json.dumps(metadata, ensure_ascii=False))
+        if kind not in NODE_KINDS:
+            raise InvalidState(f"Knotentyp muss einer von {', '.join(NODE_KINDS)} sein.")
+        if status not in NODE_STATUSES:
+            raise InvalidState(f"Knotenstatus muss einer von {', '.join(NODE_STATUSES)} sein.")
+        if not title:
+            raise InvalidState("Titel fehlt.")
+        ts = now_iso()
+        node = KnowledgeNode(
+            id=new_id(),
+            kind=kind,
+            title=title,
+            status=status,
+            details=details,
+            created_at=ts,
+            updated_at=ts,
+            metadata=metadata,
+        )
+        self.store.save_node(node)
+        self.bus.emit("node.created", {"id": node.id, "kind": node.kind})
+        return node
+
+    def get_node(self, node_id: str) -> KnowledgeNode:
+        return self.store.get_node(node_id)
+
+    def list_nodes(self) -> list[KnowledgeNode]:
+        return self.store.list_nodes()
+
+    def connect(
+        self,
+        source_id: str,
+        target_id: str,
+        kind: str,
+        *,
+        metadata: dict | None = None,
+    ) -> Relation:
+        kind = kind.strip().lower()
+        metadata = dict(metadata or {})
+        reject_secrets(json.dumps(metadata, ensure_ascii=False))
+        if kind not in RELATION_KINDS:
+            raise InvalidState(
+                f"Verbindungstyp muss einer von {', '.join(RELATION_KINDS)} sein."
+            )
+        self.store.get_node(source_id)
+        self.store.get_node(target_id)
+        relation = Relation(
+            id=new_id(),
+            source_id=source_id,
+            target_id=target_id,
+            kind=kind,
+            created_at=now_iso(),
+            metadata=metadata,
+        )
+        self.store.save_relation(relation)
+        self.bus.emit(
+            "relation.created",
+            {"id": relation.id, "source_id": source_id, "target_id": target_id},
+        )
+        return relation
+
+    def list_relations(self) -> list[Relation]:
+        return self.store.list_relations()
+
+    def relations_for(self, node_id: str) -> list[Relation]:
+        self.store.get_node(node_id)
+        return [
+            relation
+            for relation in self.store.list_relations()
+            if node_id in (relation.source_id, relation.target_id)
+        ]
+
+    def graph(self, *, kind: str | None = None, status: str | None = None) -> dict:
+        """Return map data without changing local state."""
+        kind = kind.strip().lower() if kind else None
+        status = status.strip().lower() if status else None
+        if kind and kind not in NODE_KINDS:
+            raise InvalidState(f"Unbekannter Knotentyp: {kind}")
+        if status and status not in NODE_STATUSES:
+            raise InvalidState(f"Unbekannter Knotenstatus: {status}")
+        nodes = [
+            node
+            for node in self.store.list_nodes()
+            if (not kind or node.kind == kind) and (not status or node.status == status)
+        ]
+        node_ids = {node.id for node in nodes}
+        relations = [
+            relation
+            for relation in self.store.list_relations()
+            if relation.source_id in node_ids and relation.target_id in node_ids
+        ]
+        return {
+            "schema": "threaddesk.graph.v1",
+            "nodes": [node.to_dict() for node in nodes],
+            "relations": [relation.to_dict() for relation in relations],
+            "counts": {"nodes": len(nodes), "relations": len(relations)},
+            "filters": {"kind": kind, "status": status},
+        }
 
     def list(self, include_archived: bool = False) -> list[Thread]:
         return self.store.list_threads(include_archived=include_archived)
