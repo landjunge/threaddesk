@@ -10,6 +10,10 @@
   --fg-subtle: #6d716c;
   --border: color-mix(in oklab, var(--fg) 12%, transparent);
   --border-strong: color-mix(in oklab, var(--fg) 22%, transparent);
+  /* Markenfarbe des Schriftzugs, wie auf threaddesk.netzwerkpunkt.de
+     und in brand/wordmark.svg. Gilt nur fuer den Namen — die
+     Oberflaeche bleibt auf dem neutralen Akzent. */
+  --brand: #b99cff;
   --accent: #d7dbd4;
   --accent-fg: #0a0b0a;
   --ok: #7d9b7f;

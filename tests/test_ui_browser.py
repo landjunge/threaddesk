@@ -398,3 +398,33 @@ def test_node_can_be_dragged(page):
     page.wait_for_timeout(120)
     moved = node.bounding_box()
     assert abs(moved["x"] - box["x"]) > 30, "Knoten ließ sich nicht versetzen"
+
+
+def test_wordmark_is_branded_but_ui_is_not(page):
+    """Violett gehört dem Schriftzug, nicht der Oberfläche.
+
+    Wie auf threaddesk.netzwerkpunkt.de und in brand/wordmark.svg steht
+    „Thread" in der Markenfarbe und „Desk" in der Textfarbe. Der Akzent der
+    Oberfläche — Knöpfe, Fokus, aktive Navigation — bleibt davon unberührt.
+    """
+    parts = page.evaluate(
+        """() => {
+            const name = document.querySelector('.brand-name');
+            const thread = name.querySelector('.brand-thread');
+            const root = getComputedStyle(document.documentElement);
+            return {
+                full: name.textContent.trim(),
+                thread: thread ? thread.textContent : null,
+                threadColour: thread ? getComputedStyle(thread).color : null,
+                brand: root.getPropertyValue('--brand').trim(),
+                accent: root.getPropertyValue('--accent').trim(),
+            };
+        }"""
+    )
+    assert parts["full"] == "ThreadDesk"
+    assert parts["thread"] == "Thread"
+    assert parts["brand"].lower() == "#b99cff"
+    # Der Schriftzug trägt die Markenfarbe ...
+    assert parts["threadColour"] == "rgb(185, 156, 255)"
+    # ... die Oberfläche ausdrücklich nicht.
+    assert parts["accent"].lower() != parts["brand"].lower()

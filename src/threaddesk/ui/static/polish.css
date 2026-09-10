@@ -1,3 +1,5 @@
+.brand-thread { color: var(--brand); }
+
 .thread-index {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
