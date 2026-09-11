@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ThreadDesk wird vorbereitet</title>
+  <style>
+    :root{color-scheme:dark;--ink:#f1edf8;--muted:#96929f;--violet:#b99cff;--deep:#0d0e13;--panel:#15161d}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;overflow:hidden;background:radial-gradient(circle at 50% 30%,#282039 0,#111219 40%,#090a0e 75%);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
+    body:before{content:"";position:fixed;inset:0;opacity:.22;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:48px 48px;mask-image:linear-gradient(to bottom,black,transparent 80%)}
+    main{position:relative;width:min(760px,calc(100vw - 32px));padding:clamp(28px,6vw,60px);border:1px solid #32313c;border-radius:32px;background:linear-gradient(145deg,rgba(28,29,38,.96),rgba(15,16,22,.96));box-shadow:0 32px 100px #0009,0 0 80px #9b78ef18}
+    .brand{display:flex;align-items:center;gap:16px}.brand img{width:62px;height:62px}.brand strong{font-size:clamp(26px,5vw,40px);letter-spacing:-1.5px}.brand strong span{color:var(--violet)}
+    .stage{position:relative;height:190px;margin:38px 0 20px}.node{position:absolute;width:18px;height:18px;border-radius:50%;background:var(--violet);box-shadow:0 0 22px var(--violet);animation:pulse 1.8s ease-in-out infinite}.n1{left:4%;top:20%}.n2{left:4%;top:50%;animation-delay:.3s}.n3{left:4%;top:80%;animation-delay:.6s}.desk{position:absolute;right:2%;top:41%;width:98px;height:64px;border-radius:16px 16px 26px 26px;background:linear-gradient(135deg,#c9b4ff,#8d6ae2);box-shadow:0 0 50px #b99cff55}.desk:after{content:"";position:absolute;left:27px;right:27px;bottom:-25px;height:25px;background:#7960b2;clip-path:polygon(12% 0,88% 0,100% 100%,0 100%)}
+    .thread{position:absolute;left:6%;right:14%;height:44px;border:4px solid transparent;border-top-color:#b99cff;border-radius:50%;filter:drop-shadow(0 0 8px #b99cff99);transform-origin:right;animation:flow 2.4s ease-in-out infinite}.t1{top:25%;transform:rotate(9deg)}.t2{top:52%;border-top-color:#f1edf8;animation-delay:.25s}.t3{top:76%;border-top-color:#696773;transform:rotate(-9deg);animation-delay:.5s}
+    h1{margin:0;font-size:clamp(28px,6vw,48px);letter-spacing:-2px}p{color:var(--muted);font-size:17px}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:28px}.step{padding:13px 15px;border:1px solid #34333e;border-radius:14px;color:#84818c;font-size:13px}.step b{display:block;margin-bottom:4px;color:#d9d4e2}.step:nth-child(1){animation:active 4.5s infinite}.step:nth-child(2){animation:active 4.5s 1.5s infinite}.step:nth-child(3){animation:active 4.5s 3s infinite}
+    .bar{height:6px;margin-top:24px;overflow:hidden;border-radius:99px;background:#292933}.bar i{display:block;height:100%;width:35%;border-radius:inherit;background:linear-gradient(90deg,#8e6be2,#d2c2ff);box-shadow:0 0 16px #b99cff;animation:load 2s ease-in-out infinite}
+    small{display:block;margin-top:16px;color:#6f6c76;text-align:center}@keyframes pulse{50%{transform:scale(1.45);opacity:.65}}@keyframes flow{50%{filter:drop-shadow(0 0 15px #cbb8ff);opacity:.55}}@keyframes active{0%,28%{border-color:#9b78ef;color:#b99cff;background:#b99cff0e}33%,100%{border-color:#34333e;color:#84818c;background:transparent}}@keyframes load{0%{transform:translateX(-110%)}100%{transform:translateX(390%)}}@media(max-width:560px){.steps{grid-template-columns:1fr}.stage{height:145px;margin:24px 0}.desk{width:74px;height:50px}}
+  </style>
+</head>
+<body>
+  <main>
+    <div class="brand"><img src="brand/mark.svg" alt=""><strong><span>Thread</span>Desk</strong></div>
+    <div class="stage" aria-hidden="true"><i class="node n1"></i><i class="node n2"></i><i class="node n3"></i><i class="thread t1"></i><i class="thread t2"></i><i class="thread t3"></i><i class="desk"></i></div>
+    <h1>Dein Arbeitsplatz entsteht.</h1>
+    <p>ThreadDesk richtet sich beim ersten Start selbst ein. Dieses Fenster darf geöffnet bleiben.</p>
+    <div class="steps"><div class="step"><b>01 · Umgebung</b>lokal vorbereiten</div><div class="step"><b>02 · Oberfläche</b>Bestandteile laden</div><div class="step"><b>03 · Start</b>ThreadDesk öffnen</div></div>
+    <div class="bar"><i></i></div><small>Keine Cloud. Kein Agentenstart. Deine Daten bleiben lokal.</small>
+  </main>
+</body>
+</html>

@@ -15,7 +15,8 @@
   <meta property="og:description" content="Lokale Control-Layer vor Gnom-Hub-V1. Speichert Kontext. Führt nichts aus." />
   <meta property="og:url" content="https://threaddesk.netzwerkpunkt.de/" />
   <style>
-:root{--bg:#0a0b0a;--fg:#eceae4;--muted:#9a9d96;--subtle:#6d716c;--line:rgba(236,234,228,.12);--accent:#d7dbd4;--accent-fg:#0a0b0a}
+:root{--bg:#0a0b0a;--fg:#eceae4;--muted:#9a9d96;--subtle:#6d716c;--line:rgba(236,234,228,.12);--accent:#d7dbd4;--accent-fg:#0a0b0a;--brand:#b99cff}
+.brand-thread{color:var(--brand)}
 *{box-sizing:border-box}html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:system-ui,"Segoe UI",sans-serif}
 body{min-height:100dvh;display:flex;flex-direction:column}
 a{color:inherit}header,main,footer{width:min(1120px,100%);margin:0 auto;padding:0 20px}
@@ -44,7 +45,7 @@ footer{border-top:1px solid var(--line);padding:1.6rem 20px 2.4rem;color:var(--m
   <main>
     <section class="hero">
       <p class="k">Fallback · github.io</p>
-      <h1>ThreadDesk</h1>
+      <h1><span class="brand-thread">Thread</span>Desk</h1>
       <p class="claim">Persistente Threads. Speichert Kontext. Führt nichts aus. Die kanonische Seite ist die Subdomain.</p>
       <div class="cta">
         <a class="p" href="https://threaddesk.netzwerkpunkt.de/">threaddesk.netzwerkpunkt.de</a>

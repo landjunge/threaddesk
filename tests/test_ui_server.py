@@ -131,7 +131,7 @@ def test_index_has_shortcuts_help(home: Path) -> None:
     assert res.status_code == 200
     assert "Tastatur" in res.text
     assert "data-thread-index" in res.text
-    assert "Gnom-Brainstorm schreiben" in res.text
+    assert "Gnom-Brainstorm" in res.text
 
 
 def test_rename_files_and_prompt_preview(home: Path) -> None:
@@ -173,3 +173,76 @@ def test_rename_files_and_prompt_preview(home: Path) -> None:
     )
     assert removed.status_code == 200
     assert "src/app.py" not in ThreadService(store=JsonStore(home)).current().context.files
+
+
+def test_map_page_is_a_read_only_api_graph_view(home: Path) -> None:
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from threaddesk.ui.server import create_app
+
+    svc = ThreadService(store=JsonStore(home))
+    project = svc.create_node("project", "ThreadDesk", status="active")
+    task = svc.create_node("task", "Karte", status="ready")
+    svc.connect(project.id, task.id, "contains")
+
+    client = TestClient(create_app())
+    page = client.get("/map")
+
+    assert page.status_code == 200
+    assert 'data-graph-endpoint="/api/graph"' in page.text
+    assert 'src="/static/map.js"' in page.text
+    assert "Hineinzoomen" in page.text
+    assert "Herauszoomen" in page.text
+    assert "data-map-detail" in page.text
+    assert 'aria-live="polite"' in page.text
+
+    graph = client.get("/api/graph").json()
+    assert graph["counts"] == {"nodes": 2, "relations": 1}
+
+
+def test_knowledge_page_applies_guarded_node_transition(home: Path) -> None:
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from threaddesk.ui.server import create_app
+
+    svc = ThreadService(store=JsonStore(home))
+    task = svc.create_node("task", "UI-Ablauf", status="ready")
+    client = TestClient(create_app())
+
+    page = client.get("/knowledge")
+    assert 'value="assigned"' in page.text
+    assert f'value="{task.revision}"' in page.text
+
+    changed = client.post(
+        f"/knowledge/nodes/{task.id}/transition",
+        data={"status": "assigned", "expected_revision": task.revision},
+        follow_redirects=False,
+    )
+
+    assert changed.status_code == 303
+    stored = ThreadService(store=JsonStore(home)).get_node(task.id)
+    assert stored.status == "assigned"
+    assert stored.revision == 2
+
+
+def test_knowledge_page_filters_nodes_and_relations(home: Path) -> None:
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from threaddesk.ui.server import create_app
+
+    svc = ThreadService(store=JsonStore(home))
+    project = svc.create_node("project", "ThreadDesk", status="active")
+    task = svc.create_node("task", "Unsichtbare Aufgabe", status="blocked")
+    svc.connect(project.id, task.id, "contains")
+
+    page = TestClient(create_app()).get("/knowledge?kind=project&status=active")
+
+    assert page.status_code == 200
+    assert "ThreadDesk" in page.text
+    assert "Unsichtbare Aufgabe" not in page.text
+    assert "contains" not in page.text
+    assert 'option value="project" selected' in page.text
+    assert 'option value="active" selected' in page.text

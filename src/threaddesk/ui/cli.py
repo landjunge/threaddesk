@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -284,6 +285,12 @@ def cmd_serve(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_graph(args: argparse.Namespace) -> int:
+    payload = _svc().graph(kind=args.kind, status=args.status)
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="td", description="ThreadDesk — Kontext halten, nichts ausführen.")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -414,6 +421,11 @@ def build_parser() -> argparse.ArgumentParser:
     da.add_argument("-a", "--all", action="store_true", help="inkl. archivierte")
     da.add_argument("--open", action="store_true", help="HTML lokal öffnen")
     da.set_defaults(func=cmd_dash)
+
+    gr = sub.add_parser("graph", help="Knoten und Verbindungen als JSON ausgeben")
+    gr.add_argument("--kind", default=None)
+    gr.add_argument("--status", default=None)
+    gr.set_defaults(func=cmd_graph)
 
     se = sub.add_parser("serve", aliases=["ui"], help="Lokale UI auf localhost (führt nichts aus)")
     se.add_argument("--host", default="127.0.0.1")

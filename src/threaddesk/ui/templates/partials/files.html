@@ -1,6 +1,6 @@
 <section id="files" class="block">
-  <h3>Dateien</h3>
-  <p class="muted">Nur Pfade merken. Kein Upload, kein Öffnen.</p>
+  <h3>{{ t("files.title") }}</h3>
+  <p class="muted">{{ t("files.hint") }}</p>
   {% if current.context.files %}
   <ul class="file-list">
     {% for path in current.context.files %}
@@ -10,16 +10,16 @@
         hx-post="/threads/{{ current.id }}/files/remove"
         hx-target="#workspace"
         hx-swap="innerHTML"
-        hx-confirm="Pfad entfernen?"
+        hx-confirm="{{ t('files.confirm_remove') }}"
       >
         <input type="hidden" name="path" value="{{ path }}" />
-        <button type="submit" class="btn btn-ghost btn-compact">Weg</button>
+        <button type="submit" class="btn btn-ghost btn-compact">{{ t("files.remove") }}</button>
       </form>
     </li>
     {% endfor %}
   </ul>
   {% else %}
-  <p class="muted">Keine Dateipfade.</p>
+  <p class="muted">{{ t("files.empty") }}</p>
   {% endif %}
   <form
     class="inline-form"
@@ -28,6 +28,6 @@
     hx-swap="innerHTML"
   >
     <input type="text" name="path" required maxlength="400" placeholder="src/app.py" />
-    <button type="submit" class="btn btn-primary">Hinzufügen</button>
+    <button type="submit" class="btn btn-primary">{{ t("files.add") }}</button>
   </form>
 </section>

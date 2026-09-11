@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block body %}
+<main class="map-page" data-graph-endpoint="/api/graph" data-strings='{{ map_strings|safe }}'>
+  <header class="map-toolbar">
+    <div>
+      <p class="eyebrow">{{ t("map.eyebrow") }}</p>
+      <h1>{{ t("map.title") }}</h1>
+      <p class="muted" data-map-summary>{{ t("map.summary_hint") }}</p>
+    </div>
+    <div class="map-actions" aria-label="{{ t('map.controls') }}">
+      <button class="btn btn-ghost" type="button" data-map-effects aria-pressed="true">{{ t("map.effects_on") }}</button>
+      <button class="btn btn-ghost" type="button" data-map-zoom-out aria-label="{{ t('map.zoom_out') }}">−</button>
+      <button class="btn btn-ghost" type="button" data-map-reset>{{ t("map.fit") }}</button>
+      <button class="btn btn-ghost" type="button" data-map-zoom-in aria-label="{{ t('map.zoom_in') }}">+</button>
+    </div>
+  </header>
+  <section class="map-stage" data-map-stage aria-label="{{ t('map.stage_label') }}">
+    <svg class="map-canvas" data-map-canvas viewBox="0 0 1000 700" role="img" aria-labelledby="map-title map-description">
+      <title id="map-title">{{ t("map.svg_title") }}</title>
+      <desc id="map-description">{{ t("map.svg_desc") }}</desc>
+      <g data-map-world></g>
+    </svg>
+    <p class="map-empty" data-map-empty hidden>{{ t("map.empty") }}</p>
+    <p class="map-error" data-map-error hidden>{{ t("map.error") }}</p>
+    <ul class="map-legend" aria-label="{{ t('map.legend') }}">
+      <li><span class="key key-circle"></span>{{ t("map.legend_circle") }}</li>
+      <li><span class="key key-rect"></span>{{ t("map.legend_rect") }}</li>
+      <li><span class="key key-doc"></span>{{ t("map.legend_doc") }}</li>
+      <li><span class="key key-hex"></span>{{ t("map.legend_hex") }}</li>
+      <li><span class="key key-tone tone-good"></span>{{ t("map.legend_good") }}</li>
+      <li><span class="key key-tone tone-wait"></span>{{ t("map.legend_wait") }}</li>
+      <li><span class="key key-tone tone-fresh"></span>{{ t("map.legend_fresh") }}</li>
+      <li><span class="key key-tone tone-risk"></span>{{ t("map.legend_risk") }}</li>
+    </ul>
+  </section>
+  <section class="panel map-detail" data-map-detail aria-live="polite">
+    <p class="eyebrow">{{ t("map.selection") }}</p>
+    <h2 data-map-detail-title>{{ t("map.no_selection") }}</h2>
+    <p class="muted" data-map-detail-text>{{ t("map.pick_hint") }}</p>
+    <dl data-map-detail-meta hidden></dl>
+  </section>
+</main>
+<script src="/static/map.js" defer></script>
+{% endblock %}

@@ -1,8 +1,26 @@
 from __future__ import annotations
 
+import json
+
 from threaddesk.core.errors import GateBlocked, InvalidState, NotFound
 from threaddesk.core.events import EventBus
-from threaddesk.core.models import STATUSES, Snapshot, Thread, ThreadContext, new_id, new_thread, now_iso
+from threaddesk.core.models import (
+    NODE_KINDS,
+    NODE_STATUSES,
+    NODE_TRANSITIONS,
+    RELATION_KINDS,
+    STATUSES,
+    VISIBILITIES,
+    GraphEvent,
+    KnowledgeNode,
+    Relation,
+    Snapshot,
+    Thread,
+    ThreadContext,
+    new_id,
+    new_thread,
+    now_iso,
+)
 from threaddesk.core.secrets import reject_secrets
 from threaddesk.services.dashboard import build as build_dashboard
 from threaddesk.services.dashboard import render_html as render_dashboard_html
@@ -33,6 +51,232 @@ class ThreadService:
         self.bus.emit("thread.created", {"id": thread.id})
         self.bus.emit("thread.switched", {"id": thread.id})
         return thread
+
+    def create_node(
+        self,
+        kind: str,
+        title: str,
+        *,
+        status: str = "idea",
+        details: str = "",
+        source: str = "local",
+        visibility: str = "private",
+        metadata: dict | None = None,
+    ) -> KnowledgeNode:
+        kind = kind.strip().lower()
+        status = status.strip().lower()
+        title = reject_secrets(title).strip()
+        details = reject_secrets(details).strip()
+        source = reject_secrets(source).strip()
+        visibility = visibility.strip().lower()
+        metadata = dict(metadata or {})
+        reject_secrets(json.dumps(metadata, ensure_ascii=False))
+        if kind not in NODE_KINDS:
+            raise InvalidState(f"Knotentyp muss einer von {', '.join(NODE_KINDS)} sein.")
+        if status not in NODE_STATUSES:
+            raise InvalidState(f"Knotenstatus muss einer von {', '.join(NODE_STATUSES)} sein.")
+        if not title:
+            raise InvalidState("Titel fehlt.")
+        if not source:
+            raise InvalidState("Herkunft fehlt.")
+        if visibility not in VISIBILITIES:
+            raise InvalidState(
+                f"Sichtbarkeit muss einer von {', '.join(VISIBILITIES)} sein."
+            )
+        ts = now_iso()
+        node = KnowledgeNode(
+            id=new_id(),
+            kind=kind,
+            title=title,
+            status=status,
+            details=details,
+            created_at=ts,
+            updated_at=ts,
+            revision=1,
+            source=source,
+            visibility=visibility,
+            metadata=metadata,
+        )
+        self.store.save_node(node)
+        self._record_graph_event("node.created", node.id, node.kind, node.revision)
+        self.bus.emit("node.created", {"id": node.id, "kind": node.kind})
+        return node
+
+    def get_node(self, node_id: str) -> KnowledgeNode:
+        return self.store.get_node(node_id)
+
+    def list_nodes(self) -> list[KnowledgeNode]:
+        return self.store.list_nodes()
+
+    def list_graph_events(self) -> list[GraphEvent]:
+        return self.store.list_graph_events()
+
+    def allowed_node_transitions(self, node_id: str) -> tuple[str, ...]:
+        node = self.store.get_node(node_id)
+        return NODE_TRANSITIONS.get(node.kind, {}).get(node.status, ())
+
+    def _record_graph_event(
+        self,
+        name: str,
+        entity_id: str,
+        entity_type: str,
+        revision: int,
+        payload: dict | None = None,
+    ) -> GraphEvent:
+        event = GraphEvent(
+            id=new_id(),
+            name=name,
+            entity_id=entity_id,
+            entity_type=entity_type,
+            revision=revision,
+            occurred_at=now_iso(),
+            payload=dict(payload or {}),
+        )
+        self.store.append_graph_event(event)
+        return event
+
+    def transition_node(
+        self, node_id: str, status: str, *, expected_revision: int
+    ) -> KnowledgeNode:
+        node = self.store.get_node(node_id)
+        status = status.strip().lower()
+        transitions = NODE_TRANSITIONS.get(node.kind)
+        if transitions is None:
+            raise InvalidState(
+                f"Statuswechsel für Knotentyp {node.kind} wird noch nicht unterstützt."
+            )
+        if node.revision != expected_revision:
+            raise InvalidState(
+                f"Veraltete Revision: erwartet {expected_revision}, aktuell {node.revision}."
+            )
+        allowed = transitions.get(node.status, ())
+        if status not in allowed:
+            choices = ", ".join(allowed) if allowed else "keiner"
+            raise InvalidState(
+                f"Ungültiger Statuswechsel: {node.kind} {node.status} → {status}; "
+                f"erlaubt: {choices}."
+            )
+        previous_status = node.status
+        node.status = status
+        node.revision += 1
+        node.updated_at = now_iso()
+        self.store.save_node(node)
+        self._record_graph_event(
+            "node.transitioned",
+            node.id,
+            node.kind,
+            node.revision,
+            {"from": previous_status, "to": node.status},
+        )
+        self.bus.emit(
+            "node.transitioned",
+            {"id": node.id, "status": node.status, "revision": node.revision},
+        )
+        return node
+
+    def connect(
+        self,
+        source_id: str,
+        target_id: str,
+        kind: str,
+        *,
+        source: str = "local",
+        metadata: dict | None = None,
+    ) -> Relation:
+        kind = kind.strip().lower()
+        source = reject_secrets(source).strip()
+        metadata = dict(metadata or {})
+        reject_secrets(json.dumps(metadata, ensure_ascii=False))
+        if kind not in RELATION_KINDS:
+            raise InvalidState(
+                f"Verbindungstyp muss einer von {', '.join(RELATION_KINDS)} sein."
+            )
+        if not source:
+            raise InvalidState("Herkunft fehlt.")
+        self.store.get_node(source_id)
+        self.store.get_node(target_id)
+        if kind == "depends_on" and self._creates_dependency_cycle(
+            source_id, target_id
+        ):
+            raise InvalidState("Abhängigkeitszyklus erkannt; Verbindung nicht gespeichert.")
+        relation = Relation(
+            id=new_id(),
+            source_id=source_id,
+            target_id=target_id,
+            kind=kind,
+            created_at=now_iso(),
+            revision=1,
+            source=source,
+            metadata=metadata,
+        )
+        self.store.save_relation(relation)
+        self._record_graph_event(
+            "relation.created", relation.id, "relation", relation.revision
+        )
+        self.bus.emit(
+            "relation.created",
+            {"id": relation.id, "source_id": source_id, "target_id": target_id},
+        )
+        return relation
+
+    def _creates_dependency_cycle(self, source_id: str, target_id: str) -> bool:
+        if source_id == target_id:
+            return True
+        outgoing: dict[str, set[str]] = {}
+        for relation in self.store.list_relations():
+            if relation.kind == "depends_on":
+                outgoing.setdefault(relation.source_id, set()).add(
+                    relation.target_id
+                )
+        pending = [target_id]
+        visited: set[str] = set()
+        while pending:
+            current = pending.pop()
+            if current == source_id:
+                return True
+            if current in visited:
+                continue
+            visited.add(current)
+            pending.extend(outgoing.get(current, ()))
+        return False
+
+    def list_relations(self) -> list[Relation]:
+        return self.store.list_relations()
+
+    def relations_for(self, node_id: str) -> list[Relation]:
+        self.store.get_node(node_id)
+        return [
+            relation
+            for relation in self.store.list_relations()
+            if node_id in (relation.source_id, relation.target_id)
+        ]
+
+    def graph(self, *, kind: str | None = None, status: str | None = None) -> dict:
+        """Return map data without changing local state."""
+        kind = kind.strip().lower() if kind else None
+        status = status.strip().lower() if status else None
+        if kind and kind not in NODE_KINDS:
+            raise InvalidState(f"Unbekannter Knotentyp: {kind}")
+        if status and status not in NODE_STATUSES:
+            raise InvalidState(f"Unbekannter Knotenstatus: {status}")
+        nodes = [
+            node
+            for node in self.store.list_nodes()
+            if (not kind or node.kind == kind) and (not status or node.status == status)
+        ]
+        node_ids = {node.id for node in nodes}
+        relations = [
+            relation
+            for relation in self.store.list_relations()
+            if relation.source_id in node_ids and relation.target_id in node_ids
+        ]
+        return {
+            "schema": "threaddesk.graph.v1",
+            "nodes": [node.to_dict() for node in nodes],
+            "relations": [relation.to_dict() for relation in relations],
+            "counts": {"nodes": len(nodes), "relations": len(relations)},
+            "filters": {"kind": kind, "status": status},
+        }
 
     def list(self, include_archived: bool = False) -> list[Thread]:
         return self.store.list_threads(include_archived=include_archived)

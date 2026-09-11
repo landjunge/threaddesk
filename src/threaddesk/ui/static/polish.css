@@ -1,3 +1,5 @@
+.brand-thread { color: var(--brand); }
+
 .thread-index {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
@@ -8,6 +10,143 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+}
+
+.view-nav {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.knowledge-page {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-5);
+}
+
+.knowledge-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.knowledge-head h1 {
+  margin: var(--space-1) 0;
+  font-size: var(--text-xl);
+}
+
+.knowledge-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.knowledge-filter {
+  display: flex;
+  align-items: end;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.knowledge-filter label { display: grid; gap: var(--space-1); }
+
+.knowledge-form {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+}
+
+.knowledge-form label {
+  display: grid;
+  gap: var(--space-1);
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+}
+
+.knowledge-form input,
+.knowledge-form textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--fg);
+  padding: var(--space-3);
+  font: inherit;
+}
+
+.knowledge-list {
+  margin-top: var(--space-4);
+}
+
+.node-table,
+.relation-list {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.node-row {
+  display: grid;
+  grid-template-columns: 18px minmax(180px, 1fr) 100px 100px minmax(180px, auto);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+
+.node-main {
+  display: grid;
+}
+
+.node-row form { display: flex; align-items: center; gap: var(--space-2); }
+
+.node-main span,
+.node-kind,
+.node-row code,
+.relation-row {
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+}
+
+.node-shape {
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 10px color-mix(in oklab, var(--accent) 35%, transparent);
+}
+
+.node-shape-task,
+.node-shape-document,
+.node-shape-decision,
+.node-shape-result {
+  border-radius: 2px;
+}
+
+.relation-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.status-blocked {
+  color: #d27f7f;
+}
+
+.status-confirmed {
+  color: #7fa3d2;
+}
+
+@media (max-width: 820px) {
+  .knowledge-grid { grid-template-columns: 1fr; }
+  .node-row { grid-template-columns: 18px 1fr auto; }
+  .node-kind, .node-row code { display: none; }
+  .topbar-note { display: none; }
 }
 
 .btn-compact {
@@ -92,7 +231,7 @@ kbd {
 .toast-stack .banner-ok,
 .toast-stack .banner-error {
   margin: 0;
-  background: var(--bg-elevated);
+  background: #08131a;
 }
 
 .htmx-indicator {
@@ -198,4 +337,249 @@ select {
 .prompt-preview {
   max-height: 280px;
   overflow: auto;
+}
+
+
+.map-page {
+  display: grid;
+  grid-template-rows: auto minmax(520px, calc(100vh - 190px));
+  gap: var(--space-4);
+  width: min(1400px, 100%);
+  margin: 0 auto;
+  padding: var(--space-5);
+}
+
+.map-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.map-actions { display: flex; gap: var(--space-2); }
+
+.map-stage {
+  position: relative;
+  overflow: hidden;
+  /* Feste Höhe statt min-height: sonst wächst die Bühne auf die
+     Eigenhöhe des SVG (viewBox-Seitenverhältnis) und die Karte
+     reicht über den Bildschirmrand hinaus. */
+  height: clamp(400px, 66vh, 760px);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: #04070a;
+  touch-action: none;
+  cursor: grab;
+  /* Shift-Klick sammelt Knoten. Ohne dies markiert er zusätzlich
+     die Beschriftungen als Text. */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.map-stage.is-panning { cursor: grabbing; }
+.map-canvas { width: 100%; height: 100%; display: block; }
+
+/* `hidden` muss jede eigene display-Regel schlagen. Ohne !important
+   bleibt z. B. .map-error{display:grid} liegen, deckt die Karte ab
+   und schluckt jeden Klick auf einen Knoten. */
+[hidden] { display: none !important; }
+
+.map-empty, .map-error {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--fg-muted);
+}
+
+/* --- Zustandstöne der Landkarte.
+   Die gedämpften Token aus style.css gelten für Buttons und Grundgerüst.
+   Die Karte ist der Schauplatz: leuchtende Töne auf dunklem Grund, wie der
+   Bauplan sie für die Effekt-Landkarte verlangt. Farbe ist trotzdem nie das
+   einzige Signal — Form, Glyphe und Statusmarke tragen dasselbe. --- */
+.map-page {
+  --tone-good: #3ff0a4;
+  --tone-wait: #ffc65a;
+  --tone-fresh: #52c4ff;
+  --tone-risk: #ff5f6d;
+  --tone-idle: #8fa3ad;
+  --tone-soft: #56737f;
+  --tone-bold: #b8dcec;
+}
+
+.map-backdrop { pointer-events: none; }
+
+/* --- Kanten --- */
+.map-edge {
+  fill: none;
+  stroke: var(--tone-soft);
+  stroke-linecap: round;
+  filter: url(#map-edge-glow);
+  transition: stroke-opacity .25s ease, stroke .25s ease;
+}
+.map-edge-bold  { stroke: var(--tone-bold); }
+.map-edge-good  { stroke: var(--tone-good); stroke-opacity: .85; }
+.map-edge-fresh { stroke: var(--tone-fresh); stroke-opacity: .9; }
+.map-edge-risk  { stroke: var(--tone-risk); }
+
+.map-arrow path { fill: var(--tone-soft); }
+.map-arrow-bold path  { fill: var(--tone-bold); }
+.map-arrow-good path  { fill: var(--tone-good); }
+.map-arrow-fresh path { fill: var(--tone-fresh); }
+.map-arrow-risk path  { fill: var(--tone-risk); }
+
+/* Übergaben und Reihenfolgen zeigen Fließrichtung. */
+.map-edge-flow {
+  stroke-dasharray: 9 11;
+  animation: map-flow 1.5s linear infinite;
+  filter: url(#map-edge-glow);
+}
+@keyframes map-flow { to { stroke-dashoffset: -20; } }
+
+/* --- Knoten --- */
+.map-node { cursor: pointer; outline: none; }
+.map-node-halo {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 11;
+  opacity: .26;
+  filter: url(#map-glow);
+  transition: opacity .25s ease, stroke-width .25s ease;
+}
+.map-node-shape {
+  fill: #08131a;
+  stroke: currentColor;
+  stroke-width: 2;
+  transition: fill .2s ease, stroke-width .2s ease;
+}
+.map-node-glyph {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .85;
+  pointer-events: none;
+}
+.map-node-mark { pointer-events: none; }
+.map-node-mark-disc {
+  fill: #04070a;
+  stroke: currentColor;
+  stroke-width: 1.4;
+}
+.map-node-mark-sign {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.map-label text {
+  fill: #eaf5fa;
+  font: 12px var(--font);
+  paint-order: stroke;
+  stroke: #04070a;
+  stroke-width: 3.5;
+  pointer-events: none;
+}
+
+.map-tone-good  { color: var(--tone-good); }
+.map-tone-wait  { color: var(--tone-wait); }
+.map-tone-fresh { color: var(--tone-fresh); }
+.map-tone-risk  { color: var(--tone-risk); }
+.map-tone-idle  { color: var(--tone-idle); }
+
+.map-node:hover .map-node-halo,
+.map-node:focus-visible .map-node-halo { opacity: .6; stroke-width: 15; }
+.map-node:focus-visible .map-node-shape { stroke-width: 3; }
+
+.map-node.is-selected .map-node-shape { stroke-width: 3.6; fill: #0d2029; }
+.map-node.is-selected .map-node-halo { opacity: .85; stroke-width: 18; }
+
+/* Auswahl hebt ihre Umgebung hervor und dämpft den Rest. */
+.map-page.has-selection .map-node { opacity: .32; }
+.map-page.has-selection .map-node.is-near,
+.map-page.has-selection .map-node.is-selected { opacity: 1; }
+.map-page.has-selection .map-edge { stroke-opacity: .12; }
+.map-page.has-selection .map-edge.is-linked { stroke-opacity: .95; }
+
+/* Rot pulsiert nur bei Gefahr oder Blockade. */
+.map-tone-risk .map-node-halo {
+  animation: map-alarm 1.7s ease-in-out infinite;
+}
+@keyframes map-alarm {
+  0%, 100% { opacity: .3; stroke-width: 11; }
+  50%      { opacity: .85; stroke-width: 22; }
+}
+
+/* Effekte abschaltbar — und aus, wenn das System weniger Bewegung will. */
+.map-page.effects-off .map-edge-flow {
+  animation: none;
+  stroke-dasharray: 9 11;
+  filter: none;
+}
+.map-page.effects-off .map-tone-risk .map-node-halo { animation: none; opacity: .34; }
+.map-page.effects-off .map-node-halo { filter: none; }
+.map-page.effects-off .map-edge { filter: none; }
+@media (prefers-reduced-motion: reduce) {
+  .map-edge-flow, .map-tone-risk .map-node-halo { animation: none !important; }
+}
+
+/* --- Legende --- */
+.map-legend {
+  position: absolute;
+  left: var(--space-3);
+  bottom: var(--space-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  max-width: calc(100% - var(--space-6));
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: #04070acc;
+  backdrop-filter: blur(6px);
+  list-style: none;
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+}
+.map-legend li { display: flex; align-items: center; gap: 6px; }
+.map-legend .key {
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid var(--tone-bold);
+  background: var(--bg-elevated);
+}
+.map-legend .key-circle { border-radius: 50%; }
+.map-legend .key-rect { border-radius: 3px; width: 18px; height: 11px; }
+.map-legend .key-doc { border-radius: 2px; clip-path: polygon(0 0,72% 0,100% 28%,100% 100%,0 100%); }
+.map-legend .key-hex { clip-path: polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%); }
+.map-legend .key-tone { border-radius: 50%; border-width: 0; }
+.map-legend .tone-good  { background: var(--tone-good); }
+.map-legend .tone-wait  { background: var(--tone-wait); }
+.map-legend .tone-fresh { background: var(--tone-fresh); }
+.map-legend .tone-risk  { background: var(--tone-risk); }
+
+@media (max-width: 720px) {
+  .map-legend { position: static; margin: var(--space-2); max-width: none; }
+}
+
+.map-detail { min-height: 130px; }
+.map-detail h2 { margin: var(--space-1) 0; }
+.map-detail dl {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(100px, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+}
+.map-detail dl div { display: grid; gap: var(--space-1); }
+.map-detail dt { color: var(--fg-muted); font-size: var(--text-xs); }
+.map-detail dd { margin: 0; }
+
+@media (max-width: 720px) {
+  .map-toolbar { align-items: flex-start; flex-direction: column; }
+  .map-page { padding: var(--space-3); }
+  .map-detail dl { grid-template-columns: repeat(2, minmax(100px, 1fr)); }
 }

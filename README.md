@@ -1,5 +1,6 @@
 <p align="center"><img src="brand/mark.svg" width="180" alt="ThreadDesk Bildmarke"></p>
 <p align="center"><img src="brand/wordmark.svg" width="520" alt="ThreadDesk"></p>
+<p align="center"><a href="https://github.com/landjunge/threaddesk/releases/tag/preview"><img src="brand/download-button.svg" width="320" alt="ThreadDesk herunterladen"></a></p>
 
 <p align="center"><strong>Ein Arbeitsplatz, der den Stand deiner KI-Projekte behält.</strong></p>
 
@@ -50,23 +51,31 @@ ThreadDesk merkt sich diesen Stand. Jeder Arbeitsbereich wird zu einem eigenen T
 
 ---
 
-## Installation
+## Einfach starten
+
+### macOS
+
+1. Oben auf **ThreadDesk herunterladen** klicken.
+2. **ThreadDesk-macOS.dmg** laden und ThreadDesk nach „Programme“ ziehen — fertig. Die Ausgabe unterstützt Intel-Macs (i7) nativ.
+
+Falls macOS den Doppelklick blockiert: Rechtsklick auf die Datei → **Öffnen**.
+
+### Windows
+
+1. Oben auf **ThreadDesk herunterladen** klicken.
+2. **ThreadDesk-Windows.exe** laden und doppelklicken — fertig.
+
+### Ein Terminal-Befehl
 
 ~~~sh
-git clone https://github.com/landjunge/threaddesk.git
-cd threaddesk
-python3 -m venv .venv
-.venv/bin/pip install -e ".[dev]"
+python3 start.py
 ~~~
 
-Ein erster Thread:
+Die Desktop-Downloads enthalten Python und alle benötigten Bestandteile. Für den Terminal-Befehl ist Python 3.9 oder neuer erforderlich.
 
-~~~sh
-td new "Meine Idee"
-td note "Das ist der aktuelle Stand"
-td current
-td snap save "erster Stand"
-~~~
+Ein erster Thread in der Oberfläche:
+
+Klicke auf „Neuer Thread“, gib deiner Idee einen Namen und speichere den ersten Stand.
 
 ---
 
@@ -88,7 +97,7 @@ ThreadDesk ist eine lokale Control-Layer vor Gnom-Hub-V1. Die Grenze ist Teil de
 | MCP-Server | td mcp |
 | Ausführung sperren | td gate freeze |
 
-Die optionale Oberfläche benötigt `pip install -e ".[ui]"`. Daten liegen unter `~/.threaddesk/`.
+Für die manuelle Entwicklerinstallation: `python3 -m pip install -e ".[dev,ui]"`. Daten liegen unter `~/.threaddesk/`.
 
 ### Wie dieses Projekt entsteht
 

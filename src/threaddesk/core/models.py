@@ -6,6 +6,75 @@ from typing import Any
 from uuid import uuid4
 
 STATUSES = ("idea", "active", "paused", "done", "archived")
+NODE_KINDS = (
+    "project",
+    "decision",
+    "task",
+    "result",
+    "person",
+    "agent",
+    "document",
+    "tool",
+    "source",
+    "workflow",
+)
+NODE_STATUSES = (
+    "idea",
+    "candidate",
+    "proposed",
+    "confirmed",
+    "active",
+    "ready",
+    "assigned",
+    "in_progress",
+    "waiting",
+    "blocked",
+    "delivered",
+    "review",
+    "unverified",
+    "verified",
+    "accepted",
+    "rejected",
+    "rework",
+    "superseded",
+    "done",
+    "paused",
+    "archived",
+)
+NODE_TRANSITIONS = {
+    "decision": {
+        "proposed": ("confirmed", "rejected"),
+        "confirmed": ("superseded",),
+    },
+    "task": {
+        "idea": ("ready",),
+        "ready": ("assigned",),
+        "assigned": ("in_progress",),
+        "in_progress": ("blocked", "delivered"),
+        "blocked": ("in_progress",),
+        "delivered": ("review",),
+        "review": ("accepted", "rejected"),
+        "rejected": ("in_progress",),
+    },
+    "result": {
+        "delivered": ("unverified",),
+        "unverified": ("verified", "rejected", "rework"),
+        "verified": ("accepted", "rejected", "rework"),
+        "rework": ("delivered",),
+    },
+}
+RELATION_KINDS = (
+    "contains",
+    "depends_on",
+    "assigned_to",
+    "produced",
+    "supports",
+    "references",
+    "blocks",
+    "follows",
+    "related_to",
+)
+VISIBILITIES = ("private", "shared", "public")
 
 
 def now_iso() -> str:
@@ -101,6 +170,94 @@ class Thread:
             updated_at=data.get("updated_at") or "",
             context=ThreadContext.from_dict(data.get("context")),
             current_snapshot_id=data.get("current_snapshot_id"),
+        )
+
+
+@dataclass
+class KnowledgeNode:
+    id: str
+    kind: str
+    title: str
+    status: str = "idea"
+    details: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+    revision: int = 1
+    source: str = "local"
+    visibility: str = "private"
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> KnowledgeNode:
+        return cls(
+            id=data["id"],
+            kind=data["kind"],
+            title=data["title"],
+            status=data.get("status") or "idea",
+            details=data.get("details") or "",
+            created_at=data.get("created_at") or "",
+            updated_at=data.get("updated_at") or "",
+            revision=int(data.get("revision") or 1),
+            source=data.get("source") or "local",
+            visibility=data.get("visibility") or "private",
+            metadata=dict(data.get("metadata") or {}),
+        )
+
+
+@dataclass
+class Relation:
+    id: str
+    source_id: str
+    target_id: str
+    kind: str
+    created_at: str = ""
+    revision: int = 1
+    source: str = "local"
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Relation:
+        return cls(
+            id=data["id"],
+            source_id=data["source_id"],
+            target_id=data["target_id"],
+            kind=data["kind"],
+            created_at=data.get("created_at") or "",
+            revision=int(data.get("revision") or 1),
+            source=data.get("source") or "local",
+            metadata=dict(data.get("metadata") or {}),
+        )
+
+
+@dataclass(frozen=True)
+class GraphEvent:
+    id: str
+    name: str
+    entity_id: str
+    entity_type: str
+    revision: int
+    occurred_at: str
+    payload: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> GraphEvent:
+        return cls(
+            id=data["id"],
+            name=data["name"],
+            entity_id=data["entity_id"],
+            entity_type=data["entity_type"],
+            revision=int(data["revision"]),
+            occurred_at=data["occurred_at"],
+            payload=dict(data.get("payload") or {}),
         )
 
 

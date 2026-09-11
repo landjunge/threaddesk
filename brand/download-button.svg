@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 112" role="img" aria-labelledby="title">
+  <title id="title">ThreadDesk herunterladen</title>
+  <defs>
+    <linearGradient id="button" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#b99cff"/><stop offset="1" stop-color="#8b68e0"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-40%" width="140%" height="180%"><feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#5d3aa9" flood-opacity=".28"/></filter>
+  </defs>
+  <rect x="12" y="8" width="616" height="88" rx="24" fill="url(#button)" filter="url(#shadow)"/>
+  <path d="M77 30v31m-13-12 13 13 13-13M62 72h30" fill="none" stroke="#17191f" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="116" y="64" fill="#17191f" font-family="Arial,Helvetica,sans-serif" font-size="31" font-weight="800">ThreadDesk herunterladen</text>
+  <text x="116" y="86" fill="#332451" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" letter-spacing="1">ZIP · MACOS &amp; WINDOWS</text>
+</svg>

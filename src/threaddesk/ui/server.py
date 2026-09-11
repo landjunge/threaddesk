@@ -7,13 +7,21 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from jinja2 import pass_context
 
 from threaddesk.api.service import ThreadService
 from threaddesk.core.errors import ThreadDeskError
-from threaddesk.core.models import STATUSES, Thread
+from threaddesk.core import i18n
+from threaddesk.core.models import (
+    NODE_KINDS,
+    NODE_STATUSES,
+    RELATION_KINDS,
+    STATUSES,
+    Thread,
+)
 from threaddesk.storage.json_store import JsonStore
 
 HERE = Path(__file__).resolve().parent
@@ -47,13 +55,29 @@ def _last_packet(svc: ThreadService, thread: Thread | None) -> dict | None:
     return None
 
 
+LANGUAGE_COOKIE = "threaddesk_lang"
+
+
+def _language(request: Request) -> str:
+    """Sprache fuer diese Anfrage. Reihenfolge: ?lang=, Cookie, Browser."""
+    chosen = request.query_params.get("lang")
+    if chosen:
+        return i18n.normalise(chosen)
+    cookie = request.cookies.get(LANGUAGE_COOKIE)
+    if cookie:
+        return i18n.normalise(cookie)
+    return i18n.from_accept_header(request.headers.get("accept-language"))
+
+
 def _ctx(request: Request, extra: dict | None = None) -> dict:
     svc = _svc()
     current = svc.current()
     snapshots = svc.snapshots(current.id) if current else []
     extra = extra or {}
+    lang = _language(request)
     data = {
         "request": request,
+        "lang": lang,
         "threads": svc.list(include_archived=False),
         "current": current,
         "current_id": svc.store.get_current_id(),
@@ -72,6 +96,15 @@ def _ctx(request: Request, extra: dict | None = None) -> dict:
 def create_app() -> FastAPI:
     app = FastAPI(title="ThreadDesk", docs_url=None, redoc_url=None)
     templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+    # Kein sichtbarer Text gehoert direkt ins Template — nur Schluessel.
+    @pass_context
+    def _t(context, key: str, **values: object) -> str:
+        return i18n.translate(key, context.get("lang") or i18n.DEFAULT_LANGUAGE,
+                              **values)
+
+    templates.env.globals["t"] = _t
+    templates.env.globals["languages"] = i18n.LANGUAGES
+    templates.env.globals["language_names"] = i18n.LANGUAGE_NAMES
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     def workspace(request: Request, extra: dict | None = None) -> HTMLResponse:
@@ -88,6 +121,95 @@ def create_app() -> FastAPI:
     @app.get("/", response_class=HTMLResponse)
     def index(request: Request) -> HTMLResponse:
         return templates.TemplateResponse(request, "index.html", _ctx(request))
+
+    @app.get("/lang/{code}", response_class=RedirectResponse)
+    def switch_language(code: str, request: Request) -> RedirectResponse:
+        """Merkt die Sprache und kehrt dorthin zurueck, wo der Nutzer war."""
+        target = request.headers.get("referer") or "/"
+        response = RedirectResponse(target, status_code=303)
+        response.set_cookie(
+            LANGUAGE_COOKIE, i18n.normalise(code),
+            max_age=60 * 60 * 24 * 365, samesite="lax",
+        )
+        return response
+
+    @app.get("/api/graph", response_class=JSONResponse)
+    def graph(kind: str | None = None, status: str | None = None) -> dict:
+        return _svc().graph(kind=kind, status=status)
+
+    @app.get("/map", response_class=HTMLResponse)
+    def map_view(request: Request) -> HTMLResponse:
+        lang = _language(request)
+        return templates.TemplateResponse(request, "map.html", {
+            "request": request,
+            "lang": lang,
+            "map_strings": json.dumps(i18n.catalog_for(lang), ensure_ascii=False),
+        })
+
+    @app.get("/knowledge", response_class=HTMLResponse)
+    def knowledge(
+        request: Request, kind: str | None = None, status: str | None = None
+    ) -> HTMLResponse:
+        svc = _svc()
+        graph_data = svc.graph(kind=kind, status=status)
+        node_ids = {node["id"] for node in graph_data["nodes"]}
+        nodes = [node for node in svc.list_nodes() if node.id in node_ids]
+        relation_ids = {relation["id"] for relation in graph_data["relations"]}
+        relations = [
+            relation
+            for relation in svc.list_relations()
+            if relation.id in relation_ids
+        ]
+        return templates.TemplateResponse(
+            request,
+            "knowledge.html",
+            {
+                "request": request,
+                "lang": _language(request),
+                "nodes": nodes,
+                "relations": relations,
+                "transitions_by_node": {
+                    node.id: svc.allowed_node_transitions(node.id) for node in nodes
+                },
+                "node_kinds": NODE_KINDS,
+                "node_statuses": NODE_STATUSES,
+                "relation_kinds": RELATION_KINDS,
+                "active_kind": graph_data["filters"]["kind"],
+                "active_status": graph_data["filters"]["status"],
+            },
+        )
+
+    @app.post("/knowledge/nodes", response_class=RedirectResponse)
+    def create_knowledge_node(
+        kind: str = Form(...),
+        title: str = Form(...),
+        status: str = Form("idea"),
+        details: str = Form(""),
+    ) -> RedirectResponse:
+        _svc().create_node(kind, title, status=status, details=details)
+        return RedirectResponse("/knowledge", status_code=303)
+
+    @app.post("/knowledge/relations", response_class=RedirectResponse)
+    def create_knowledge_relation(
+        source_id: str = Form(...),
+        target_id: str = Form(...),
+        kind: str = Form(...),
+    ) -> RedirectResponse:
+        _svc().connect(source_id, target_id, kind)
+        return RedirectResponse("/knowledge", status_code=303)
+
+    @app.post(
+        "/knowledge/nodes/{node_id}/transition", response_class=RedirectResponse
+    )
+    def transition_knowledge_node(
+        node_id: str,
+        status: str = Form(...),
+        expected_revision: int = Form(...),
+    ) -> RedirectResponse:
+        _svc().transition_node(
+            node_id, status, expected_revision=expected_revision
+        )
+        return RedirectResponse("/knowledge", status_code=303)
 
     @app.get("/partials/threads", response_class=HTMLResponse)
     def partial_threads(request: Request) -> HTMLResponse:

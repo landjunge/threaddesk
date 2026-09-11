@@ -2,10 +2,10 @@
 <article class="panel detail">
   <header class="detail-head">
     <div class="title-block" x-data="{ rename: false }">
-      <p class="eyebrow">Aktiver Thread</p>
+      <p class="eyebrow">{{ t("detail.active_thread") }}</p>
       <h1>{{ current.title }}</h1>
       <button type="button" class="btn btn-ghost btn-compact" @click="rename = !rename">
-        Umbenennen
+        {{ t("detail.rename") }}
       </button>
       <form
         class="inline-form"
@@ -16,7 +16,7 @@
         hx-swap="innerHTML"
       >
         <input type="text" name="title" value="{{ current.title }}" required maxlength="160" />
-        <button type="submit" class="btn btn-primary">OK</button>
+        <button type="submit" class="btn btn-primary">{{ t("detail.ok") }}</button>
       </form>
     </div>
     <span class="status status-{{ current.status }}">{{ current.status }}</span>
@@ -27,14 +27,14 @@
       hx-post="/threads/{{ current.id }}/archive"
       hx-target="#workspace"
       hx-swap="innerHTML"
-      hx-confirm="Thread archivieren? Er verschwindet aus der Liste."
+      hx-confirm="{{ t('detail.confirm_archive') }}"
     >
-      <button type="submit" class="btn btn-ghost btn-compact">Archivieren</button>
+      <button type="submit" class="btn btn-ghost btn-compact">{{ t("detail.archive") }}</button>
     </form>
   </div>
 
   <section class="block">
-    <h3>Status</h3>
+    <h3>{{ t("detail.status") }}</h3>
     <div class="status-row">
       {% for s in statuses %}
       <form
@@ -53,15 +53,15 @@
   </section>
 
   <section class="block">
-    <h3>Beschreibung</h3>
+    <h3>{{ t("detail.description") }}</h3>
     <form
       class="stack"
       hx-post="/threads/{{ current.id }}/describe"
       hx-target="#workspace"
       hx-swap="innerHTML"
     >
-      <textarea name="text" rows="3" placeholder="Worum geht es?">{{ current.description }}</textarea>
-      <button type="submit" class="btn btn-primary">Speichern</button>
+      <textarea name="text" rows="3" placeholder="{{ t('detail.description_placeholder') }}">{{ current.description }}</textarea>
+      <button type="submit" class="btn btn-primary">{{ t("detail.save") }}</button>
     </form>
   </section>
 
@@ -75,8 +75,8 @@
 </article>
 {% else %}
 <article class="panel detail empty-detail">
-  <p class="eyebrow">Kein aktiver Thread</p>
-  <h1>Wähle links einen Thread</h1>
-  <p class="muted">Oder lege einen mit Neu an. Taste n.</p>
+  <p class="eyebrow">{{ t("detail.no_thread") }}</p>
+  <h1>{{ t("detail.pick") }}</h1>
+  <p class="muted">{{ t("detail.or_new") }}</p>
 </article>
 {% endif %}

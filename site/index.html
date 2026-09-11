@@ -10,6 +10,9 @@
   <meta property="og:site_name" content="Netzwerkpunkt"><meta property="og:locale" content="de_DE">
   <link rel="icon" href="https://netzwerkpunkt.de/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://netzwerkpunkt.de/hub.css?v=20260826-products">
+  <style>
+    .thread-logo{display:block;width:min(520px,90vw);margin:14px 0 18px}.thread-logo text{font-family:Arial,Helvetica,sans-serif;font-weight:800;letter-spacing:-8px}.download-block{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:28px}.download-primary{display:inline-flex;align-items:center;gap:12px;padding:16px 22px;border-radius:14px;background:#b99cff;color:#17191f!important;font-weight:850;text-decoration:none;box-shadow:0 14px 40px rgba(155,120,239,.3);transition:transform .2s,box-shadow .2s}.download-primary:hover{transform:translateY(-2px);box-shadow:0 18px 48px rgba(155,120,239,.42)}.download-primary svg{width:22px}.install-note{width:100%;margin:0;color:#8f8d95;font-size:.9rem}.product-mark img{width:min(310px,70%);filter:drop-shadow(0 30px 55px rgba(155,120,239,.24))}@media(max-width:700px){.thread-logo{margin-top:8px}.download-primary{width:100%;justify-content:center}}
+  </style>
 </head>
 <body class="product-page thread-page">
 <header class="topbar">
@@ -20,19 +23,19 @@
 <section class="product-hero">
   <div>
     <p class="eyebrow"><span class="pulse"></span>CONTEXT · ACTIVE</p>
-    <h1>ThreadDesk</h1>
+    <svg class="thread-logo" viewBox="0 0 1180 230" role="img" aria-label="ThreadDesk"><text x="24" y="176" font-size="170"><tspan fill="#b99cff">Thread</tspan><tspan fill="#f1edf8">Desk</tspan></text></svg>
     <p class="intro">Persistente Threads. Speichert Kontext. Führt nichts aus.</p>
     <p class="product-question">Was ist der Stand?</p>
-    <div class="actions"><a class="button primary" href="https://github.com/landjunge/threaddesk">GitHub <span>↗</span></a><a class="button secondary" href="https://netzwerkpunkt.de/#system">Zum System <span>↗</span></a></div>
+    <div class="download-block"><a class="download-primary" id="thread-download" href="https://github.com/landjunge/threaddesk/releases/tag/preview"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>ThreadDesk herunterladen</span></a><a class="button secondary" href="https://github.com/landjunge/threaddesk">GitHub <span>↗</span></a><p class="install-note">macOS: DMG öffnen · Windows: EXE doppelklicken · fertig</p></div>
   </div>
-  <div class="product-mark" aria-hidden="true"><span class="product-mark-label">NETZWERKPUNKT / PRODUKT</span><div class="product-mark-core">THREAD<br>DESK</div></div>
+  <div class="product-mark" aria-hidden="true"><span class="product-mark-label">NETZWERKPUNKT / PRODUKT</span><svg viewBox="0 0 512 512"><defs><linearGradient id="thread" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d7c8ff"/><stop offset="1" stop-color="#9b78ef"/></linearGradient></defs><rect x="36" y="36" width="440" height="440" rx="104" fill="#111319"/><path d="M112 152h92c32 0 48 18 48 48v112c0 30 16 48 48 48h100" fill="none" stroke="url(#thread)" stroke-width="28" stroke-linecap="round"/><path d="M112 256h84" fill="none" stroke="#f0edf8" stroke-width="28" stroke-linecap="round"/><path d="M112 360h92c32 0 48-18 48-48V200c0-30 16-48 48-48h100" fill="none" stroke="#6f727b" stroke-width="28" stroke-linecap="round"/><circle cx="112" cy="152" r="20" fill="#b99cff"/><circle cx="112" cy="256" r="20" fill="#f0edf8"/><circle cx="112" cy="360" r="20" fill="#777b86"/><path d="M310 330h104v30c0 24-20 44-44 44h-16c-24 0-44-20-44-44z" fill="#b99cff"/></svg></div>
 </section>
 <section class="proofbar" aria-label="Grundsätze">
   <div><strong>01</strong><span>KLARE<br>GRENZEN</span></div><div><strong>02</strong><span>LOKAL<br>GEDACHT</span></div><div><strong>03</strong><span>DU<br>ENTSCHEIDEST</span></div>
 </section>
 <section class="feature-section" id="funktionen">
   <div class="section-head compact"><p class="eyebrow">WAS ES LEISTET</p><h2>Drei klare<br><em>Bausteine.</em></h2></div>
-  <div class="feature-grid"><article><span>01 · THREADS</span><h2>Threads</h2><p>Anlegen, wechseln, archivieren — voller Kontext beim Wechsel.</p></article><article><span>02 · GRENZE</span><h2>Nur vorbereiten</h2><p>Prompts, Handoff und Snapshots. Kein Agent-Start, kein Execute.</p></article><article><span>03 · LOKAL</span><h2>Lokal</h2><p>Daten unter ~/.threaddesk/. CLI und optionale Oberfläche.</p></article></div>
+  <div class="feature-grid"><article><span>01 · START</span><h2>Doppelklick</h2><p>Entpacken, Startdatei öffnen — ThreadDesk richtet den Rest selbst ein.</p></article><article><span>02 · GRENZE</span><h2>Nur vorbereiten</h2><p>Prompts, Handoff und Snapshots. Kein Agent-Start, kein Execute.</p></article><article><span>03 · LOKAL</span><h2>Lokal</h2><p>Daten unter ~/.threaddesk/. Oberfläche und Daten bleiben bei dir.</p></article></div>
 </section>
 <section class="detail-section" id="details">
   <div class="detail-copy"><p class="eyebrow">EINORDNUNG</p><h2>Werkzeug mit<br><em>klarer Aufgabe.</em></h2><h3>Was ist es?</h3><p>ThreadDesk ist die lokale Control-Layer vor dem Execute-Desk. Es merkt sich, woran du arbeitest — und startet bewusst nichts.</p><h3>Warum?</h3><p>Kontext geht in Chat-Tools verloren. Hier bleibt er: Notizen, Dateien, Snapshots und Handoff-Pakete für gnom-hub-v1 — ohne stilles Handeln.</p><h3>Als Nächstes</h3><p>MVP schärfen: Switcher, Status, Gate und saubere Handoffs. Execute bleibt bei gnom-hub-v1 beziehungsweise bei dir.</p><h3>CLI</h3><pre><code>td new "…" · td switch 1 · td current · td serve</code></pre></div>
@@ -40,6 +43,20 @@
 </section>
 <section class="other-products" id="projekte"><div class="section-head compact"><p class="eyebrow">NETZWERKPUNKT</p><h2>Die anderen<br><em>Werkzeuge.</em></h2></div><div class="other-grid"><a href="https://4allpass.netzwerkpunkt.de/"><strong>4AllPass</strong><span>Ein digitaler Tresor, der wirklich dir gehört.</span></a><a href="https://tollgate.netzwerkpunkt.de/"><strong>Tollgate</strong><span>Kontrollschicht zwischen Agents und Internet.</span></a><a href="https://gnom-hub-v1.netzwerkpunkt.de/"><strong>gnom-hub-v1</strong><span>Brainstorm frei. Execute nur auf Absicht.</span></a><a href="https://agent-x-files.netzwerkpunkt.de/"><strong>Agent-X-Files</strong><span>Detektivspiel mit KI-Partnerin.</span></a></div></section>
 </main>
+<script>
+  (() => {
+    const button = document.getElementById('thread-download');
+    const label = button.querySelector('span');
+    const platform = (navigator.userAgentData?.platform || navigator.platform || '').toLowerCase();
+    if (platform.includes('mac')) {
+      button.href = 'https://github.com/landjunge/threaddesk/releases/download/preview/ThreadDesk-macOS.dmg';
+      label.textContent = 'Für macOS herunterladen';
+    } else if (platform.includes('win')) {
+      button.href = 'https://github.com/landjunge/threaddesk/releases/download/preview/ThreadDesk-Windows.exe';
+      label.textContent = 'Für Windows herunterladen';
+    }
+  })();
+</script>
 <footer><p><strong>Netzwerkpunkt</strong><br>Daniel Filipek (landjunge) · Berlin</p><p>Werkzeuge unter deiner Kontrolle.<br>Local-first · offen · bewusst ausführbar.</p><div><a href="https://netzwerkpunkt.de/impressum">Impressum</a><a href="https://netzwerkpunkt.de/datenschutz">Datenschutz</a></div></footer>
 </body>
 </html>

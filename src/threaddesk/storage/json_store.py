@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from threaddesk.core.errors import NotFound
-from threaddesk.core.models import Snapshot, Thread
+from threaddesk.core.models import GraphEvent, KnowledgeNode, Relation, Snapshot, Thread
 
 DEFAULT_ROOT = Path.home() / ".threaddesk"
 
@@ -14,9 +14,15 @@ class JsonStore:
         self.root = Path(root or DEFAULT_ROOT)
         self.threads_dir = self.root / "threads"
         self.snaps_dir = self.root / "snapshots"
+        self.nodes_dir = self.root / "nodes"
+        self.relations_dir = self.root / "relations"
+        self.events_dir = self.root / "graph-events"
         self.state_path = self.root / "state.json"
         self.threads_dir.mkdir(parents=True, exist_ok=True)
         self.snaps_dir.mkdir(parents=True, exist_ok=True)
+        self.nodes_dir.mkdir(parents=True, exist_ok=True)
+        self.relations_dir.mkdir(parents=True, exist_ok=True)
+        self.events_dir.mkdir(parents=True, exist_ok=True)
 
     def _thread_path(self, thread_id: str) -> Path:
         return self.threads_dir / f"{thread_id}.json"
@@ -83,3 +89,46 @@ class JsonStore:
         snaps = [Snapshot.from_dict(self._read_json(p)) for p in folder.glob("*.json")]
         snaps.sort(key=lambda s: s.created_at, reverse=True)
         return snaps
+
+    def save_node(self, node: KnowledgeNode) -> None:
+        self._write_json(self.nodes_dir / f"{node.id}.json", node.to_dict())
+
+    def get_node(self, node_id: str) -> KnowledgeNode:
+        path = self.nodes_dir / f"{node_id}.json"
+        if not path.exists():
+            raise NotFound(f"Knoten nicht gefunden: {node_id}")
+        return KnowledgeNode.from_dict(self._read_json(path))
+
+    def list_nodes(self) -> list[KnowledgeNode]:
+        nodes = [
+            KnowledgeNode.from_dict(self._read_json(path))
+            for path in self.nodes_dir.glob("*.json")
+        ]
+        nodes.sort(key=lambda node: (node.updated_at, node.id), reverse=True)
+        return nodes
+
+    def save_relation(self, relation: Relation) -> None:
+        self._write_json(self.relations_dir / f"{relation.id}.json", relation.to_dict())
+
+    def list_relations(self) -> list[Relation]:
+        relations = [
+            Relation.from_dict(self._read_json(path))
+            for path in self.relations_dir.glob("*.json")
+        ]
+        relations.sort(key=lambda relation: (relation.created_at, relation.id))
+        return relations
+
+
+    def append_graph_event(self, event: GraphEvent) -> None:
+        path = self.events_dir / f"{event.id}.json"
+        if path.exists():
+            raise ValueError(f"Ereignis existiert bereits: {event.id}")
+        self._write_json(path, event.to_dict())
+
+    def list_graph_events(self) -> list[GraphEvent]:
+        events = [
+            GraphEvent.from_dict(self._read_json(path))
+            for path in self.events_dir.glob("*.json")
+        ]
+        events.sort(key=lambda event: (event.occurred_at, event.id))
+        return events
