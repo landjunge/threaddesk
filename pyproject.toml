@@ -18,6 +18,7 @@ threaddesk-mcp = "threaddesk.ui.mcp_stdio:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "httpx>=0.27"]
+browser = ["playwright>=1.44"]
 ui = ["fastapi>=0.110", "uvicorn>=0.27", "jinja2>=3.1", "python-multipart>=0.0.9"]
 desktop = ["pywebview>=5.4"]
 

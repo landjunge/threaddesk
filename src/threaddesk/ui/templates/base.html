@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="{{ lang }}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -22,18 +22,26 @@
         <div class="brand">
           <span class="brand-mark" aria-hidden="true"></span>
           <div>
-            <p class="brand-name">ThreadDesk</p>
-            <p class="brand-tag">Kontext halten · nichts ausführen</p>
+            <p class="brand-name"><span class="brand-thread">Thread</span>Desk</p>
+            <p class="brand-tag">{{ t("app.tagline") }}</p>
           </div>
         </div>
         <div class="topbar-actions">
-          <nav class="view-nav" aria-label="Ansichten">
-            <a href="/" class="btn btn-ghost btn-compact">Threads</a>
-            <a href="/knowledge" class="btn btn-ghost btn-compact">Wissenspool</a>\n            <a href="/map" class="btn btn-ghost btn-compact">Karte</a>
+          <nav class="view-nav" aria-label="{{ t('nav.label') }}">
+            <a href="/" class="btn btn-ghost btn-compact">{{ t("nav.threads") }}</a>
+            <a href="/knowledge" class="btn btn-ghost btn-compact">{{ t("nav.knowledge") }}</a>
+            <a href="/map" class="btn btn-ghost btn-compact">{{ t("nav.map") }}</a>
           </nav>
-          <p class="topbar-note">Lokal · nichts ausführen</p>
+          <p class="topbar-note">{{ t("app.local_note") }}</p>
+          <nav class="lang-switch" aria-label="{{ t('nav.language') }}">
+            {% for code in languages %}
+            <a href="/lang/{{ code }}" class="btn btn-ghost btn-compact{{ ' is-active' if code == lang else '' }}"
+               hreflang="{{ code }}" lang="{{ code }}"
+               aria-current="{{ 'true' if code == lang else 'false' }}">{{ code|upper }}</a>
+            {% endfor %}
+          </nav>
           <button type="button" class="btn btn-ghost btn-compact" data-help-open>
-            Tasten <kbd>?</kbd>
+            {{ t("help.open") }} <kbd>?</kbd>
           </button>
         </div>
       </header>
@@ -42,20 +50,20 @@
     <div id="help" class="help" hidden>
       <div class="help-card" role="dialog" aria-labelledby="help-title">
         <header class="panel-head">
-          <h2 id="help-title">Tastatur</h2>
-          <button type="button" class="btn btn-ghost btn-compact" data-help-close>Schließen</button>
+          <h2 id="help-title">{{ t("help.title") }}</h2>
+          <button type="button" class="btn btn-ghost btn-compact" data-help-close>{{ t("help.close") }}</button>
         </header>
         <dl class="help-keys">
-          <div><dt><kbd>n</kbd></dt><dd>Neuer Thread</dd></div>
-          <div><dt><kbd>j</kbd> / <kbd>k</kbd></dt><dd>Nächster / vorheriger Thread</dd></div>
-          <div><dt><kbd>1</kbd>–<kbd>9</kbd></dt><dd>Thread wählen</dd></div>
-          <div><dt><kbd>s</kbd></dt><dd>Snapshot-Feld</dd></div>
-          <div><dt><kbd>m</kbd></dt><dd>Mikrofon an / aus</dd></div>
-          <div><dt><kbd>Strg</kbd>+<kbd>Enter</kbd></dt><dd>Formular speichern</dd></div>
-          <div><dt><kbd>?</kbd></dt><dd>Diese Hilfe</dd></div>
-          <div><dt><kbd>Esc</kbd></dt><dd>Schließen</dd></div>
+          <div><dt><kbd>n</kbd></dt><dd>{{ t("help.new_thread") }}</dd></div>
+          <div><dt><kbd>j</kbd> / <kbd>k</kbd></dt><dd>{{ t("help.next_prev") }}</dd></div>
+          <div><dt><kbd>1</kbd>–<kbd>9</kbd></dt><dd>{{ t("help.pick_thread") }}</dd></div>
+          <div><dt><kbd>s</kbd></dt><dd>{{ t("help.snapshot_field") }}</dd></div>
+          <div><dt><kbd>m</kbd></dt><dd>{{ t("help.microphone") }}</dd></div>
+          <div><dt><kbd>{{ t("help.key_ctrl") }}</kbd>+<kbd>Enter</kbd></dt><dd>{{ t("help.save_form") }}</dd></div>
+          <div><dt><kbd>?</kbd></dt><dd>{{ t("help.this_help") }}</dd></div>
+          <div><dt><kbd>Esc</kbd></dt><dd>{{ t("help.escape") }}</dd></div>
         </dl>
-        <p class="muted">Keine Taste startet einen Agenten.</p>
+        <p class="muted">{{ t("help.no_agent") }}</p>
       </div>
     </div>
   </body>

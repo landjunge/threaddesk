@@ -3,88 +3,88 @@
 <main class="knowledge-page">
   <header class="knowledge-head">
     <div>
-      <p class="eyebrow">Projektgedächtnis · Listenansicht</p>
-      <h1>Wissenspool</h1>
-      <p class="muted">Knoten enthalten Wissen. Linien erklären den Zusammenhang.</p>
+      <p class="eyebrow">{{ t("knowledge.eyebrow") }}</p>
+      <h1>{{ t("knowledge.title") }}</h1>
+      <p class="muted">{{ t("knowledge.lead") }}</p>
     </div>
-    <a class="btn btn-ghost" href="/api/graph">Graph-JSON</a>
+    <a class="btn btn-ghost" href="/api/graph">{{ t("knowledge.graph_json") }}</a>
   </header>
 
   <form class="panel knowledge-filter" method="get" action="/knowledge">
-    <label>Typ
+    <label>{{ t("knowledge.kind") }}
       <select name="kind">
-        <option value="">Alle</option>
+        <option value="">{{ t("knowledge.all") }}</option>
         {% for kind in node_kinds %}<option value="{{ kind }}"{% if active_kind == kind %} selected{% endif %}>{{ kind }}</option>{% endfor %}
       </select>
     </label>
-    <label>Status
+    <label>{{ t("knowledge.status") }}
       <select name="status">
-        <option value="">Alle</option>
+        <option value="">{{ t("knowledge.all") }}</option>
         {% for status in node_statuses %}<option value="{{ status }}"{% if active_status == status %} selected{% endif %}>{{ status }}</option>{% endfor %}
       </select>
     </label>
-    <button class="btn btn-ghost" type="submit">Filtern</button>
-    <a class="btn btn-ghost" href="/knowledge">Zurücksetzen</a>
+    <button class="btn btn-ghost" type="submit">{{ t("knowledge.filter") }}</button>
+    <a class="btn btn-ghost" href="/knowledge">{{ t("knowledge.reset") }}</a>
   </form>
 
   <section class="knowledge-grid">
     <form class="panel knowledge-form" method="post" action="/knowledge/nodes">
-      <div class="panel-head"><h2>Neuer Knoten</h2></div>
-      <label>Typ<select name="kind">{% for kind in node_kinds %}<option value="{{ kind }}">{{ kind }}</option>{% endfor %}</select></label>
-      <label>Titel<input name="title" required placeholder="Was soll gemerkt werden?" /></label>
-      <label>Status<select name="status">{% for status in node_statuses %}<option value="{{ status }}">{{ status }}</option>{% endfor %}</select></label>
-      <label>Details<textarea name="details" rows="4" placeholder="Kurze, bestätigte Beschreibung"></textarea></label>
-      <button class="btn btn-primary" type="submit">Knoten speichern</button>
+      <div class="panel-head"><h2>{{ t("knowledge.new_node") }}</h2></div>
+      <label>{{ t("knowledge.kind") }}<select name="kind">{% for kind in node_kinds %}<option value="{{ kind }}">{{ kind }}</option>{% endfor %}</select></label>
+      <label>{{ t("knowledge.node_title") }}<input name="title" required placeholder="{{ t('knowledge.node_title_hint') }}" /></label>
+      <label>{{ t("knowledge.status") }}<select name="status">{% for status in node_statuses %}<option value="{{ status }}">{{ status }}</option>{% endfor %}</select></label>
+      <label>{{ t("knowledge.details") }}<textarea name="details" rows="4" placeholder="{{ t('knowledge.details_hint') }}"></textarea></label>
+      <button class="btn btn-primary" type="submit">{{ t("knowledge.save_node") }}</button>
     </form>
 
     <form class="panel knowledge-form" method="post" action="/knowledge/relations">
-      <div class="panel-head"><h2>Verbindung anlegen</h2></div>
+      <div class="panel-head"><h2>{{ t("knowledge.new_relation") }}</h2></div>
       {% if nodes|length >= 2 %}
-      <label>Von<select name="source_id">{% for node in nodes %}<option value="{{ node.id }}">{{ node.title }} · {{ node.kind }}</option>{% endfor %}</select></label>
-      <label>Verbindung<select name="kind">{% for kind in relation_kinds %}<option value="{{ kind }}">{{ kind }}</option>{% endfor %}</select></label>
-      <label>Zu<select name="target_id">{% for node in nodes %}<option value="{{ node.id }}">{{ node.title }} · {{ node.kind }}</option>{% endfor %}</select></label>
-      <button class="btn btn-primary" type="submit">Linie speichern</button>
+      <label>{{ t("knowledge.from") }}<select name="source_id">{% for node in nodes %}<option value="{{ node.id }}">{{ node.title }} · {{ node.kind }}</option>{% endfor %}</select></label>
+      <label>{{ t("knowledge.relation") }}<select name="kind">{% for kind in relation_kinds %}<option value="{{ kind }}">{{ kind }}</option>{% endfor %}</select></label>
+      <label>{{ t("knowledge.to") }}<select name="target_id">{% for node in nodes %}<option value="{{ node.id }}">{{ node.title }} · {{ node.kind }}</option>{% endfor %}</select></label>
+      <button class="btn btn-primary" type="submit">{{ t("knowledge.save_relation") }}</button>
       {% else %}
-      <p class="muted">Für eine Verbindung werden mindestens zwei Knoten benötigt.</p>
+      <p class="muted">{{ t("knowledge.need_two") }}</p>
       {% endif %}
     </form>
   </section>
 
   <section class="panel knowledge-list">
-    <div class="panel-head"><h2>Knoten</h2><span class="count">{{ nodes|length }}</span></div>
+    <div class="panel-head"><h2>{{ t("knowledge.nodes") }}</h2><span class="count">{{ nodes|length }}</span></div>
     {% if nodes %}
     <div class="node-table" role="list">
       {% for node in nodes %}
       <article class="node-row" role="listitem" data-kind="{{ node.kind }}" data-status="{{ node.status }}">
         <span class="node-shape node-shape-{{ node.kind }}" aria-hidden="true"></span>
-        <div class="node-main"><strong>{{ node.title }}</strong><span>{{ node.details or "Keine Details" }}</span></div>
+        <div class="node-main"><strong>{{ node.title }}</strong><span>{{ node.details or t("knowledge.no_details") }}</span></div>
         <span class="node-kind">{{ node.kind }}</span>
         <span class="status status-{{ node.status }}">{{ node.status }}</span>
         {% set transitions = transitions_by_node[node.id] %}
         {% if transitions %}
         <form method="post" action="/knowledge/nodes/{{ node.id }}/transition">
           <input type="hidden" name="expected_revision" value="{{ node.revision }}" />
-          <select name="status" aria-label="Nächster Status für {{ node.title }}">
+          <select name="status" aria-label="{{ t('knowledge.next_status_for', title=node.title) }}">
             {% for status in transitions %}<option value="{{ status }}">{{ status }}</option>{% endfor %}
           </select>
-          <button class="btn btn-ghost btn-compact" type="submit">Übernehmen</button>
+          <button class="btn btn-ghost btn-compact" type="submit">{{ t("knowledge.apply") }}</button>
         </form>
         {% else %}<code>{{ node.id }}</code>{% endif %}
       </article>
       {% endfor %}
     </div>
-    {% else %}<p class="empty">Noch keine Knoten. Der erste Knoten kann ein Projekt sein.</p>{% endif %}
+    {% else %}<p class="empty">{{ t("knowledge.empty_nodes") }}</p>{% endif %}
   </section>
 
   <section class="panel knowledge-list">
-    <div class="panel-head"><h2>Verbindungen</h2><span class="count">{{ relations|length }}</span></div>
+    <div class="panel-head"><h2>{{ t("knowledge.relations") }}</h2><span class="count">{{ relations|length }}</span></div>
     {% if relations %}
     <div class="relation-list">
       {% for relation in relations %}
       <div class="relation-row"><code>{{ relation.source_id }}</code><span>→ {{ relation.kind }} →</span><code>{{ relation.target_id }}</code></div>
       {% endfor %}
     </div>
-    {% else %}<p class="empty">Noch keine Verbindungen.</p>{% endif %}
+    {% else %}<p class="empty">{{ t("knowledge.empty_relations") }}</p>{% endif %}
   </section>
 </main>
 {% endblock %}
