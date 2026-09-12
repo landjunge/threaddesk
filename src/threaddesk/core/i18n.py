@@ -678,6 +678,10 @@ CATALOG: dict[str, dict[str, str]] = {
         "de": "Ausgabesprache: de oder en",
         "en": "Output language: de or en",
     },
+    "cli.help.mode": {
+        "de": "Sprachebene: plain (Klartext, Standard) oder expert (Fachsprache)",
+        "en": "Wording: plain (default) or expert (technical terms)",
+    },
     "cli.help.new": {
         "de": "Thread anlegen und aktivieren",
         "en": "Create and activate a thread",
@@ -722,16 +726,41 @@ CATALOG: dict[str, dict[str, str]] = {
         "de": "Archivierten Thread löschen",
         "en": "Delete an archived thread",
     },
-    "cli.help.snap": {"de": "Snapshots", "en": "Snapshots"},
-    "cli.help.snap_save": {"de": "Snapshot speichern", "en": "Save a snapshot"},
-    "cli.help.snap_list": {"de": "Snapshots listen", "en": "List snapshots"},
-    "cli.help.snap_load": {"de": "Snapshot laden", "en": "Load a snapshot"},
+    "cli.help.snap": {"de": "Zwischenstände", "en": "Saved states"},
+    "cli.help.snap#expert": {"de": "Snapshots", "en": "Snapshots"},
+    "cli.help.snap_save": {
+        "de": "Notizen von jetzt festhalten", "en": "Keep the notes as they are now",
+    },
+    "cli.help.snap_save#expert": {
+        "de": "Snapshot speichern", "en": "Save a snapshot",
+    },
+    "cli.help.snap_list": {
+        "de": "Zwischenstände listen", "en": "List saved states",
+    },
+    "cli.help.snap_list#expert": {
+        "de": "Snapshots listen", "en": "List snapshots",
+    },
+    "cli.help.snap_load": {
+        "de": "Zwischenstand zurückholen (überschreibt die Notizen)",
+        "en": "Bring a saved state back (overwrites the notes)",
+    },
+    "cli.help.snap_load#expert": {
+        "de": "Snapshot laden", "en": "Load a snapshot",
+    },
     "cli.help.prompt": {
+        "de": "Text zum Kopieren aus dem Thread bauen (schickt ihn nirgendwo hin)",
+        "en": "Build text to copy from the thread (sends it nowhere)",
+    },
+    "cli.help.prompt#expert": {
         "de": "Prompt aus Thread-Kontext bauen (führt nichts aus)",
         "en": "Build a prompt from the thread context (executes nothing)",
     },
     "cli.help.prompt_save": {"de": "im Thread speichern", "en": "store in the thread"},
     "cli.help.handoff": {
+        "de": "Übergabe-Datei für Gnom-Hub schreiben (startet nichts)",
+        "en": "Write a handover file for Gnom-Hub (starts nothing)",
+    },
+    "cli.help.handoff#expert": {
         "de": "Lokales Handoff-JSON für Gnom-Hub (startet nichts)",
         "en": "Local handoff JSON for Gnom-Hub (starts nothing)",
     },
@@ -756,6 +785,10 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "chat + /api/execute, still no POST",
     },
     "cli.help.gate": {
+        "de": "Schranke: begrenzt Schleifen und Tagesmenge (startet kein Tollgate)",
+        "en": "Gate: limits loops and the daily amount (does not start Tollgate)",
+    },
+    "cli.help.gate#expert": {
         "de": "Lokaler Loop-/Tages-Schutz (kein Tollgate-Start)",
         "en": "Local loop and daily guard (does not start Tollgate)",
     },
@@ -801,6 +834,19 @@ def from_accept_header(header: str | None) -> str:
 # uebersprungen, sonst wuerde jede Server-Shell stumm auf Deutsch landen.
 ENVIRONMENT_VARIABLES = ("THREADDESK_LANG", "LC_ALL", "LC_MESSAGES", "LANG")
 NEUTRAL_LOCALES = {"c", "posix", ""}
+
+
+# Eigene Variable fuer die Sprachebene. Es gibt keine Locale dafuer, also
+# gibt es auch nichts vom System zu erben.
+REGISTER_VARIABLE = "THREADDESK_MODE"
+
+
+def register_from_environment(env: dict[str, str] | None = None) -> str:
+    """Liest die Sprachebene aus der Umgebung. Ohne Angabe: Klartext."""
+    import os
+
+    source = os.environ if env is None else env
+    return normalise_register(source.get(REGISTER_VARIABLE))
 
 
 def from_environment(env: dict[str, str] | None = None) -> str:
