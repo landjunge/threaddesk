@@ -122,6 +122,26 @@ def test_at_most_four_font_tokens_are_defined() -> None:
     assert len(defined) <= 4, defined
 
 
+def test_r2_tokens_match_the_shared_desk_reference() -> None:
+    """Die bestätigten R2-Zahlen dürfen nicht wieder zum alten Satz driften."""
+    text = (STYLESHEETS[0].parent / "style.css").read_text(encoding="utf-8")
+    expected = {
+        "--border-strong": "#5c616a",
+        "--border-hover": "#6b7280",
+        "--risk": "#c45c5c",
+        "--control": "28px",
+        "--control-sm": "32px",
+        "--text-sm": "10px",
+        "--text-base": "12px",
+        "--text-lg": "14px",
+        "--text-xl": "16px",
+    }
+    for token, value in expected.items():
+        assert re.search(rf"{re.escape(token)}:\s*{re.escape(value)}\s*;", text), (
+            f"{token} muss laut Desk-Design R2 {value} sein"
+        )
+
+
 def test_controls_are_square_and_surfaces_share_one_radius() -> None:
     """Eckige Bedienelemente, eine Rundung für Flächen.
 
