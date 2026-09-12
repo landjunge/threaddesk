@@ -96,6 +96,22 @@ ThreadDesk ist eine lokale Control-Layer vor Gnom-Hub-V1. Die Grenze ist Teil de
 | Lokale Oberfläche | td serve |
 | MCP-Server | td mcp |
 | Ausführung sperren | td gate freeze |
+| Sprache umschalten | td --lang en list |
+
+### Sprache
+
+ThreadDesk spricht Deutsch und Englisch — Oberfläche und Kommandozeile.
+
+| Weg | Beispiel |
+|---|---|
+| Einmalig | `td --lang en list` |
+| Dauerhaft | `export THREADDESK_LANG=en` |
+| Automatisch | aus `LC_ALL`, `LC_MESSAGES` oder `LANG` |
+| Oberfläche | Schalter oben rechts, merkt sich die Wahl ein Jahr |
+
+Ohne Angabe ist Deutsch die Voreinstellung. Die Gliederungswörter der
+Kommandozeilenhilfe (`usage:`, `options:`) kommen aus Python selbst und
+bleiben englisch.
 
 Für die manuelle Entwicklerinstallation: `python3 -m pip install -e ".[dev,ui]"`. Daten liegen unter `~/.threaddesk/`.
 

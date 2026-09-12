@@ -298,7 +298,216 @@ CATALOG: dict[str, dict[str, str]] = {
         "de": "Keine Threads. Lege oben einen an.",
         "en": "No threads. Create one above.",
     },
+    # --- Kommandozeile: Ausgaben ---
+    "cli.description": {
+        "de": "ThreadDesk — Kontext halten, nichts ausführen.",
+        "en": "ThreadDesk — keep context, execute nothing.",
+    },
+    "cli.error": {"de": "fehler: {message}", "en": "error: {message}"},
+    "cli.field.description": {"de": "beschreibung: {value}", "en": "description: {value}"},
+    "cli.field.status": {
+        "de": "status: {status}  snap: {snapshot}",
+        "en": "status: {status}  snap: {snapshot}",
+    },
+    "cli.section.files": {"de": "--- dateien ---", "en": "--- files ---"},
+    "cli.section.notes": {"de": "--- notizen ---", "en": "--- notes ---"},
+    "cli.notes.empty": {"de": "(leer)", "en": "(empty)"},
+    "cli.thread.created": {
+        "de": "angelegt und aktiv: {id}  {title}",
+        "en": "created and active: {id}  {title}",
+    },
+    "cli.thread.none": {"de": "keine threads", "en": "no threads"},
+    "cli.thread.active": {"de": "aktiv: {id}  {title}", "en": "active: {id}  {title}"},
+    "cli.thread.no_active": {"de": "kein aktiver thread", "en": "no active thread"},
+    "cli.thread.renamed": {
+        "de": "umbenannt: {id}  {title}",
+        "en": "renamed: {id}  {title}",
+    },
+    "cli.thread.archived": {"de": "archiviert: {id}", "en": "archived: {id}"},
+    "cli.thread.unarchived": {
+        "de": "wieder offen (paused): {id}",
+        "en": "reopened (paused): {id}",
+    },
+    "cli.thread.deleted": {"de": "gelöscht: {id}", "en": "deleted: {id}"},
+    "cli.thread.delete_guard": {
+        "de": "löschen nur mit --yes (vorher td archive)",
+        "en": "delete requires --yes (run td archive first)",
+    },
+    "cli.note.saved": {"de": "notiz gesetzt: {id}", "en": "note saved: {id}"},
+    "cli.description.saved": {
+        "de": "beschreibung gesetzt: {id}",
+        "en": "description saved: {id}",
+    },
+    "cli.status.saved": {"de": "status {status}: {id}", "en": "status {status}: {id}"},
+    "cli.files.none": {"de": "keine dateien", "en": "no files"},
+    "cli.files.added": {"de": "datei: {path}  ({id})", "en": "file: {path}  ({id})"},
+    "cli.files.removed": {
+        "de": "entfernt: {path}  ({id})",
+        "en": "removed: {path}  ({id})",
+    },
+    "cli.snap.saved": {"de": "snapshot: {id}  {label}", "en": "snapshot: {id}  {label}"},
+    "cli.snap.no_label": {"de": "(ohne label)", "en": "(no label)"},
+    "cli.snap.none": {"de": "keine snapshots", "en": "no snapshots"},
+    "cli.snap.restored": {
+        "de": "wiederhergestellt: {id}  snap={snapshot}",
+        "en": "restored: {id}  snap={snapshot}",
+    },
+    "cli.prompt.none": {
+        "de": "keine gespeicherten prompts",
+        "en": "no stored prompts",
+    },
+    "cli.prompt.stored": {
+        "de": "--- im thread gespeichert ---",
+        "en": "--- stored in thread ---",
+    },
+    "cli.packet.grok": {
+        "de": "paket: {path}  (grok nicht gestartet)",
+        "en": "packet: {path}  (grok not started)",
+    },
+    "cli.packet.gnom": {
+        "de": "paket: {path}  (gnom nicht gestartet, nichts gesendet)",
+        "en": "packet: {path}  (gnom not started, nothing sent)",
+    },
+    "cli.gate.frozen": {
+        "de": "frozen: {frozen}  tag: {day}",
+        "en": "frozen: {frozen}  day: {day}",
+    },
+    "cli.gate.yes": {"de": "ja", "en": "yes"},
+    "cli.gate.no": {"de": "nein", "en": "no"},
+    "cli.gate.execute_today": {
+        "de": "execute heute: {used}/{limit}  pro thread: {per_thread}",
+        "en": "execute today: {used}/{limit}  per thread: {per_thread}",
+    },
+    "cli.gate.handoff_today": {
+        "de": "handoff heute: {used}/{limit}  pro thread: {per_thread}",
+        "en": "handoff today: {used}/{limit}  per thread: {per_thread}",
+    },
+    "cli.gate.cooldown": {"de": "cooldown: {seconds}s", "en": "cooldown: {seconds}s"},
+    "cli.gate.last": {
+        "de": "zuletzt: {action}  {thread}  {at}",
+        "en": "last: {action}  {thread}  {at}",
+    },
+    "cli.gate.allow": {"de": "ok  {action}", "en": "ok  {action}"},
+    "cli.gate.block": {"de": "block  {action}", "en": "block  {action}"},
+    "cli.gate.remaining": {
+        "de": "rest thread={thread}  tag={day}",
+        "en": "remaining thread={thread}  day={day}",
+    },
+    "cli.dash.html": {"de": "html: {path}", "en": "html: {path}"},
+    "cli.dash.opened": {
+        "de": "browser geöffnet (keine Agenten)",
+        "en": "browser opened (no agents)",
+    },
+    "cli.serve.missing": {
+        "de": "fehlende Abhängigkeit: pip install -e \".[ui]\"",
+        "en": "missing dependency: pip install -e \".[ui]\"",
+    },
+    "cli.serve.running": {
+        "de": "ThreadDesk UI  http://{host}:{port}  (führt nichts aus)",
+        "en": "ThreadDesk UI  http://{host}:{port}  (executes nothing)",
+    },
+    # --- Kommandozeile: Hilfetexte ---
+    "cli.help.lang": {
+        "de": "Ausgabesprache: de oder en",
+        "en": "Output language: de or en",
+    },
+    "cli.help.new": {
+        "de": "Thread anlegen und aktivieren",
+        "en": "Create and activate a thread",
+    },
+    "cli.help.list": {"de": "Threads listen", "en": "List threads"},
+    "cli.help.include_archived": {
+        "de": "inkl. archivierte",
+        "en": "include archived",
+    },
+    "cli.help.switch": {
+        "de": "Thread aktivieren (id, Nummer oder Titel)",
+        "en": "Activate a thread (id, number or title)",
+    },
+    "cli.help.switch_id": {
+        "de": "ohne Argument: Liste",
+        "en": "without argument: list",
+    },
+    "cli.help.current": {
+        "de": "Aktiven Thread inkl. Kontext zeigen",
+        "en": "Show the active thread and its context",
+    },
+    "cli.help.note": {
+        "de": "Notiz setzen (überschreibt, außer -a)",
+        "en": "Set the note (overwrites unless -a)",
+    },
+    "cli.help.describe": {"de": "Beschreibung setzen", "en": "Set the description"},
+    "cli.help.status": {
+        "de": "idea | active | paused | done",
+        "en": "idea | active | paused | done",
+    },
+    "cli.help.files": {
+        "de": "Dateipfade im Kontext (kein Inhalt)",
+        "en": "File paths in the context (no content)",
+    },
+    "cli.help.rename": {"de": "Thread umbenennen", "en": "Rename a thread"},
+    "cli.help.archive": {"de": "Thread archivieren", "en": "Archive a thread"},
+    "cli.help.unarchive": {
+        "de": "Archiv holen (wird paused)",
+        "en": "Bring back from archive (becomes paused)",
+    },
+    "cli.help.delete": {
+        "de": "Archivierten Thread löschen",
+        "en": "Delete an archived thread",
+    },
+    "cli.help.snap": {"de": "Snapshots", "en": "Snapshots"},
+    "cli.help.snap_save": {"de": "Snapshot speichern", "en": "Save a snapshot"},
+    "cli.help.snap_list": {"de": "Snapshots listen", "en": "List snapshots"},
+    "cli.help.snap_load": {"de": "Snapshot laden", "en": "Load a snapshot"},
+    "cli.help.prompt": {
+        "de": "Prompt aus Thread-Kontext bauen (führt nichts aus)",
+        "en": "Build a prompt from the thread context (executes nothing)",
+    },
+    "cli.help.prompt_save": {"de": "im Thread speichern", "en": "store in the thread"},
+    "cli.help.handoff": {
+        "de": "Lokales Handoff-JSON für Gnom-Hub (startet nichts)",
+        "en": "Local handoff JSON for Gnom-Hub (starts nothing)",
+    },
+    "cli.help.mcp": {
+        "de": "MCP-Server auf stdin/stdout (nur Thread-Daten)",
+        "en": "MCP server on stdin/stdout (thread data only)",
+    },
+    "cli.help.grok": {
+        "de": "Grok-Build-Paket schreiben (startet Grok nicht)",
+        "en": "Write a Grok build packet (does not start Grok)",
+    },
+    "cli.help.grok_execute": {
+        "de": "Execute-Paket, immer noch kein Start",
+        "en": "Execute packet, still no start",
+    },
+    "cli.help.gnom": {
+        "de": "gnom-hub-v1-Paket schreiben (startet und sendet nichts)",
+        "en": "Write a gnom-hub-v1 packet (starts nothing, sends nothing)",
+    },
+    "cli.help.gnom_execute": {
+        "de": "chat + /api/execute, immer noch kein POST",
+        "en": "chat + /api/execute, still no POST",
+    },
+    "cli.help.gate": {
+        "de": "Lokaler Loop-/Tages-Schutz (kein Tollgate-Start)",
+        "en": "Local loop and daily guard (does not start Tollgate)",
+    },
+    "cli.help.dash": {
+        "de": "Nur-Lese-Tafel (HTML + Terminal, kein Server)",
+        "en": "Read-only board (HTML + terminal, no server)",
+    },
+    "cli.help.dash_open": {"de": "HTML lokal öffnen", "en": "Open the HTML locally"},
+    "cli.help.graph": {
+        "de": "Knoten und Verbindungen als JSON ausgeben",
+        "en": "Print nodes and relations as JSON",
+    },
+    "cli.help.serve": {
+        "de": "Lokale UI auf localhost (führt nichts aus)",
+        "en": "Local UI on localhost (executes nothing)",
+    },
+    "cli.help.serve_open": {"de": "Browser öffnen", "en": "Open the browser"},
 }
+
 
 def normalise(language: str | None) -> str:
     """Gibt immer eine unterstuetzte Sprache zurueck."""
@@ -320,44 +529,24 @@ def from_accept_header(header: str | None) -> str:
     return DEFAULT_LANGUAGE
 
 
-def translate(key: str, language: str = DEFAULT_LANGUAGE, **values: object) -> str:
-    """Uebersetzt einen Schluessel.
-
-    Ein unbekannter Schluessel gibt den Schluessel selbst zurueck, damit die
-    Oberflaeche nicht zerbricht — der Test faengt ihn vorher ab.
-    """
-    entry = CATALOG.get(key)
-    if entry is None:
-        return key
-    text = entry.get(normalise(language)) or entry[DEFAULT_LANGUAGE]
-    return text.format(**values) if values else text
+# Reihenfolge fuer die Kommandozeile: unsere eigene Variable schlaegt die
+# Locale des Systems. "C" und "POSIX" heissen "keine Vorliebe" und werden
+# uebersprungen, sonst wuerde jede Server-Shell stumm auf Deutsch landen.
+ENVIRONMENT_VARIABLES = ("THREADDESK_LANG", "LC_ALL", "LC_MESSAGES", "LANG")
+NEUTRAL_LOCALES = {"c", "posix", ""}
 
 
-def catalog_for(language: str) -> dict[str, str]:
-    """Der ganze Katalog in einer Sprache — fuer die Kartenlogik im Browser."""
-    code = normalise(language)
-    return {key: entry.get(code) or entry[DEFAULT_LANGUAGE]
-            for key, entry in CATALOG.items()
-}
+def from_environment(env: dict[str, str] | None = None) -> str:
+    """Liest die Sprache aus den ueblichen Locale-Variablen."""
+    import os
 
-
-def normalise(language: str | None) -> str:
-    """Gibt immer eine unterstuetzte Sprache zurueck."""
-    if not language:
-        return DEFAULT_LANGUAGE
-    code = language.strip().lower().replace("_", "-").split("-", 1)[0]
-    return code if code in LANGUAGES else DEFAULT_LANGUAGE
-
-
-def from_accept_header(header: str | None) -> str:
-    """Liest die erste unterstuetzte Sprache aus einem Accept-Language-Kopf."""
-    if not header:
-        return DEFAULT_LANGUAGE
-    for chunk in header.split(","):
-        code = chunk.split(";", 1)[0].strip().lower().replace("_", "-")
-        base = code.split("-", 1)[0]
-        if base in LANGUAGES:
-            return base
+    source = os.environ if env is None else env
+    for name in ENVIRONMENT_VARIABLES:
+        raw = (source.get(name) or "").strip()
+        code = raw.split(".", 1)[0].split("@", 1)[0]
+        if code.lower() in NEUTRAL_LOCALES:
+            continue
+        return normalise(code)
     return DEFAULT_LANGUAGE
 
 
