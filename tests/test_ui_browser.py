@@ -320,8 +320,8 @@ def test_chrome_uses_shared_tokens_and_map_has_its_own_tones(page):
             };
         }"""
     )
-    # Grundgerüst bleibt auf dem grauen Akzent des Hub-Designs.
-    assert values["accent"].lower() == "#d7dbd4"
+    # Grundgeruest folgt dem gemeinsamen Akzent aller Werkzeuge.
+    assert values["accent"].lower() == "#8f98a8"
     # Die Karte übernimmt ihn gerade nicht.
     assert values["toneGood"] != values["mutedOk"]
     assert values["toneGood"] and values["toneRisk"]

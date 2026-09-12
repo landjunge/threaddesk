@@ -2,42 +2,49 @@
    warmes Fast-Schwarz, warmes Off-White, grauer Akzent. Alle Werkzeuge
    teilen diese Basis; Zustandsfarben bleiben gedämpft. */
 :root {
-  --bg: #0a0b0a;
-  --bg-elevated: #121310;
-  --bg-subtle: #1a1b18;
-  --fg: #eceae4;
-  --fg-muted: #9a9d96;
-  --fg-subtle: #6d716c;
-  --border: color-mix(in oklab, var(--fg) 12%, transparent);
-  --border-strong: color-mix(in oklab, var(--fg) 22%, transparent);
+  --bg: #121316;
+  --bg-elevated: #1a1b1f;
+  --bg-subtle: #1e1f24;
+  --fg: #e2e4e9;
+  --fg-muted: #8b909a;
+  --fg-subtle: #6b7280;
+  /* Zwei Linienstaerken mit verschiedenen Aufgaben:
+     --border trennt Flaechen (Deko, kein Kontrastwert noetig).
+     --border-strong zeichnet die Kante von Bedienelementen und haelt
+     dafuer 3:1 gegen den Hintergrund ein (WCAG 2.2, 1.4.11). */
+  --border: #2e3138;
+  --border-strong: #5f646f;
   /* Markenfarbe des Schriftzugs, wie auf threaddesk.netzwerkpunkt.de
      und in brand/wordmark.svg. Gilt nur fuer den Namen — die
      Oberflaeche bleibt auf dem neutralen Akzent. */
   --brand: #b99cff;
-  --accent: #d7dbd4;
-  --accent-fg: #0a0b0a;
-  --ok: #7d9b7f;
-  --warn: #c4a574;
+  --accent: #8f98a8;
+  --accent-fg: #121316;
+  --ok: #3d9b6a;
+  --warn: #c9a227;
   --idle: #85887e;
   --done: #8aa4b5;
-  --risk: #c47b6f;
-  --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  --risk: #dc7070;
+  /* Keine Rundungen. border-radius ist ueberall 0; die einzige Ausnahme
+     sind die Kartensymbole, dort bedeutet die Form die Knotenart. */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 24px;
   --space-6: 32px;
-  --font: "IBM Plex Sans", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.25rem;
-  --text-xl: 1.75rem;
+  /* Dieselbe Schrift in allen Werkzeugen. Die des Betriebssystems, damit
+     nichts nachgeladen werden muss und ThreadDesk auch ohne Netz so
+     aussieht wie mit. */
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Vier Schriftgroessen, mehr nicht. Grundgroesse 16px wie fuer Fliesstext
+     im Web empfohlen, die uebrigen Stufen im Verhaeltnis 1.25 (grosse Terz)
+     darum herum: 13 / 16 / 20 / 25. */
+  --text-sm: 0.8125rem;   /* 13px · Beschriftungen, Meta, Karte */
+  --text-base: 1rem;      /* 16px · Text, Knoepfe, Eingabefelder */
+  --text-lg: 1.25rem;     /* 20px · Zwischenueberschriften */
+  --text-xl: 1.5625rem;   /* 25px · Seitentitel */
   --motion-quick: 150ms;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
@@ -55,7 +62,7 @@ body {
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font);
-  font-size: 16px;
+  font-size: var(--text-base);
   line-height: 1.5;
 }
 
@@ -88,13 +95,13 @@ button:not(:disabled),
 .brand-mark {
   width: 10px;
   height: 10px;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--accent);
 }
 
 .brand-name {
   margin: 0;
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   font-weight: 600;
   letter-spacing: -0.02em;
 }
@@ -106,7 +113,7 @@ button:not(:disabled),
 .gate-hint {
   margin: 0;
   color: var(--fg-muted);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
 }
 
 .workspace {
@@ -133,7 +140,7 @@ button:not(:disabled),
 .panel {
   background: var(--bg-subtle);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: 0;
   padding: var(--space-4);
 }
 
@@ -148,7 +155,7 @@ button:not(:disabled),
 .panel-head h2,
 .block h3 {
   margin: 0;
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -157,7 +164,7 @@ button:not(:disabled),
 
 .count {
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--fg-subtle);
 }
 
@@ -176,7 +183,7 @@ button:not(:disabled),
   border: 1px solid var(--border);
   background: var(--bg-elevated);
   color: var(--fg);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   padding: var(--space-3);
   display: flex;
   flex-direction: column;
@@ -208,16 +215,16 @@ button:not(:disabled),
 
 .thread-id {
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--fg-subtle);
 }
 
 .status {
   display: inline-flex;
   align-items: center;
-  border-radius: 999px;
+  border-radius: 0;
   padding: 2px 8px;
-  font-size: 0.68rem;
+  font-size: var(--text-sm);
   font-weight: 500;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -256,18 +263,16 @@ button:not(:disabled),
 }
 
 .prose,
+
 .notes {
   margin: var(--space-2) 0 0;
   color: var(--fg);
-}
-
-.notes {
   white-space: pre-wrap;
   font-family: var(--font);
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   padding: var(--space-3);
 }
 
@@ -278,7 +283,7 @@ button:not(:disabled),
 
 code {
   font-family: var(--font-mono);
-  font-size: 0.82em;
+  font-size: var(--text-sm);
 }
 
 .empty,
@@ -300,13 +305,13 @@ code {
 
 .gate-stats dt {
   color: var(--fg-muted);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
 }
 
 .gate-stats dd {
   margin: 0;
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
 }
 
 [x-cloak] {
@@ -319,18 +324,18 @@ code {
   justify-content: center;
   min-height: 40px;
   padding: 0 var(--space-4);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
+  border-radius: 0;
+  border: 1px solid var(--border-strong);
   background: var(--bg-elevated);
   color: var(--fg);
-  font: 500 var(--text-sm)/1 var(--font);
+  font: 500 var(--text-base)/1 var(--font);
   transition: background var(--motion-quick) var(--ease-out),
     border-color var(--motion-quick) var(--ease-out),
     transform var(--motion-quick) var(--ease-out);
 }
 
 .btn:hover {
-  border-color: var(--border-strong);
+  border-color: var(--accent);
 }
 
 .btn:active {
@@ -358,19 +363,20 @@ code {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--fg-muted);
 }
 
 input[type="text"],
 textarea {
   width: 100%;
-  border: 1px solid var(--border);
+  min-height: 40px;
+  border: 1px solid var(--border-strong);
   background: var(--bg);
   color: var(--fg);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   padding: var(--space-3);
-  font: 400 var(--text-sm)/1.45 var(--font);
+  font: 400 var(--text-base)/1.45 var(--font);
 }
 
 input[type="text"] {
@@ -394,7 +400,7 @@ textarea:focus,
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   color: var(--fg-muted);
 }
 
@@ -412,11 +418,11 @@ textarea:focus,
 .chip {
   min-height: 36px;
   padding: 0 var(--space-3);
-  border-radius: 999px;
+  border-radius: 0;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--fg-muted);
-  font: 500 var(--text-xs)/1 var(--font);
+  font: 500 var(--text-sm)/1 var(--font);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -453,13 +459,13 @@ textarea:focus,
   gap: var(--space-3);
   padding: var(--space-3);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   background: var(--bg);
 }
 
 .snap-label {
   margin: 0;
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   font-weight: 500;
 }
 
@@ -468,8 +474,8 @@ textarea:focus,
   grid-column: 1 / -1;
   margin: var(--space-3) var(--space-4) 0;
   padding: var(--space-3);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-sm);
+  border-radius: 0;
+  font-size: var(--text-base);
 }
 
 .banner-ok {
@@ -489,8 +495,8 @@ textarea:focus,
   padding: var(--space-2) var(--space-3);
   background: var(--bg-subtle);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
+  border-radius: 0;
+  font-size: var(--text-sm);
   color: var(--fg-muted);
 }
 

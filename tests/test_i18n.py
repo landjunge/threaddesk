@@ -25,7 +25,7 @@ SAME_IN_BOTH = {
     "tab", "ok", "api", "ui", "cli", "url", "http", "https",
     "gate", "frozen", "cooldown", "prompt", "label", "optional", "status",
     "generic", "detailed", "short", "steps", "agent", "paket", "packet",
-    "threads", "revision", "details", "s", "n", "m", "j", "k",
+    "threads", "revision", "details", "s", "n", "m", "j", "k", "person",
     # Zustandswerte und Ausgabemarken, die ThreadDesk unuebersetzt fuehrt.
     "snap", "block", "html", "idea", "active", "paused", "done",
 }
@@ -123,14 +123,55 @@ def test_no_hardcoded_text_in_templates(template: Path) -> None:
         f"{template.name} verdrahtet sichtbaren Text: {leftovers}")
 
 
+# Werte, die aus Python kommen, werden ueber einen zusammengesetzten Schluessel
+# uebersetzt: t("kind." ~ kind). Statisch ist davon nur das Praefix sichtbar.
+# test_every_dropdown_value_has_a_label prueft dafuer jeden moeglichen Wert.
+DYNAMIC_PREFIXES = {"kind.", "status.", "relation.", "prompt.target.", "prompt.variant."}
+
+
 @pytest.mark.parametrize("template", TEMPLATE_FILES,
                          ids=lambda p: str(p.relative_to(TEMPLATES)))
 def test_template_keys_exist(template: Path) -> None:
     """Jeder t(...)-Aufruf muss einen Katalogeintrag treffen."""
     used = re.findall(r"""t\(\s*['"]([\w.]+)['"]""",
                       template.read_text(encoding="utf-8"))
-    unknown = sorted({key for key in used if key not in i18n.CATALOG})
+    unknown = sorted({key for key in used
+                      if key not in i18n.CATALOG and key not in DYNAMIC_PREFIXES})
     assert not unknown, f"{template.name} nutzt unbekannte Schlüssel: {unknown}"
+
+
+def test_every_dropdown_value_has_a_label() -> None:
+    """Kein Auswahlmenü darf einen rohen Python-Wert zeigen.
+
+    Genau das war der Fehler: die Menüs zeigten `decision`, `in_progress`,
+    `depends_on` — unübersetzt, weil die Werte direkt aus dem Modell kamen
+    und der Wächter Jinja-Ausdrücke wegschneidet.
+    """
+    from threaddesk.core import models
+
+    groups = {
+        "kind": models.NODE_KINDS,
+        "status": models.NODE_STATUSES,
+        "relation": models.RELATION_KINDS,
+        "prompt.target": ("gnom", "grok", "generic"),
+        "prompt.variant": ("detailed", "short", "steps", "agent"),
+    }
+    missing = [f"{prefix}.{value}"
+               for prefix, values in groups.items()
+               for value in values
+               if f"{prefix}.{value}" not in i18n.CATALOG]
+    assert not missing, f"Auswahlwerte ohne Beschriftung: {missing}"
+
+
+@pytest.mark.parametrize("language", i18n.LANGUAGES)
+def test_dropdowns_show_labels_not_raw_values(client, language) -> None:
+    """Die gerenderte Seite darf den rohen Wert nicht als Beschriftung tragen."""
+    page = client.get(f"/knowledge?lang={language}").text
+    offenders = []
+    for raw in ("decision", "in_progress", "depends_on", "superseded"):
+        if f">{raw}</option>" in page:
+            offenders.append(raw)
+    assert not offenders, f"roher Wert im Menü ({language}): {offenders}"
 
 
 # --------------------------------------------------------------- Auflösung
