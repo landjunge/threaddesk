@@ -56,6 +56,7 @@ def _last_packet(svc: ThreadService, thread: Thread | None) -> dict | None:
 
 
 LANGUAGE_COOKIE = "threaddesk_lang"
+REGISTER_COOKIE = "threaddesk_register"
 
 
 def _language(request: Request) -> str:
@@ -69,6 +70,18 @@ def _language(request: Request) -> str:
     return i18n.from_accept_header(request.headers.get("accept-language"))
 
 
+def _register(request: Request) -> str:
+    """Sprachebene fuer diese Anfrage. Reihenfolge: ?mode=, Cookie, Klartext.
+
+    Anders als bei der Sprache fragen wir den Browser nicht: Klartext ist der
+    Normalfall fuer alle, und wer Fachwoerter will, sagt es einmal.
+    """
+    chosen = request.query_params.get("mode")
+    if chosen:
+        return i18n.normalise_register(chosen)
+    return i18n.normalise_register(request.cookies.get(REGISTER_COOKIE))
+
+
 def _ctx(request: Request, extra: dict | None = None) -> dict:
     svc = _svc()
     current = svc.current()
@@ -78,6 +91,7 @@ def _ctx(request: Request, extra: dict | None = None) -> dict:
     data = {
         "request": request,
         "lang": lang,
+        "register": _register(request),
         "threads": svc.list(include_archived=False),
         "current": current,
         "current_id": svc.store.get_current_id(),
@@ -100,11 +114,13 @@ def create_app() -> FastAPI:
     @pass_context
     def _t(context, key: str, **values: object) -> str:
         return i18n.translate(key, context.get("lang") or i18n.DEFAULT_LANGUAGE,
+                              context.get("register") or i18n.DEFAULT_REGISTER,
                               **values)
 
     templates.env.globals["t"] = _t
     templates.env.globals["languages"] = i18n.LANGUAGES
     templates.env.globals["language_names"] = i18n.LANGUAGE_NAMES
+    templates.env.globals["registers"] = i18n.REGISTERS
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     def workspace(request: Request, extra: dict | None = None) -> HTMLResponse:
@@ -133,6 +149,17 @@ def create_app() -> FastAPI:
         )
         return response
 
+    @app.get("/mode/{value}", response_class=RedirectResponse)
+    def switch_register(value: str, request: Request) -> RedirectResponse:
+        """Merkt die Sprachebene — Klartext oder Fachsprache."""
+        target = request.headers.get("referer") or "/"
+        response = RedirectResponse(target, status_code=303)
+        response.set_cookie(
+            REGISTER_COOKIE, i18n.normalise_register(value),
+            max_age=60 * 60 * 24 * 365, samesite="lax",
+        )
+        return response
+
     @app.get("/api/graph", response_class=JSONResponse)
     def graph(kind: str | None = None, status: str | None = None) -> dict:
         return _svc().graph(kind=kind, status=status)
@@ -140,10 +167,13 @@ def create_app() -> FastAPI:
     @app.get("/map", response_class=HTMLResponse)
     def map_view(request: Request) -> HTMLResponse:
         lang = _language(request)
+        register = _register(request)
         return templates.TemplateResponse(request, "map.html", {
             "request": request,
             "lang": lang,
-            "map_strings": json.dumps(i18n.catalog_for(lang), ensure_ascii=False),
+            "register": register,
+            "map_strings": json.dumps(
+                i18n.catalog_for(lang, register), ensure_ascii=False),
         })
 
     @app.get("/knowledge", response_class=HTMLResponse)
