@@ -9,9 +9,10 @@ import pytest
 from threaddesk.api.service import ThreadService
 from threaddesk.core.models import GraphEvent, KnowledgeNode, Relation, Snapshot, ThreadContext, new_thread
 from threaddesk.storage.json_store import JsonStore
+from threaddesk.storage.sqlite_store import SQLiteStore
 
 
-@pytest.fixture(params=[JsonStore], ids=["json"])
+@pytest.fixture(params=[JsonStore, SQLiteStore], ids=["json", "sqlite"])
 def store(request: pytest.FixtureRequest, tmp_path: Path):
     return request.param(tmp_path)
 
@@ -69,6 +70,23 @@ def test_thread_service_accepts_the_store_contract(tmp_path: Path) -> None:
 
     assert service.current().id == created.id
     assert service.list()[0].title == "Struktureller Vertrag"
+
+
+def test_sqlite_schema_is_versioned_indexed_and_fts_ready(tmp_path: Path) -> None:
+    store = SQLiteStore(tmp_path)
+    version = store.connection.execute("SELECT version FROM schema_info").fetchone()[0]
+    objects = {
+        row[0]: row[1]
+        for row in store.connection.execute(
+            "SELECT name, type FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'"
+        )
+    }
+
+    assert version == 1
+    assert objects["idx_threads_status_updated"] == "index"
+    assert objects["idx_snapshots_thread_created"] == "index"
+    assert objects["idx_nodes_kind_status_updated"] == "index"
+    assert objects["search_index"] == "table"
 
 
 def test_application_code_uses_no_private_json_store_members() -> None:
