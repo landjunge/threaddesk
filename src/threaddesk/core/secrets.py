@@ -6,9 +6,15 @@ from threaddesk.core.errors import SecretRejected
 
 # Reject obvious key material so it never lands in thread files.
 _SECRET = re.compile(
-    r"(?i)(api[_-]?key|secret|password|token|bearer)\s*[:=]\s*\S+"
+    r"(?i)(api[_-]?key|secret|password|token|bearer)[\"']?\s*[:=]\s*[\"']?\S+"
     r"|sk-[A-Za-z0-9]{16,}"
-    r"|ghp_[A-Za-z0-9]{20,}"
+    r"|gh[pousr]_[A-Za-z0-9_]{20,}"
+    r"|glpat-[A-Za-z0-9_-]{20,}"
+    r"|AKIA[0-9A-Z]{16}"
+    r"|(?:ntn_|secret_)[A-Za-z0-9]{20,}"
+    r"|xox[baprs]-[A-Za-z0-9-]{20,}"
+    r"|\bBearer\s+[A-Za-z0-9._~+/=-]{8,}"
+    r"|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"
 )
 
 

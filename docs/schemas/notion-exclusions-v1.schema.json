@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://threaddesk.netzwerkpunkt.de/schemas/notion-exclusions-v1.schema.json",
+  "title": "ThreadDesk Notion exclusions v1",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["source_id", "title", "reason"],
+    "properties": {
+      "source_id": {"type": "string", "minLength": 1},
+      "title": {"type": "string", "minLength": 1},
+      "reason": {"type": "string", "minLength": 1}
+    },
+    "additionalProperties": true
+  }
+}
