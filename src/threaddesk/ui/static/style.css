@@ -1,10 +1,12 @@
-/* Farben aus dem Netzwerkpunkt-Hub-Design (siehe docs/index.html):
-   warmes Fast-Schwarz, warmes Off-White, grauer Akzent. Alle Werkzeuge
-   teilen diese Basis; Zustandsfarben bleiben gedämpft. */
+/* Gemeinsames Desk-Design R2: neutrale Produktoberflaeche. ThreadDesk
+   bleibt nur an der Wortmarke als eigenes Produkt erkennbar. */
 :root {
   --bg: #121316;
   --bg-elevated: #1a1b1f;
   --bg-subtle: #1e1f24;
+  --bg-card: #1e1f24;
+  --bg-raised: #24262d;
+  --bg-strip: #15171b;
   --fg: #e2e4e9;
   --fg-muted: #8b909a;
   --fg-subtle: #6b7280;
@@ -13,7 +15,8 @@
      --border-strong zeichnet die Kante von Bedienelementen und haelt
      dafuer 3:1 gegen den Hintergrund ein (WCAG 2.2, 1.4.11). */
   --border: #2e3138;
-  --border-strong: #5f646f;
+  --border-strong: #5c616a;
+  --border-hover: #6b7280;
   /* Markenfarbe des Schriftzugs, wie auf threaddesk.netzwerkpunkt.de
      und in brand/wordmark.svg. Gilt nur fuer den Namen — die
      Oberflaeche bleibt auf dem neutralen Akzent. */
@@ -24,16 +27,12 @@
   --warn: #c9a227;
   --idle: #85887e;
   --done: #8aa4b5;
-  --risk: #dc7070;
+  --risk: #c45c5c;
   /* Keine Rundungen. border-radius ist ueberall 0; die einzige Ausnahme
      sind die Kartensymbole, dort bedeutet die Form die Knotenart. */
-  /* Zwei Groessen fuer Bedienelemente, mehr gibt es nicht:
-     --control  ist der Regelfall (Knopf, Eingabefeld, Auswahlmenue),
-     --control-sm die kompakte Fassung fuer dichte Zeilen und Chips.
-     Beide liegen auf dem 8er-Raster. Unter dem Finger werden beide 44px
-     gross — das ist keine dritte Groesse, sondern dieselben Elemente
-     unter einem anderen Eingabegeraet (Apple HIG, Material). */
-  --control: 40px;
+  /* R2: Knoepfe 28px, Reiter und kompakte Navigation 32px. Unter dem
+     Finger waechst nur die Trefferflaeche auf mindestens 44px. */
+  --control: 28px;
   --control-sm: 32px;
   --control-touch: 44px;
   --space-1: 4px;
@@ -47,13 +46,11 @@
      aussieht wie mit. */
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  /* Vier Schriftgroessen, mehr nicht. Grundgroesse 16px wie fuer Fliesstext
-     im Web empfohlen, die uebrigen Stufen im Verhaeltnis 1.25 (grosse Terz)
-     darum herum: 13 / 16 / 20 / 25. */
-  --text-sm: 0.8125rem;   /* 13px · Beschriftungen, Meta, Karte */
-  --text-base: 1rem;      /* 16px · Text, Knoepfe, Eingabefelder */
-  --text-lg: 1.25rem;     /* 20px · Zwischenueberschriften */
-  --text-xl: 1.5625rem;   /* 25px · Seitentitel */
+  /* Genau vier R2-Schriftstufen. */
+  --text-sm: 10px;     /* Meta, Zeit, kleine Etiketten */
+  --text-base: 12px;   /* Text, Knoepfe, Reiter */
+  --text-lg: 14px;     /* Karten- und Abschnittstitel */
+  --text-xl: 16px;     /* App-Titel, sonst nichts */
   --motion-quick: 150ms;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
