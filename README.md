@@ -137,9 +137,10 @@ Für die manuelle Entwicklerinstallation: `python3 -m pip install -e ".[dev,ui]"
 
 ### Die gemeinsamen Regeln der NetzwerkPunkt-Werkzeuge
 
-ThreadDesk, 4AllPass und TollGate teilen sich Aussehen und Sprachregeln.
-Wer ein neues Werkzeug baut, übernimmt dieselben Werte — sie sind nicht
-Geschmack, sondern nachschlagbare Standards. **4AllPass ist die Vorlage.**
+ThreadDesk, Gnom-Hub-V1, 4AllPass und TollGate teilen sich das Desk-Design R2.
+Wer ein neues Werkzeug baut, übernimmt dieselben Grundflächen, Kanten, Maße
+und Sprachregeln. Die Produktidentität bleibt eine eigene, begrenzte Schicht:
+Bei ThreadDesk ist „Thread“ violett, während die Bedienoberfläche neutral bleibt.
 
 **Farben** (gleich in allen Werkzeugen)
 
@@ -148,25 +149,24 @@ Geschmack, sondern nachschlagbare Standards. **4AllPass ist die Vorlage.**
 | `--bg` | `#121316` | Grundfläche |
 | `--bg-panel` | `#1a1b1f` | Fläche |
 | `--bg-card` | `#1e1f24` | Karte |
+| `--bg-raised` | `#24262d` | Angehobene Karte |
+| `--bg-strip` | `#15171b` | Reiterleiste |
 | `--fg` | `#e2e4e9` | Text |
 | `--fg-muted` | `#8b909a` | Nebentext |
 | `--border` | `#2e3138` | Trennlinie zwischen Flächen (Deko) |
-| `--border-strong` | `#5f646f` | **Kante von Bedienelementen** |
+| `--border-strong` | `#5c616a` | **Kante von Bedienelementen** |
+| `--border-hover` | `#6b7280` | Kante bei Hover |
 | `--accent` | `#8f98a8` | Akzent |
-| `--ok` / `--warn` / `--err` | `#3d9b6a` / `#c9a227` / `#dc7070` | Zustände |
+| `--brand` | `#b99cff` | Nur „Thread“ in Wortmarke/Titel; später Logo-Rahmen |
+| `--ok` / `--warn` / `--err` | `#3d9b6a` / `#c9a227` / `#c45c5c` | Zustände |
 
 **Form und Größe**
 
 - `border-radius: 0` — überall. Rund nur, wo die Form etwas *bedeutet*
   (Kartensymbole, Fortschrittsring, Statuspunkt), mit Begründung im Code.
-- Genau vier Schriftgrößen: **13 / 16 / 20 / 25 px**. 16px Grundgröße wie für
-  Fließtext im Web empfohlen, die Stufen im Verhältnis 1.25 (große Terz).
-  Andere Tokens werden gelöscht, nicht nur gemieden.
-- Abstände im 8er-Raster: 4 / 8 / 12 / 16 / 24 / 32.
-- **Genau zwei Größen für Bedienelemente**, mehr gibt es nicht:
-  `--control: 40px` für den Regelfall (Knopf, Eingabefeld, Auswahlmenü) und
-  `--control-sm: 32px` für dichte Zeilen und Chips. Beide liegen auf dem
-  8er-Raster. Knopf, Eingabefeld und Auswahlmenü sind gleich hoch.
+- Genau vier Schriftgrößen: **10 / 12 / 14 / 16 px**.
+- Abstände: 4 / 8 / 12 / 16 px.
+- Knöpfe sind **28px**, Reiter und kompakte Navigation **32px** hoch.
 - Unter `@media (pointer: coarse)` werden alle Ziele **44px**
   (`--control-touch`). Das ist keine dritte Größe, sondern dieselben
   Elemente unter einem anderen Eingabegerät — die Zahl kommt von Apple und
