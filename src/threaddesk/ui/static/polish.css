@@ -2,7 +2,7 @@
 
 .thread-index {
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--fg-subtle);
 }
 
@@ -33,7 +33,7 @@
 
 .knowledge-head h1 {
   margin: var(--space-1) 0;
-  font-size: var(--text-xl);
+  font-size: var(--text-lg);
 }
 
 .knowledge-grid {
@@ -61,14 +61,14 @@
   display: grid;
   gap: var(--space-1);
   color: var(--fg-muted);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
 }
 
 .knowledge-form input,
 .knowledge-form textarea {
   width: 100%;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   background: var(--bg);
   color: var(--fg);
   padding: var(--space-3);
@@ -93,7 +93,7 @@
   gap: var(--space-3);
   padding: var(--space-3);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   background: var(--bg);
 }
 
@@ -108,7 +108,7 @@
 .node-row code,
 .relation-row {
   color: var(--fg-muted);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
 }
 
 .node-shape {
@@ -152,7 +152,7 @@
 .btn-compact {
   min-height: 36px;
   padding: 0 var(--space-3);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
 }
 
 .detail-meta {
@@ -199,7 +199,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--fg);
 }
 
@@ -210,11 +210,11 @@ kbd {
   padding: 0 6px;
   border: 1px solid var(--border-strong);
   border-bottom-width: 2px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--bg);
   color: var(--fg-muted);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: var(--text-base);
 }
 
 .toast-stack {
@@ -262,7 +262,7 @@ kbd {
   width: min(420px, 100%);
   background: var(--bg-elevated);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-sm);
   padding: var(--space-5);
 }
 
@@ -285,7 +285,7 @@ kbd {
 
 .help-keys dd {
   margin: 0;
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   color: var(--fg-muted);
 }
 
@@ -305,13 +305,28 @@ kbd {
 }
 
 select {
+  /* Ohne appearance:none zeichnet das Betriebssystem das Menue selbst —
+     eigener Pfeil, eigene Schrift, unter Windows mit 3D-Rahmen. Das passt
+     zu nichts. Also eigener Pfeil als Hintergrundbild. */
+  appearance: none;
+  -webkit-appearance: none;
   min-height: 40px;
   border: 1px solid var(--border);
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: linear-gradient(45deg, transparent 50%, var(--fg-muted) 50%),
+                    linear-gradient(135deg, var(--fg-muted) 50%, transparent 50%);
+  background-position: calc(100% - 16px) center, calc(100% - 11px) center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
   color: var(--fg);
-  border-radius: var(--radius-sm);
-  padding: 0 var(--space-3);
-  font: 400 var(--text-sm)/1 var(--font);
+  border-radius: 0;
+  padding: 0 calc(var(--space-3) + 16px) 0 var(--space-3);
+  font: 400 var(--text-base)/1 var(--font);
+}
+
+select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .file-list {
@@ -330,7 +345,7 @@ select {
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   background: var(--bg);
 }
 
@@ -366,7 +381,7 @@ select {
      reicht über den Bildschirmrand hinaus. */
   height: clamp(400px, 66vh, 760px);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-sm);
   background: #04070a;
   touch-action: none;
   cursor: grab;
@@ -477,7 +492,7 @@ select {
 
 .map-label text {
   fill: #eaf5fa;
-  font: 12px var(--font);
+  font: var(--text-base) var(--font);
   paint-order: stroke;
   stroke: #04070a;
   stroke-width: 3.5;
@@ -538,12 +553,12 @@ select {
   margin: 0;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: #04070acc;
   backdrop-filter: blur(6px);
   list-style: none;
   color: var(--fg-muted);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
 }
 .map-legend li { display: flex; align-items: center; gap: 6px; }
 .map-legend .key {
@@ -575,7 +590,7 @@ select {
   margin: var(--space-3) 0 0;
 }
 .map-detail dl div { display: grid; gap: var(--space-1); }
-.map-detail dt { color: var(--fg-muted); font-size: var(--text-xs); }
+.map-detail dt { color: var(--fg-muted); font-size: var(--text-sm); }
 .map-detail dd { margin: 0; }
 
 @media (max-width: 720px) {

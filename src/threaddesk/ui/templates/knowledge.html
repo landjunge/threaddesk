@@ -14,13 +14,13 @@
     <label>{{ t("knowledge.kind") }}
       <select name="kind">
         <option value="">{{ t("knowledge.all") }}</option>
-        {% for kind in node_kinds %}<option value="{{ kind }}"{% if active_kind == kind %} selected{% endif %}>{{ kind }}</option>{% endfor %}
+        {% for kind in node_kinds %}<option value="{{ kind }}"{% if active_kind == kind %} selected{% endif %}>{{ t("kind." ~ kind) }}</option>{% endfor %}
       </select>
     </label>
     <label>{{ t("knowledge.status") }}
       <select name="status">
         <option value="">{{ t("knowledge.all") }}</option>
-        {% for status in node_statuses %}<option value="{{ status }}"{% if active_status == status %} selected{% endif %}>{{ status }}</option>{% endfor %}
+        {% for status in node_statuses %}<option value="{{ status }}"{% if active_status == status %} selected{% endif %}>{{ t("status." ~ status) }}</option>{% endfor %}
       </select>
     </label>
     <button class="btn btn-ghost" type="submit">{{ t("knowledge.filter") }}</button>
@@ -30,9 +30,9 @@
   <section class="knowledge-grid">
     <form class="panel knowledge-form" method="post" action="/knowledge/nodes">
       <div class="panel-head"><h2>{{ t("knowledge.new_node") }}</h2></div>
-      <label>{{ t("knowledge.kind") }}<select name="kind">{% for kind in node_kinds %}<option value="{{ kind }}">{{ kind }}</option>{% endfor %}</select></label>
+      <label>{{ t("knowledge.kind") }}<select name="kind">{% for kind in node_kinds %}<option value="{{ kind }}">{{ t("kind." ~ kind) }}</option>{% endfor %}</select></label>
       <label>{{ t("knowledge.node_title") }}<input name="title" required placeholder="{{ t('knowledge.node_title_hint') }}" /></label>
-      <label>{{ t("knowledge.status") }}<select name="status">{% for status in node_statuses %}<option value="{{ status }}">{{ status }}</option>{% endfor %}</select></label>
+      <label>{{ t("knowledge.status") }}<select name="status">{% for status in node_statuses %}<option value="{{ status }}">{{ t("status." ~ status) }}</option>{% endfor %}</select></label>
       <label>{{ t("knowledge.details") }}<textarea name="details" rows="4" placeholder="{{ t('knowledge.details_hint') }}"></textarea></label>
       <button class="btn btn-primary" type="submit">{{ t("knowledge.save_node") }}</button>
     </form>
@@ -40,9 +40,9 @@
     <form class="panel knowledge-form" method="post" action="/knowledge/relations">
       <div class="panel-head"><h2>{{ t("knowledge.new_relation") }}</h2></div>
       {% if nodes|length >= 2 %}
-      <label>{{ t("knowledge.from") }}<select name="source_id">{% for node in nodes %}<option value="{{ node.id }}">{{ node.title }} · {{ node.kind }}</option>{% endfor %}</select></label>
-      <label>{{ t("knowledge.relation") }}<select name="kind">{% for kind in relation_kinds %}<option value="{{ kind }}">{{ kind }}</option>{% endfor %}</select></label>
-      <label>{{ t("knowledge.to") }}<select name="target_id">{% for node in nodes %}<option value="{{ node.id }}">{{ node.title }} · {{ node.kind }}</option>{% endfor %}</select></label>
+      <label>{{ t("knowledge.from") }}<select name="source_id">{% for node in nodes %}<option value="{{ node.id }}">{{ node.title }} · {{ t("kind." ~ node.kind) }}</option>{% endfor %}</select></label>
+      <label>{{ t("knowledge.relation") }}<select name="kind">{% for kind in relation_kinds %}<option value="{{ kind }}">{{ t("relation." ~ kind) }}</option>{% endfor %}</select></label>
+      <label>{{ t("knowledge.to") }}<select name="target_id">{% for node in nodes %}<option value="{{ node.id }}">{{ node.title }} · {{ t("kind." ~ node.kind) }}</option>{% endfor %}</select></label>
       <button class="btn btn-primary" type="submit">{{ t("knowledge.save_relation") }}</button>
       {% else %}
       <p class="muted">{{ t("knowledge.need_two") }}</p>
@@ -65,7 +65,7 @@
         <form method="post" action="/knowledge/nodes/{{ node.id }}/transition">
           <input type="hidden" name="expected_revision" value="{{ node.revision }}" />
           <select name="status" aria-label="{{ t('knowledge.next_status_for', title=node.title) }}">
-            {% for status in transitions %}<option value="{{ status }}">{{ status }}</option>{% endfor %}
+            {% for status in transitions %}<option value="{{ status }}">{{ t("status." ~ status) }}</option>{% endfor %}
           </select>
           <button class="btn btn-ghost btn-compact" type="submit">{{ t("knowledge.apply") }}</button>
         </form>

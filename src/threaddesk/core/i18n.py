@@ -298,6 +298,199 @@ CATALOG: dict[str, dict[str, str]] = {
         "de": "Keine Threads. Lege oben einen an.",
         "en": "No threads. Create one above.",
     },
+    # --- Knotenarten (Auswahlmenues) ---
+    "kind.project": {
+        "de": "Projekt",
+        "en": "Project",
+    },
+    "kind.decision": {
+        "de": "Entscheidung",
+        "en": "Decision",
+    },
+    "kind.task": {
+        "de": "Aufgabe",
+        "en": "Task",
+    },
+    "kind.result": {
+        "de": "Ergebnis",
+        "en": "Result",
+    },
+    "kind.person": {
+        "de": "Person",
+        "en": "Person",
+    },
+    "kind.agent": {
+        "de": "Agent",
+        "en": "Agent",
+    },
+    "kind.document": {
+        "de": "Dokument",
+        "en": "Document",
+    },
+    "kind.tool": {
+        "de": "Werkzeug",
+        "en": "Tool",
+    },
+    "kind.source": {
+        "de": "Quelle",
+        "en": "Source",
+    },
+    "kind.workflow": {
+        "de": "Ablauf",
+        "en": "Workflow",
+    },
+    # --- Knotenzustände (Auswahlmenues) ---
+    "status.idea": {
+        "de": "Idee",
+        "en": "Idea",
+    },
+    "status.candidate": {
+        "de": "Kandidat",
+        "en": "Candidate",
+    },
+    "status.proposed": {
+        "de": "Vorgeschlagen",
+        "en": "Proposed",
+    },
+    "status.confirmed": {
+        "de": "Bestätigt",
+        "en": "Confirmed",
+    },
+    "status.active": {
+        "de": "Aktiv",
+        "en": "Active",
+    },
+    "status.ready": {
+        "de": "Bereit",
+        "en": "Ready",
+    },
+    "status.assigned": {
+        "de": "Zugewiesen",
+        "en": "Assigned",
+    },
+    "status.in_progress": {
+        "de": "In Arbeit",
+        "en": "In progress",
+    },
+    "status.waiting": {
+        "de": "Wartet",
+        "en": "Waiting",
+    },
+    "status.blocked": {
+        "de": "Blockiert",
+        "en": "Blocked",
+    },
+    "status.delivered": {
+        "de": "Geliefert",
+        "en": "Delivered",
+    },
+    "status.review": {
+        "de": "Prüfung",
+        "en": "Review",
+    },
+    "status.unverified": {
+        "de": "Ungeprüft",
+        "en": "Unverified",
+    },
+    "status.verified": {
+        "de": "Geprüft",
+        "en": "Verified",
+    },
+    "status.accepted": {
+        "de": "Angenommen",
+        "en": "Accepted",
+    },
+    "status.rejected": {
+        "de": "Abgelehnt",
+        "en": "Rejected",
+    },
+    "status.rework": {
+        "de": "Nacharbeit",
+        "en": "Rework",
+    },
+    "status.superseded": {
+        "de": "Ersetzt",
+        "en": "Superseded",
+    },
+    "status.done": {
+        "de": "Fertig",
+        "en": "Done",
+    },
+    "status.paused": {
+        "de": "Pausiert",
+        "en": "Paused",
+    },
+    "status.archived": {
+        "de": "Archiviert",
+        "en": "Archived",
+    },
+    # --- Beziehungsarten (Auswahlmenues) ---
+    "relation.contains": {
+        "de": "enthält",
+        "en": "contains",
+    },
+    "relation.depends_on": {
+        "de": "hängt ab von",
+        "en": "depends on",
+    },
+    "relation.assigned_to": {
+        "de": "zugewiesen an",
+        "en": "assigned to",
+    },
+    "relation.produced": {
+        "de": "erzeugte",
+        "en": "produced",
+    },
+    "relation.supports": {
+        "de": "stützt",
+        "en": "supports",
+    },
+    "relation.references": {
+        "de": "verweist auf",
+        "en": "references",
+    },
+    "relation.blocks": {
+        "de": "blockiert",
+        "en": "blocks",
+    },
+    "relation.follows": {
+        "de": "folgt auf",
+        "en": "follows",
+    },
+    "relation.related_to": {
+        "de": "verwandt mit",
+        "en": "related to",
+    },
+    # --- Prompt-Ziele (Auswahlmenues) ---
+    "prompt.target.gnom": {
+        "de": "Gnom-Hub-V1",
+        "en": "Gnom-Hub-V1",
+    },
+    "prompt.target.grok": {
+        "de": "Grok",
+        "en": "Grok",
+    },
+    "prompt.target.generic": {
+        "de": "Allgemein",
+        "en": "Generic",
+    },
+    # --- Prompt-Varianten (Auswahlmenues) ---
+    "prompt.variant.detailed": {
+        "de": "Ausführlich",
+        "en": "Detailed",
+    },
+    "prompt.variant.short": {
+        "de": "Kurz",
+        "en": "Short",
+    },
+    "prompt.variant.steps": {
+        "de": "Schritte",
+        "en": "Steps",
+    },
+    "prompt.variant.agent": {
+        "de": "Agent",
+        "en": "Agent",
+    },
     # --- Kommandozeile: Ausgaben ---
     "cli.description": {
         "de": "ThreadDesk — Kontext halten, nichts ausführen.",
