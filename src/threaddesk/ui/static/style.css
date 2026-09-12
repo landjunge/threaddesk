@@ -27,6 +27,15 @@
   --risk: #dc7070;
   /* Keine Rundungen. border-radius ist ueberall 0; die einzige Ausnahme
      sind die Kartensymbole, dort bedeutet die Form die Knotenart. */
+  /* Zwei Groessen fuer Bedienelemente, mehr gibt es nicht:
+     --control  ist der Regelfall (Knopf, Eingabefeld, Auswahlmenue),
+     --control-sm die kompakte Fassung fuer dichte Zeilen und Chips.
+     Beide liegen auf dem 8er-Raster. Unter dem Finger werden beide 44px
+     gross — das ist keine dritte Groesse, sondern dieselben Elemente
+     unter einem anderen Eingabegeraet (Apple HIG, Material). */
+  --control: 40px;
+  --control-sm: 32px;
+  --control-touch: 44px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -322,7 +331,7 @@ code {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 40px;
+  min-height: var(--control);
   padding: 0 var(--space-4);
   border-radius: 0;
   border: 1px solid var(--border-strong);
@@ -370,7 +379,7 @@ code {
 input[type="text"],
 textarea {
   width: 100%;
-  min-height: 40px;
+  min-height: var(--control);
   border: 1px solid var(--border-strong);
   background: var(--bg);
   color: var(--fg);
@@ -380,7 +389,7 @@ textarea {
 }
 
 input[type="text"] {
-  min-height: 40px;
+  min-height: var(--control);
 }
 
 textarea {
@@ -416,7 +425,7 @@ textarea:focus,
 }
 
 .chip {
-  min-height: 36px;
+  min-height: var(--control-sm);
   padding: 0 var(--space-3);
   border-radius: 0;
   border: 1px solid var(--border);
@@ -515,8 +524,17 @@ textarea:focus,
     border-bottom: 1px solid var(--border);
   }
 
+}
+
+@media (pointer: coarse) {
+  /* Unter dem Finger werden alle Ziele 44px. Das ist die Zahl, die Apple
+     und Material dafuer nennen — kein eigener Geschmack. */
+  .btn,
+  .chip,
+  select,
+  input[type="text"],
   .thread-item {
-    min-height: 44px;
+    min-height: var(--control-touch);
   }
 }
 
