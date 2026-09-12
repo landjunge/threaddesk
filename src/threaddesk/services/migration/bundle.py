@@ -50,6 +50,14 @@ ALLOWED_ATTACHMENT_SUFFIXES = frozenset(
 HEX_SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 
+def _freeze(value: Any) -> Any:
+    if isinstance(value, dict):
+        return MappingProxyType({key: _freeze(item) for key, item in value.items()})
+    if isinstance(value, list):
+        return tuple(_freeze(item) for item in value)
+    return value
+
+
 class BundleValidationError(ValueError):
     """Safe validation failure that never includes imported content."""
 
@@ -88,16 +96,53 @@ class ValidatedBundle:
     counts: Mapping[str, int]
     files: tuple[str, ...]
     max_ndjson_line_bytes: int
+    max_file_bytes: int
+
+    def _ensure_unchanged(self) -> None:
+        if _hash_file(self.path) != self.bundle_sha256:
+            _fail("bundle_changed", self.path.name)
 
     def iter_objects(self) -> Iterator[dict[str, Any]]:
+        self._ensure_unchanged()
         yield from _iter_ndjson_path(
             self.path, "objects.ndjson", self.max_ndjson_line_bytes
         )
 
     def iter_relations(self) -> Iterator[dict[str, Any]]:
+        self._ensure_unchanged()
         yield from _iter_ndjson_path(
             self.path, "relations.ndjson", self.max_ndjson_line_bytes
         )
+
+    def iter_exclusions(self) -> Iterator[dict[str, Any]]:
+        self._ensure_unchanged()
+        with zipfile.ZipFile(self.path, "r") as archive:
+            data = _json_object_or_list(
+                _read_limited(
+                    archive,
+                    archive.getinfo("exclusions.json"),
+                    self.max_file_bytes,
+                ),
+                "exclusions.json",
+            )
+        yield from data
+
+    def read_text(self, name: str) -> str:
+        if name not in self.files or not name.startswith("content/"):
+            _fail("content_path", name)
+        try:
+            with zipfile.ZipFile(self.path, "r") as archive:
+                info = archive.getinfo(name)
+                data = _read_limited(archive, info, self.max_file_bytes)
+        except (KeyError, OSError, zipfile.BadZipFile):
+            _fail("bundle_changed", name)
+        expected = self.manifest["files"][name]
+        if (
+            len(data) != expected["size"]
+            or hashlib.sha256(data).hexdigest() != expected["sha256"]
+        ):
+            _fail("bundle_changed", name)
+        return _decode_utf8(data, name)
 
 
 def _fail(code: str, path: str = "") -> NoReturn:
@@ -478,10 +523,11 @@ def validate_bundle(
     return ValidatedBundle(
         path=bundle_path,
         bundle_sha256=_hash_file(bundle_path),
-        manifest=MappingProxyType(manifest),
+        manifest=_freeze(manifest),
         counts=MappingProxyType(actual_counts),
         files=tuple(sorted(actual_files)),
         max_ndjson_line_bytes=limits.max_ndjson_line_bytes,
+        max_file_bytes=limits.max_file_bytes,
     )
 
 

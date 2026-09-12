@@ -10,7 +10,8 @@ from typing import Any, Iterator, Mapping
 
 from threaddesk.core.errors import NotFound
 from threaddesk.core.models import GraphEvent, KnowledgeNode, Relation, Snapshot, Thread
-from threaddesk.storage.schema import FTS_SQL, SCHEMA_SQL, SCHEMA_VERSION
+from threaddesk.core.provenance import SourceRecord
+from threaddesk.storage.schema import FTS_SQL, MIGRATIONS, SCHEMA_SQL, SCHEMA_VERSION
 
 
 class SQLiteStore:
@@ -20,12 +21,32 @@ class SQLiteStore:
         self.database_path = self.root / "threaddesk.sqlite3"
         self.connection = sqlite3.connect(self.database_path)
         self.connection.row_factory = sqlite3.Row
-        self.connection.executescript(SCHEMA_SQL)
+        self.connection.execute("PRAGMA foreign_keys = ON")
+        self.connection.execute(
+            "CREATE TABLE IF NOT EXISTS schema_info (version INTEGER NOT NULL)"
+        )
         row = self.connection.execute("SELECT version FROM schema_info").fetchone()
         if row is None:
+            self.connection.executescript(SCHEMA_SQL)
             self.connection.execute("INSERT INTO schema_info(version) VALUES (?)", (SCHEMA_VERSION,))
-        elif row["version"] != SCHEMA_VERSION:
+        elif row["version"] > SCHEMA_VERSION:
             raise RuntimeError(f"Nicht unterstützte Schema-Version: {row['version']}")
+        else:
+            version = int(row["version"])
+            while version < SCHEMA_VERSION:
+                next_version = version + 1
+                migration = MIGRATIONS.get(next_version)
+                if migration is None:
+                    raise RuntimeError(
+                        f"Keine Migration für Schema-Version {next_version}."
+                    )
+                self.connection.executescript(
+                    "BEGIN IMMEDIATE;\n"
+                    + migration
+                    + f"\nUPDATE schema_info SET version = {next_version};\nCOMMIT;"
+                )
+                version = next_version
+            self.connection.executescript(SCHEMA_SQL)
         try:
             self.connection.executescript(FTS_SQL)
         except sqlite3.OperationalError:
@@ -193,3 +214,38 @@ class SQLiteStore:
 
     def list_import_batches(self) -> list[dict[str, Any]]:
         return [self._load(row) for row in self.connection.execute("SELECT payload FROM import_batches ORDER BY id")]
+
+    def save_source_record(self, record: SourceRecord) -> None:
+        self.connection.execute(
+            """INSERT OR REPLACE INTO source_records(
+                   source_system,source_id,target_id,payload
+               ) VALUES (?,?,?,?)""",
+            (
+                record.source_system,
+                record.source_id,
+                record.target_id,
+                self._dump(record.to_dict()),
+            ),
+        )
+        self._commit()
+
+    def get_source_record(self, source_system: str, source_id: str) -> SourceRecord:
+        row = self.connection.execute(
+            "SELECT payload FROM source_records WHERE source_system = ? AND source_id = ?",
+            (source_system, source_id),
+        ).fetchone()
+        if row is None:
+            raise NotFound(f"Quellbeleg nicht gefunden: {source_system}/{source_id}")
+        return SourceRecord.from_dict(self._load(row))
+
+    def list_source_records(self, source_system: str | None = None) -> list[SourceRecord]:
+        if source_system is None:
+            rows = self.connection.execute(
+                "SELECT payload FROM source_records ORDER BY source_system, source_id"
+            )
+        else:
+            rows = self.connection.execute(
+                "SELECT payload FROM source_records WHERE source_system = ? ORDER BY source_id",
+                (source_system,),
+            )
+        return [SourceRecord.from_dict(self._load(row)) for row in rows]

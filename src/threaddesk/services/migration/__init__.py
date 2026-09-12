@@ -9,10 +9,14 @@ from threaddesk.services.migration.bundle import (
     ValidatedBundle,
     validate_bundle,
 )
+from threaddesk.services.migration.diff import DryRunPlanner
+from threaddesk.services.migration.mapper import NotionMapper
 
 __all__ = [
     "BundleLimits",
     "BundleValidationError",
     "ValidatedBundle",
+    "DryRunPlanner",
+    "NotionMapper",
     "validate_bundle",
 ]

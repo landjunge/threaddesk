@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 from typing import Any, Mapping
 
 from threaddesk.core.errors import NotFound
 from threaddesk.core.models import GraphEvent, KnowledgeNode, Relation, Snapshot, Thread
+from threaddesk.core.provenance import SourceRecord
 
 DEFAULT_ROOT = Path.home() / ".threaddesk"
 
@@ -18,12 +20,14 @@ class JsonStore:
         self.nodes_dir = self.root / "nodes"
         self.relations_dir = self.root / "relations"
         self.events_dir = self.root / "graph-events"
+        self.source_records_dir = self.root / "source-records"
         self.state_path = self.root / "state.json"
         self.threads_dir.mkdir(parents=True, exist_ok=True)
         self.snaps_dir.mkdir(parents=True, exist_ok=True)
         self.nodes_dir.mkdir(parents=True, exist_ok=True)
         self.relations_dir.mkdir(parents=True, exist_ok=True)
         self.events_dir.mkdir(parents=True, exist_ok=True)
+        self.source_records_dir.mkdir(parents=True, exist_ok=True)
 
     def _thread_path(self, thread_id: str) -> Path:
         return self.threads_dir / f"{thread_id}.json"
@@ -150,3 +154,30 @@ class JsonStore:
         ]
         events.sort(key=lambda event: (event.occurred_at, event.id))
         return events
+
+    @staticmethod
+    def _source_record_name(source_system: str, source_id: str) -> str:
+        value = f"{source_system}\x00{source_id}".encode("utf-8")
+        return hashlib.sha256(value).hexdigest() + ".json"
+
+    def save_source_record(self, record: SourceRecord) -> None:
+        path = self.source_records_dir / self._source_record_name(
+            record.source_system, record.source_id
+        )
+        self._write_json(path, record.to_dict())
+
+    def get_source_record(self, source_system: str, source_id: str) -> SourceRecord:
+        path = self.source_records_dir / self._source_record_name(source_system, source_id)
+        if not path.exists():
+            raise NotFound(f"Quellbeleg nicht gefunden: {source_system}/{source_id}")
+        return SourceRecord.from_dict(self._read_json(path))
+
+    def list_source_records(self, source_system: str | None = None) -> list[SourceRecord]:
+        records = [
+            SourceRecord.from_dict(self._read_json(path))
+            for path in self.source_records_dir.glob("*.json")
+        ]
+        if source_system is not None:
+            records = [item for item in records if item.source_system == source_system]
+        records.sort(key=lambda item: item.key)
+        return records
