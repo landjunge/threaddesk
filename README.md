@@ -163,8 +163,16 @@ Geschmack, sondern nachschlagbare Standards. **4AllPass ist die Vorlage.**
   Fließtext im Web empfohlen, die Stufen im Verhältnis 1.25 (große Terz).
   Andere Tokens werden gelöscht, nicht nur gemieden.
 - Abstände im 8er-Raster: 4 / 8 / 12 / 16 / 24 / 32.
-- Bedienelemente mindestens **32px** hoch, auf Touch 44px (WCAG 2.2, 2.5.8
-  verlangt 24px). Knopf, Eingabefeld und Auswahlmenü sind gleich hoch.
+- **Genau zwei Größen für Bedienelemente**, mehr gibt es nicht:
+  `--control: 40px` für den Regelfall (Knopf, Eingabefeld, Auswahlmenü) und
+  `--control-sm: 32px` für dichte Zeilen und Chips. Beide liegen auf dem
+  8er-Raster. Knopf, Eingabefeld und Auswahlmenü sind gleich hoch.
+- Unter `@media (pointer: coarse)` werden alle Ziele **44px**
+  (`--control-touch`). Das ist keine dritte Größe, sondern dieselben
+  Elemente unter einem anderen Eingabegerät — die Zahl kommt von Apple und
+  Material. Der Zeiger ist das richtige Signal, **nicht** die Fensterbreite:
+  ein schmales Desktop-Fenster ist kein Finger. WCAG 2.2 (2.5.8) verlangt
+  als Minimum 24px; alle drei Werte liegen darüber.
 - Kontrast: **4.5:1** für Text, **3:1** für alles andere, was etwas bedeutet
   (WCAG 2.2, 1.4.3 und 1.4.11).
 - Auswahlmenüs setzen `appearance: none` und zeichnen ihren Pfeil selbst —
