@@ -113,7 +113,84 @@ Ohne Angabe ist Deutsch die Voreinstellung. Die Gliederungswörter der
 Kommandozeilenhilfe (`usage:`, `options:`) kommen aus Python selbst und
 bleiben englisch.
 
+### Sprachebene: Klartext oder Fachsprache
+
+Unabhängig von Deutsch/Englisch gibt es zwei Sprachebenen. **Klartext ist der
+Normalfall, Fachsprache ist zuschaltbar** — nie umgekehrt. Wer die Begriffe
+kennt, schaltet sie ein; wer sie nicht kennt, wird nicht mit ihnen überfahren.
+
+| Weg | Beispiel |
+|---|---|
+| Einmalig | `td --mode expert gate` |
+| Dauerhaft | `export THREADDESK_MODE=expert` |
+| Oberfläche | Schalter oben rechts neben DE/EN, merkt sich die Wahl ein Jahr |
+
+| Klartext (Standard) | Fachsprache |
+|---|---|
+| Schranke · Übergabe · Zwischenstände | Gate · Paket · Snapshots |
+| `geschlossen: nein` · `heute losgeschickt` · `wartezeit: 15s` | `frozen: nein` · `execute heute` · `cooldown: 15s` |
+
+Die Sprachebene wird **nicht** aus dem Browser oder der Umgebung geraten:
+Klartext gilt für alle, bis jemand etwas anderes sagt.
+
 Für die manuelle Entwicklerinstallation: `python3 -m pip install -e ".[dev,ui]"`. Daten liegen unter `~/.threaddesk/`.
+
+### Die gemeinsamen Regeln der NetzwerkPunkt-Werkzeuge
+
+ThreadDesk, 4AllPass und TollGate teilen sich Aussehen und Sprachregeln.
+Wer ein neues Werkzeug baut, übernimmt dieselben Werte — sie sind nicht
+Geschmack, sondern nachschlagbare Standards. **4AllPass ist die Vorlage.**
+
+**Farben** (gleich in allen Werkzeugen)
+
+| Token | Wert | Wofür |
+|---|---|---|
+| `--bg` | `#121316` | Grundfläche |
+| `--bg-panel` | `#1a1b1f` | Fläche |
+| `--bg-card` | `#1e1f24` | Karte |
+| `--fg` | `#e2e4e9` | Text |
+| `--fg-muted` | `#8b909a` | Nebentext |
+| `--border` | `#2e3138` | Trennlinie zwischen Flächen (Deko) |
+| `--border-strong` | `#5f646f` | **Kante von Bedienelementen** |
+| `--accent` | `#8f98a8` | Akzent |
+| `--ok` / `--warn` / `--err` | `#3d9b6a` / `#c9a227` / `#dc7070` | Zustände |
+
+**Form und Größe**
+
+- `border-radius: 0` — überall. Rund nur, wo die Form etwas *bedeutet*
+  (Kartensymbole, Fortschrittsring, Statuspunkt), mit Begründung im Code.
+- Genau vier Schriftgrößen: **13 / 16 / 20 / 25 px**. 16px Grundgröße wie für
+  Fließtext im Web empfohlen, die Stufen im Verhältnis 1.25 (große Terz).
+  Andere Tokens werden gelöscht, nicht nur gemieden.
+- Abstände im 8er-Raster: 4 / 8 / 12 / 16 / 24 / 32.
+- Bedienelemente mindestens **32px** hoch, auf Touch 44px (WCAG 2.2, 2.5.8
+  verlangt 24px). Knopf, Eingabefeld und Auswahlmenü sind gleich hoch.
+- Kontrast: **4.5:1** für Text, **3:1** für alles andere, was etwas bedeutet
+  (WCAG 2.2, 1.4.3 und 1.4.11).
+- Auswahlmenüs setzen `appearance: none` und zeichnen ihren Pfeil selbst —
+  sonst malt das Betriebssystem das Menü, unter Windows mit 3D-Effekt.
+- Schrift: die des Betriebssystems, nichts nachladen.
+
+**Sprache**
+
+- Jedes Werkzeug ist von Anfang an **deutsch und englisch**. Nachrüsten ist
+  teuer. Sichtbarer Text gehört in einen Katalog, nie direkt ins Template.
+- Immer **eine** Sprache zur Zeit, nie beide nebeneinander. Umschalter im Kopf.
+- Auflösung: `?lang=` → Cookie → `Accept-Language` → Standard.
+- Dazu die zwei Sprachebenen: **Klartext ist der Normalfall, Fachsprache ist
+  zuschaltbar.** Eine Fachfassung hängt als eigener Katalogeintrag am selben
+  Schlüssel, getrennt durch `#expert` (kein Punkt — sonst wäre
+  `register.expert` die Fachfassung von `register`). Fehlt die Fachfassung,
+  bleibt der Klartext stehen.
+- Jede Beschriftung sagt, was passiert. Jedes Feld sagt, wofür es da ist.
+  Keine Abkürzung ohne Auflösung. Fehlermeldungen nennen den nächsten Schritt.
+- Eigennamen werden nicht übersetzt: ThreadDesk, TollGate, 4AllPass,
+  Gnom-Hub-V1, Grok, Codex, Thread, MCP.
+
+**Fallstrick**, der zweimal zugeschlagen hat: `argparse` baut die Hilfetexte
+beim *Anlegen* des Parsers, nicht beim Parsen. `--lang` und `--mode` müssen
+deshalb vorher von Hand aus `argv` gelesen werden, sonst ist
+`td --mode expert --help` wieder Klartext.
 
 ### Wie dieses Projekt entsteht
 
