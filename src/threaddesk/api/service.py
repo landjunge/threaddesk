@@ -594,6 +594,11 @@ class ThreadService:
         if not key:
             raise NotFound("Thread-ID fehlt.")
         if key.isdigit():
+            try:
+                self.store.get_thread(key)
+                return key
+            except NotFound:
+                pass
             rows = self.list(include_archived=False)
             idx = int(key)
             if 1 <= idx <= len(rows):
