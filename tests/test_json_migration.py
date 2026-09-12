@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from threaddesk.api.service import ThreadService
+from threaddesk.core.provenance import SourceRecord
 from threaddesk.storage.json_migration import MigrationError, migrate_json_store
 from threaddesk.storage.json_store import JsonStore
 from threaddesk.storage.sqlite_store import SQLiteStore
@@ -29,6 +30,12 @@ def seed(root: Path, size: int = 3) -> JsonStore:
     project = service.create_node("project", "ThreadDesk", status="active")
     task = service.create_node("task", "SQLite", status="ready")
     service.connect(project.id, task.id, "contains")
+    store.save_source_record(
+        SourceRecord(
+            "notion", "page-1", project.id, "a" * 64, "b" * 64,
+            "export-1", "2026-09-12T20:00:00+00:00", "notion.v1.suggested_kind",
+        )
+    )
     return store
 
 
@@ -42,6 +49,7 @@ def canonical(store) -> dict:
         "nodes": [item.to_dict() for item in store.list_nodes()],
         "relations": [item.to_dict() for item in store.list_relations()],
         "events": [item.to_dict() for item in store.list_graph_events()],
+        "source_records": [item.to_dict() for item in store.list_source_records()],
         "current_id": store.get_current_id(),
     }
 

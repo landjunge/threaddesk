@@ -21,6 +21,7 @@ def _read(source: JsonStore) -> dict:
         "nodes": source.list_nodes(),
         "relations": source.list_relations(),
         "events": source.list_graph_events(),
+        "source_records": source.list_source_records(),
         "current_id": source.get_current_id(),
     }
 
@@ -49,7 +50,12 @@ def migrate_json_store(
     counts = {key: len(value) for key, value in incoming.items() if isinstance(value, list)}
     if _canonical(incoming) == _canonical(existing):
         return {"status": "noop", "changed": False, "counts": counts, "dry_run": dry_run}
-    if any(existing[key] for key in ("threads", "snapshots", "nodes", "relations", "events")):
+    if any(
+        existing[key]
+        for key in (
+            "threads", "snapshots", "nodes", "relations", "events", "source_records"
+        )
+    ):
         raise MigrationError("SQLite-Ziel enthält bereits einen anderen Bestand.")
     if dry_run:
         return {"status": "preview", "changed": True, "counts": counts, "dry_run": True}
@@ -68,6 +74,8 @@ def migrate_json_store(
                 target.save_relation(relation)
             for event in incoming["events"]:
                 target.append_graph_event(event)
+            for record in incoming["source_records"]:
+                target.save_source_record(record)
             target.set_current_id(incoming["current_id"])
             if fault:
                 fault("before_commit")

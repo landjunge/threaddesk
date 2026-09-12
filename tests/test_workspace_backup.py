@@ -41,7 +41,7 @@ def test_backup_manifest_and_verified_restore_match_exactly(tmp_path: Path) -> N
 
     assert manifest["kind"] == "threaddesk.workspace-backup"
     assert manifest["app_version"] == "0.1.0"
-    assert manifest["schema_version"] == 1
+    assert manifest["schema_version"] == 2
     assert manifest["design_reference"] == "desk-r2"
     assert set(manifest["files"]) == {"threaddesk.sqlite3", "artifacts/handoff.json"}
 

@@ -1,10 +1,18 @@
 """Versioned SQLite schema for ThreadDesk's local workspace."""
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
-TABLES = ("threads", "snapshots", "nodes", "relations", "graph_events")
+TABLES = (
+    "threads",
+    "snapshots",
+    "nodes",
+    "relations",
+    "graph_events",
+    "import_batches",
+    "source_records",
+)
 
-SCHEMA_SQL = """
+V1_SCHEMA_SQL = """
 PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS schema_info (
     version INTEGER NOT NULL
@@ -63,6 +71,24 @@ CREATE TABLE IF NOT EXISTS import_batches (
     payload TEXT NOT NULL
 );
 """
+
+SOURCE_RECORDS_SQL = """
+CREATE TABLE IF NOT EXISTS source_records (
+    source_system TEXT NOT NULL,
+    source_id TEXT NOT NULL,
+    target_id TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    PRIMARY KEY(source_system, source_id)
+);
+CREATE INDEX IF NOT EXISTS idx_source_records_target
+    ON source_records(target_id, source_system, source_id);
+"""
+
+SCHEMA_SQL = V1_SCHEMA_SQL + SOURCE_RECORDS_SQL
+
+MIGRATIONS = {
+    2: SOURCE_RECORDS_SQL,
+}
 
 FTS_SQL = """
 CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(

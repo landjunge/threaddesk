@@ -128,6 +128,19 @@ def test_valid_bundle_is_verified_and_remains_streamable(tmp_path: Path) -> None
     }
     assert [item["source_id"] for item in checked.iter_objects()] == ["notion-page-1"]
     assert list(checked.iter_relations()) == []
+    assert list(checked.iter_exclusions())[0]["source_id"] == "private-1"
+    assert checked.read_text("content/notion-page-1.md").startswith("# ThreadDesk")
+    with pytest.raises(TypeError):
+        checked.manifest["files"]["report.md"]["size"] = 1
+
+
+def test_validated_bundle_rejects_file_replacement_before_mapping(tmp_path: Path) -> None:
+    path = write_bundle(tmp_path / "replace.tdbundle")
+    checked = validate_bundle(path)
+    path.write_bytes(b"replaced after validation")
+
+    with pytest.raises(BundleValidationError, match="bundle_changed"):
+        list(checked.iter_objects())
 
 
 def test_validation_never_opens_a_network_connection(tmp_path: Path, monkeypatch) -> None:

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Mapping, Protocol
 
 from threaddesk.core.models import GraphEvent, KnowledgeNode, Relation, Snapshot, Thread
+from threaddesk.core.provenance import SourceRecord
 
 
 class ThreadStore(Protocol):
@@ -46,9 +47,22 @@ class ImportBatchStore(Protocol):
     def list_import_batches(self) -> list[dict[str, Any]]: ...
 
 
+class SourceRecordStore(Protocol):
+    def save_source_record(self, record: SourceRecord) -> None: ...
+    def get_source_record(self, source_system: str, source_id: str) -> SourceRecord: ...
+    def list_source_records(self, source_system: str | None = None) -> list[SourceRecord]: ...
+
+
 class UnitOfWork(Protocol):
     def transaction(self) -> AbstractContextManager[None]: ...
 
 
-class Store(ThreadStore, SnapshotStore, GraphStore, ArtifactStore, Protocol):
+class Store(
+    ThreadStore,
+    SnapshotStore,
+    GraphStore,
+    ArtifactStore,
+    SourceRecordStore,
+    Protocol,
+):
     """Minimum application store contract before import is enabled."""
