@@ -1,4 +1,19 @@
-# ThreadDesk — verbindlicher Plan (14.08.2026)
+# ThreadDesk — der MVP-Plan vom 14.08.2026 (abgeschlossen, historisch)
+
+> **Diese Datei ist ein Rückblick, keine Arbeitsanweisung.**
+>
+> Sie beschreibt das ursprüngliche MVP und ist damit erfüllt: Threads, Kontext,
+> Switcher, Snapshot, Prompt-Generator, MCP, Grok- und Gnom-Brücke, Gate und
+> Dashboard stehen.
+>
+> **Die Phasennummern 1 bis 5a unten gelten nicht mehr.** Die laufende Planung
+> zählt anders — dort bedeutet „Phase 4" etwas völlig anderes als hier. Wer eine
+> Phasennummer liest, meint die der laufenden Planung, nicht diese. Sie stehen
+> hier nur, damit die Commit-Geschichte lesbar bleibt.
+>
+> Was heute gilt und was als Nächstes ansteht, steht nicht im Repo, sondern im
+> Arbeitsstand, den der Eigentümer pflegt. Wer hier nachschlägt, um zu wissen,
+> was zu tun ist, schlägt an der falschen Stelle nach.
 
 ## Ziel
 
@@ -36,13 +51,13 @@ core / storage / ui / services / api
 - Events für Wechsel und Snapshots
 - Neue Features = Modul unter `services/`
 
-## Phasen
+## Phasen (historische Zählung, abgelöst)
 
 | Phase | Inhalt | Ziel |
 |---|---|---|
 | 1 | Core + Storage + Events | Fundament |
 | 2 | CLI + Switcher + Snapshot | nutzbar |
-| 3 | Polish, Fehler, echte Nutzung | Alltag — in Arbeit: Status, Notiz-Append, Dateipfade, Titel/Nummer-Switch, --yes |
+| 3 | Polish, Fehler, echte Nutzung | Alltag — fertig: Status, Notiz-Append, Dateipfade, Titel/Nummer-Switch, --yes |
 | 4a | Prompt-Generator (lokal, kein Execute) | fertig |
 | 4b | MCP stdio + Handoff (kein delete, untrusted wrap) | fertig |
 | 4c | Grok-Build-Bridge (Paket schreiben, Grok nicht starten) | fertig |
