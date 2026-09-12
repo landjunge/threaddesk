@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://threaddesk.netzwerkpunkt.de/schemas/notion-object-v1.schema.json",
+  "title": "ThreadDesk Notion source object v1",
+  "type": "object",
+  "required": [
+    "source_id",
+    "title",
+    "source_path",
+    "source_url",
+    "source_type",
+    "parent_id",
+    "last_edited_at",
+    "properties",
+    "content_path",
+    "content_sha256",
+    "archived",
+    "suggested_kind",
+    "mapping_reason"
+  ],
+  "properties": {
+    "source_id": {"type": "string", "minLength": 1},
+    "title": {"type": "string", "minLength": 1},
+    "source_path": {"type": "string", "minLength": 1},
+    "source_url": {"type": "string", "minLength": 1},
+    "source_type": {"type": "string", "minLength": 1},
+    "parent_id": {"type": ["string", "null"]},
+    "last_edited_at": {"type": "string", "format": "date-time"},
+    "properties": {"type": "object"},
+    "content_path": {"type": ["string", "null"]},
+    "content_sha256": {
+      "anyOf": [
+        {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        {"type": "null"}
+      ]
+    },
+    "archived": {"type": "boolean"},
+    "suggested_kind": {"type": "string", "minLength": 1},
+    "mapping_reason": {"type": "string", "minLength": 1}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"content_path": {"type": "null"}}},
+      "then": {"properties": {"content_sha256": {"type": "null"}}},
+      "else": {
+        "properties": {
+          "content_path": {"type": "string", "pattern": "^content/"},
+          "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    }
+  ],
+  "additionalProperties": true
+}
