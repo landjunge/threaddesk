@@ -612,14 +612,32 @@ CATALOG: dict[str, dict[str, str]] = {
         "de": "entfernt: {path}  ({id})",
         "en": "removed: {path}  ({id})",
     },
-    "cli.snap.saved": {"de": "snapshot: {id}  {label}", "en": "snapshot: {id}  {label}"},
-    "cli.snap.no_label": {"de": "(ohne label)", "en": "(no label)"},
-    "cli.snap.none": {"de": "keine snapshots", "en": "no snapshots"},
+    "cli.snap.saved": {
+        "de": "zwischenstand gespeichert: {id}  {label}",
+        "en": "state saved: {id}  {label}",
+    },
+    "cli.snap.saved#expert": {
+        "de": "snapshot: {id}  {label}", "en": "snapshot: {id}  {label}",
+    },
+    "cli.snap.no_label": {"de": "(ohne name)", "en": "(no name)"},
+    "cli.snap.no_label#expert": {"de": "(ohne label)", "en": "(no label)"},
+    "cli.snap.none": {
+        "de": "keine zwischenstände", "en": "no saved states",
+    },
+    "cli.snap.none#expert": {"de": "keine snapshots", "en": "no snapshots"},
     "cli.snap.restored": {
+        "de": "zurückgeholt: {id}  stand={snapshot}",
+        "en": "brought back: {id}  state={snapshot}",
+    },
+    "cli.snap.restored#expert": {
         "de": "wiederhergestellt: {id}  snap={snapshot}",
         "en": "restored: {id}  snap={snapshot}",
     },
     "cli.prompt.none": {
+        "de": "kein text im thread gespeichert",
+        "en": "no text stored in the thread",
+    },
+    "cli.prompt.none#expert": {
         "de": "keine gespeicherten prompts",
         "en": "no stored prompts",
     },
@@ -628,35 +646,70 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "--- stored in thread ---",
     },
     "cli.packet.grok": {
+        "de": "datei geschrieben: {path}  (grok wurde nicht gestartet)",
+        "en": "file written: {path}  (grok was not started)",
+    },
+    "cli.packet.grok#expert": {
         "de": "paket: {path}  (grok nicht gestartet)",
         "en": "packet: {path}  (grok not started)",
     },
     "cli.packet.gnom": {
+        "de": "datei geschrieben: {path}  (gnom wurde nicht gestartet, "
+              "nichts gesendet)",
+        "en": "file written: {path}  (gnom was not started, nothing sent)",
+    },
+    "cli.packet.gnom#expert": {
         "de": "paket: {path}  (gnom nicht gestartet, nichts gesendet)",
         "en": "packet: {path}  (gnom not started, nothing sent)",
     },
     "cli.gate.frozen": {
+        "de": "geschlossen: {frozen}  tag: {day}",
+        "en": "closed: {frozen}  day: {day}",
+    },
+    "cli.gate.frozen#expert": {
         "de": "frozen: {frozen}  tag: {day}",
         "en": "frozen: {frozen}  day: {day}",
     },
     "cli.gate.yes": {"de": "ja", "en": "yes"},
     "cli.gate.no": {"de": "nein", "en": "no"},
     "cli.gate.execute_today": {
+        "de": "heute losgeschickt: {used}/{limit}  pro thread: {per_thread}",
+        "en": "sent off today: {used}/{limit}  per thread: {per_thread}",
+    },
+    "cli.gate.execute_today#expert": {
         "de": "execute heute: {used}/{limit}  pro thread: {per_thread}",
         "en": "execute today: {used}/{limit}  per thread: {per_thread}",
     },
     "cli.gate.handoff_today": {
+        "de": "heute übergeben: {used}/{limit}  pro thread: {per_thread}",
+        "en": "handed over today: {used}/{limit}  per thread: {per_thread}",
+    },
+    "cli.gate.handoff_today#expert": {
         "de": "handoff heute: {used}/{limit}  pro thread: {per_thread}",
         "en": "handoff today: {used}/{limit}  per thread: {per_thread}",
     },
-    "cli.gate.cooldown": {"de": "cooldown: {seconds}s", "en": "cooldown: {seconds}s"},
+    "cli.gate.cooldown": {
+        "de": "wartezeit: {seconds}s", "en": "wait time: {seconds}s",
+    },
+    "cli.gate.cooldown#expert": {
+        "de": "cooldown: {seconds}s", "en": "cooldown: {seconds}s",
+    },
     "cli.gate.last": {
         "de": "zuletzt: {action}  {thread}  {at}",
         "en": "last: {action}  {thread}  {at}",
     },
     "cli.gate.allow": {"de": "ok  {action}", "en": "ok  {action}"},
-    "cli.gate.block": {"de": "block  {action}", "en": "block  {action}"},
+    "cli.gate.block": {
+        "de": "gestoppt  {action}", "en": "stopped  {action}",
+    },
+    "cli.gate.block#expert": {
+        "de": "block  {action}", "en": "block  {action}",
+    },
     "cli.gate.remaining": {
+        "de": "übrig  thread={thread}  tag={day}",
+        "en": "left  thread={thread}  day={day}",
+    },
+    "cli.gate.remaining#expert": {
         "de": "rest thread={thread}  tag={day}",
         "en": "remaining thread={thread}  day={day}",
     },
