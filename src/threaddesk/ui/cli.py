@@ -77,6 +77,21 @@ def cmd_new(args: argparse.Namespace) -> int:
     return 0
 
 
+def _numbers(svc: ThreadService) -> dict[str, int]:
+    """Welche Nummer welchem Thread gehoert.
+
+    Eine Nummer muss ueberall dasselbe bedeuten. `td switch 2` loest immer
+    gegen die nicht archivierten Threads auf, also darf auch `td list --all`
+    nur diese nummerieren. Sonst zeigt die Liste eine Nummer, die woanders
+    hinfuehrt — und zwar stillschweigend.
+
+    Archivierte Threads bekommen keine Nummer. Sie bleiben ueber ihre Kennung
+    oder ihren Titel erreichbar.
+    """
+    return {thread.id: number
+            for number, thread in enumerate(svc.list(include_archived=False), 1)}
+
+
 def cmd_list(args: argparse.Namespace) -> int:
     t = _lang(args)
     svc = _svc()
@@ -85,8 +100,9 @@ def cmd_list(args: argparse.Namespace) -> int:
     if not rows:
         print(t("cli.thread.none"))
         return 0
-    for i, thread in enumerate(rows, 1):
-        print(_fmt(thread, current, i))
+    numbers = _numbers(svc)
+    for thread in rows:
+        print(_fmt(thread, current, numbers.get(thread.id)))
     return 0
 
 
