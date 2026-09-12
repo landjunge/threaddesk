@@ -34,6 +34,14 @@
                aria-current="{{ 'true' if code == lang else 'false' }}">{{ code|upper }}</a>
             {% endfor %}
           </nav>
+          {# Klartext ist der Normalfall, Fachsprache ist zuschaltbar. #}
+          <nav class="lang-switch" aria-label="{{ t('nav.register') }}">
+            {% for value in registers %}
+            <a href="/mode/{{ value }}" class="btn btn-ghost btn-compact{{ ' is-active' if value == register else '' }}"
+               title="{{ t('register.' ~ value ~ '.hint') }}"
+               aria-current="{{ 'true' if value == register else 'false' }}">{{ t('register.' ~ value) }}</a>
+            {% endfor %}
+          </nav>
           <button type="button" class="btn btn-ghost btn-compact" data-help-open>
             {{ t("help.open") }} <kbd>?</kbd>
           </button>

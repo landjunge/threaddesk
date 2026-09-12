@@ -20,6 +20,19 @@ DEFAULT_LANGUAGE = "de"
 
 LANGUAGE_NAMES = {"de": "Deutsch", "en": "English"}
 
+# Zwei Sprachebenen, unabhaengig von DE/EN. Klartext ist der Normalfall,
+# Fachsprache ist zuschaltbar — nie umgekehrt. Wer die Fachwoerter kennt,
+# schaltet sie ein; wer sie nicht kennt, wird nicht damit ueberfahren.
+# Vorbild ist 4AllPass (frontend/src/lib/copy-mode.ts).
+PLAIN = "plain"
+EXPERT = "expert"
+REGISTERS = (PLAIN, EXPERT)
+DEFAULT_REGISTER = PLAIN
+# Ein Fachtext haengt als eigener Eintrag am selben Schluessel. Das Trennzeichen
+# ist bewusst kein Punkt: sonst waere "register.expert" die Fachfassung von
+# "register" statt ein eigener Schluessel.
+EXPERT_SUFFIX = "#expert"
+
 CATALOG: dict[str, dict[str, str]] = {
     # --- Grundgeruest ---
     "app.tagline": {
@@ -35,6 +48,17 @@ CATALOG: dict[str, dict[str, str]] = {
     "nav.knowledge": {"de": "Wissenspool", "en": "Knowledge"},
     "nav.map": {"de": "Karte", "en": "Map"},
     "nav.language": {"de": "Sprache", "en": "Language"},
+    "nav.register": {"de": "Sprachebene", "en": "Wording"},
+    "register.plain": {"de": "Klartext", "en": "Plain"},
+    "register.expert": {"de": "Fachsprache", "en": "Expert"},
+    "register.plain.hint": {
+        "de": "Kurze Sätze, keine Fachwörter. So startet ThreadDesk.",
+        "en": "Short sentences, no jargon. This is how ThreadDesk starts.",
+    },
+    "register.expert.hint": {
+        "de": "Die Fachbegriffe, wenn du sie kennst.",
+        "en": "The technical terms, if you know them.",
+    },
     # --- Hilfe ---
     "help.open": {"de": "Tasten", "en": "Keys"},
     "help.title": {"de": "Tastatur", "en": "Keyboard"},
@@ -195,19 +219,38 @@ CATALOG: dict[str, dict[str, str]] = {
     "files.empty": {"de": "Keine Dateipfade.", "en": "No file paths."},
     "files.add": {"de": "Hinzufügen", "en": "Add"},
     # --- Gate ---
-    "gate.title": {"de": "Gate", "en": "Gate"},
-    "gate.frozen": {"de": "frozen", "en": "frozen"},
+    # Im Klartext heisst das Ding auf Deutsch Schranke — sonst stuende in der
+    # Ueberschrift "Gate" und im Satz darunter "Schranke".
+    "gate.title": {"de": "Schranke", "en": "Gate"},
+    "gate.title#expert": {"de": "Gate", "en": "Gate"},
+    "gate.frozen": {"de": "zu", "en": "closed"},
+    "gate.frozen#expert": {"de": "frozen", "en": "frozen"},
     "gate.open": {"de": "offen", "en": "open"},
-    "gate.execute_today": {"de": "Execute heute", "en": "Execute today"},
-    "gate.handoff_today": {"de": "Handoff heute", "en": "Handoff today"},
-    "gate.cooldown": {"de": "Cooldown", "en": "Cooldown"},
+    "gate.execute_today": {"de": "Heute losgeschickt", "en": "Sent off today"},
+    "gate.execute_today#expert": {"de": "Execute heute", "en": "Execute today"},
+    "gate.handoff_today": {"de": "Heute übergeben", "en": "Handed over today"},
+    "gate.handoff_today#expert": {"de": "Handoff heute", "en": "Handoff today"},
+    "gate.cooldown": {"de": "Wartezeit", "en": "Wait time"},
+    "gate.cooldown#expert": {"de": "Cooldown", "en": "Cooldown"},
     "gate.confirm_freeze": {
+        "de": "Schranke schließen? Dann schreibt ThreadDesk keine Übergabe-Dateien mehr.",
+        "en": "Close the gate? ThreadDesk then writes no more handover files.",
+    },
+    "gate.confirm_freeze#expert": {
         "de": "Gate einfrieren? Execute- und Handoff-Pakete werden blockiert.",
         "en": "Freeze the gate? Execute and handoff packets will be blocked.",
     },
-    "gate.thaw": {"de": "Auftauen", "en": "Thaw"},
-    "gate.freeze": {"de": "Einfrieren", "en": "Freeze"},
+    "gate.thaw": {"de": "Öffnen", "en": "Open"},
+    "gate.thaw#expert": {"de": "Auftauen", "en": "Thaw"},
+    "gate.freeze": {"de": "Schließen", "en": "Close"},
+    "gate.freeze#expert": {"de": "Einfrieren", "en": "Freeze"},
     "gate.hint": {
+        "de": "Die Schranke verhindert nur, dass Dateien geschrieben werden. "
+              "Sie startet nie etwas.",
+        "en": "The gate only stops files from being written. It never starts "
+              "anything.",
+    },
+    "gate.hint#expert": {
         "de": "Sperrt nur Pakete. Startet nichts.",
         "en": "Blocks packets only. Starts nothing.",
     },
@@ -233,12 +276,24 @@ CATALOG: dict[str, dict[str, str]] = {
     "notes.mic_stop": {"de": "Stopp", "en": "Stop"},
     "notes.save": {"de": "Notiz speichern", "en": "Save note"},
     # --- Paket ---
-    "packet.title": {"de": "Paket", "en": "Packet"},
+    "packet.title": {"de": "Übergabe", "en": "Handover"},
+    "packet.title#expert": {"de": "Paket", "en": "Packet"},
     "packet.hint": {
+        "de": "Legt eine Datei an, die du einem Werkzeug weitergeben kannst. "
+              "ThreadDesk startet nichts davon selbst.",
+        "en": "Creates a file you can hand to another tool. ThreadDesk starts "
+              "none of them itself.",
+    },
+    "packet.hint#expert": {
         "de": "Schreibt Dateien. Startet Grok und gnom-hub-v1 nicht.",
         "en": "Writes files. Does not start Grok or gnom-hub-v1.",
     },
-    "packet.write_handoff": {"de": "Handoff schreiben", "en": "Write handoff"},
+    "packet.write_handoff": {
+        "de": "Übergabe-Datei schreiben", "en": "Write handover file",
+    },
+    "packet.write_handoff#expert": {
+        "de": "Handoff schreiben", "en": "Write handoff",
+    },
     "packet.gnom": {"de": "Gnom-Brainstorm", "en": "Gnom brainstorm"},
     "packet.grok": {"de": "Grok-Brainstorm", "en": "Grok brainstorm"},
     "packet.not_executed": {"de": "nicht ausgeführt", "en": "not executed"},
@@ -247,6 +302,10 @@ CATALOG: dict[str, dict[str, str]] = {
     # --- Prompt ---
     "prompt.title": {"de": "Prompt", "en": "Prompt"},
     "prompt.hint": {
+        "de": "Der fertige Text zum Kopieren. ThreadDesk schickt ihn nirgendwo hin.",
+        "en": "The finished text, ready to copy. ThreadDesk sends it nowhere.",
+    },
+    "prompt.hint#expert": {
         "de": "Nur Vorschau. Startet Grok und Gnom nicht.",
         "en": "Preview only. Does not start Grok or Gnom.",
     },
@@ -257,13 +316,28 @@ CATALOG: dict[str, dict[str, str]] = {
     "prompt.copy": {"de": "Prompt kopieren", "en": "Copy prompt"},
     "prompt.saved": {"de": "Gespeichert:", "en": "Saved:"},
     # --- Snapshots ---
-    "snapshots.title": {"de": "Snapshots", "en": "Snapshots"},
+    "snapshots.title": {"de": "Zwischenstände", "en": "Saved states"},
+    "snapshots.title#expert": {"de": "Snapshots", "en": "Snapshots"},
+    "snapshots.hint": {
+        "de": "Friert die Notizen von jetzt ein. Du kannst sie später "
+              "zurückholen.",
+        "en": "Freezes the notes as they are now. You can bring them back later.",
+    },
+    "snapshots.hint#expert": {
+        "de": "Legt eine Kopie der Notizen ab, ladbar per Snapshot-ID.",
+        "en": "Stores a copy of the notes, loadable by snapshot id.",
+    },
     "snapshots.current": {"de": "Aktuell:", "en": "Current:"},
     "snapshots.none": {"de": "keiner", "en": "none"},
     "snapshots.label_placeholder": {"de": "Label (optional)", "en": "Label (optional)"},
     "snapshots.save": {"de": "Speichern", "en": "Save"},
     "snapshots.unnamed": {"de": "(ohne Label)", "en": "(unnamed)"},
     "snapshots.confirm_restore": {
+        "de": "Zwischenstand zurückholen? Was jetzt in den Notizen steht, "
+              "geht dabei verloren.",
+        "en": "Bring this state back? Whatever is in the notes now will be lost.",
+    },
+    "snapshots.confirm_restore#expert": {
         "de": "Snapshot laden? Aktuelle Notizen werden überschrieben.",
         "en": "Load snapshot? Current notes will be overwritten.",
     },
@@ -743,21 +817,51 @@ def from_environment(env: dict[str, str] | None = None) -> str:
     return DEFAULT_LANGUAGE
 
 
-def translate(key: str, language: str = DEFAULT_LANGUAGE, **values: object) -> str:
+def normalise_register(register: str | None) -> str:
+    """Gibt immer eine unterstuetzte Sprachebene zurueck."""
+    if not register:
+        return DEFAULT_REGISTER
+    value = register.strip().lower()
+    return value if value in REGISTERS else DEFAULT_REGISTER
+
+
+def _entry(key: str, register: str) -> dict[str, str] | None:
+    """Der Eintrag fuer diesen Schluessel auf dieser Ebene.
+
+    Auf der Fachebene zaehlt die Variante `<schluessel>.expert`, wenn es sie
+    gibt. Gibt es sie nicht, bleibt der Klartext stehen — die meisten Texte
+    brauchen keine zweite Fassung, und einen erfundenen Fachbegriff
+    hinzuschreiben waere schlechter als der klare Satz.
+    """
+    if normalise_register(register) == EXPERT:
+        variant = CATALOG.get(key + EXPERT_SUFFIX)
+        if variant is not None:
+            return variant
+    return CATALOG.get(key)
+
+
+def translate(key: str, language: str = DEFAULT_LANGUAGE,
+              register: str = DEFAULT_REGISTER, **values: object) -> str:
     """Uebersetzt einen Schluessel.
 
     Ein unbekannter Schluessel gibt den Schluessel selbst zurueck, damit die
     Oberflaeche nicht zerbricht — der Test faengt ihn vorher ab.
     """
-    entry = CATALOG.get(key)
+    entry = _entry(key, register)
     if entry is None:
         return key
     text = entry.get(normalise(language)) or entry[DEFAULT_LANGUAGE]
     return text.format(**values) if values else text
 
 
-def catalog_for(language: str) -> dict[str, str]:
-    """Der ganze Katalog in einer Sprache — fuer die Kartenlogik im Browser."""
+def catalog_for(language: str, register: str = DEFAULT_REGISTER) -> dict[str, str]:
+    """Der ganze Katalog in einer Sprache — fuer die Kartenlogik im Browser.
+
+    Die `.expert`-Varianten tauchen nicht als eigene Schluessel auf; sie sind
+    bereits eingesetzt, wo die Fachebene gewaehlt ist.
+    """
     code = normalise(language)
-    return {key: entry.get(code) or entry[DEFAULT_LANGUAGE]
-            for key, entry in CATALOG.items()}
+    keys = (key for key in CATALOG if not key.endswith(EXPERT_SUFFIX))
+    return {key: (_entry(key, register) or CATALOG[key]).get(code)
+                 or CATALOG[key][DEFAULT_LANGUAGE]
+            for key in keys}
