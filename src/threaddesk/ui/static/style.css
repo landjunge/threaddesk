@@ -8,8 +8,12 @@
   --fg: #e2e4e9;
   --fg-muted: #8b909a;
   --fg-subtle: #6b7280;
+  /* Zwei Linienstaerken mit verschiedenen Aufgaben:
+     --border trennt Flaechen (Deko, kein Kontrastwert noetig).
+     --border-strong zeichnet die Kante von Bedienelementen und haelt
+     dafuer 3:1 gegen den Hintergrund ein (WCAG 2.2, 1.4.11). */
   --border: #2e3138;
-  --border-strong: #3a3e46;
+  --border-strong: #5f646f;
   /* Markenfarbe des Schriftzugs, wie auf threaddesk.netzwerkpunkt.de
      und in brand/wordmark.svg. Gilt nur fuer den Namen — die
      Oberflaeche bleibt auf dem neutralen Akzent. */
@@ -21,10 +25,8 @@
   --idle: #85887e;
   --done: #8aa4b5;
   --risk: #dc7070;
-  /* Bedienelemente sind eckig (border-radius: 0). Flaechen haben genau eine
-     Rundung. Die Karten-Symbole bestimmen ihre Form selbst — dort bedeutet
-     sie die Knotenart (Kreis, Rechteck, Sechseck). */
-  --radius-sm: 8px;
+  /* Keine Rundungen. border-radius ist ueberall 0; die einzige Ausnahme
+     sind die Kartensymbole, dort bedeutet die Form die Knotenart. */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -33,11 +35,13 @@
   --space-6: 32px;
   --font: "IBM Plex Sans", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-  /* Genau drei Schriftgroessen. Mehr gibt es nicht — wer eine vierte
-     braucht, braucht in Wahrheit ein anderes Element. */
-  --text-sm: 0.75rem;     /* 12px · Beschriftungen, Meta, Karte */
-  --text-base: 0.875rem;  /* 14px · Text, Knoepfe, Eingabefelder */
-  --text-lg: 1.75rem;     /* 28px · Ueberschriften */
+  /* Vier Schriftgroessen, mehr nicht. Grundgroesse 16px wie fuer Fliesstext
+     im Web empfohlen, die uebrigen Stufen im Verhaeltnis 1.25 (grosse Terz)
+     darum herum: 13 / 16 / 20 / 25. */
+  --text-sm: 0.8125rem;   /* 13px · Beschriftungen, Meta, Karte */
+  --text-base: 1rem;      /* 16px · Text, Knoepfe, Eingabefelder */
+  --text-lg: 1.25rem;     /* 20px · Zwischenueberschriften */
+  --text-xl: 1.5625rem;   /* 25px · Seitentitel */
   --motion-quick: 150ms;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
@@ -88,7 +92,7 @@ button:not(:disabled),
 .brand-mark {
   width: 10px;
   height: 10px;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--accent);
 }
 
@@ -133,7 +137,7 @@ button:not(:disabled),
 .panel {
   background: var(--bg-subtle);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   padding: var(--space-4);
 }
 
@@ -241,7 +245,7 @@ button:not(:disabled),
 
 .detail h1 {
   margin: 4px 0 0;
-  font-size: var(--text-lg);
+  font-size: var(--text-xl);
   font-weight: 600;
   letter-spacing: -0.03em;
   line-height: 1.2;
@@ -265,7 +269,7 @@ button:not(:disabled),
   font-size: var(--text-base);
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   padding: var(--space-3);
 }
 
@@ -318,7 +322,7 @@ code {
   min-height: 40px;
   padding: 0 var(--space-4);
   border-radius: 0;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   background: var(--bg-elevated);
   color: var(--fg);
   font: 500 var(--text-base)/1 var(--font);
@@ -328,7 +332,7 @@ code {
 }
 
 .btn:hover {
-  border-color: var(--border-strong);
+  border-color: var(--accent);
 }
 
 .btn:active {
@@ -363,7 +367,8 @@ code {
 input[type="text"],
 textarea {
   width: 100%;
-  border: 1px solid var(--border);
+  min-height: 40px;
+  border: 1px solid var(--border-strong);
   background: var(--bg);
   color: var(--fg);
   border-radius: 0;
@@ -466,7 +471,7 @@ textarea:focus,
   grid-column: 1 / -1;
   margin: var(--space-3) var(--space-4) 0;
   padding: var(--space-3);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   font-size: var(--text-base);
 }
 
@@ -487,7 +492,7 @@ textarea:focus,
   padding: var(--space-2) var(--space-3);
   background: var(--bg-subtle);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   font-size: var(--text-sm);
   color: var(--fg-muted);
 }

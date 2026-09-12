@@ -71,14 +71,9 @@ RADIUS = re.compile(r"border-radius:\s*([^;]+);")
 # "999px ist ok" jedem Knopf, wieder rund zu werden — genau das ist beim
 # Schreiben dieses Tests passiert und erst durch die Probe aufgefallen.
 SHAPE_EXCEPTIONS = {
-    ".brand-mark": "Logo, kein Bedienelement.",
-    ".node-shape": "Die Form bedeutet auf der Karte die Knotenart.",
-    (".node-shape-task, .node-shape-document, .node-shape-decision, "
-     ".node-shape-result"): "Wie .node-shape: die Form bedeutet die Knotenart.",
-    ".map-legend .key-circle": "Zeigt die Kartenform in der Legende.",
-    ".map-legend .key-rect": "Zeigt die Kartenform in der Legende.",
-    ".map-legend .key-doc": "Zeigt die Kartenform in der Legende.",
-    ".map-legend .key-tone": "Zeigt die Kartenform in der Legende.",
+    ".node-shape": "Kreis statt Ecke: die Form bedeutet auf der Karte die Knotenart.",
+    ".map-legend .key-circle": "Zeigt dieselbe Kartenform in der Legende.",
+    ".map-legend .key-tone": "Zeigt dieselbe Kartenform in der Legende.",
 }
 
 
@@ -105,25 +100,26 @@ def _declarations(pattern):
     return found
 
 
-def test_exactly_three_font_sizes() -> None:
-    """Drei Schriftgrößen, keine vierte.
+def test_at_most_four_font_sizes() -> None:
+    """Höchstens vier Schriftgrößen.
 
     Vorher standen Tokens neben 16px, 0.82em, 0.72rem und 0.68rem — drei
     Einheiten durcheinander. Das sah aus wie hundert Größen.
     """
-    allowed = {"var(--text-sm)", "var(--text-base)", "var(--text-lg)"}
+    allowed = {"var(--text-sm)", "var(--text-base)", "var(--text-lg)",
+               "var(--text-xl)"}
     offenders = [f"{sheet}:{line}: {value}  ({selector})"
                  for sheet, line, value, selector in _declarations(FONT_SIZE)
                  if value not in allowed]
     assert not offenders, (
-        "Schriftgröße außerhalb der drei Tokens:\n" + "\n".join(offenders))
+        "Schriftgröße außerhalb der vier Tokens:\n" + "\n".join(offenders))
 
 
-def test_only_three_font_tokens_are_defined() -> None:
+def test_at_most_four_font_tokens_are_defined() -> None:
     """Was es nicht gibt, kann niemand benutzen."""
     text = (STYLESHEETS[0].parent / "style.css").read_text(encoding="utf-8")
     defined = set(re.findall(r"--text-[\w-]+(?=:)", text))
-    assert defined == {"--text-sm", "--text-base", "--text-lg"}, defined
+    assert len(defined) <= 4, defined
 
 
 def test_controls_are_square_and_surfaces_share_one_radius() -> None:
@@ -133,11 +129,11 @@ def test_controls_are_square_and_surfaces_share_one_radius() -> None:
     """
     offenders = [f"{sheet}:{line}: {selector} → {value}"
                  for sheet, line, value, selector in _declarations(RADIUS)
-                 if value not in {"0", "var(--radius-sm)"}
+                 if value != "0"
                  and selector not in SHAPE_EXCEPTIONS]
     assert not offenders, (
-        "Rundung außerhalb von 0 (Bedienelement) und var(--radius-sm) (Fläche).\n"
-        "Eine andere Form braucht einen Eintrag in SHAPE_EXCEPTIONS mit Grund:\n"
+        "Keine Rundungen. Eine andere Form braucht einen Eintrag in "
+        "SHAPE_EXCEPTIONS mit Grund:\n"
         + "\n".join(offenders))
 
 
@@ -146,10 +142,10 @@ def test_every_shape_exception_carries_a_reason() -> None:
         assert len(reason.strip()) > 15, f"{selector} ohne Begründung"
 
 
-def test_only_one_surface_radius_token_is_defined() -> None:
+def test_no_radius_token_exists() -> None:
+    """Keine Rundungen — also auch kein Token dafür."""
     text = (STYLESHEETS[0].parent / "style.css").read_text(encoding="utf-8")
-    defined = set(re.findall(r"--radius-[\w-]+(?=:)", text))
-    assert defined == {"--radius-sm"}, defined
+    assert not re.findall(r"--radius-[\w-]+(?=:)", text)
 
 
 def test_dropdowns_do_not_use_the_operating_system_widget() -> None:

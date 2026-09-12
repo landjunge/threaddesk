@@ -33,7 +33,7 @@
 
 .knowledge-head h1 {
   margin: var(--space-1) 0;
-  font-size: var(--text-lg);
+  font-size: var(--text-xl);
 }
 
 .knowledge-grid {
@@ -67,7 +67,8 @@
 .knowledge-form input,
 .knowledge-form textarea {
   width: 100%;
-  border: 1px solid var(--border);
+  min-height: 40px;
+  border: 1px solid var(--border-strong);
   border-radius: 0;
   background: var(--bg);
   color: var(--fg);
@@ -123,7 +124,7 @@
 .node-shape-document,
 .node-shape-decision,
 .node-shape-result {
-  border-radius: 2px;
+  border-radius: 0;
 }
 
 .relation-row {
@@ -185,7 +186,7 @@
   margin-top: var(--space-3);
   padding: var(--space-3);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   background: var(--bg);
 }
 
@@ -197,7 +198,7 @@
   word-break: break-word;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   color: var(--fg);
@@ -210,7 +211,7 @@ kbd {
   padding: 0 6px;
   border: 1px solid var(--border-strong);
   border-bottom-width: 2px;
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   background: var(--bg);
   color: var(--fg-muted);
   font-family: var(--font-mono);
@@ -262,7 +263,7 @@ kbd {
   width: min(420px, 100%);
   background: var(--bg-elevated);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   padding: var(--space-5);
 }
 
@@ -311,7 +312,7 @@ select {
   appearance: none;
   -webkit-appearance: none;
   min-height: 40px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   background-color: var(--bg);
   background-image: linear-gradient(45deg, transparent 50%, var(--fg-muted) 50%),
                     linear-gradient(135deg, var(--fg-muted) 50%, transparent 50%);
@@ -381,7 +382,7 @@ select:focus-visible {
      reicht über den Bildschirmrand hinaus. */
   height: clamp(400px, 66vh, 760px);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   background: #04070a;
   touch-action: none;
   cursor: grab;
@@ -553,7 +554,7 @@ select:focus-visible {
   margin: 0;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   background: #04070acc;
   backdrop-filter: blur(6px);
   list-style: none;
@@ -568,8 +569,8 @@ select:focus-visible {
   background: var(--bg-elevated);
 }
 .map-legend .key-circle { border-radius: 50%; }
-.map-legend .key-rect { border-radius: 3px; width: 18px; height: 11px; }
-.map-legend .key-doc { border-radius: 2px; clip-path: polygon(0 0,72% 0,100% 28%,100% 100%,0 100%); }
+.map-legend .key-rect { border-radius: 0; width: 18px; height: 11px; }
+.map-legend .key-doc { border-radius: 0; clip-path: polygon(0 0,72% 0,100% 28%,100% 100%,0 100%); }
 .map-legend .key-hex { clip-path: polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%); }
 .map-legend .key-tone { border-radius: 50%; border-width: 0; }
 .map-legend .tone-good  { background: var(--tone-good); }
@@ -582,7 +583,7 @@ select:focus-visible {
 }
 
 .map-detail { min-height: 130px; }
-.map-detail h2 { margin: var(--space-1) 0; }
+.map-detail h2 { margin: var(--space-1) 0; font-size: var(--text-lg); }
 .map-detail dl {
   display: grid;
   grid-template-columns: repeat(5, minmax(100px, 1fr));
