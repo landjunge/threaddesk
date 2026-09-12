@@ -321,7 +321,10 @@ def test_cli_keys_exist() -> None:
 def test_every_cli_key_is_used() -> None:
     """Kein toter Schlüssel — sonst wächst der Katalog ins Nichts."""
     used = {text for _, text in _cli_string_literals() if text.startswith("cli.")}
-    declared = {key for key in i18n.CATALOG if key.startswith("cli.")}
+    # Eine Fachfassung wird über ihren Grundschlüssel erreicht, nie direkt.
+    # Sie steht deshalb in keinem Aufruf und ist trotzdem nicht tot.
+    declared = {key for key in i18n.CATALOG
+                if key.startswith("cli.") and not key.endswith(i18n.EXPERT_SUFFIX)}
     assert not (declared - used), f"unbenutzte Schlüssel: {sorted(declared - used)}"
 
 

@@ -18,17 +18,29 @@ def _svc() -> ThreadService:
     return ThreadService()
 
 
-def _translator(language: str) -> Translator:
-    """Bindet die Sprache einmal, damit kein Aufruf sie vergessen kann."""
+def _translator(language: str,
+                register: str = i18n.DEFAULT_REGISTER) -> Translator:
+    """Bindet Sprache und Sprachebene einmal, damit kein Aufruf sie vergisst."""
 
     def translate(key: str, **values: object) -> str:
-        return i18n.translate(key, language, **values)
+        return i18n.translate(key, language, register, **values)
 
     return translate
 
 
 def _lang(args: argparse.Namespace) -> Translator:
-    return _translator(getattr(args, "lang", i18n.DEFAULT_LANGUAGE))
+    return _translator(getattr(args, "lang", i18n.DEFAULT_LANGUAGE),
+                       getattr(args, "mode", i18n.DEFAULT_REGISTER))
+
+
+def _flag_value(argv: list[str], flag: str) -> str | None:
+    """Liest `--flag wert` oder `--flag=wert` aus argv."""
+    for index, item in enumerate(argv):
+        if item == flag and index + 1 < len(argv):
+            return argv[index + 1]
+        if item.startswith(flag + "="):
+            return item.split("=", 1)[1]
+    return None
 
 
 def resolve_language(argv: list[str]) -> str:
@@ -38,12 +50,15 @@ def resolve_language(argv: list[str]) -> str:
     Parsen. Deshalb muss --lang vorher aus argv gelesen werden, sonst waere
     `td --lang en --help` wieder deutsch.
     """
-    for index, item in enumerate(argv):
-        if item == "--lang" and index + 1 < len(argv):
-            return i18n.normalise(argv[index + 1])
-        if item.startswith("--lang="):
-            return i18n.normalise(item.split("=", 1)[1])
-    return i18n.from_environment()
+    chosen = _flag_value(argv, "--lang")
+    return i18n.normalise(chosen) if chosen else i18n.from_environment()
+
+
+def resolve_register(argv: list[str]) -> str:
+    """Sprachebene schon vor dem Parsen bestimmen — aus demselben Grund."""
+    chosen = _flag_value(argv, "--mode")
+    return (i18n.normalise_register(chosen) if chosen
+            else i18n.register_from_environment())
 
 
 def _fmt(thread: Thread, current_id: str | None, index: int | None = None) -> str:
@@ -396,14 +411,21 @@ def cmd_graph(args: argparse.Namespace) -> int:
     return 0
 
 
-def build_parser(language: str = i18n.DEFAULT_LANGUAGE) -> argparse.ArgumentParser:
-    t = _translator(language)
+def build_parser(language: str = i18n.DEFAULT_LANGUAGE,
+                 register: str = i18n.DEFAULT_REGISTER) -> argparse.ArgumentParser:
+    t = _translator(language, register)
     p = argparse.ArgumentParser(prog="td", description=t("cli.description"))
     p.add_argument(
         "--lang",
         default=language,
         choices=list(i18n.LANGUAGES),
         help=t("cli.help.lang"),
+    )
+    p.add_argument(
+        "--mode",
+        default=register,
+        choices=list(i18n.REGISTERS),
+        help=t("cli.help.mode"),
     )
     sub = p.add_subparsers(dest="cmd", required=True)
 
@@ -556,12 +578,14 @@ def build_parser(language: str = i18n.DEFAULT_LANGUAGE) -> argparse.ArgumentPars
 def main(argv: list[str] | None = None) -> int:
     items = sys.argv[1:] if argv is None else argv
     language = resolve_language(items)
-    parser = build_parser(language)
+    register = resolve_register(items)
+    parser = build_parser(language, register)
     args = parser.parse_args(items)
     try:
         return int(args.func(args))
     except ThreadDeskError as exc:
-        print(i18n.translate("cli.error", args.lang, message=exc), file=sys.stderr)
+        print(i18n.translate("cli.error", args.lang, args.mode, message=exc),
+              file=sys.stderr)
         return 2
 
 
