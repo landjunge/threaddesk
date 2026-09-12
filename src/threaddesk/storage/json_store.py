@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any, Mapping
 
 from threaddesk.core.errors import NotFound
 from threaddesk.core.models import GraphEvent, KnowledgeNode, Relation, Snapshot, Thread
@@ -35,6 +36,23 @@ class JsonStore:
         tmp = path.with_suffix(".json.tmp")
         tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         tmp.replace(path)
+
+    def artifact_path(self, name: str) -> Path:
+        """Resolve a top-level generated artifact without exposing store internals."""
+        path = Path(name)
+        if path.is_absolute() or path.name != name or name in {"", ".", ".."}:
+            raise ValueError("Artefaktname muss ein einfacher Dateiname sein.")
+        return self.root / name
+
+    def write_json_artifact(self, name: str, data: Mapping[str, Any]) -> Path:
+        path = self.artifact_path(name)
+        self._write_json(path, dict(data))
+        return path
+
+    def write_text_artifact(self, name: str, text: str) -> Path:
+        path = self.artifact_path(name)
+        path.write_text(text, encoding="utf-8")
+        return path
 
     def list_threads(self, include_archived: bool = False) -> list[Thread]:
         items: list[Thread] = []
