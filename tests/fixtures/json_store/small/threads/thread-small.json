@@ -1,0 +1,16 @@
+{
+  "id": "thread-small",
+  "title": "Beispielprojekt",
+  "description": "Anonymisierter Bestand",
+  "status": "active",
+  "created_at": "2026-01-01T10:00:00+00:00",
+  "updated_at": "2026-01-02T10:00:00+00:00",
+  "context": {
+    "notes": "Nächsten Schritt prüfen.",
+    "files": ["docs/plan.md"],
+    "prompts": [],
+    "agent_state": {},
+    "extra": {}
+  },
+  "current_snapshot_id": null
+}
