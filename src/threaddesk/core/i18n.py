@@ -226,6 +226,13 @@ CATALOG: dict[str, dict[str, str]] = {
     "ui.snapshot_loaded": {"de": "Geladen: {id}", "en": "Loaded: {id}"},
     "ui.gate_closed": {"de": "Schranke geschlossen", "en": "Gate closed"},
     "ui.gate_opened": {"de": "Schranke geöffnet", "en": "Gate opened"},
+    "migration.eyebrow": {"de": "Sichere Übernahme", "en": "Safe migration"},
+    "migration.title": {"de": "Migrationszentrum", "en": "Migration center"},
+    "migration.intro": {"de": "Prüfe ein Bundle, bevor etwas übernommen wird.", "en": "Review a bundle before anything is imported."},
+    "migration.file": {"de": "Bundle-Datei", "en": "Bundle file"},
+    "migration.dry_run": {"de": "Vorschau", "en": "Dry run"},
+    "migration.select_hint": {"de": "Noch keine Datei ausgewählt.", "en": "No file selected yet."},
+    "migration.confirm": {"de": "Import bestätigen", "en": "Confirm import"},
     # --- Browser-JavaScript ---
     "browser.copied": {"de": "Kopiert", "en": "Copied"},
     "browser.request_failed": {"de": "Anfrage fehlgeschlagen", "en": "Request failed"},

@@ -192,6 +192,15 @@ def create_app() -> FastAPI:
                 i18n.catalog_for(lang, register), ensure_ascii=False),
         })
 
+    @app.get("/migration", response_class=HTMLResponse)
+    def migration(request: Request) -> HTMLResponse:
+        lang = _language(request)
+        register = _register(request)
+        return templates.TemplateResponse(request, "migration.html", {
+            "request": request, "lang": lang, "register": register,
+            "browser_strings": _browser_strings(lang, register),
+        })
+
     @app.get("/knowledge", response_class=HTMLResponse)
     def knowledge(
         request: Request, kind: str | None = None, status: str | None = None
