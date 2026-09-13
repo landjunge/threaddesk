@@ -54,6 +54,10 @@ class SQLiteStore:
         self.connection.commit()
         self._transaction_depth = 0
 
+    @property
+    def workspace_path(self) -> Path:
+        return self.root
+
     @contextmanager
     def transaction(self) -> Iterator[None]:
         if self._transaction_depth:
@@ -249,3 +253,54 @@ class SQLiteStore:
                 (source_system,),
             )
         return [SourceRecord.from_dict(self._load(row)) for row in rows]
+
+    def save_artifact(self, data: Mapping[str, Any]) -> None:
+        self.connection.execute(
+            """INSERT OR IGNORE INTO artifacts(
+                   sha256,size,relative_path,payload
+               ) VALUES (?,?,?,?)""",
+            (
+                data["sha256"],
+                int(data["size"]),
+                data["relative_path"],
+                self._dump(data),
+            ),
+        )
+        self._commit()
+
+    def list_artifacts(self) -> list[dict[str, Any]]:
+        return [
+            self._load(row)
+            for row in self.connection.execute(
+                "SELECT payload FROM artifacts ORDER BY sha256"
+            )
+        ]
+
+    def link_node_artifact(self, data: Mapping[str, Any]) -> None:
+        self.connection.execute(
+            """INSERT OR REPLACE INTO node_artifacts(
+                   node_id,sha256,role,payload
+               ) VALUES (?,?,?,?)""",
+            (
+                data["node_id"],
+                data["sha256"],
+                data["role"],
+                self._dump(data),
+            ),
+        )
+        self._commit()
+
+    def replace_node_artifact(self, data: Mapping[str, Any]) -> None:
+        self.connection.execute(
+            "DELETE FROM node_artifacts WHERE node_id = ? AND role = ?",
+            (data["node_id"], data["role"]),
+        )
+        self.link_node_artifact(data)
+
+    def list_node_artifacts(self) -> list[dict[str, Any]]:
+        return [
+            self._load(row)
+            for row in self.connection.execute(
+                "SELECT payload FROM node_artifacts ORDER BY node_id, sha256, role"
+            )
+        ]

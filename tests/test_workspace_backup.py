@@ -41,7 +41,7 @@ def test_backup_manifest_and_verified_restore_match_exactly(tmp_path: Path) -> N
 
     assert manifest["kind"] == "threaddesk.workspace-backup"
     assert manifest["app_version"] == "0.1.0"
-    assert manifest["schema_version"] == 2
+    assert manifest["schema_version"] == 3
     assert manifest["design_reference"] == "desk-r2"
     assert set(manifest["files"]) == {"threaddesk.sqlite3", "artifacts/handoff.json"}
 
@@ -51,6 +51,23 @@ def test_backup_manifest_and_verified_restore_match_exactly(tmp_path: Path) -> N
     assert (restored_path / "threaddesk.sqlite3").read_bytes() == (backup / "threaddesk.sqlite3").read_bytes()
     assert (restored_path / "handoff.json").read_bytes() == (source.root / "handoff.json").read_bytes()
     assert (restored_path / ".backup-verified").is_file()
+
+
+def test_backup_preserves_content_artifacts_and_import_evidence_directories(tmp_path: Path) -> None:
+    source = workspace(tmp_path / "source")
+    content = source.root / "artifacts" / ("a" * 64)
+    content.parent.mkdir()
+    content.write_text("content\n", encoding="utf-8")
+    imported = source.root / "imports" / "bundle.tdbundle"
+    imported.parent.mkdir()
+    imported.write_bytes(b"bundle")
+    manager = WorkspaceBackup(tmp_path / "backups")
+
+    backup = manager.create(source)
+    restored = manager.restore_verified(backup, tmp_path / "restored")
+
+    assert (restored / "artifacts" / content.name).read_bytes() == content.read_bytes()
+    assert (restored / "imports" / imported.name).read_bytes() == imported.read_bytes()
 
 
 def test_corrupt_backup_is_rejected_without_target(tmp_path: Path) -> None:
