@@ -53,6 +53,16 @@ def test_prefix_resolve(svc: ThreadService) -> None:
     assert svc.get(t.id[:6]).id == t.id
 
 
+def test_long_numeric_prefix_is_not_treated_as_a_list_index(svc: ThreadService) -> None:
+    thread = svc.create("Numerischer Präfix")
+    original_id = thread.id
+    thread.id = "123456abcdef"
+    svc.store.delete_thread(original_id)
+    svc.store.save_thread(thread)
+
+    assert svc.get("123456").id == "123456abcdef"
+
+
 def test_title_and_index_resolve(svc: ThreadService) -> None:
     svc.create("Gnom Hub")
     b = svc.create("Tollgate Safety")

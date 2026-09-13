@@ -593,17 +593,6 @@ class ThreadService:
         key = (key or "").strip()
         if not key:
             raise NotFound("Thread-ID fehlt.")
-        if key.isdigit():
-            try:
-                self.store.get_thread(key)
-                return key
-            except NotFound:
-                pass
-            rows = self.list(include_archived=False)
-            idx = int(key)
-            if 1 <= idx <= len(rows):
-                return rows[idx - 1].id
-            raise NotFound(f"Thread nicht gefunden: {key}")
         try:
             self.store.get_thread(key)
             return key
@@ -611,8 +600,16 @@ class ThreadService:
             pass
         all_threads = self.store.list_threads(include_archived=True)
         by_id = [t for t in all_threads if t.id.startswith(key)]
-        if len(by_id) == 1:
+        # Short numeric keys are the documented list indexes ("1", "2", ...).
+        # Longer numeric prefixes must still resolve UUID-like thread IDs.
+        if len(by_id) == 1 and (not key.isdigit() or len(key) >= 4):
             return by_id[0].id
+        if key.isdigit() and len(key) < 4:
+            rows = self.list(include_archived=False)
+            idx = int(key)
+            if 1 <= idx <= len(rows):
+                return rows[idx - 1].id
+            raise NotFound(f"Thread nicht gefunden: {key}")
         needle = key.lower()
         by_title = [t for t in all_threads if needle in t.title.lower()]
         if len(by_title) == 1:
