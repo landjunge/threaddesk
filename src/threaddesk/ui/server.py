@@ -5,8 +5,9 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import tempfile
 
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -23,6 +24,7 @@ from threaddesk.core.models import (
     Thread,
 )
 from threaddesk.storage.json_store import JsonStore
+from threaddesk.services.migration import BundleValidationError, MigrationPreviewService
 
 HERE = Path(__file__).resolve().parent
 TEMPLATES_DIR = HERE / "templates"
@@ -200,6 +202,27 @@ def create_app() -> FastAPI:
             "request": request, "lang": lang, "register": register,
             "browser_strings": _browser_strings(lang, register),
         })
+
+    @app.post("/api/migration/dry-run", response_class=JSONResponse)
+    async def migration_dry_run(bundle: UploadFile = File(...)) -> dict:
+        """Validate and plan only. This route never imports graph data."""
+        if not bundle.filename or not bundle.filename.lower().endswith(".tdbundle"):
+            raise HTTPException(status_code=400, detail="bundle_file")
+        with tempfile.TemporaryDirectory(prefix="threaddesk-preview-") as temporary:
+            path = Path(temporary) / "bundle.tdbundle"
+            size = 0
+            with path.open("wb") as output:
+                while chunk := await bundle.read(1024 * 1024):
+                    size += len(chunk)
+                    if size > 128 * 1024 * 1024:
+                        raise HTTPException(status_code=413, detail="bundle_upload_size")
+                    output.write(chunk)
+            try:
+                return MigrationPreviewService(_svc().store).inspect(path)
+            except BundleValidationError as exc:
+                raise HTTPException(status_code=400, detail=exc.code) from exc
+            finally:
+                await bundle.close()
 
     @app.get("/knowledge", response_class=HTMLResponse)
     def knowledge(

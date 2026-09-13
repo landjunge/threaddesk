@@ -233,6 +233,12 @@ CATALOG: dict[str, dict[str, str]] = {
     "migration.dry_run": {"de": "Vorschau", "en": "Dry run"},
     "migration.select_hint": {"de": "Noch keine Datei ausgewählt.", "en": "No file selected yet."},
     "migration.confirm": {"de": "Import bestätigen", "en": "Confirm import"},
+    "migration.run_dry_run": {"de": "Vorschau prüfen", "en": "Run preview"},
+    "browser.migration.choose_bundle": {"de": "Bitte eine .tdbundle-Datei auswählen.", "en": "Please choose a .tdbundle file."},
+    "browser.migration.checking": {"de": "Prüfe Bundle…", "en": "Checking bundle…"},
+    "browser.migration.blocked": {"de": "Prüfung blockiert: {blockers}", "en": "Preview blocked: {blockers}"},
+    "browser.migration.ready": {"de": "Prüfung fertig · {hash}", "en": "Preview ready · {hash}"},
+    "browser.migration.failed": {"de": "Prüfung nicht möglich: {reason}", "en": "Preview failed: {reason}"},
     # --- Browser-JavaScript ---
     "browser.copied": {"de": "Kopiert", "en": "Copied"},
     "browser.request_failed": {"de": "Anfrage fehlgeschlagen", "en": "Request failed"},
