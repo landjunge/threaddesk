@@ -69,6 +69,20 @@ class WorkspaceBackup:
                 self.copy_file(source, target)
                 target.chmod(0o600)
 
+            directory_backup = partial / "directories"
+            for name in ("artifacts", "imports"):
+                source_root = store.root / name
+                if not source_root.is_dir():
+                    continue
+                for source in sorted(source_root.rglob("*")):
+                    if not source.is_file():
+                        continue
+                    relative = source.relative_to(store.root)
+                    target = directory_backup / relative
+                    target.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
+                    self.copy_file(source, target)
+                    target.chmod(0o600)
+
             schema_version = store.connection.execute("SELECT version FROM schema_info").fetchone()[0]
             files = {
                 str(path.relative_to(partial)): {
@@ -80,7 +94,7 @@ class WorkspaceBackup:
             }
             manifest = {
                 "kind": "threaddesk.workspace-backup",
-                "version": 1,
+                "version": 2,
                 "app_version": __version__,
                 "schema_version": schema_version,
                 "design_reference": "desk-r2",
@@ -139,6 +153,14 @@ class WorkspaceBackup:
             if artifact_root.exists():
                 for source in artifact_root.iterdir():
                     shutil.copy2(source, temporary / source.name)
+            directory_root = backup / "directories"
+            if directory_root.exists():
+                for source in sorted(directory_root.rglob("*")):
+                    if not source.is_file():
+                        continue
+                    target_path = temporary / source.relative_to(directory_root)
+                    target_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(source, target_path)
             validation = SQLiteStore(temporary)
             try:
                 if validation.connection.execute("PRAGMA quick_check").fetchone()[0] != "ok":

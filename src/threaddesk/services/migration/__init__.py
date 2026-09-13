@@ -10,6 +10,12 @@ from threaddesk.services.migration.bundle import (
     validate_bundle,
 )
 from threaddesk.services.migration.diff import DryRunPlanner
+from threaddesk.services.migration.importer import (
+    AtomicImportError,
+    AtomicImportService,
+    ImportBlocked,
+    ImportOutcomeUncertain,
+)
 from threaddesk.services.migration.mapper import NotionMapper
 
 __all__ = [
@@ -17,6 +23,10 @@ __all__ = [
     "BundleValidationError",
     "ValidatedBundle",
     "DryRunPlanner",
+    "AtomicImportError",
+    "AtomicImportService",
+    "ImportBlocked",
+    "ImportOutcomeUncertain",
     "NotionMapper",
     "validate_bundle",
 ]

@@ -1,6 +1,6 @@
 """Versioned SQLite schema for ThreadDesk's local workspace."""
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 TABLES = (
     "threads",
@@ -10,6 +10,8 @@ TABLES = (
     "graph_events",
     "import_batches",
     "source_records",
+    "artifacts",
+    "node_artifacts",
 )
 
 V1_SCHEMA_SQL = """
@@ -86,8 +88,31 @@ CREATE INDEX IF NOT EXISTS idx_source_records_target
 
 SCHEMA_SQL = V1_SCHEMA_SQL + SOURCE_RECORDS_SQL
 
+ARTIFACTS_SQL = """
+CREATE TABLE IF NOT EXISTS artifacts (
+    sha256 TEXT PRIMARY KEY,
+    size INTEGER NOT NULL,
+    relative_path TEXT NOT NULL,
+    payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS node_artifacts (
+    node_id TEXT NOT NULL,
+    sha256 TEXT NOT NULL,
+    role TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    PRIMARY KEY(node_id, sha256, role),
+    FOREIGN KEY(node_id) REFERENCES nodes(id) ON DELETE CASCADE,
+    FOREIGN KEY(sha256) REFERENCES artifacts(sha256)
+);
+CREATE INDEX IF NOT EXISTS idx_node_artifacts_sha
+    ON node_artifacts(sha256, node_id);
+"""
+
+SCHEMA_SQL += ARTIFACTS_SQL
+
 MIGRATIONS = {
     2: SOURCE_RECORDS_SQL,
+    3: ARTIFACTS_SQL,
 }
 
 FTS_SQL = """

@@ -82,13 +82,16 @@ def test_sqlite_schema_is_versioned_indexed_and_fts_ready(tmp_path: Path) -> Non
         )
     }
 
-    assert version == 2
+    assert version == 3
     assert objects["idx_threads_status_updated"] == "index"
     assert objects["idx_snapshots_thread_created"] == "index"
     assert objects["idx_nodes_kind_status_updated"] == "index"
     assert objects["search_index"] == "table"
     assert objects["source_records"] == "table"
     assert objects["idx_source_records_target"] == "index"
+    assert objects["artifacts"] == "table"
+    assert objects["node_artifacts"] == "table"
+    assert objects["idx_node_artifacts_sha"] == "index"
 
 
 def test_application_code_uses_no_private_json_store_members() -> None:

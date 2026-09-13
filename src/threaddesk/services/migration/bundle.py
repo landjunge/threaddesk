@@ -98,24 +98,24 @@ class ValidatedBundle:
     max_ndjson_line_bytes: int
     max_file_bytes: int
 
-    def _ensure_unchanged(self) -> None:
+    def ensure_unchanged(self) -> None:
         if _hash_file(self.path) != self.bundle_sha256:
             _fail("bundle_changed", self.path.name)
 
     def iter_objects(self) -> Iterator[dict[str, Any]]:
-        self._ensure_unchanged()
+        self.ensure_unchanged()
         yield from _iter_ndjson_path(
             self.path, "objects.ndjson", self.max_ndjson_line_bytes
         )
 
     def iter_relations(self) -> Iterator[dict[str, Any]]:
-        self._ensure_unchanged()
+        self.ensure_unchanged()
         yield from _iter_ndjson_path(
             self.path, "relations.ndjson", self.max_ndjson_line_bytes
         )
 
     def iter_exclusions(self) -> Iterator[dict[str, Any]]:
-        self._ensure_unchanged()
+        self.ensure_unchanged()
         with zipfile.ZipFile(self.path, "r") as archive:
             data = _json_object_or_list(
                 _read_limited(
