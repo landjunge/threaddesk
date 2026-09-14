@@ -210,7 +210,7 @@ def test_user_sees_conflict_and_keyboard_cannot_bypass_import_block(
                 replace={"content/page-task.md": b"# changed without manifest hash\n"},
             ),
             "size",
-        ),/
+        ),
         (
             "path",
             lambda source, target: _copy_bundle(
