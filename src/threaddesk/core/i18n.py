@@ -234,6 +234,7 @@ CATALOG: dict[str, dict[str, str]] = {
     "migration.select_hint": {"de": "Noch keine Datei ausgewählt.", "en": "No file selected yet."},
     "migration.confirm": {"de": "Import bestätigen", "en": "Confirm import"},
     "migration.run_dry_run": {"de": "Vorschau prüfen", "en": "Run preview"},
+    "migration.recover": {"de": "Wiederherstellungs-Kopie erstellen", "en": "Create recovery copy"},
     "browser.migration.choose_bundle": {"de": "Bitte eine .tdbundle-Datei auswählen.", "en": "Please choose a .tdbundle file."},
     "browser.migration.checking": {"de": "Prüfe Bundle…", "en": "Checking bundle…"},
     "browser.migration.blocked": {"de": "Prüfung blockiert: {blockers}", "en": "Preview blocked: {blockers}"},
@@ -242,6 +243,7 @@ CATALOG: dict[str, dict[str, str]] = {
     "browser.migration.importing": {"de": "Importiere bestätigtes Bundle…", "en": "Importing confirmed bundle…"},
     "browser.migration.imported": {"de": "Import fertig · Batch {batch}", "en": "Import complete · batch {batch}"},
     "browser.migration.uncertain": {"de": "Ausgang unklar · sicher erneut prüfen: {batch}", "en": "Outcome uncertain · safely check again: {batch}"},
+    "browser.migration.recovered": {"de": "Wiederherstellungs-Kopie erstellt: {path}", "en": "Recovery copy created: {path}"},
     # --- Browser-JavaScript ---
     "browser.copied": {"de": "Kopiert", "en": "Copied"},
     "browser.request_failed": {"de": "Anfrage fehlgeschlagen", "en": "Request failed"},

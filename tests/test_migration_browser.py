@@ -82,4 +82,10 @@ def test_user_reviews_then_explicitly_imports_bundle(live_migration):
             "Import fertig", timeout=15000,
         )
         assert len(SQLiteStore(home).list_nodes()) == 2
+        expect(page.locator('[data-testid="migration-recover"]')).to_be_visible()
+        page.wait_for_timeout(180)
+        page.locator('[data-testid="migration-recover"]').click()
+        expect(page.locator('[data-migration-summary]')).to_contain_text(
+            "Wiederherstellungs-Kopie erstellt", timeout=15000,
+        )
         browser.close()
