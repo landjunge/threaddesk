@@ -255,6 +255,18 @@ def create_app() -> FastAPI:
         except AtomicImportError as exc:
             raise HTTPException(status_code=400, detail=str(exc).split(":", 1)[0]) from exc
 
+    @app.post("/api/migration/recover", response_class=JSONResponse)
+    async def migration_recover(batch_id: str = Form(...)) -> dict:
+        """Prepare a verified recovery copy without overwriting the live workspace."""
+        store = _svc().store
+        if not isinstance(store, SQLiteStore):
+            raise HTTPException(status_code=409, detail="sqlite_storage_not_active")
+        try:
+            path = MigrationReviewService(store).recover(batch_id)
+            return {"status": "recovered_copy", "batch_id": batch_id, "path": str(path)}
+        except AtomicImportError as exc:
+            raise HTTPException(status_code=400, detail=str(exc).split(":", 1)[0]) from exc
+
     @app.get("/knowledge", response_class=HTMLResponse)
     def knowledge(
         request: Request, kind: str | None = None, status: str | None = None

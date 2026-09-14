@@ -72,3 +72,8 @@ class MigrationReviewService:
         plan = self.preview.planner.plan(bundle, existing_nodes=self.store.list_nodes(),
             source_records=self.store.list_source_records("notion"))
         return AtomicImportService(self.store).commit(bundle, plan)
+
+    def recover(self, batch_id: str) -> Path:
+        """Create a verified recovery copy; it never overwrites the live workspace."""
+        target = self.store.workspace_path / "recovery" / batch_id
+        return AtomicImportService(self.store).restore(batch_id, target)

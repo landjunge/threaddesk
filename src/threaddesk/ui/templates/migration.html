@@ -9,6 +9,8 @@
   <button class="btn btn-ghost" data-testid="run-dry-run" type="button" disabled>{{ t("migration.run_dry_run") }}</button>
   <section data-testid="dry-run" aria-live="polite"><h2>{{ t("migration.dry_run") }}</h2><p class="muted" data-migration-summary>{{ t("migration.select_hint") }}</p><ul data-migration-proposals></ul></section>
   <button class="btn btn-primary" data-testid="import-confirm" type="button" disabled>{{ t("migration.confirm") }}</button>
+  <button class="btn btn-ghost" data-testid="migration-recover" type="button" hidden>{{ t("migration.recover") }}</button>
+  <ul data-migration-evidence></ul>
 </main>
 <script src="/static/migration.js" defer></script>
 {% endblock %}
