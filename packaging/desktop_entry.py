@@ -29,11 +29,30 @@ def wait_until_ready(url: str, timeout: float = 15.0) -> None:
 
 def main() -> int:
     if "--self-test" in sys.argv:
+        import uvicorn
+
         from threaddesk.ui.server import create_app
 
+        port = free_port()
         app = create_app()
-        assert app.title == "ThreadDesk"
-        print("ThreadDesk desktop package: OK")
+        server = uvicorn.Server(uvicorn.Config(
+            app, host="127.0.0.1", port=port, log_level="error",
+        ))
+        thread = threading.Thread(target=server.run, daemon=True)
+        thread.start()
+        try:
+            migration_url = f"http://127.0.0.1:{port}/migration?lang=en"
+            wait_until_ready(migration_url)
+            with urlopen(migration_url, timeout=2) as response:
+                page = response.read().decode("utf-8")
+            assert response.status == 200
+            assert 'data-testid="migration-center"' in page
+            assert 'lang="en"' in page
+        finally:
+            server.should_exit = True
+            thread.join(timeout=10)
+        assert not thread.is_alive()
+        print("ThreadDesk desktop package and migration page: OK")
         return 0
 
     import webview
