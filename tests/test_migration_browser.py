@@ -209,8 +209,8 @@ def test_user_sees_conflict_and_keyboard_cannot_bypass_import_block(
                 source, target,
                 replace={"content/page-task.md": b"# changed without manifest hash\n"},
             ),
-            "checksum",
-        ),
+            "size",
+        ),/
         (
             "path",
             lambda source, target: _copy_bundle(
@@ -239,7 +239,7 @@ def test_user_sees_unsafe_bundle_rejected_without_partial_import(
         _choose_bundle(page, unsafe)
         _preview(page)
         expect(page.locator('[data-migration-summary]')).to_contain_text(
-            f"Prüfung fehlgeschlagen: {error}", timeout=15000,
+            f"Prüfung nicht möglich: {error}", timeout=15000,
         )
         expect(page.locator('[data-testid="import-confirm"]')).to_be_disabled()
         assert SQLiteStore(home).list_nodes() == []
@@ -260,7 +260,7 @@ def test_user_sees_secret_rejected_without_exposing_secret_or_importing(
         _choose_bundle(page, unsafe)
         _preview(page)
         expect(page.locator('[data-migration-summary]')).to_contain_text(
-            "Prüfung fehlgeschlagen: secret", timeout=15000,
+            "Prüfung nicht möglich: secret", timeout=15000,
         )
         expect(page.locator('[data-migration-summary]')).not_to_contain_text(
             "placeholder",
