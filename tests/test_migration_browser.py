@@ -1,4 +1,4 @@
-"""Playwright acceptance test: a reviewed bundle needs a second explicit import click."""
+"""Observable Playwright migration journeys with deliberate mouse/keyboard pacing."""
 
 from __future__ import annotations
 
@@ -6,6 +6,8 @@ import os
 import socket
 import threading
 import time
+from pathlib import Path
+import zipfile
 
 import pytest
 
@@ -14,8 +16,12 @@ pytest.importorskip("playwright.sync_api", reason="playwright not installed")
 from playwright.sync_api import expect, sync_playwright  # noqa: E402
 
 from test_atomic_import import write_import_bundle  # noqa: E402
+from threaddesk.core.models import KnowledgeNode  # noqa: E402
+from threaddesk.services.migration import AtomicImportService, DryRunPlanner, validate_bundle  # noqa: E402
 from threaddesk.storage.sqlite_store import SQLiteStore  # noqa: E402
 from threaddesk.ui.server import create_app  # noqa: E402
+
+USER_PACE_MS = 180
 
 
 def _free_port() -> int:
@@ -24,11 +30,13 @@ def _free_port() -> int:
         return int(sock.getsockname()[1])
 
 
-@pytest.fixture(scope="module")
-def live_migration(tmp_path_factory):
+@pytest.fixture
+def live_migration(tmp_path: Path):
+    """A fresh installed-like local workspace for every user journey."""
     uvicorn = pytest.importorskip("uvicorn", reason="uvicorn not installed")
-    home = tmp_path_factory.mktemp("migration-workspace")
-    bundle = write_import_bundle(home / "notion.tdbundle")
+    home = tmp_path / "migration-workspace"
+    home.mkdir()
+    bundle = write_import_bundle(tmp_path / "notion.tdbundle")
     before_home = os.environ.get("THREADDESK_HOME")
     before_storage = os.environ.get("THREADDESK_STORAGE")
     os.environ["THREADDESK_HOME"] = str(home)
@@ -60,32 +68,203 @@ def live_migration(tmp_path_factory):
             os.environ["THREADDESK_STORAGE"] = before_storage
 
 
-def test_user_reviews_then_explicitly_imports_bundle(live_migration):
+def _choose_bundle(page, bundle: Path) -> None:
+    page.locator('[data-testid="bundle-file"]').set_input_files({
+        "name": bundle.name,
+        "mimeType": "application/octet-stream",
+        "buffer": bundle.read_bytes(),
+    })
+    page.wait_for_timeout(USER_PACE_MS)
+
+
+def _preview(page) -> None:
+    page.locator('[data-testid="run-dry-run"]').click()
+    page.wait_for_timeout(USER_PACE_MS)
+
+
+def _import(page) -> None:
+    page.locator('[data-testid="import-confirm"]').click()
+    page.wait_for_timeout(USER_PACE_MS)
+
+
+def _copy_bundle(source: Path, target: Path, *, replace: dict[str, bytes] | None = None,
+                 extra: dict[str, bytes] | None = None) -> Path:
+    replace = replace or {}
+    extra = extra or {}
+    with zipfile.ZipFile(source, "r") as old, zipfile.ZipFile(
+        target, "w", compression=zipfile.ZIP_DEFLATED
+    ) as new:
+        for info in old.infolist():
+            new.writestr(info.filename, replace.get(info.filename, old.read(info.filename)))
+        for name, data in extra.items():
+            new.writestr(name, data)
+    return target
+
+
+def _commit_for_conflict(home: Path, bundle: Path) -> None:
+    store = SQLiteStore(home)
+    validated = validate_bundle(bundle)
+    plan = DryRunPlanner().plan(
+        validated,
+        existing_nodes=store.list_nodes(),
+        source_records=store.list_source_records("notion"),
+    )
+    AtomicImportService(store).commit(validated, plan)
+    node = next(item for item in store.list_nodes() if item.kind == "project")
+    node.details = "Local change must remain visible."
+    node.revision += 1
+    store.save_node(node)
+
+
+def test_user_reviews_then_explicitly_imports_bundle_and_creates_recovery_copy(
+    live_migration,
+):
     base_url, bundle, home = live_migration
     with sync_playwright() as play:
-        browser = play.chromium.launch()
+        browser = play.chromium.launch(slow_mo=USER_PACE_MS)
         page = browser.new_page(viewport={"width": 1280, "height": 900})
         page.goto(f"{base_url}/migration", wait_until="networkidle")
-        page.locator('[data-testid="bundle-file"]').set_input_files({
-            "name": "notion.tdbundle",
-            "mimeType": "application/octet-stream",
-            "buffer": bundle.read_bytes(),
-        })
-        page.wait_for_timeout(180)
+        _choose_bundle(page, bundle)
         expect(page.locator('[data-testid="import-confirm"]')).to_be_disabled()
-        page.locator('[data-testid="run-dry-run"]').click()
+        _preview(page)
         expect(page.locator('[data-testid="import-confirm"]')).to_be_enabled(timeout=15000)
         assert SQLiteStore(home).list_nodes() == []
-        page.wait_for_timeout(180)
-        page.locator('[data-testid="import-confirm"]').click()
+        _import(page)
         expect(page.locator('[data-migration-summary]')).to_contain_text(
             "Import fertig", timeout=15000,
         )
         assert len(SQLiteStore(home).list_nodes()) == 2
         expect(page.locator('[data-testid="migration-recover"]')).to_be_visible()
-        page.wait_for_timeout(180)
         page.locator('[data-testid="migration-recover"]').click()
         expect(page.locator('[data-migration-summary]')).to_contain_text(
             "Wiederherstellungs-Kopie erstellt", timeout=15000,
         )
+        assert list((home / "recovery").glob("*"))
+        browser.close()
+
+
+def test_user_reimports_identical_bundle_without_duplicate_nodes_or_backups(
+    live_migration,
+):
+    base_url, bundle, home = live_migration
+    with sync_playwright() as play:
+        browser = play.chromium.launch(slow_mo=USER_PACE_MS)
+        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page.goto(f"{base_url}/migration", wait_until="networkidle")
+
+        _choose_bundle(page, bundle)
+        _preview(page)
+        expect(page.locator('[data-testid="import-confirm"]')).to_be_enabled(timeout=15000)
+        _import(page)
+        expect(page.locator('[data-migration-summary]')).to_contain_text(
+            "Import fertig", timeout=15000,
+        )
+        backups = list((home / "backups").glob("*.complete"))
+
+        _choose_bundle(page, bundle)
+        _preview(page)
+        expect(page.locator('[data-testid="import-confirm"]')).to_be_enabled(timeout=15000)
+        _import(page)
+        expect(page.locator('[data-migration-summary]')).to_contain_text(
+            "Import fertig", timeout=15000,
+        )
+        assert len(SQLiteStore(home).list_nodes()) == 2
+        assert list((home / "backups").glob("*.complete")) == backups
+        browser.close()
+
+
+def test_user_sees_conflict_and_keyboard_cannot_bypass_import_block(
+    live_migration, tmp_path: Path,
+):
+    base_url, _, home = live_migration
+    first = write_import_bundle(tmp_path / "first.tdbundle")
+    changed = write_import_bundle(
+        tmp_path / "changed.tdbundle", export_id="export-2",
+        project_title="ThreadDesk changed in Notion",
+    )
+    _commit_for_conflict(home, first)
+
+    with sync_playwright() as play:
+        browser = play.chromium.launch(slow_mo=USER_PACE_MS)
+        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page.goto(f"{base_url}/migration", wait_until="networkidle")
+        _choose_bundle(page, changed)
+        _preview(page)
+        expect(page.locator('[data-migration-summary]')).to_contain_text(
+            "Prüfung blockiert: conflict", timeout=15000,
+        )
+        page.keyboard.press("Tab")
+        page.keyboard.press("Enter")
+        expect(page.locator('[data-testid="import-confirm"]')).to_be_disabled()
+        assert len(SQLiteStore(home).list_nodes()) == 2
+        browser.close()
+
+
+@pytest.mark.parametrize(
+    ("name", "builder", "error"),
+    [
+        (
+            "checksum",
+            lambda source, target: _copy_bundle(
+                source, target,
+                replace={"content/page-task.md": b"# changed without manifest hash\n"},
+            ),
+            "size",
+        ),
+        (
+            "path",
+            lambda source, target: _copy_bundle(
+                source, target, extra={"../outside.md": b"not allowed"},
+            ),
+            "path",
+        ),
+        (
+            "zip-bomb",
+            lambda source, target: _copy_bundle(
+                source, target, extra={"content/repeated.md": b"0" * 4096},
+            ),
+            "compression_ratio",
+        ),
+    ],
+)
+def test_user_sees_unsafe_bundle_rejected_without_partial_import(
+    live_migration, tmp_path: Path, name, builder, error,
+):
+    base_url, source, home = live_migration
+    unsafe = builder(source, tmp_path / f"{name}.tdbundle")
+    with sync_playwright() as play:
+        browser = play.chromium.launch(slow_mo=USER_PACE_MS)
+        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page.goto(f"{base_url}/migration", wait_until="networkidle")
+        _choose_bundle(page, unsafe)
+        _preview(page)
+        expect(page.locator('[data-migration-summary]')).to_contain_text(
+            f"Prüfung nicht möglich: {error}", timeout=15000,
+        )
+        expect(page.locator('[data-testid="import-confirm"]')).to_be_disabled()
+        assert SQLiteStore(home).list_nodes() == []
+        browser.close()
+
+
+def test_user_sees_secret_rejected_without_exposing_secret_or_importing(
+    live_migration, tmp_path: Path,
+):
+    base_url, _, home = live_migration
+    unsafe = write_import_bundle(
+        tmp_path / "secret.tdbundle", project_title="API_KEY=placeholder",
+    )
+    with sync_playwright() as play:
+        browser = play.chromium.launch(slow_mo=USER_PACE_MS)
+        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page.goto(f"{base_url}/migration", wait_until="networkidle")
+        _choose_bundle(page, unsafe)
+        _preview(page)
+        expect(page.locator('[data-migration-summary]')).to_contain_text(
+            "Prüfung nicht möglich: secret", timeout=15000,
+        )
+        expect(page.locator('[data-migration-summary]')).not_to_contain_text(
+            "placeholder",
+        )
+        expect(page.locator('[data-testid="import-confirm"]')).to_be_disabled()
+        assert SQLiteStore(home).list_nodes() == []
         browser.close()
