@@ -268,3 +268,29 @@ def test_user_sees_secret_rejected_without_exposing_secret_or_importing(
         expect(page.locator('[data-testid="import-confirm"]')).to_be_disabled()
         assert SQLiteStore(home).list_nodes() == []
         browser.close()
+
+
+def test_english_user_can_review_import_and_create_recovery_copy(live_migration):
+    base_url, bundle, home = live_migration
+    with sync_playwright() as play:
+        browser = play.chromium.launch(slow_mo=USER_PACE_MS)
+        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page.goto(f"{base_url}/migration?lang=en", wait_until="networkidle")
+        expect(page.locator("html")).to_have_attribute("lang", "en")
+        _choose_bundle(page, bundle)
+        expect(page.locator('[data-testid="import-confirm"]')).to_be_disabled()
+        _preview(page)
+        expect(page.locator('[data-migration-summary]')).to_contain_text(
+            "Preview ready", timeout=15000,
+        )
+        expect(page.locator('[data-testid="import-confirm"]')).to_be_enabled()
+        _import(page)
+        expect(page.locator('[data-migration-summary]')).to_contain_text(
+            "Import complete", timeout=15000,
+        )
+        page.locator('[data-testid="migration-recover"]').click()
+        expect(page.locator('[data-migration-summary]')).to_contain_text(
+            "Recovery copy created", timeout=15000,
+        )
+        assert len(SQLiteStore(home).list_nodes()) == 2
+        browser.close()
