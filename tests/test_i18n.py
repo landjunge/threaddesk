@@ -324,8 +324,12 @@ def test_no_hardcoded_visible_javascript_messages() -> None:
 
 
 def test_browser_keys_exist_and_are_used() -> None:
-    source = TEMPLATES.parent / "static" / "app.js"
-    used = set(re.findall(r'uiText\(["\']([\w.]+)["\']', source.read_text(encoding="utf-8")))
+    sources = sorted((TEMPLATES.parent / "static").glob("*.js"))
+    used = {
+        key
+        for source in sources
+        for key in re.findall(r'uiText\(["\']([\w.]+)["\']', source.read_text(encoding="utf-8"))
+    }
     declared = {key for key in i18n.CATALOG if key.startswith("browser.")}
     assert used == declared
 
