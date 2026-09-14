@@ -39,4 +39,4 @@ jobs:
       - name: Install Chromium
         run: python -m playwright install --with-deps chromium
       - name: Bedienprüfung
-        run: python -m pytest tests/test_ui_browser.py -q
+        run: python -m pytest tests/test_ui_browser.py tests/test_migration_browser.py -q
