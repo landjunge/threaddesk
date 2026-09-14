@@ -17,7 +17,10 @@ from threaddesk.services.migration.importer import (
     ImportOutcomeUncertain,
 )
 from threaddesk.services.migration.mapper import NotionMapper
-from threaddesk.services.migration.preview import MigrationPreviewService
+from threaddesk.services.migration.preview import (
+    MigrationPreviewService,
+    MigrationReviewService,
+)
 
 __all__ = [
     "BundleLimits",
@@ -30,5 +33,6 @@ __all__ = [
     "ImportOutcomeUncertain",
     "NotionMapper",
     "MigrationPreviewService",
+    "MigrationReviewService",
     "validate_bundle",
 ]

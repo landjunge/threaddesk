@@ -24,7 +24,15 @@ from threaddesk.core.models import (
     Thread,
 )
 from threaddesk.storage.json_store import JsonStore
-from threaddesk.services.migration import BundleValidationError, MigrationPreviewService
+from threaddesk.storage.sqlite_store import SQLiteStore
+from threaddesk.services.migration import (
+    AtomicImportError,
+    BundleValidationError,
+    ImportBlocked,
+    ImportOutcomeUncertain,
+    MigrationPreviewService,
+    MigrationReviewService,
+)
 
 HERE = Path(__file__).resolve().parent
 TEMPLATES_DIR = HERE / "templates"
@@ -34,8 +42,11 @@ WRITE_STATUSES = tuple(s for s in STATUSES if s != "archived")
 
 def _svc() -> ThreadService:
     home = os.environ.get("THREADDESK_HOME")
-    if home:
-        return ThreadService(store=JsonStore(Path(home)))
+    root = Path(home) if home else None
+    if os.environ.get("THREADDESK_STORAGE") == "sqlite":
+        return ThreadService(store=SQLiteStore(root))
+    if root:
+        return ThreadService(store=JsonStore(root))
     return ThreadService()
 
 
@@ -205,7 +216,7 @@ def create_app() -> FastAPI:
 
     @app.post("/api/migration/dry-run", response_class=JSONResponse)
     async def migration_dry_run(bundle: UploadFile = File(...)) -> dict:
-        """Validate and plan only. This route never imports graph data."""
+        """Validate and plan only; import requires the separate confirm route."""
         if not bundle.filename or not bundle.filename.lower().endswith(".tdbundle"):
             raise HTTPException(status_code=400, detail="bundle_file")
         with tempfile.TemporaryDirectory(prefix="threaddesk-preview-") as temporary:
@@ -218,11 +229,31 @@ def create_app() -> FastAPI:
                         raise HTTPException(status_code=413, detail="bundle_upload_size")
                     output.write(chunk)
             try:
-                return MigrationPreviewService(_svc().store).inspect(path)
+                store = _svc().store
+                if isinstance(store, SQLiteStore):
+                    return MigrationReviewService(store).stage(path)
+                result = MigrationPreviewService(store).inspect(path)
+                return {**result, "can_confirm_import": False,
+                    "blockers": sorted(set(result["blockers"]) | {"sqlite_storage_not_active"})}
             except BundleValidationError as exc:
                 raise HTTPException(status_code=400, detail=exc.code) from exc
             finally:
                 await bundle.close()
+
+    @app.post("/api/migration/confirm", response_class=JSONResponse)
+    async def migration_confirm(bundle_sha256: str = Form(...)) -> dict:
+        """Commit only a previously reviewed immutable bundle."""
+        store = _svc().store
+        if not isinstance(store, SQLiteStore):
+            raise HTTPException(status_code=409, detail="sqlite_storage_not_active")
+        try:
+            return MigrationReviewService(store).commit(bundle_sha256)
+        except (BundleValidationError, ImportBlocked, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc).split(":", 1)[0]) from exc
+        except ImportOutcomeUncertain as exc:
+            return JSONResponse(status_code=202, content={"status": "uncertain", "batch_id": exc.batch_id})
+        except AtomicImportError as exc:
+            raise HTTPException(status_code=400, detail=str(exc).split(":", 1)[0]) from exc
 
     @app.get("/knowledge", response_class=HTMLResponse)
     def knowledge(

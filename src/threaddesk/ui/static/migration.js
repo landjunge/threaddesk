@@ -4,23 +4,20 @@
   const dryRun = document.querySelector('[data-testid="run-dry-run"]');
   const summary = document.querySelector('[data-migration-summary]');
   const proposals = document.querySelector('[data-migration-proposals]');
+  let reviewSha = null;
   if (!file || !confirm || !dryRun || !summary || !proposals) return;
   file.addEventListener('change', () => {
     const selected = file.files && file.files[0];
     const valid = Boolean(selected && selected.name.toLowerCase().endsWith('.tdbundle'));
-    confirm.disabled = true;
-    dryRun.disabled = !valid;
+    reviewSha = null; confirm.disabled = true; dryRun.disabled = !valid;
     summary.textContent = valid ? selected.name : uiText('browser.migration.choose_bundle');
     proposals.replaceChildren();
   });
   dryRun.addEventListener('click', async () => {
     if (!file.files || !file.files[0]) return;
-    confirm.disabled = true;
-    dryRun.disabled = true;
-    summary.textContent = uiText('browser.migration.checking');
-    proposals.replaceChildren();
-    const data = new FormData();
-    data.append('bundle', file.files[0]);
+    reviewSha = null; confirm.disabled = true; dryRun.disabled = true;
+    summary.textContent = uiText('browser.migration.checking'); proposals.replaceChildren();
+    const data = new FormData(); data.append('bundle', file.files[0]);
     try {
       const response = await fetch('/api/migration/dry-run', {method: 'POST', body: data});
       const result = await response.json();
@@ -28,16 +25,22 @@
       summary.textContent = result.blockers.length
         ? uiText('browser.migration.blocked', {blockers: result.blockers.join(', ')})
         : uiText('browser.migration.ready', {hash: result.bundle_sha256.slice(0, 12)});
-      result.proposals.forEach((item) => {
-        const row = document.createElement('li');
-        row.textContent = `${item.diff}: ${item.title}`;
-        proposals.append(row);
-      });
-      confirm.disabled = !result.can_confirm_import;
-    } catch (error) {
-      summary.textContent = uiText('browser.migration.failed', {reason: error.message});
-    } finally {
-      dryRun.disabled = false;
-    }
+      result.proposals.forEach((item) => { const row = document.createElement('li'); row.textContent = item.diff + ': ' + item.title; proposals.append(row); });
+      reviewSha = result.review_sha256 || null;
+      confirm.disabled = !result.can_confirm_import || !reviewSha;
+    } catch (error) { summary.textContent = uiText('browser.migration.failed', {reason: error.message}); }
+    finally { dryRun.disabled = false; }
+  });
+  confirm.addEventListener('click', async () => {
+    if (!reviewSha || confirm.disabled) return;
+    confirm.disabled = true; summary.textContent = uiText('browser.migration.importing');
+    const data = new FormData(); data.append('bundle_sha256', reviewSha);
+    try {
+      const response = await fetch('/api/migration/confirm', {method: 'POST', body: data});
+      const result = await response.json();
+      if (response.status === 202) { summary.textContent = uiText('browser.migration.uncertain', {batch: result.batch_id}); return; }
+      if (!response.ok) throw new Error(result.detail || 'import_failed');
+      summary.textContent = uiText('browser.migration.imported', {batch: result.id});
+    } catch (error) { summary.textContent = uiText('browser.migration.failed', {reason: error.message}); confirm.disabled = false; }
   });
 })();

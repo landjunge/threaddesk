@@ -239,6 +239,9 @@ CATALOG: dict[str, dict[str, str]] = {
     "browser.migration.blocked": {"de": "Prüfung blockiert: {blockers}", "en": "Preview blocked: {blockers}"},
     "browser.migration.ready": {"de": "Prüfung fertig · {hash}", "en": "Preview ready · {hash}"},
     "browser.migration.failed": {"de": "Prüfung nicht möglich: {reason}", "en": "Preview failed: {reason}"},
+    "browser.migration.importing": {"de": "Importiere bestätigtes Bundle…", "en": "Importing confirmed bundle…"},
+    "browser.migration.imported": {"de": "Import fertig · Batch {batch}", "en": "Import complete · batch {batch}"},
+    "browser.migration.uncertain": {"de": "Ausgang unklar · sicher erneut prüfen: {batch}", "en": "Outcome uncertain · safely check again: {batch}"},
     # --- Browser-JavaScript ---
     "browser.copied": {"de": "Kopiert", "en": "Copied"},
     "browser.request_failed": {"de": "Anfrage fehlgeschlagen", "en": "Request failed"},
