@@ -96,6 +96,25 @@ TOOLS = [
         }},
     },
     {
+        "name": "import_return",
+        "description": "Store one untrusted return in the local review inbox. Never accepts it automatically.",
+        "inputSchema": {"type": "object", "properties": {"payload": {"type": "object"}}, "required": ["payload"]},
+    },
+    {
+        "name": "list_returns",
+        "description": "List the local return review inbox.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "review_return",
+        "description": "Record an explicit user review decision for one return.",
+        "inputSchema": {"type": "object", "properties": {
+            "return_id": {"type": "string"},
+            "choice": {"type": "string", "enum": ["accepted", "rejected", "rework"]},
+            "note": {"type": "string"},
+        }, "required": ["return_id", "choice"]},
+    },
+    {
         "name": "export_grok",
         "description": "Write a local Grok Build packet. Does not start grok.",
         "inputSchema": {
@@ -214,6 +233,15 @@ class McpBridge:
             }
         if name == "export_handoff":
             return self.svc.handoff(args.get("id"), str(args.get("target") or "generic"))
+        if name == "import_return":
+            return self.svc.receive_return(dict(args.get("payload") or {}))
+        if name == "list_returns":
+            return self.svc.returns()
+        if name == "review_return":
+            return self.svc.decide_return(
+                str(args.get("return_id") or ""), str(args.get("choice") or ""),
+                str(args.get("note") or ""),
+            )
         if name == "export_grok":
             return self.svc.grok(
                 str(args.get("mode") or "brainstorm"),

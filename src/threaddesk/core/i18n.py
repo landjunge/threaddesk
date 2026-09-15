@@ -895,6 +895,10 @@ CATALOG: dict[str, dict[str, str]] = {
         "de": "Übergabe-Datei für Gnom-Hub schreiben (startet nichts)",
         "en": "Write a handover file for Gnom-Hub (starts nothing)",
     },
+    "cli.help.inbox": {
+        "de": "Lokale Rückgaben prüfen und bewusst entscheiden",
+        "en": "Review local returns and decide explicitly",
+    },
     "cli.help.handoff#expert": {
         "de": "Lokales Handoff-JSON für Gnom-Hub (startet nichts)",
         "en": "Local handoff JSON for Gnom-Hub (starts nothing)",
