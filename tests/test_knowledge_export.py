@@ -196,3 +196,22 @@ def test_xlsx_requires_output_path_in_both_languages(monkeypatch, tmp_path: Path
     assert "--output wissen.xlsx" in capsys.readouterr().err
     assert cli.main(["--lang", "en", "graph", "--export", "--format", "xlsx"]) == 2
     assert "--output knowledge.xlsx" in capsys.readouterr().err
+
+
+def test_svg_and_pdf_are_readable_filtered_and_private_safe(monkeypatch, tmp_path: Path, capsys) -> None:
+    from threaddesk.ui import cli
+
+    store = populated_store(tmp_path)
+    monkeypatch.setattr(cli, "_svc", lambda: type("Service", (), {"store": store})())
+
+    assert cli.main(["graph", "--export", "--format", "svg", "--kind", "task"]) == 0
+    svg = capsys.readouterr().out
+    assert svg.startswith('<svg xmlns="http://www.w3.org/2000/svg"')
+    assert "Task" in svg and "Project" not in svg and "Private" not in svg
+    assert "kind: task" in svg and "Legende:" in svg
+
+    target = tmp_path / "map.pdf"
+    assert cli.main(["--lang", "en", "graph", "--export", "--format", "pdf", "--output", str(target)]) == 0
+    raw = target.read_bytes()
+    assert raw.startswith(b"%PDF-1.4") and raw.endswith(b"%%EOF\n")
+    assert b"Project" in raw and b"Private" not in raw

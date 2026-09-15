@@ -936,9 +936,9 @@ CATALOG: dict[str, dict[str, str]] = {
         "de": "Wissen anzeigen oder als JSON/Markdown/CSV/XLSX exportieren",
         "en": "Show knowledge or export it as JSON/Markdown/CSV/XLSX",
     },
-    "cli.graph.xlsx_output": {
-        "de": "XLSX braucht einen Dateinamen, zum Beispiel --output wissen.xlsx",
-        "en": "XLSX needs a file name, for example --output knowledge.xlsx",
+    "cli.graph.binary_output": {
+        "de": "{format} braucht einen Dateinamen, zum Beispiel --output wissen.{extension}",
+        "en": "{format} needs a file name, for example --output knowledge.{extension}",
     },
     "cli.help.serve": {
         "de": "Lokale UI auf localhost (führt nichts aus)",
