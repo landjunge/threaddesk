@@ -413,10 +413,23 @@ def cmd_graph(args: argparse.Namespace) -> int:
             node_ids=args.ids or None,
             include_private=args.include_private,
         )
-        if args.format == "markdown":
-            print(service.encode_markdown(payload, language=args.lang), end="")
+        if args.format == "xlsx":
+            if not args.output:
+                print(_lang(args)("cli.graph.xlsx_output"), file=sys.stderr)
+                return 2
+            Path(args.output).write_bytes(service.encode_xlsx(payload))
         else:
-            print(service.encode(payload), end="")
+            rendered = (
+                service.encode_markdown(payload, language=args.lang)
+                if args.format == "markdown"
+                else service.encode_csv(payload)
+                if args.format == "csv"
+                else service.encode(payload)
+            )
+            if args.output:
+                Path(args.output).write_text(rendered, encoding="utf-8", newline="")
+            else:
+                print(rendered, end="")
         return 0
     payload = _svc().graph(kind=args.kind, status=args.status)
     print(json.dumps(payload, ensure_ascii=False, indent=2))
@@ -578,7 +591,8 @@ def build_parser(language: str = i18n.DEFAULT_LANGUAGE,
     gr.add_argument("--kind", default=None)
     gr.add_argument("--status", default=None)
     gr.add_argument("--export", action="store_true")
-    gr.add_argument("--format", choices=("json", "markdown"), default="json")
+    gr.add_argument("--format", choices=("json", "markdown", "csv", "xlsx"), default="json")
+    gr.add_argument("--output", default=None)
     gr.add_argument("--ids", nargs="*", default=None)
     gr.add_argument("--include-private", action="store_true")
     gr.set_defaults(func=cmd_graph)
