@@ -263,8 +263,6 @@ class AtomicImportService:
                                 )
                             )
                         continue
-                    if proposal.diff is DiffKind.ARCHIVE and proposal.target_id is None:
-                        continue
                     if proposal.diff not in {DiffKind.NEW, DiffKind.UPDATE, DiffKind.ARCHIVE}:
                         continue
                     existing = (
