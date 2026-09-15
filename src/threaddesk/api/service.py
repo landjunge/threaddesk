@@ -589,6 +589,24 @@ class ThreadService:
         self.bus.emit("gnom.packet", {"thread_id": thread.id, "mode": packet["mode"], "path": str(json_path)})
         return packet
 
+    def bind_gnom_job(self, job_id: str, packet: dict | None = None) -> dict:
+        from threaddesk.services.gnom_jobs import GnomJobRegistry
+
+        if packet is None:
+            packet = json.loads(self.store.artifact_path("gnom.json").read_text(encoding="utf-8"))
+        return GnomJobRegistry(self.store).bind(job_id, packet)
+
+    def record_gnom_event(self, job_id: str, event_id: str, status: str, details: str = "") -> dict:
+        from threaddesk.services.gnom_jobs import GnomJobRegistry
+
+        reject_secrets(details)
+        return GnomJobRegistry(self.store).record(job_id, event_id, status, details)
+
+    def gnom_jobs(self) -> list[dict]:
+        from threaddesk.services.gnom_jobs import GnomJobRegistry
+
+        return GnomJobRegistry(self.store).list()
+
     def restore(self, snap_id: str) -> Thread:
         snap = self.store.get_snapshot(snap_id)
         thread = self.store.get_thread(snap.thread_id)
