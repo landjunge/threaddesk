@@ -1,3 +1,17 @@
+let UI_STRINGS = {};
+try {
+  UI_STRINGS = JSON.parse(document.body.dataset.uiStrings || "{}");
+} catch (_error) {
+  UI_STRINGS = {};
+}
+const uiText = (key, values = {}) => {
+  let text = UI_STRINGS[key] || key;
+  Object.entries(values).forEach(([name, value]) => {
+    text = text.split(`{${name}}`).join(value);
+  });
+  return text;
+};
+
 function typingTarget(el) {
   if (!el) return false;
   const tag = el.tagName;
@@ -129,7 +143,7 @@ document.addEventListener("click", (event) => {
   if (!el || !navigator.clipboard) return;
   const prev = copy.textContent;
   navigator.clipboard.writeText(el.textContent || "").then(() => {
-    copy.textContent = "Kopiert";
+    copy.textContent = uiText("browser.copied");
     window.setTimeout(() => {
       copy.textContent = prev;
     }, 1400);
@@ -144,7 +158,7 @@ document.body.addEventListener("htmx:afterSwap", (event) => {
 });
 
 document.body.addEventListener("htmx:sendError", () => {
-  console.warn("ThreadDesk UI: Anfrage fehlgeschlagen");
+  console.warn(`ThreadDesk UI: ${uiText("browser.request_failed")}`);
 });
 
 function notesMic() {
@@ -160,17 +174,17 @@ function notesMic() {
     start() {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) {
-        this.err = "Dieser Browser hat keine Spracheingabe.";
+        this.err = uiText("browser.mic_unavailable");
         return;
       }
       if (!window.isSecureContext) {
-        this.err = "Mikrofon braucht einen sicheren Kontext.";
+        this.err = uiText("browser.mic_insecure");
         return;
       }
       this.err = "";
       this.interim = "";
       const rec = new SR();
-      rec.lang = "de-DE";
+      rec.lang = document.body.dataset.language === "en" ? "en-US" : "de-DE";
       rec.continuous = true;
       rec.interimResults = true;
       rec.onresult = (event) => {
@@ -185,9 +199,9 @@ function notesMic() {
         if (finalText.trim()) appendSpokenNote(finalText.trim());
       };
       rec.onerror = (event) => {
-        if (event.error === "not-allowed") this.err = "Mikrofon nicht erlaubt.";
+        if (event.error === "not-allowed") this.err = uiText("browser.mic_denied");
         else if (event.error === "no-speech") this.err = "";
-        else this.err = "Spracheingabe: " + event.error;
+        else this.err = uiText("browser.speech_error", {error: event.error});
         if (event.error !== "no-speech") this.stop();
       };
       rec.onend = () => {

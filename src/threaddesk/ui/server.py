@@ -83,6 +83,17 @@ def _register(request: Request) -> str:
     return i18n.normalise_register(request.cookies.get(REGISTER_COOKIE))
 
 
+def _browser_strings(language: str, register: str) -> str:
+    return json.dumps(
+        {
+            key: value
+            for key, value in i18n.catalog_for(language, register).items()
+            if key.startswith("browser.")
+        },
+        ensure_ascii=False,
+    )
+
+
 def _ctx(request: Request, extra: dict | None = None) -> dict:
     svc = _svc()
     current = svc.current()
@@ -93,6 +104,7 @@ def _ctx(request: Request, extra: dict | None = None) -> dict:
         "request": request,
         "lang": lang,
         "register": _register(request),
+        "browser_strings": _browser_strings(lang, _register(request)),
         "threads": svc.list(include_archived=False),
         "current": current,
         "current_id": svc.store.get_current_id(),
@@ -131,7 +143,9 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(ThreadDeskError)
     async def _on_error(request: Request, exc: ThreadDeskError) -> HTMLResponse:
-        html = workspace(request, {"error": str(exc)})
+        html = workspace(
+            request, {"error": i18n.translate("ui.error", _language(request))}
+        )
         html.status_code = 400
         return html
 
@@ -173,6 +187,7 @@ def create_app() -> FastAPI:
             "request": request,
             "lang": lang,
             "register": register,
+            "browser_strings": _browser_strings(lang, register),
             "map_strings": json.dumps(
                 i18n.catalog_for(lang, register), ensure_ascii=False),
         })
@@ -191,12 +206,16 @@ def create_app() -> FastAPI:
             for relation in svc.list_relations()
             if relation.id in relation_ids
         ]
+        lang = _language(request)
+        register = _register(request)
         return templates.TemplateResponse(
             request,
             "knowledge.html",
             {
                 "request": request,
-                "lang": _language(request),
+                "lang": lang,
+                "register": register,
+                "browser_strings": _browser_strings(lang, register),
                 "nodes": nodes,
                 "relations": relations,
                 "transitions_by_node": {
@@ -265,7 +284,7 @@ def create_app() -> FastAPI:
         description: str = Form(""),
     ) -> HTMLResponse:
         thread = _svc().create(title, description)
-        return workspace(request, {"notice": f"angelegt: {thread.title}"})
+        return workspace(request, {"notice": i18n.translate("ui.created", _language(request), title=thread.title)})
 
     @app.post("/threads/{thread_id}/switch", response_class=HTMLResponse)
     def switch_thread(thread_id: str, request: Request) -> HTMLResponse:
@@ -280,7 +299,7 @@ def create_app() -> FastAPI:
         append: str = Form(""),
     ) -> HTMLResponse:
         _svc().set_note(text, thread_id, append=bool(append))
-        return workspace(request, {"notice": "Notiz gespeichert"})
+        return workspace(request, {"notice": i18n.translate("ui.note_saved", _language(request))})
 
     @app.post("/threads/{thread_id}/describe", response_class=HTMLResponse)
     def set_description(
@@ -289,7 +308,7 @@ def create_app() -> FastAPI:
         text: str = Form(""),
     ) -> HTMLResponse:
         _svc().set_description(text, thread_id)
-        return workspace(request, {"notice": "Beschreibung gespeichert"})
+        return workspace(request, {"notice": i18n.translate("ui.description_saved", _language(request))})
 
     @app.post("/threads/{thread_id}/status", response_class=HTMLResponse)
     def set_status(
@@ -298,7 +317,7 @@ def create_app() -> FastAPI:
         status: str = Form(...),
     ) -> HTMLResponse:
         thread = _svc().set_status(status, thread_id)
-        return workspace(request, {"notice": f"Status: {thread.status}"})
+        return workspace(request, {"notice": i18n.translate("ui.status_saved", _language(request), status=thread.status)})
 
     @app.post("/threads/{thread_id}/snapshot", response_class=HTMLResponse)
     def save_snapshot(
@@ -307,7 +326,7 @@ def create_app() -> FastAPI:
         label: str = Form(""),
     ) -> HTMLResponse:
         snap = _svc().snapshot(label, thread_id)
-        return workspace(request, {"notice": f"Snapshot {snap.id}"})
+        return workspace(request, {"notice": i18n.translate("ui.snapshot_saved", _language(request), id=snap.id)})
 
     @app.post("/threads/{thread_id}/rename", response_class=HTMLResponse)
     def rename_thread(
@@ -316,7 +335,7 @@ def create_app() -> FastAPI:
         title: str = Form(...),
     ) -> HTMLResponse:
         thread = _svc().rename(thread_id, title)
-        return workspace(request, {"notice": f"umbenannt: {thread.title}"})
+        return workspace(request, {"notice": i18n.translate("ui.renamed", _language(request), title=thread.title)})
 
     @app.post("/threads/{thread_id}/files", response_class=HTMLResponse)
     def add_file(
@@ -325,7 +344,7 @@ def create_app() -> FastAPI:
         path: str = Form(...),
     ) -> HTMLResponse:
         _svc().add_file(path, thread_id)
-        return workspace(request, {"notice": f"Datei: {path.strip()}"})
+        return workspace(request, {"notice": i18n.translate("ui.file_added", _language(request), path=path.strip())})
 
     @app.post("/threads/{thread_id}/files/remove", response_class=HTMLResponse)
     def remove_file(
@@ -334,7 +353,7 @@ def create_app() -> FastAPI:
         path: str = Form(...),
     ) -> HTMLResponse:
         _svc().remove_file(path, thread_id)
-        return workspace(request, {"notice": "Pfad entfernt"})
+        return workspace(request, {"notice": i18n.translate("ui.file_removed", _language(request))})
 
     @app.post("/threads/{thread_id}/prompt", response_class=HTMLResponse)
     def preview_prompt(
@@ -345,20 +364,22 @@ def create_app() -> FastAPI:
         save: str = Form(""),
     ) -> HTMLResponse:
         text = _svc().prompt(target, variant, thread_id, save=bool(save))
-        notice = "Prompt gespeichert" if save else "Prompt-Vorschau"
+        notice = i18n.translate(
+            "ui.prompt_saved" if save else "ui.prompt_preview", _language(request)
+        )
         return workspace(request, {"notice": notice, "prompt_preview": text})
 
     @app.post("/threads/{thread_id}/archive", response_class=HTMLResponse)
     def archive_thread(thread_id: str, request: Request) -> HTMLResponse:
         thread = _svc().archive(thread_id)
-        return workspace(request, {"notice": f"archiviert: {thread.title}"})
+        return workspace(request, {"notice": i18n.translate("ui.archived", _language(request), title=thread.title)})
 
     @app.post("/threads/{thread_id}/handoff", response_class=HTMLResponse)
     def write_handoff(thread_id: str, request: Request) -> HTMLResponse:
         payload = _svc().handoff(thread_id)
         return workspace(
             request,
-            {"notice": "Handoff geschrieben · nicht gesendet", "packet": payload},
+            {"notice": i18n.translate("ui.handoff_written", _language(request)), "packet": payload},
         )
 
     @app.post("/threads/{thread_id}/gnom", response_class=HTMLResponse)
@@ -366,7 +387,7 @@ def create_app() -> FastAPI:
         packet = _svc().gnom("brainstorm", "detailed", thread_id)
         return workspace(
             request,
-            {"notice": "Gnom-Paket geschrieben · nicht gestartet", "packet": packet},
+            {"notice": i18n.translate("ui.gnom_written", _language(request)), "packet": packet},
         )
 
     @app.post("/threads/{thread_id}/grok", response_class=HTMLResponse)
@@ -374,18 +395,21 @@ def create_app() -> FastAPI:
         packet = _svc().grok("brainstorm", "detailed", thread_id)
         return workspace(
             request,
-            {"notice": "Grok-Paket geschrieben · nicht gestartet", "packet": packet},
+            {"notice": i18n.translate("ui.grok_written", _language(request)), "packet": packet},
         )
 
     @app.post("/snapshots/{snap_id}/restore", response_class=HTMLResponse)
     def restore_snapshot(snap_id: str, request: Request) -> HTMLResponse:
         thread = _svc().restore(snap_id)
-        return workspace(request, {"notice": f"geladen: {thread.current_snapshot_id}"})
+        return workspace(request, {"notice": i18n.translate("ui.snapshot_loaded", _language(request), id=thread.current_snapshot_id)})
 
     @app.post("/gate/freeze", response_class=HTMLResponse)
     def freeze_gate(request: Request, frozen: str = Form(...)) -> HTMLResponse:
         status = _svc().gate_freeze(frozen == "1")
-        label = "Gate frozen" if status["frozen"] else "Gate offen"
+        label = i18n.translate(
+            "ui.gate_closed" if status["frozen"] else "ui.gate_opened",
+            _language(request),
+        )
         return workspace(request, {"notice": label})
 
     return app

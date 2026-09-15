@@ -25,7 +25,7 @@ SAME_IN_BOTH = {
     "tab", "ok", "api", "ui", "cli", "url", "http", "https",
     "gate", "frozen", "cooldown", "prompt", "label", "optional", "status",
     "generic", "detailed", "short", "steps", "agent", "paket", "packet",
-    "threads", "revision", "details", "s", "n", "m", "j", "k", "person",
+    "threads", "revision", "details", "import", "s", "n", "m", "j", "k", "person",
     # Zustandswerte und Ausgabemarken, die ThreadDesk unuebersetzt fuehrt.
     "snap", "block", "html", "idea", "active", "paused", "done",
 }
@@ -260,6 +260,74 @@ def test_map_hands_its_strings_to_the_browser(client) -> None:
     page = client.get("/map?lang=en")
     assert "data-strings=" in page.text
     assert i18n.translate("map.no_details", "en") in page.text
+
+
+@pytest.mark.parametrize("language", i18n.LANGUAGES)
+def test_post_routes_return_localised_success_and_error(client, language) -> None:
+    created = client.post(
+        f"/threads?lang={language}",
+        data={"title": "Sprachtest", "description": ""},
+    )
+    assert i18n.translate("ui.created", language, title="Sprachtest") in created.text
+
+    failed = client.post(
+        f"/threads?lang={language}", data={"title": " ", "description": ""}
+    )
+    assert failed.status_code == 400
+    assert i18n.translate("ui.error", language) in failed.text
+
+
+def test_browser_strings_are_injected_for_every_page(client) -> None:
+    for path in ("/", "/knowledge", "/map"):
+        page = client.get(f"{path}?lang=en")
+        assert "data-ui-strings=" in page.text
+        assert "Copied" in page.text
+
+
+def test_no_hardcoded_visible_server_messages() -> None:
+    import ast
+
+    source = TEMPLATES.parent / "server.py"
+    tree = ast.parse(source.read_text(encoding="utf-8"))
+    docstrings = set()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            body = getattr(node, "body", [])
+            if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant):
+                docstrings.add(id(body[0].value))
+    offenders = [
+        f"{node.lineno}: {node.value!r}"
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant)
+        and isinstance(node.value, str)
+        and id(node) not in docstrings
+        and WORD.search(node.value)
+        and (" " in node.value.strip() or UMLAUT.search(node.value))
+    ]
+    assert not offenders, "sichtbare Servertexte ohne Katalog:\n" + "\n".join(offenders)
+
+
+def test_no_hardcoded_visible_javascript_messages() -> None:
+    sources = sorted((TEMPLATES.parent / "static").glob("*.js"))
+    patterns = (
+        r"\.err\s*=\s*[\"'][^\"']*[A-Za-zÄÖÜäöüß]{3,}[^\"']*[\"']",
+        r"\.textContent\s*=\s*[\"'][^\"']*[A-Za-zÄÖÜäöüß]{3,}[^\"']*[\"']",
+        r"console\.warn\(\s*[\"'][^\"']*[A-Za-zÄÖÜäöüß]{3,}",
+    )
+    offenders = [
+        f"{source.name}: {pattern}"
+        for source in sources
+        for pattern in patterns
+        if re.search(pattern, source.read_text(encoding="utf-8"))
+    ]
+    assert not offenders, f"sichtbare JavaScript-Texte ohne Katalog: {offenders}"
+
+
+def test_browser_keys_exist_and_are_used() -> None:
+    source = TEMPLATES.parent / "static" / "app.js"
+    used = set(re.findall(r'uiText\(["\']([\w.]+)["\']', source.read_text(encoding="utf-8")))
+    declared = {key for key in i18n.CATALOG if key.startswith("browser.")}
+    assert used == declared
 
 
 # ----------------------------------------------------------- Kommandozeile
