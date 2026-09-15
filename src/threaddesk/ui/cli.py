@@ -10,6 +10,7 @@ from threaddesk.api.service import ThreadService
 from threaddesk.core import i18n
 from threaddesk.core.errors import ThreadDeskError
 from threaddesk.core.models import Thread
+from threaddesk.services.knowledge_export import KnowledgeExportService
 
 Translator = Callable[..., str]
 
@@ -406,6 +407,14 @@ def cmd_serve(args: argparse.Namespace) -> int:
 
 
 def cmd_graph(args: argparse.Namespace) -> int:
+    if args.export:
+        service = KnowledgeExportService(_svc().store)
+        payload = service.build(
+            node_ids=args.ids or None,
+            include_private=args.include_private,
+        )
+        print(service.encode(payload), end="")
+        return 0
     payload = _svc().graph(kind=args.kind, status=args.status)
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     return 0
@@ -565,6 +574,9 @@ def build_parser(language: str = i18n.DEFAULT_LANGUAGE,
     gr = sub.add_parser("graph", help=t("cli.help.graph"))
     gr.add_argument("--kind", default=None)
     gr.add_argument("--status", default=None)
+    gr.add_argument("--export", action="store_true")
+    gr.add_argument("--ids", nargs="*", default=None)
+    gr.add_argument("--include-private", action="store_true")
     gr.set_defaults(func=cmd_graph)
 
     se = sub.add_parser("serve", aliases=["ui"], help=t("cli.help.serve"))
