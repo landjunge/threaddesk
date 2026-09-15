@@ -12,6 +12,7 @@ from threaddesk.core.errors import ThreadDeskError
 from threaddesk.core.models import Thread
 from threaddesk.services.knowledge_export import KnowledgeExportService
 from threaddesk.services.knowledge_visual_export import encode_pdf, encode_svg
+from threaddesk.services.knowledge_package import KnowledgePackageService
 
 Translator = Callable[..., str]
 
@@ -421,12 +422,17 @@ def cmd_graph(args: argparse.Namespace) -> int:
             node_ids=args.ids if args.ids is not None else filtered_ids,
             include_private=args.include_private,
         )
-        if args.format in ("xlsx", "pdf"):
+        if args.format == "package" and args.preview:
+            print(json.dumps(KnowledgePackageService(service.store).preview(payload), ensure_ascii=False, indent=2))
+            return 0
+        if args.format in ("xlsx", "pdf", "package"):
             if not args.output:
                 print(_lang(args)("cli.graph.binary_output", format=args.format.upper(), extension=args.format), file=sys.stderr)
                 return 2
-            rendered_binary = service.encode_xlsx(payload) if args.format == "xlsx" else encode_pdf(
-                payload, language=args.lang, filters={"kind": args.kind, "status": args.status}
+            rendered_binary = (
+                service.encode_xlsx(payload) if args.format == "xlsx"
+                else KnowledgePackageService(service.store).encode(payload, language=args.lang) if args.format == "package"
+                else encode_pdf(payload, language=args.lang, filters={"kind": args.kind, "status": args.status})
             )
             Path(args.output).write_bytes(rendered_binary)
         else:
@@ -604,8 +610,9 @@ def build_parser(language: str = i18n.DEFAULT_LANGUAGE,
     gr.add_argument("--kind", default=None)
     gr.add_argument("--status", default=None)
     gr.add_argument("--export", action="store_true")
-    gr.add_argument("--format", choices=("json", "markdown", "csv", "xlsx", "svg", "pdf"), default="json")
+    gr.add_argument("--format", choices=("json", "markdown", "csv", "xlsx", "svg", "pdf", "package"), default="json")
     gr.add_argument("--output", default=None)
+    gr.add_argument("--preview", action="store_true")
     gr.add_argument("--ids", nargs="*", default=None)
     gr.add_argument("--include-private", action="store_true")
     gr.set_defaults(func=cmd_graph)
