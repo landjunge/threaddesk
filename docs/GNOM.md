@@ -24,3 +24,7 @@ v1-Regel: **Send = Dialog (Box 2). Execute = Worker.**
 MCP-lite des Hubs (`GET /api/mcp/tools`, `POST /api/mcp`) bleibt unberührt. ThreadDesk ruft es nicht auf.
 
 gnom-hub-v1 selbst bleibt unverändert.
+Gnom-Pakete verwenden `threaddesk.gnom-handoff.v1`. Sie tragen den
+versionierten Handoff-Vertrag, `preview_required=true` und beginnen als
+`pending_user_confirmation`. ThreadDesk markiert sie weder als gesendet noch
+als ausgeführt. Gnom-Hub muss den Kontext vor jeder Übernahme sichtbar zeigen.

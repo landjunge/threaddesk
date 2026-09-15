@@ -26,6 +26,7 @@ from threaddesk.services.dashboard import build as build_dashboard
 from threaddesk.services.dashboard import render_html as render_dashboard_html
 from threaddesk.services.dashboard import render_text as render_dashboard_text
 from threaddesk.services.gnom_bridge import build_packet as build_gnom_packet
+from threaddesk.services.gnom_bridge import validate_packet as validate_gnom_packet
 from threaddesk.services.gnom_bridge import chat_body as gnom_chat_body
 from threaddesk.services.gnom_bridge import command_for as gnom_command
 from threaddesk.services.grok_bridge import build_packet as build_grok_packet
@@ -568,7 +569,7 @@ class ThreadService:
         thread = self._target(key)
         if (mode or "brainstorm").strip().lower() == "execute":
             self._admit("execute", thread.id)
-        packet = build_gnom_packet(thread, mode=mode, variant=variant)
+        packet = validate_gnom_packet(build_gnom_packet(thread, mode=mode, variant=variant))
         reject_secrets(packet["prompt"])
         prompt_path = self.store.write_text_artifact(
             "gnom-prompt.md", packet["prompt"] + "\n"
