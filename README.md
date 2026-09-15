@@ -101,6 +101,8 @@ ThreadDesk ist eine lokale Control-Layer vor Gnom-Hub-V1. Die Grenze ist Teil de
 | Arbeitsmappe mit getrennten Blättern | td graph --export --format xlsx --output wissen.xlsx |
 | Wissenskarte als SVG | td graph --export --format svg --output karte.svg |
 | Wissenskarte als PDF | td graph --export --format pdf --output karte.pdf |
+| Exportpaket prüfen | td graph --export --format package --preview |
+| Exportpaket schreiben | td graph --export --format package --output wissen.zip |
 | Ausführung sperren | td gate freeze |
 | Sprache umschalten | td --lang en list |
 

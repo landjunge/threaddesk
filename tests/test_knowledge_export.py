@@ -215,3 +215,24 @@ def test_svg_and_pdf_are_readable_filtered_and_private_safe(monkeypatch, tmp_pat
     raw = target.read_bytes()
     assert raw.startswith(b"%PDF-1.4") and raw.endswith(b"%%EOF\n")
     assert b"Project" in raw and b"Private" not in raw
+
+
+def test_package_preview_and_archive_are_auditable(monkeypatch, tmp_path: Path, capsys) -> None:
+    from threaddesk.ui import cli
+
+    store = populated_store(tmp_path)
+    monkeypatch.setattr(cli, "_svc", lambda: type("Service", (), {"store": store})())
+    assert cli.main(["graph", "--export", "--format", "package", "--preview"]) == 0
+    preview = json.loads(capsys.readouterr().out)
+    assert preview["format"] == "threaddesk.export-package.v1"
+    assert preview["counts"]["nodes"] == 2
+
+    target = tmp_path / "knowledge.zip"
+    assert cli.main(["graph", "--export", "--format", "package", "--output", str(target)]) == 0
+    with ZipFile(target) as package:
+        assert {"manifest.json", "data/knowledge.json", "documents/preview.md", "export-log.json"} <= set(package.namelist())
+        manifest = json.loads(package.read("manifest.json"))
+        log = json.loads(package.read("export-log.json"))
+        assert manifest["artifacts_skipped"][0]["reason"] == "missing_or_unsafe"
+        assert log["private_included"] is False
+        KnowledgeExportService.decode(package.read("data/knowledge.json"))
