@@ -244,6 +244,18 @@ def cmd_handoff(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_inbox(args: argparse.Namespace) -> int:
+    service = _svc()
+    if args.inbox_cmd == "import":
+        payload = json.loads(Path(args.path).read_text(encoding="utf-8"))
+        print(json.dumps(service.receive_return(payload), ensure_ascii=False, indent=2))
+    elif args.inbox_cmd == "decide":
+        print(json.dumps(service.decide_return(args.return_id, args.choice, args.note), ensure_ascii=False, indent=2))
+    else:
+        print(json.dumps(service.returns(), ensure_ascii=False, indent=2))
+    return 0
+
+
 def cmd_mcp(_: argparse.Namespace) -> int:
     from threaddesk.ui.mcp_stdio import serve
 
@@ -564,6 +576,18 @@ def build_parser(language: str = i18n.DEFAULT_LANGUAGE,
     ho.add_argument("--id", default=None)
     ho.add_argument("--target", default="generic", choices=["generic", "grok", "codex", "claude", "gnom-hub-v1"])
     ho.set_defaults(func=cmd_handoff)
+
+    ib = sub.add_parser("inbox", help=t("cli.help.inbox"))
+    ibs = ib.add_subparsers(dest="inbox_cmd", required=True)
+    ibs.add_parser("list").set_defaults(func=cmd_inbox)
+    ibi = ibs.add_parser("import")
+    ibi.add_argument("path")
+    ibi.set_defaults(func=cmd_inbox)
+    ibd = ibs.add_parser("decide")
+    ibd.add_argument("return_id")
+    ibd.add_argument("choice", choices=["accepted", "rejected", "rework"])
+    ibd.add_argument("--note", default="")
+    ibd.set_defaults(func=cmd_inbox)
 
     mp = sub.add_parser("mcp", help=t("cli.help.mcp"))
     mp.set_defaults(func=cmd_mcp)

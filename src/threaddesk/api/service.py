@@ -513,6 +513,25 @@ class ThreadService:
         payload["path"] = str(path)
         return payload
 
+    def receive_return(self, payload: dict) -> dict:
+        from threaddesk.services.return_inbox import ReturnInbox
+
+        item = ReturnInbox(self.store).receive(payload)
+        self.bus.emit("return.received", {"return_id": payload.get("return_id"), "duplicate": item["duplicate"]})
+        return item
+
+    def returns(self) -> list[dict]:
+        from threaddesk.services.return_inbox import ReturnInbox
+
+        return ReturnInbox(self.store).list()
+
+    def decide_return(self, return_id: str, choice: str, note: str = "") -> dict:
+        from threaddesk.services.return_inbox import ReturnInbox
+
+        item = ReturnInbox(self.store).decide(return_id, choice, note)
+        self.bus.emit("return.decided", {"return_id": return_id, "choice": choice})
+        return item
+
     def grok(
         self,
         mode: str = "brainstorm",

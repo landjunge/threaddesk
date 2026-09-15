@@ -44,4 +44,9 @@ Rückgaben folgen `threaddesk.return.v1` und enthalten Bearbeiter, Lauf,
 Ergebnis, Dateien/PR, echte Testergebnisse und offene Probleme. Eine externe
 Rückgabe kommt immer als `delivered/unverified`; sie kann sich niemals selbst
 als geprüft oder angenommen markieren.
+
+Die lokale Rückgabe-Inbox speichert Rückgaben idempotent. Dieselbe `return_id`
+erzeugt kein Duplikat; veränderte Duplikate und ältere Handoff-Revisionen werden
+abgelehnt. Erst der Nutzer entscheidet sichtbar `accepted`, `rejected` oder
+`rework`; eine bereits getroffene andere Entscheidung wird nicht überschrieben.
 ```
