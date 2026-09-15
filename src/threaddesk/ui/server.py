@@ -241,13 +241,24 @@ def create_app() -> FastAPI:
                 await bundle.close()
 
     @app.post("/api/migration/confirm", response_class=JSONResponse)
-    async def migration_confirm(bundle_sha256: str = Form(...)) -> dict:
+    async def migration_confirm(
+        bundle_sha256: str = Form(...),
+        resolutions_json: str = Form("{}"),
+    ) -> dict:
         """Commit only a previously reviewed immutable bundle."""
         store = _svc().store
         if not isinstance(store, SQLiteStore):
             raise HTTPException(status_code=409, detail="sqlite_storage_not_active")
         try:
-            return MigrationReviewService(store).commit(bundle_sha256)
+            resolutions = json.loads(resolutions_json)
+            if not isinstance(resolutions, dict):
+                raise ValueError("resolution_format")
+            return MigrationReviewService(store).commit(
+                bundle_sha256,
+                resolutions=resolutions,
+            )
+        except json.JSONDecodeError as exc:
+            raise HTTPException(status_code=400, detail="resolution_format") from exc
         except (BundleValidationError, ImportBlocked, ValueError) as exc:
             raise HTTPException(status_code=400, detail=str(exc).split(":", 1)[0]) from exc
         except ImportOutcomeUncertain as exc:
