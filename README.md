@@ -99,6 +99,8 @@ ThreadDesk ist eine lokale Control-Layer vor Gnom-Hub-V1. Die Grenze ist Teil de
 | Vollständige JSON-Rundreise | td graph --export --format json |
 | Tabelle für Calc/Excel | td graph --export --format csv --output wissen.csv |
 | Arbeitsmappe mit getrennten Blättern | td graph --export --format xlsx --output wissen.xlsx |
+| Wissenskarte als SVG | td graph --export --format svg --output karte.svg |
+| Wissenskarte als PDF | td graph --export --format pdf --output karte.pdf |
 | Ausführung sperren | td gate freeze |
 | Sprache umschalten | td --lang en list |
 
@@ -108,6 +110,10 @@ Beziehungen und Quellen als normalisierte Tabelle. XLSX braucht `--output` und
 legt dafür die drei übersichtlichen Blätter **Wissen**, **Beziehungen** und
 **Quellen** an. Inhalte, die mit Excel-Formelzeichen beginnen, werden als Text
 gespeichert.
+
+SVG und PDF zeigen eine statische Wissenskarte mit lesbaren Bezeichnungen,
+stabilen IDs, Beziehungen, Legende, Erstellzeit und aktiven Typ-/Statusfiltern.
+Auch hier bleiben private Knoten standardmäßig ausgeschlossen.
 
 ### Sprache
 

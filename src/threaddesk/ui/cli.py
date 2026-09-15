@@ -11,6 +11,7 @@ from threaddesk.core import i18n
 from threaddesk.core.errors import ThreadDeskError
 from threaddesk.core.models import Thread
 from threaddesk.services.knowledge_export import KnowledgeExportService
+from threaddesk.services.knowledge_visual_export import encode_pdf, encode_svg
 
 Translator = Callable[..., str]
 
@@ -409,19 +410,31 @@ def cmd_serve(args: argparse.Namespace) -> int:
 def cmd_graph(args: argparse.Namespace) -> int:
     if args.export:
         service = KnowledgeExportService(_svc().store)
+        filtered_ids = None
+        if args.kind or args.status:
+            filtered_ids = [
+                node.id for node in service.store.list_nodes()
+                if (not args.kind or node.kind == args.kind)
+                and (not args.status or node.status == args.status)
+            ]
         payload = service.build(
-            node_ids=args.ids or None,
+            node_ids=args.ids if args.ids is not None else filtered_ids,
             include_private=args.include_private,
         )
-        if args.format == "xlsx":
+        if args.format in ("xlsx", "pdf"):
             if not args.output:
-                print(_lang(args)("cli.graph.xlsx_output"), file=sys.stderr)
+                print(_lang(args)("cli.graph.binary_output", format=args.format.upper(), extension=args.format), file=sys.stderr)
                 return 2
-            Path(args.output).write_bytes(service.encode_xlsx(payload))
+            rendered_binary = service.encode_xlsx(payload) if args.format == "xlsx" else encode_pdf(
+                payload, language=args.lang, filters={"kind": args.kind, "status": args.status}
+            )
+            Path(args.output).write_bytes(rendered_binary)
         else:
             rendered = (
                 service.encode_markdown(payload, language=args.lang)
                 if args.format == "markdown"
+                else encode_svg(payload, language=args.lang, filters={"kind": args.kind, "status": args.status})
+                if args.format == "svg"
                 else service.encode_csv(payload)
                 if args.format == "csv"
                 else service.encode(payload)
@@ -591,7 +604,7 @@ def build_parser(language: str = i18n.DEFAULT_LANGUAGE,
     gr.add_argument("--kind", default=None)
     gr.add_argument("--status", default=None)
     gr.add_argument("--export", action="store_true")
-    gr.add_argument("--format", choices=("json", "markdown", "csv", "xlsx"), default="json")
+    gr.add_argument("--format", choices=("json", "markdown", "csv", "xlsx", "svg", "pdf"), default="json")
     gr.add_argument("--output", default=None)
     gr.add_argument("--ids", nargs="*", default=None)
     gr.add_argument("--include-private", action="store_true")
