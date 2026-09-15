@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import json
 import hashlib
+import csv
+import io
 from pathlib import Path
+from zipfile import ZipFile
 
 import pytest
 
@@ -150,3 +153,46 @@ def test_cli_can_emit_english_markdown_selection(monkeypatch, tmp_path: Path, ca
     assert "## Project" in rendered
     assert "## Task" in rendered
     assert "## Private" not in rendered
+
+
+def test_csv_is_normalized_safe_and_private_by_default(tmp_path: Path) -> None:
+    store = populated_store(tmp_path)
+    store.save_node(KnowledgeNode("formula", "task", "=2+2", visibility="public"))
+    payload = KnowledgeExportService(store).build(generated_at="2026-09-15T11:00:00+00:00")
+
+    rows = list(csv.DictReader(io.StringIO(KnowledgeExportService.encode_csv(payload))))
+
+    assert {row["record_type"] for row in rows} == {"node", "relation", "source"}
+    assert next(row for row in rows if row["id"] == "formula")["title"] == "'=2+2"
+    assert not any(row["id"] == "private" for row in rows)
+    assert next(row for row in rows if row["id"] == "included")["target_id"] == "task"
+
+
+def test_xlsx_has_separate_valid_sheets_and_cli_writes_file(monkeypatch, tmp_path: Path) -> None:
+    from threaddesk.ui import cli
+
+    store = populated_store(tmp_path)
+    monkeypatch.setattr(cli, "_svc", lambda: type("Service", (), {"store": store})())
+    target = tmp_path / "knowledge.xlsx"
+
+    assert cli.main(["graph", "--export", "--format", "xlsx", "--output", str(target)]) == 0
+
+    with ZipFile(target) as workbook:
+        names = set(workbook.namelist())
+        assert "xl/worksheets/sheet1.xml" in names
+        assert "xl/worksheets/sheet2.xml" in names
+        assert "xl/worksheets/sheet3.xml" in names
+        assert b"Private" not in workbook.read("xl/worksheets/sheet1.xml")
+        assert b"Project" in workbook.read("xl/worksheets/sheet1.xml")
+
+
+def test_xlsx_requires_output_path_in_both_languages(monkeypatch, tmp_path: Path, capsys) -> None:
+    from threaddesk.ui import cli
+
+    store = populated_store(tmp_path)
+    monkeypatch.setattr(cli, "_svc", lambda: type("Service", (), {"store": store})())
+
+    assert cli.main(["graph", "--export", "--format", "xlsx"]) == 2
+    assert "--output wissen.xlsx" in capsys.readouterr().err
+    assert cli.main(["--lang", "en", "graph", "--export", "--format", "xlsx"]) == 2
+    assert "--output knowledge.xlsx" in capsys.readouterr().err

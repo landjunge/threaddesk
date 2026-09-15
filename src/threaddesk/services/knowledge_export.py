@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import csv
 import hashlib
+import io
 import json
 from typing import Any, Iterable, Mapping
+from xml.etree import ElementTree as ET
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from threaddesk.core.models import (
     NODE_KINDS,
@@ -17,6 +21,11 @@ from threaddesk.core.models import (
 
 
 FORMAT = "threaddesk.knowledge-export.v1"
+
+TABULAR_COLUMNS = (
+    "record_type", "id", "title", "details", "kind", "status", "visibility",
+    "source", "source_id", "target_id", "source_system", "bundle_id",
+)
 
 
 class KnowledgeExportError(ValueError):
@@ -313,3 +322,75 @@ class KnowledgeExportService:
                     f"`{source['target_id']}` | `{source['bundle_id']}` |"
                 )
         return "\n".join(lines) + "\n"
+
+    @staticmethod
+    def _spreadsheet_value(value: Any) -> str:
+        """Return text that spreadsheet programs cannot interpret as a formula."""
+        text = "" if value is None else str(value)
+        if text.startswith(("=", "+", "-", "@", "\t", "\r")):
+            return "'" + text
+        return text
+
+    @classmethod
+    def _tabular_rows(cls, payload: Mapping[str, Any]) -> list[dict[str, str]]:
+        checked = cls.verify(payload)
+        rows: list[dict[str, str]] = []
+        for record_type, records in (
+            ("node", checked["nodes"]),
+            ("relation", checked["relations"]),
+            ("source", checked["source_records"]),
+        ):
+            for record in records:
+                values = {"record_type": record_type, **record}
+                if record_type == "source":
+                    values["id"] = f"{record['source_system']}:{record['source_id']}"
+                rows.append({column: cls._spreadsheet_value(values.get(column)) for column in TABULAR_COLUMNS})
+        return rows
+
+    @classmethod
+    def encode_csv(cls, payload: Mapping[str, Any]) -> str:
+        """Render selected knowledge as one portable UTF-8 table."""
+        output = io.StringIO(newline="")
+        writer = csv.DictWriter(output, fieldnames=TABULAR_COLUMNS, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(cls._tabular_rows(payload))
+        return output.getvalue()
+
+    @classmethod
+    def encode_xlsx(cls, payload: Mapping[str, Any]) -> bytes:
+        """Create a dependency-free XLSX workbook with three focused sheets."""
+        checked = cls.verify(payload)
+        sheets = (
+            ("Wissen", ("id", "title", "details", "kind", "status", "visibility", "source"), checked["nodes"]),
+            ("Beziehungen", ("id", "source_id", "kind", "target_id"), checked["relations"]),
+            ("Quellen", ("source_system", "source_id", "target_id", "bundle_id"), checked["source_records"]),
+        )
+
+        def worksheet(columns: tuple[str, ...], records: list[Mapping[str, Any]]) -> bytes:
+            root = ET.Element("worksheet", xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main")
+            data = ET.SubElement(root, "sheetData")
+            values_by_row = [columns] + [tuple(record.get(column, "") for column in columns) for record in records]
+            for row_number, values in enumerate(values_by_row, 1):
+                row = ET.SubElement(data, "row", r=str(row_number))
+                for column_number, value in enumerate(values, 1):
+                    letters, number = "", column_number
+                    while number:
+                        number, remainder = divmod(number - 1, 26)
+                        letters = chr(65 + remainder) + letters
+                    cell = ET.SubElement(row, "c", r=f"{letters}{row_number}", t="inlineStr")
+                    text = ET.SubElement(ET.SubElement(cell, "is"), "t")
+                    safe = cls._spreadsheet_value(value)
+                    if safe[:1].isspace() or safe[-1:].isspace():
+                        text.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+                    text.text = safe
+            return ET.tostring(root, encoding="utf-8", xml_declaration=True)
+
+        workbook = io.BytesIO()
+        with ZipFile(workbook, "w", ZIP_DEFLATED) as archive:
+            archive.writestr("[Content_Types].xml", '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml">' + "".join(f'<Override PartName="/xl/worksheets/sheet{i}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' for i in range(1, len(sheets) + 1)) + "</Types>")
+            archive.writestr("_rels/.rels", '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>')
+            archive.writestr("xl/workbook.xml", '<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' + "".join(f'<sheet name="{name}" sheetId="{i}" r:id="rId{i}"/>' for i, (name, _, _) in enumerate(sheets, 1)) + "</sheets></workbook>")
+            archive.writestr("xl/_rels/workbook.xml.rels", '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + "".join(f'<Relationship Id="rId{i}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet{i}.xml"/>' for i in range(1, len(sheets) + 1)) + "</Relationships>")
+            for index, (_, columns, records) in enumerate(sheets, 1):
+                archive.writestr(f"xl/worksheets/sheet{index}.xml", worksheet(columns, records))
+        return workbook.getvalue()

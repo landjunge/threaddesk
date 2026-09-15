@@ -97,8 +97,17 @@ ThreadDesk ist eine lokale Control-Layer vor Gnom-Hub-V1. Die Grenze ist Teil de
 | MCP-Server | td mcp |
 | Wissen für Menschen/KIs exportieren | td graph --export --format markdown |
 | Vollständige JSON-Rundreise | td graph --export --format json |
+| Tabelle für Calc/Excel | td graph --export --format csv --output wissen.csv |
+| Arbeitsmappe mit getrennten Blättern | td graph --export --format xlsx --output wissen.xlsx |
 | Ausführung sperren | td gate freeze |
 | Sprache umschalten | td --lang en list |
+
+CSV und XLSX verwenden dieselbe geprüfte Auswahl wie JSON und Markdown. Private
+Knoten bleiben ohne `--include-private` draußen. CSV schreibt Knoten,
+Beziehungen und Quellen als normalisierte Tabelle. XLSX braucht `--output` und
+legt dafür die drei übersichtlichen Blätter **Wissen**, **Beziehungen** und
+**Quellen** an. Inhalte, die mit Excel-Formelzeichen beginnen, werden als Text
+gespeichert.
 
 ### Sprache
 
