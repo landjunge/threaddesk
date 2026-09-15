@@ -38,6 +38,7 @@ def write_import_bundle(
     suggested_kind: str = "project",
     relation_kind: str = "contains",
     same_content: bool = False,
+    project_archived: bool = False,
 ) -> Path:
     project_content = f"# {project_title}\n\nOriginal project text.\n".encode()
     task_content = (
@@ -55,7 +56,7 @@ def write_import_bundle(
             "properties": {"status": "active"},
             "content_path": "content/page-project.md",
             "content_sha256": _sha256(project_content),
-            "archived": False,
+            "archived": project_archived,
             "suggested_kind": suggested_kind,
             "mapping_reason": "Explicit exporter proposal",
         },
@@ -225,6 +226,32 @@ def test_identical_content_is_published_once_and_linked_to_both_nodes(tmp_path: 
 
     assert len(store.list_artifacts()) == 1
     assert len(store.list_node_artifacts()) == 2
+
+
+def test_new_archived_source_is_preserved_with_content_and_relation(
+    tmp_path: Path,
+) -> None:
+    store = SQLiteStore(tmp_path / "workspace")
+    path = write_import_bundle(
+        tmp_path / "archived.tdbundle",
+        project_archived=True,
+    )
+    bundle, plan = plan_for(store, path)
+
+    result = AtomicImportService(store).commit(bundle, plan)
+
+    project = next(item for item in store.list_nodes() if item.kind == "project")
+    assert project.status == "archived"
+    assert project.details == "# ThreadDesk\n\nOriginal project text.\n"
+    assert result["counts"] == {
+        "created": 1,
+        "updated": 0,
+        "archived": 1,
+        "relations": 1,
+    }
+    assert len(store.list_source_records("notion")) == 2
+    assert len(store.list_node_artifacts()) == 2
+    assert len(store.list_relations()) == 1
 
 
 def test_conflict_is_blocked_before_backup_or_batch_write(tmp_path: Path) -> None:
