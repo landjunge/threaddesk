@@ -256,6 +256,19 @@ def cmd_inbox(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_gnom_job(args: argparse.Namespace) -> int:
+    service = _svc()
+    if args.gnom_job_cmd == "bind":
+        packet = json.loads(Path(args.packet).read_text(encoding="utf-8")) if args.packet else None
+        value = service.bind_gnom_job(args.job_id, packet)
+    elif args.gnom_job_cmd == "callback":
+        value = service.receive_gnom_callback(json.loads(Path(args.path).read_text(encoding="utf-8")))
+    else:
+        value = service.gnom_jobs()
+    print(json.dumps(value, ensure_ascii=False, indent=2))
+    return 0
+
+
 def cmd_mcp(_: argparse.Namespace) -> int:
     from threaddesk.ui.mcp_stdio import serve
 
@@ -607,6 +620,17 @@ def build_parser(language: str = i18n.DEFAULT_LANGUAGE,
     )
     gn.add_argument("--id", default=None)
     gn.set_defaults(func=cmd_gnom)
+
+    gj = sub.add_parser("gnom-job", help=t("cli.help.gnom_job"))
+    gjs = gj.add_subparsers(dest="gnom_job_cmd", required=True)
+    gjb = gjs.add_parser("bind")
+    gjb.add_argument("job_id")
+    gjb.add_argument("--packet", default=None)
+    gjb.set_defaults(func=cmd_gnom_job)
+    gjc = gjs.add_parser("callback")
+    gjc.add_argument("path")
+    gjc.set_defaults(func=cmd_gnom_job)
+    gjs.add_parser("list").set_defaults(func=cmd_gnom_job)
 
     gt = sub.add_parser("gate", help=t("cli.help.gate"))
     gts = gt.add_subparsers(dest="gate_cmd")
