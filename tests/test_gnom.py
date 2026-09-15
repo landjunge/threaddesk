@@ -22,6 +22,11 @@ def test_gnom_brainstorm_does_not_send(svc: ThreadService) -> None:
     assert packet["hub"] == "gnom-hub-v1"
     assert packet["mode"] == "brainstorm"
     assert packet["ran"] is False
+    assert packet["sent"] is False
+    assert packet["format"] == "threaddesk.gnom-handoff.v1"
+    assert packet["protocol_revision"] == 1
+    assert packet["preview_required"] is True
+    assert packet["adoption_status"] == "pending_user_confirmation"
     assert Path(packet["path"]).is_file()
     assert Path(packet["chat_path"]).is_file()
     assert packet["prompt"].startswith("Modus: Send")
@@ -70,6 +75,9 @@ def test_mcp_export_gnom_and_localhost_only(svc: ThreadService, monkeypatch: pyt
         hub_url()
     monkeypatch.setenv("GNOM_HUB_URL", "http://127.0.0.1:3012")
     assert hub_url() == "http://127.0.0.1:3012"
+    monkeypatch.setenv("GNOM_HUB_URL", "http://localhost.example.com:3012")
+    with pytest.raises(InvalidState):
+        hub_url()
     import threaddesk.services.gnom_bridge as wrap
 
     source = Path(wrap.__file__).read_text(encoding="utf-8")
