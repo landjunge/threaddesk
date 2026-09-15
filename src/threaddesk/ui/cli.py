@@ -239,7 +239,7 @@ def cmd_snap_list(args: argparse.Namespace) -> int:
 
 
 def cmd_handoff(args: argparse.Namespace) -> int:
-    payload = _svc().handoff(args.id)
+    payload = _svc().handoff(args.id, args.target)
     print(payload["path"])
     return 0
 
@@ -562,6 +562,7 @@ def build_parser(language: str = i18n.DEFAULT_LANGUAGE,
 
     ho = sub.add_parser("handoff", help=t("cli.help.handoff"))
     ho.add_argument("--id", default=None)
+    ho.add_argument("--target", default="generic", choices=["generic", "grok", "codex", "claude", "gnom-hub-v1"])
     ho.set_defaults(func=cmd_handoff)
 
     mp = sub.add_parser("mcp", help=t("cli.help.mcp"))

@@ -41,3 +41,36 @@ def test_handoff_writes_file(tmp_path: Path) -> None:
     assert Path(payload["path"]).is_file()
     assert payload["kind"] == "threaddesk.handoff"
     assert "Untrusted" in payload["instruction"]
+    assert payload["format"] == "threaddesk.handoff.v1"
+    assert payload["thread_id"] == payload["task_id"].split(":task")[0]
+    assert payload["handoff_id"]
+    assert payload["revision"] == 1
+    assert payload["target_system"] == "generic"
+    assert payload["sent"] is False and payload["ran"] is False
+
+
+def test_handoff_contract_carries_explicit_work_fields_without_sending(tmp_path: Path) -> None:
+    svc = ThreadService(store=JsonStore(tmp_path))
+    thread = svc.create("Build", "Shared context")
+    thread.context.extra.update({
+        "task_id": "task-7",
+        "task": "Finish the export",
+        "decisions": ["Local only"],
+        "rights_required": ["repository write"],
+        "acceptance_criteria": ["CI green"],
+    })
+    svc.store.save_thread(thread)
+
+    payload = svc.handoff()
+
+    assert payload["task_id"] == "task-7"
+    assert payload["task"] == "Finish the export"
+    assert payload["decisions"] == ["Local only"]
+    assert payload["rights_required"] == ["repository write"]
+    assert payload["acceptance_criteria"] == ["CI green"]
+    assert payload["sent"] is False
+
+    svc.gate_set(cooldown_seconds=0)
+    targeted = McpBridge(svc).call("export_handoff", {"target": "codex"})
+    assert targeted["result"]["target_system"] == "codex"
+    assert targeted["result"]["sent"] is False
