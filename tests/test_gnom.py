@@ -32,8 +32,12 @@ def test_gnom_brainstorm_does_not_send(svc: ThreadService) -> None:
     assert "127.0.0.1:8080" in packet["command"]
     chat = Path(packet["chat_path"]).read_text(encoding="utf-8")
     assert '"text"' in chat
+    assert '"handoff"' in chat
     assert "sender" not in chat
     assert "Handoff" in chat
+    assert packet["handoff"]["target_system"] == "gnom-hub-v1"
+    assert packet["handoff"]["profile"]["purpose"] == "confirmed_local_job"
+    assert packet["handoff"]["sent"] is False
 
 
 def test_gnom_execute_still_does_not_send(svc: ThreadService) -> None:

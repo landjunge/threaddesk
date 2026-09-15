@@ -73,4 +73,5 @@ def test_handoff_contract_carries_explicit_work_fields_without_sending(tmp_path:
     svc.gate_set(cooldown_seconds=0)
     targeted = McpBridge(svc).call("export_handoff", {"target": "codex"})
     assert targeted["result"]["target_system"] == "codex"
+    assert targeted["result"]["profile"]["purpose"] == "review_and_build"
     assert targeted["result"]["sent"] is False

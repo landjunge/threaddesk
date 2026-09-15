@@ -9,10 +9,17 @@ from threaddesk.core.models import Thread, new_id, now_iso
 
 FORMAT = "threaddesk.handoff.v1"
 TARGETS = ("generic", "grok", "codex", "claude", "gnom-hub-v1")
+PROFILES = {
+    "generic": {"purpose": "bounded_context", "default_rights": []},
+    "grok": {"purpose": "build_context", "default_rights": ["repository read"]},
+    "codex": {"purpose": "review_and_build", "default_rights": ["repository read"]},
+    "claude": {"purpose": "bounded_review", "default_rights": ["repository read"]},
+    "gnom-hub-v1": {"purpose": "confirmed_local_job", "default_rights": ["local hub handoff"]},
+}
 REQUIRED = (
     "format", "handoff_id", "revision", "thread_id", "task_id", "target_system",
     "task", "context", "decisions", "files", "rights_required", "acceptance_criteria",
-    "created_at", "instruction", "ran", "sent",
+    "profile", "created_at", "instruction", "ran", "sent",
 )
 
 
@@ -38,6 +45,7 @@ def build(thread: Thread, *, target_system: str = "generic") -> dict[str, Any]:
         "thread_id": thread.id,
         "task_id": task_id,
         "target_system": target,
+        "profile": PROFILES[target],
         "task": str(extra.get("task") or thread.title),
         "context": {
             "title": thread.title,

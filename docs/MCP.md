@@ -34,4 +34,9 @@ td handoff
 # versionierter Vertrag mit thread_id, task_id, handoff_id, revision,
 # Zielsystem, Aufgabe, Entscheidungen, Rechtebedarf und Abnahmekriterien;
 # schreibt nur lokal und sendet/ startet nichts
+
+Zielprofile: `grok` (Baukontext), `codex` (Prüfen/Bauen), `claude`
+(begrenzte Prüfung), `gnom-hub-v1` (bestätigter lokaler Auftrag) und `generic`.
+Grok- und Gnom-Pakete betten denselben Vertrag ein; Zieladapter dürfen seine
+Rechteangaben nicht eigenständig erweitern.
 ```

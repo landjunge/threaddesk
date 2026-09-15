@@ -29,6 +29,9 @@ def test_grok_writes_packet_and_does_not_run(svc: ThreadService, tmp_path: Path)
     assert "Brainstorm" in packet["prompt"]
     assert "Switcher" in packet["prompt"]
     assert "Bridge" in packet["prompt"]
+    assert packet["handoff"]["target_system"] == "grok"
+    assert packet["handoff"]["profile"]["purpose"] == "build_context"
+    assert packet["handoff"]["sent"] is False
 
 
 def test_grok_execute_still_does_not_run(svc: ThreadService) -> None:
