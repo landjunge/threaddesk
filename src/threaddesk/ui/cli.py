@@ -13,6 +13,8 @@ from threaddesk.core.models import Thread
 from threaddesk.services.knowledge_export import KnowledgeExportService
 from threaddesk.services.knowledge_visual_export import encode_pdf, encode_svg
 from threaddesk.services.knowledge_package import KnowledgePackageService
+from threaddesk.services.modules import ModuleRegistry, ModuleRuntime
+from threaddesk.services.workshop_module import WORKSHOP_MANIFEST, WorkshopEvent, WorkshopService
 
 Translator = Callable[..., str]
 
@@ -266,6 +268,55 @@ def cmd_gnom_job(args: argparse.Namespace) -> int:
     else:
         value = service.gnom_jobs()
     print(json.dumps(value, ensure_ascii=False, indent=2))
+    return 0
+
+
+def _module_services():
+    store = _svc().store
+    registry = ModuleRegistry(store)
+    return registry, WorkshopService(registry, ModuleRuntime(store, registry))
+
+
+def cmd_module(args: argparse.Namespace) -> int:
+    registry, workshop = _module_services()
+    if args.module_cmd == "install":
+        if args.module_id != "workshop":
+            raise ThreadDeskError(_lang(args)("cli.module.unknown", id=args.module_id))
+        workshop.install()
+        value = registry.get(args.module_id)
+    elif args.module_cmd == "enable":
+        value = registry.set_enabled(args.module_id, True, tuple(args.approve or ()))
+    elif args.module_cmd == "disable":
+        value = registry.set_enabled(args.module_id, False)
+    elif args.module_cmd == "uninstall":
+        manifest = registry.uninstall(args.module_id)
+        print(json.dumps({"id": manifest.id, "uninstalled": True, "data": manifest.uninstall}, ensure_ascii=False))
+        return 0
+    else:
+        print(json.dumps([item.to_dict() for item in registry.list()], ensure_ascii=False, indent=2))
+        return 0
+    print(json.dumps(value.to_dict(), ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_workshop(args: argparse.Namespace) -> int:
+    _, service = _module_services()
+    if args.workshop_cmd == "create":
+        result = service.create_event(WorkshopEvent(
+            id=args.event_id,
+            title=args.title,
+            audience=args.audience,
+            course_level=args.course_level,
+            schedule=args.schedule,
+            location=args.location,
+            materials=tuple(args.material or ()),
+            participant_ids=tuple(args.participant or ()),
+            task_ids=tuple(args.task or ()),
+            workflow_steps=tuple(args.step or ()),
+        ))
+        if not result.ok:
+            raise ThreadDeskError(result.error or "workshop_error")
+    print(json.dumps(result.value if result.value is not None else {"created": args.event_id}, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -631,6 +682,38 @@ def build_parser(language: str = i18n.DEFAULT_LANGUAGE,
     gjc.add_argument("path")
     gjc.set_defaults(func=cmd_gnom_job)
     gjs.add_parser("list").set_defaults(func=cmd_gnom_job)
+
+    mo = sub.add_parser("module", help=t("cli.help.module"))
+    mos = mo.add_subparsers(dest="module_cmd", required=True)
+    mos.add_parser("list").set_defaults(func=cmd_module)
+    moi = mos.add_parser("install")
+    moi.add_argument("module_id", choices=["workshop"])
+    moi.set_defaults(func=cmd_module)
+    moe = mos.add_parser("enable")
+    moe.add_argument("module_id")
+    moe.add_argument("--approve", action="append", default=[])
+    moe.set_defaults(func=cmd_module)
+    mod = mos.add_parser("disable")
+    mod.add_argument("module_id")
+    mod.set_defaults(func=cmd_module)
+    mou = mos.add_parser("uninstall")
+    mou.add_argument("module_id")
+    mou.set_defaults(func=cmd_module)
+
+    wo = sub.add_parser("workshop", help=t("cli.help.workshop"))
+    wos = wo.add_subparsers(dest="workshop_cmd", required=True)
+    woc = wos.add_parser("create")
+    woc.add_argument("event_id")
+    woc.add_argument("title")
+    woc.add_argument("--audience", required=True)
+    woc.add_argument("--course-level", required=True)
+    woc.add_argument("--schedule", required=True)
+    woc.add_argument("--location", required=True)
+    woc.add_argument("--material", action="append", default=[])
+    woc.add_argument("--participant", action="append", default=[])
+    woc.add_argument("--task", action="append", default=[])
+    woc.add_argument("--step", action="append", default=[])
+    woc.set_defaults(func=cmd_workshop)
 
     gt = sub.add_parser("gate", help=t("cli.help.gate"))
     gts = gt.add_subparsers(dest="gate_cmd")
