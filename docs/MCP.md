@@ -31,4 +31,7 @@ Handoff ohne MCP:
 ```bash
 td handoff
 # schreibt ~/.threaddesk/handoff.json
+# versionierter Vertrag mit thread_id, task_id, handoff_id, revision,
+# Zielsystem, Aufgabe, Entscheidungen, Rechtebedarf und Abnahmekriterien;
+# schreibt nur lokal und sendet/ startet nichts
 ```

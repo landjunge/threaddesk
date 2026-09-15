@@ -90,7 +90,10 @@ TOOLS = [
     {
         "name": "export_handoff",
         "description": "Write a local handoff JSON for Gnom-Hub. Does not start Gnom-Hub.",
-        "inputSchema": {"type": "object", "properties": {"id": {"type": "string"}}},
+        "inputSchema": {"type": "object", "properties": {
+            "id": {"type": "string"},
+            "target": {"type": "string", "enum": ["generic", "grok", "codex", "claude", "gnom-hub-v1"]},
+        }},
     },
     {
         "name": "export_grok",
@@ -210,7 +213,7 @@ class McpBridge:
                 )
             }
         if name == "export_handoff":
-            return self.svc.handoff(args.get("id"))
+            return self.svc.handoff(args.get("id"), str(args.get("target") or "generic"))
         if name == "export_grok":
             return self.svc.grok(
                 str(args.get("mode") or "brainstorm"),
