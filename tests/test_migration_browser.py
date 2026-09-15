@@ -173,7 +173,7 @@ def test_user_reimports_identical_bundle_without_duplicate_nodes_or_backups(
         browser.close()
 
 
-def test_user_sees_conflict_and_keyboard_cannot_bypass_import_block(
+def test_user_keeps_local_conflict_with_keyboard_then_imports(
     live_migration, tmp_path: Path,
 ):
     base_url, _, home = live_migration
@@ -191,12 +191,65 @@ def test_user_sees_conflict_and_keyboard_cannot_bypass_import_block(
         _choose_bundle(page, changed)
         _preview(page)
         expect(page.locator('[data-migration-summary]')).to_contain_text(
-            "Prüfung blockiert: conflict", timeout=15000,
+            "Noch 1 Konflikt(e) entscheiden", timeout=15000,
         )
-        page.keyboard.press("Tab")
+        comparison = page.locator('[data-conflict-source="page-project"]')
+        expect(comparison).to_contain_text("ThreadDesk-Stand")
+        expect(comparison).to_contain_text("Local change must remain visible.")
+        expect(comparison).to_contain_text("Notion-Vorschlag")
+        expect(comparison).to_contain_text("ThreadDesk changed in Notion")
+        choice = page.locator(
+            '[data-conflict-source="page-project"] [data-action="keep_local"]'
+        )
+        expect(choice).to_be_visible()
+        choice.focus()
         page.keyboard.press("Enter")
-        expect(page.locator('[data-testid="import-confirm"]')).to_be_disabled()
+        expect(choice).to_have_attribute("aria-pressed", "true")
+        expect(page.locator('[data-testid="import-confirm"]')).to_be_enabled()
+        _import(page)
+        expect(page.locator('[data-migration-summary]')).to_contain_text(
+            "Import fertig", timeout=15000,
+        )
         assert len(SQLiteStore(home).list_nodes()) == 2
+        local = next(
+            item for item in SQLiteStore(home).list_nodes() if item.kind == "project"
+        )
+        assert local.details == "Local change must remain visible."
+        browser.close()
+
+
+def test_user_takes_notion_conflict_with_mouse_then_imports(
+    live_migration, tmp_path: Path,
+):
+    base_url, _, home = live_migration
+    first = write_import_bundle(tmp_path / "first.tdbundle")
+    changed = write_import_bundle(
+        tmp_path / "changed.tdbundle", export_id="export-2",
+        project_title="ThreadDesk changed in Notion",
+    )
+    _commit_for_conflict(home, first)
+
+    with sync_playwright() as play:
+        browser = play.chromium.launch(slow_mo=USER_PACE_MS)
+        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page.goto(f"{base_url}/migration", wait_until="networkidle")
+        _choose_bundle(page, changed)
+        _preview(page)
+        choice = page.locator(
+            '[data-conflict-source="page-project"] [data-action="take_source"]'
+        )
+        expect(choice).to_be_visible(timeout=15000)
+        choice.click()
+        expect(choice).to_have_attribute("aria-pressed", "true")
+        expect(page.locator('[data-testid="import-confirm"]')).to_be_enabled()
+        _import(page)
+        expect(page.locator('[data-migration-summary]')).to_contain_text(
+            "Import fertig", timeout=15000,
+        )
+        imported = next(
+            item for item in SQLiteStore(home).list_nodes() if item.kind == "project"
+        )
+        assert imported.title == "ThreadDesk changed in Notion"
         browser.close()
 
 

@@ -231,6 +231,37 @@ class AtomicImportService:
                 for proposal in plan.proposals:
                     if proposal.diff is DiffKind.NOOP:
                         actual_ids[proposal.draft.id] = proposal.target_id or proposal.draft.id
+                        if proposal.reason == "resolved_keep_local":
+                            if proposal.target_id is None:
+                                raise ImportBlocked("resolution_target_missing")
+                            existing = self.store.get_node(proposal.target_id)
+                            self.store.save_source_record(
+                                SourceRecord(
+                                    source_system=proposal.provenance.source_system,
+                                    source_id=proposal.source_id,
+                                    target_id=existing.id,
+                                    source_hash=proposal.provenance.source_hash,
+                                    target_hash=node_target_hash(existing),
+                                    bundle_id=proposal.provenance.bundle_id,
+                                    imported_at=timestamp,
+                                    mapping_rule=proposal.provenance.mapping_rule,
+                                )
+                            )
+                            self.store.append_graph_event(
+                                GraphEvent(
+                                    id=new_id(),
+                                    name="import.conflict.kept_local",
+                                    entity_id=existing.id,
+                                    entity_type="node",
+                                    revision=existing.revision,
+                                    occurred_at=timestamp,
+                                    payload={
+                                        "batch_id": batch_id,
+                                        "source_id": proposal.source_id,
+                                        "resolution": "keep_local",
+                                    },
+                                )
+                            )
                         continue
                     if proposal.diff is DiffKind.ARCHIVE and proposal.target_id is None:
                         continue
@@ -258,7 +289,15 @@ class AtomicImportService:
                             entity_type="node",
                             revision=node.revision,
                             occurred_at=timestamp,
-                            payload={"batch_id": batch_id, "source_id": proposal.source_id},
+                            payload={
+                                "batch_id": batch_id,
+                                "source_id": proposal.source_id,
+                                **(
+                                    {"resolution": "take_source"}
+                                    if proposal.reason == "resolved_take_source"
+                                    else {}
+                                ),
+                            },
                         )
                     )
                     self.store.save_source_record(

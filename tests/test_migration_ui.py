@@ -18,11 +18,15 @@ def test_migration_page_is_a_real_bilingual_surface(monkeypatch, tmp_path):
     assert 'data-testid="migration-center"' in german.text
     assert 'data-testid="bundle-file"' in german.text
     assert 'data-testid="dry-run"' in german.text
+    assert 'data-testid="migration-conflicts"' in german.text
     assert 'data-testid="import-confirm"' in german.text
     assert 'data-testid="migration-center"' in english.text
     assert 'data-testid="bundle-file"' in english.text
     assert 'data-testid="dry-run"' in english.text
+    assert 'data-testid="migration-conflicts"' in english.text
     assert 'data-testid="import-confirm"' in english.text
+    assert "Konflikte entscheiden" in german.text
+    assert "Resolve conflicts" in english.text
 
 
 def test_bundle_selection_never_imports_and_dry_run_is_explicit():
@@ -45,3 +49,17 @@ def test_dry_run_rejects_invalid_bundle_without_writing_graph(monkeypatch, tmp_p
     assert response.status_code == 400
     assert response.json()["detail"] == "bundle_zip"
     assert list((tmp_path / "nodes").glob("*.json")) == []
+
+
+def test_confirm_rejects_non_object_resolution_payload(monkeypatch, tmp_path):
+    monkeypatch.setenv("THREADDESK_HOME", str(tmp_path))
+    monkeypatch.setenv("THREADDESK_STORAGE", "sqlite")
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/api/migration/confirm",
+        data={"bundle_sha256": "0" * 64, "resolutions_json": "[]"},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "resolution_format"

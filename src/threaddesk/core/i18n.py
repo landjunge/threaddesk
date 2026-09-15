@@ -235,6 +235,11 @@ CATALOG: dict[str, dict[str, str]] = {
     "migration.confirm": {"de": "Import bestätigen", "en": "Confirm import"},
     "migration.run_dry_run": {"de": "Vorschau prüfen", "en": "Run preview"},
     "migration.recover": {"de": "Wiederherstellungs-Kopie erstellen", "en": "Create recovery copy"},
+    "migration.conflicts": {"de": "Konflikte entscheiden", "en": "Resolve conflicts"},
+    "migration.conflicts_hint": {
+        "de": "Jeder Konflikt braucht deine ausdrückliche Entscheidung.",
+        "en": "Each conflict requires your explicit decision.",
+    },
     "browser.migration.choose_bundle": {"de": "Bitte eine .tdbundle-Datei auswählen.", "en": "Please choose a .tdbundle file."},
     "browser.migration.checking": {"de": "Prüfe Bundle…", "en": "Checking bundle…"},
     "browser.migration.blocked": {"de": "Prüfung blockiert: {blockers}", "en": "Preview blocked: {blockers}"},
@@ -244,6 +249,29 @@ CATALOG: dict[str, dict[str, str]] = {
     "browser.migration.imported": {"de": "Import fertig · Batch {batch}", "en": "Import complete · batch {batch}"},
     "browser.migration.uncertain": {"de": "Ausgang unklar · sicher erneut prüfen: {batch}", "en": "Outcome uncertain · safely check again: {batch}"},
     "browser.migration.recovered": {"de": "Wiederherstellungs-Kopie erstellt: {path}", "en": "Recovery copy created: {path}"},
+    "browser.migration.conflict": {
+        "de": "Lokal und in Notion geändert: {title}",
+        "en": "Changed locally and in Notion: {title}",
+    },
+    "browser.migration.keep_local": {"de": "Lokalen Stand behalten", "en": "Keep local version"},
+    "browser.migration.take_source": {"de": "Notion-Stand übernehmen", "en": "Use Notion version"},
+    "browser.migration.local_version": {"de": "ThreadDesk-Stand", "en": "ThreadDesk version"},
+    "browser.migration.source_version": {"de": "Notion-Vorschlag", "en": "Notion proposal"},
+    "browser.migration.field_title": {"de": "Titel", "en": "Title"},
+    "browser.migration.field_status": {"de": "Status", "en": "Status"},
+    "browser.migration.field_content": {"de": "Inhalt", "en": "Content"},
+    "browser.migration.missing_target": {
+        "de": "Der bisherige ThreadDesk-Eintrag fehlt.",
+        "en": "The previous ThreadDesk entry is missing.",
+    },
+    "browser.migration.conflicts_left": {
+        "de": "Noch {count} Konflikt(e) entscheiden.",
+        "en": "Resolve {count} more conflict(s).",
+    },
+    "browser.migration.conflicts_resolved": {
+        "de": "Alle Konflikte entschieden · {hash}",
+        "en": "All conflicts resolved · {hash}",
+    },
     # --- Browser-JavaScript ---
     "browser.copied": {"de": "Kopiert", "en": "Copied"},
     "browser.request_failed": {"de": "Anfrage fehlgeschlagen", "en": "Request failed"},

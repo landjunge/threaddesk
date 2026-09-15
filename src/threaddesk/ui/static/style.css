@@ -287,6 +287,56 @@ button:not(:disabled),
   padding-left: 1.1rem;
 }
 
+.migration-conflict {
+  margin-top: var(--space-3);
+}
+
+.migration-comparison {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-3) 0;
+}
+
+.migration-version {
+  min-width: 0;
+  padding: var(--space-3);
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.migration-version h4 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+}
+
+.migration-version dl,
+.migration-version dd {
+  margin: 0;
+}
+
+.migration-version dl > div + div {
+  margin-top: var(--space-2);
+}
+
+.migration-version dt {
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+
+.migration-version dd {
+  max-height: 12rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .migration-comparison {
+    grid-template-columns: 1fr;
+  }
+}
+
 code {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
