@@ -903,6 +903,15 @@ CATALOG: dict[str, dict[str, str]] = {
         "de": "Lokale Gnom-Jobs binden und Rückmeldungen prüfen",
         "en": "Bind local Gnom jobs and validate callbacks",
     },
+    "cli.help.module": {
+        "de": "Module installieren, freigeben und verwalten",
+        "en": "Install, approve and manage modules",
+    },
+    "cli.help.workshop": {"de": "Workshop-Modul", "en": "Workshop module"},
+    "cli.module.unknown": {
+        "de": "Unbekanntes Modul: {id}",
+        "en": "Unknown module: {id}",
+    },
     "cli.help.handoff#expert": {
         "de": "Lokales Handoff-JSON für Gnom-Hub (startet nichts)",
         "en": "Local handoff JSON for Gnom-Hub (starts nothing)",
