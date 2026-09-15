@@ -25,11 +25,12 @@ def build(
     *, handoff_id: str, handoff_revision: int, thread_id: str, task_id: str,
     worker: str, run_id: str, result: str, files: list[str] | None = None,
     pull_request: str | None = None, test_results: list[str] | None = None,
-    open_issues: list[str] | None = None,
+    open_issues: list[str] | None = None, return_id: str | None = None,
+    created_at: str | None = None,
 ) -> dict[str, Any]:
     return validate({
         "format": FORMAT,
-        "return_id": new_id(),
+        "return_id": return_id or new_id(),
         "handoff_id": handoff_id,
         "handoff_revision": handoff_revision,
         "thread_id": thread_id,
@@ -43,7 +44,7 @@ def build(
         "open_issues": open_issues or [],
         "delivery_status": "delivered",
         "review_status": "unverified",
-        "created_at": now_iso(),
+        "created_at": created_at or now_iso(),
     })
 
 

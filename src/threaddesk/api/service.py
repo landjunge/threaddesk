@@ -607,6 +607,13 @@ class ThreadService:
 
         return GnomJobRegistry(self.store).list()
 
+    def receive_gnom_callback(self, payload: dict) -> dict:
+        from threaddesk.services.gnom_callback import receive
+
+        result = receive(self.store, payload)
+        self.bus.emit("gnom.callback", {"job_id": payload.get("job_id"), "status": payload.get("status")})
+        return result
+
     def restore(self, snap_id: str) -> Thread:
         snap = self.store.get_snapshot(snap_id)
         thread = self.store.get_thread(snap.thread_id)
