@@ -598,6 +598,7 @@ class ThreadService:
             idx = int(key)
             if 1 <= idx <= len(rows):
                 return rows[idx - 1].id
+            raise NotFound(f"Thread nicht gefunden: {key}")
         try:
             self.store.get_thread(key)
             return key
