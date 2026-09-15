@@ -1,4 +1,4 @@
-"""Canonical, checksum-protected JSON exports of selected knowledge context."""
+"""Loss-minimising exports of selected knowledge context."""
 
 from __future__ import annotations
 
@@ -236,3 +236,80 @@ class KnowledgeExportService:
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise KnowledgeExportError("export_json") from exc
         return cls.verify(payload)
+
+    @classmethod
+    def encode_markdown(
+        cls,
+        payload: Mapping[str, Any],
+        *,
+        language: str = "de",
+    ) -> str:
+        """Render a verified export for people and AI tools.
+
+        JSON remains the lossless round-trip format. Markdown deliberately
+        favours readable content while retaining node and relation IDs plus
+        source provenance, so statements can still be traced back.
+        """
+        checked = cls.verify(payload)
+        english = language == "en"
+        labels = {
+            "title": "ThreadDesk knowledge export" if english else "ThreadDesk-Wissensexport",
+            "created": "Created" if english else "Erstellt",
+            "selection": "Selection" if english else "Auswahl",
+            "nodes": "Knowledge" if english else "Wissen",
+            "relations": "Relations" if english else "Beziehungen",
+            "sources": "Sources" if english else "Quellen",
+            "none": "None" if english else "Keine",
+            "private": "Private nodes excluded" if english else "Private Knoten ausgeschlossen",
+        }
+        lines = [
+            f"# {labels['title']}",
+            "",
+            f"- {labels['created']}: `{checked['generated_at']}`",
+            f"- {labels['selection']}: {checked['counts']['nodes']} / "
+            f"{checked['counts']['relations']}",
+        ]
+        excluded = checked["selection"]["excluded_private"]
+        if excluded:
+            lines.append(f"- {labels['private']}: " + ", ".join(f"`{item}`" for item in excluded))
+
+        lines.extend(["", f"# {labels['nodes']}"])
+        if not checked["nodes"]:
+            lines.extend(["", labels["none"]])
+        for node in checked["nodes"]:
+            lines.extend([
+                "",
+                f"## {node['title']}",
+                "",
+                f"- ID: `{node['id']}`",
+                f"- Typ / Type: `{node['kind']}`",
+                f"- Status: `{node['status']}`",
+                f"- Sichtbarkeit / Visibility: `{node['visibility']}`",
+                f"- Quelle / Source: `{node['source']}`",
+            ])
+            details = str(node.get("details") or "").strip()
+            if details:
+                lines.extend(["", details])
+
+        lines.extend(["", f"# {labels['relations']}"])
+        if not checked["relations"]:
+            lines.extend(["", labels["none"]])
+        else:
+            lines.extend(["", "| ID | From | Type | To |", "|---|---|---|---|"])
+            for relation in checked["relations"]:
+                lines.append(
+                    f"| `{relation['id']}` | `{relation['source_id']}` | "
+                    f"`{relation['kind']}` | `{relation['target_id']}` |"
+                )
+
+        lines.extend(["", f"# {labels['sources']}"])
+        if not checked["source_records"]:
+            lines.extend(["", labels["none"]])
+        else:
+            lines.extend(["", "| System | Source ID | Target ID | Bundle |", "|---|---|---|---|"])
+            for source in checked["source_records"]:
+                lines.append(
+                    f"| `{source['source_system']}` | `{source['source_id']}` | "
+                    f"`{source['target_id']}` | `{source['bundle_id']}` |"
+                )
+        return "\n".join(lines) + "\n"
