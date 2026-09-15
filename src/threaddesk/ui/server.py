@@ -41,7 +41,8 @@ def _last_packet(svc: ThreadService, thread: Thread | None) -> dict | None:
     if thread is None:
         return None
     files = [
-        svc.store.root / name for name in ("gnom.json", "handoff.json", "grok.json")
+        svc.store.artifact_path(name)
+        for name in ("gnom.json", "handoff.json", "grok.json")
     ]
     files = [p for p in files if p.exists()]
     files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
