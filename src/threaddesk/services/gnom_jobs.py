@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import Any, Mapping
 
 from threaddesk.core.errors import InvalidState, NotFound
@@ -10,6 +11,7 @@ from threaddesk.core.models import now_iso
 from threaddesk.services.gnom_bridge import validate_packet
 
 STATUSES = ("started", "question", "blocked", "error", "delivered", "cancelled")
+TERMINAL = ("error", "delivered", "cancelled")
 
 
 class GnomJobRegistry:
@@ -59,19 +61,35 @@ class GnomJobRegistry:
         self.store.write_json_artifact("gnom-jobs.json", state)
         return binding
 
-    def record(self, job_id: str, event_id: str, status: str, details: str = "") -> dict[str, Any]:
+    def record(
+        self, job_id: str, event_id: str, status: str, details: str = "",
+        occurred_at: str | None = None,
+    ) -> dict[str, Any]:
         if status not in STATUSES or not event_id.strip():
             raise InvalidState("gnom_job_event")
-        event = {"event_id": event_id.strip(), "status": status, "details": details, "occurred_at": now_iso()}
+        explicit_time = occurred_at is not None
+        occurred_at = occurred_at or now_iso()
+        try:
+            datetime.fromisoformat(occurred_at.replace("Z", "+00:00"))
+        except (TypeError, ValueError) as exc:
+            raise InvalidState("gnom_event_time") from exc
+        event = {"event_id": event_id.strip(), "status": status, "details": details, "occurred_at": occurred_at}
         state = self._read()
         for job in state["jobs"]:
             if job["job_id"] != job_id:
                 continue
             for existing in job["events"]:
                 if existing["event_id"] == event["event_id"]:
-                    if existing["status"] != status or existing["details"] != details:
+                    changed = existing["status"] != status or existing["details"] != details
+                    if explicit_time and existing["occurred_at"] != event["occurred_at"]:
+                        changed = True
+                    if changed:
                         raise InvalidState("gnom_event_conflict")
                     return job
+            if job["status"] in TERMINAL:
+                raise InvalidState("gnom_job_terminal")
+            if job["events"] and event["occurred_at"] < job["events"][-1]["occurred_at"]:
+                raise InvalidState("gnom_event_stale")
             job["events"].append(event); job["status"] = status
             self.store.write_json_artifact("gnom-jobs.json", state)
             return job

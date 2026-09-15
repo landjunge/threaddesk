@@ -15,7 +15,8 @@ def setup(tmp_path: Path):
 
 def callback(status="started", event_id="e1", **extra):
     return {"format": "threaddesk.gnom-callback.v1", "event_id": event_id,
-            "job_id": "job-1", "status": status, "occurred_at": "2026-09-15T19:00:00+00:00", **extra}
+            "job_id": "job-1", "handoff_revision": 1, "status": status,
+            "occurred_at": "2026-09-15T19:00:00+00:00", **extra}
 
 
 def test_status_callback_updates_only_bound_job(tmp_path: Path) -> None:
@@ -43,3 +44,16 @@ def test_callback_rejects_unknown_fields_and_missing_delivery_result(tmp_path: P
         svc.receive_gnom_callback(callback(admin=True))
     with pytest.raises(InvalidState, match="result"):
         svc.receive_gnom_callback(callback("delivered"))
+
+
+def test_stale_revision_late_event_and_delivery_after_cancel_are_rejected(tmp_path: Path) -> None:
+    svc = setup(tmp_path)
+    with pytest.raises(InvalidState, match="stale_revision"):
+        svc.receive_gnom_callback(callback(handoff_revision=2))
+    svc.receive_gnom_callback(callback("started", event_id="e1", occurred_at="2026-09-15T19:02:00+00:00"))
+    with pytest.raises(InvalidState, match="event_stale"):
+        svc.receive_gnom_callback(callback("blocked", event_id="late", occurred_at="2026-09-15T19:01:00+00:00"))
+    svc.receive_gnom_callback(callback("cancelled", event_id="cancel", occurred_at="2026-09-15T19:03:00+00:00"))
+    with pytest.raises(InvalidState, match="job_terminal"):
+        svc.receive_gnom_callback(callback("delivered", event_id="delivery", occurred_at="2026-09-15T19:04:00+00:00", result="Too late"))
+    assert svc.returns() == []

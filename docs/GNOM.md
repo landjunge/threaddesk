@@ -39,3 +39,8 @@ Der lokale Rückkanal akzeptiert ausschließlich
 `started`, `question`, `blocked`, `error`, `delivered` oder `cancelled`.
 Eine Lieferung wird nur als `delivered/unverified` in die Review-Inbox gelegt;
 sie verändert niemals direkt bestätigtes Wissen.
+
+Unterbrechungsregeln: Job- und Ereignisspeicher überleben Neustarts. Jede
+Callback-Nachricht muss zur gebundenen Handoff-Revision passen. Ereignisse mit
+älterem Zeitpunkt werden abgelehnt. Nach `error`, `delivered` oder `cancelled`
+ist der Job terminal; verspätete Folgeereignisse können ihn nicht wieder öffnen.

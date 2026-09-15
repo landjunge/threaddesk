@@ -12,7 +12,7 @@ from threaddesk.services.return_inbox import ReturnInbox
 
 FORMAT = "threaddesk.gnom-callback.v1"
 ALLOWED = {
-    "format", "event_id", "job_id", "status", "occurred_at", "details",
+    "format", "event_id", "job_id", "handoff_revision", "status", "occurred_at", "details",
     "result", "artifacts", "test_results", "open_issues", "pull_request",
 }
 
@@ -26,6 +26,8 @@ def receive(store: Any, value: Mapping[str, Any]) -> dict[str, Any]:
     for field in ("event_id", "job_id", "occurred_at"):
         if not isinstance(payload.get(field), str) or not payload[field].strip():
             raise InvalidState(f"gnom_callback_{field}")
+    if not isinstance(payload.get("handoff_revision"), int) or payload["handoff_revision"] < 1:
+        raise InvalidState("gnom_callback_revision")
     for field in ("details", "result", "pull_request"):
         if payload.get(field) is not None and not isinstance(payload[field], str):
             raise InvalidState(f"gnom_callback_{field}")
@@ -40,7 +42,12 @@ def receive(store: Any, value: Mapping[str, Any]) -> dict[str, Any]:
 
     registry = GnomJobRegistry(store)
     job = registry.get(payload["job_id"])
-    registry.record(payload["job_id"], payload["event_id"], payload["status"], payload.get("details") or "")
+    if payload["handoff_revision"] != job["handoff_revision"]:
+        raise InvalidState("gnom_callback_stale_revision")
+    registry.record(
+        payload["job_id"], payload["event_id"], payload["status"],
+        payload.get("details") or "", payload["occurred_at"],
+    )
     result = {"job": registry.get(payload["job_id"]), "return": None}
     if payload["status"] == "delivered":
         returned = build_return(
