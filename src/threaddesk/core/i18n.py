@@ -933,8 +933,8 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "cli.help.dash_open": {"de": "HTML lokal öffnen", "en": "Open the HTML locally"},
     "cli.help.graph": {
-        "de": "Knoten und Verbindungen als JSON ausgeben",
-        "en": "Print nodes and relations as JSON",
+        "de": "Wissen anzeigen oder als JSON/Markdown exportieren",
+        "en": "Show knowledge or export it as JSON/Markdown",
     },
     "cli.help.serve": {
         "de": "Lokale UI auf localhost (führt nichts aus)",

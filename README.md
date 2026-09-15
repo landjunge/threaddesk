@@ -95,6 +95,8 @@ ThreadDesk ist eine lokale Control-Layer vor Gnom-Hub-V1. Die Grenze ist Teil de
 | Handoff schreiben | td handoff |
 | Lokale Oberfläche | td serve |
 | MCP-Server | td mcp |
+| Wissen für Menschen/KIs exportieren | td graph --export --format markdown |
+| Vollständige JSON-Rundreise | td graph --export --format json |
 | Ausführung sperren | td gate freeze |
 | Sprache umschalten | td --lang en list |
 

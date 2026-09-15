@@ -116,3 +116,37 @@ def test_cli_can_emit_verified_canonical_export(monkeypatch, tmp_path: Path, cap
     decoded = KnowledgeExportService.decode(capsys.readouterr().out)
     assert decoded["selection"]["included"] == ["project", "task"]
     assert [relation["id"] for relation in decoded["relations"]] == ["included"]
+
+
+def test_markdown_export_is_readable_traceable_and_private_by_default(tmp_path: Path) -> None:
+    service = KnowledgeExportService(populated_store(tmp_path))
+    payload = service.build(generated_at="2026-09-15T11:00:00+00:00")
+
+    rendered = service.encode_markdown(payload)
+
+    assert rendered.startswith("# ThreadDesk-Wissensexport\n")
+    assert "## Project" in rendered
+    assert "## Task" in rendered
+    assert "`project` | `contains` | `task`" in rendered
+    assert "`notion` | `source-project` | `project` | `bundle`" in rendered
+    assert "Private nodes excluded: `private`" not in rendered
+    assert "Private Knoten ausgeschlossen: `private`" in rendered
+    assert "## Private" not in rendered
+
+
+def test_cli_can_emit_english_markdown_selection(monkeypatch, tmp_path: Path, capsys) -> None:
+    from threaddesk.ui import cli
+
+    store = populated_store(tmp_path)
+    monkeypatch.setattr(cli, "_svc", lambda: type("Service", (), {"store": store})())
+
+    assert cli.main([
+        "--lang", "en", "graph", "--export", "--format", "markdown",
+        "--ids", "project", "task",
+    ]) == 0
+
+    rendered = capsys.readouterr().out
+    assert rendered.startswith("# ThreadDesk knowledge export\n")
+    assert "## Project" in rendered
+    assert "## Task" in rendered
+    assert "## Private" not in rendered

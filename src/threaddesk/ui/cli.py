@@ -413,7 +413,10 @@ def cmd_graph(args: argparse.Namespace) -> int:
             node_ids=args.ids or None,
             include_private=args.include_private,
         )
-        print(service.encode(payload), end="")
+        if args.format == "markdown":
+            print(service.encode_markdown(payload, language=args.lang), end="")
+        else:
+            print(service.encode(payload), end="")
         return 0
     payload = _svc().graph(kind=args.kind, status=args.status)
     print(json.dumps(payload, ensure_ascii=False, indent=2))
@@ -575,6 +578,7 @@ def build_parser(language: str = i18n.DEFAULT_LANGUAGE,
     gr.add_argument("--kind", default=None)
     gr.add_argument("--status", default=None)
     gr.add_argument("--export", action="store_true")
+    gr.add_argument("--format", choices=("json", "markdown"), default="json")
     gr.add_argument("--ids", nargs="*", default=None)
     gr.add_argument("--include-private", action="store_true")
     gr.set_defaults(func=cmd_graph)
