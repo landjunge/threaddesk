@@ -191,7 +191,7 @@ def test_user_keeps_local_conflict_with_keyboard_then_imports(
         _choose_bundle(page, changed)
         _preview(page)
         expect(page.locator('[data-migration-summary]')).to_contain_text(
-            "Prüfung blockiert: conflict", timeout=15000,
+            "Noch 1 Konflikt(e) entscheiden", timeout=15000,
         )
         comparison = page.locator('[data-conflict-source="page-project"]')
         expect(comparison).to_contain_text("ThreadDesk-Stand")
