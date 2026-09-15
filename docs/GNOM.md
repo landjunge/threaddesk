@@ -28,3 +28,8 @@ Gnom-Pakete verwenden `threaddesk.gnom-handoff.v1`. Sie tragen den
 versionierten Handoff-Vertrag, `preview_required=true` und beginnen als
 `pending_user_confirmation`. ThreadDesk markiert sie weder als gesendet noch
 als ausgeführt. Gnom-Hub muss den Kontext vor jeder Übernahme sichtbar zeigen.
+
+Nach der sichtbaren Übernahme bindet ThreadDesk eine Gnom-`job_id` dauerhaft
+an `thread_id`, `task_id`, `handoff_id` und Handoff-Revision. Statusereignisse
+haben eine eigene `event_id`; identische Wiederholungen sind No-ops, veränderte
+Duplikate werden abgelehnt.
