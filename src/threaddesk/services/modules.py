@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 import re
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 from threaddesk.core.errors import InvalidState, NotFound
 from threaddesk.storage.protocols import ArtifactStore
@@ -197,3 +197,68 @@ class ModuleRegistry:
             raise NotFound(f"Modul nicht gefunden: {module_id}")
         self._save(state)
         return ModuleManifest.from_dict(value["manifest"])
+
+
+@dataclass(frozen=True)
+class ModuleRunResult:
+    ok: bool
+    value: Any = None
+    error: str | None = None
+
+
+class ModuleContext:
+    """Narrow facade: modules never receive the application store itself."""
+
+    def __init__(self, store: Any, installed: InstalledModule) -> None:
+        self.__store = store
+        self.module_id = installed.manifest.id
+        self.manifest = installed.manifest
+
+    def read_nodes(self, kind: str) -> list[dict[str, Any]]:
+        scope = f"knowledge:{kind}"
+        if scope not in self.manifest.read_scopes and "knowledge:*" not in self.manifest.read_scopes:
+            raise InvalidState("module_read_scope")
+        return [node.to_dict() for node in self.__store.list_nodes() if node.kind == kind]
+
+    def read_own_data(self) -> dict[str, Any]:
+        path = self.__store.artifact_path(f"module-{self.module_id}-data.json")
+        if not path.exists():
+            return {"schema_version": 1, "records": {}}
+        import json
+
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if value.get("schema_version") != 1 or not isinstance(value.get("records"), dict):
+            raise InvalidState("module_data")
+        return value
+
+    def write_own_record(self, action: str, record_id: str, value: Mapping[str, Any]) -> None:
+        if action not in self.manifest.write_actions:
+            raise InvalidState("module_write_action")
+        if not MODULE_ID.fullmatch(record_id):
+            raise InvalidState("module_record_id")
+        state = self.read_own_data()
+        state["records"][record_id] = dict(value)
+        self.__store.write_json_artifact(f"module-{self.module_id}-data.json", state)
+
+
+class ModuleRuntime:
+    def __init__(self, store: Any, registry: ModuleRegistry) -> None:
+        self.store = store
+        self.registry = registry
+
+    def run(
+        self,
+        module_id: str,
+        action: str,
+        handler: Callable[[ModuleContext], Any],
+    ) -> ModuleRunResult:
+        try:
+            installed = self.registry.get(module_id)
+            if not installed.enabled:
+                raise InvalidState("module_disabled")
+            if action not in installed.manifest.write_actions:
+                raise InvalidState("module_write_action")
+            value = handler(ModuleContext(self.store, installed))
+            return ModuleRunResult(ok=True, value=value)
+        except Exception as exc:  # isolation boundary: a module cannot crash the core
+            return ModuleRunResult(ok=False, error=str(exc) or exc.__class__.__name__)
