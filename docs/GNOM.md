@@ -44,3 +44,8 @@ Unterbrechungsregeln: Job- und Ereignisspeicher überleben Neustarts. Jede
 Callback-Nachricht muss zur gebundenen Handoff-Revision passen. Ereignisse mit
 älterem Zeitpunkt werden abgelehnt. Nach `error`, `delivered` oder `cancelled`
 ist der Job terminal; verspätete Folgeereignisse können ihn nicht wieder öffnen.
+
+Dateiweg und MCP verwenden dieselben Verträge und Speicher. Lokal stehen
+`td gnom-job bind`, `td gnom-job callback` und `td gnom-job list` bereit; MCP
+spiegelt sie als `bind_gnom_job`, `receive_gnom_callback` und
+`list_gnom_jobs`. Keiner dieser Wege führt automatisch Folgearbeit aus.

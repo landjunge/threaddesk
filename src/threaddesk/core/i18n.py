@@ -899,6 +899,10 @@ CATALOG: dict[str, dict[str, str]] = {
         "de": "Lokale Rückgaben prüfen und bewusst entscheiden",
         "en": "Review local returns and decide explicitly",
     },
+    "cli.help.gnom_job": {
+        "de": "Lokale Gnom-Jobs binden und Rückmeldungen prüfen",
+        "en": "Bind local Gnom jobs and validate callbacks",
+    },
     "cli.help.handoff#expert": {
         "de": "Lokales Handoff-JSON für Gnom-Hub (startet nichts)",
         "en": "Local handoff JSON for Gnom-Hub (starts nothing)",

@@ -139,6 +139,23 @@ TOOLS = [
         },
     },
     {
+        "name": "bind_gnom_job",
+        "description": "Bind a confirmed Gnom job to a versioned handoff. Does not execute it.",
+        "inputSchema": {"type": "object", "properties": {
+            "job_id": {"type": "string"}, "packet": {"type": "object"},
+        }, "required": ["job_id"]},
+    },
+    {
+        "name": "receive_gnom_callback",
+        "description": "Validate one Gnom callback and store delivery as unverified.",
+        "inputSchema": {"type": "object", "properties": {"payload": {"type": "object"}}, "required": ["payload"]},
+    },
+    {
+        "name": "list_gnom_jobs",
+        "description": "List local Gnom job bindings and status events.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
         "name": "check_gate",
         "description": "Read local loop/day gate. Cannot freeze or change policy.",
         "inputSchema": {
@@ -254,6 +271,13 @@ class McpBridge:
                 str(args.get("variant") or "detailed"),
                 args.get("id"),
             )
+        if name == "bind_gnom_job":
+            packet = args.get("packet")
+            return self.svc.bind_gnom_job(str(args.get("job_id") or ""), dict(packet) if packet else None)
+        if name == "receive_gnom_callback":
+            return self.svc.receive_gnom_callback(dict(args.get("payload") or {}))
+        if name == "list_gnom_jobs":
+            return self.svc.gnom_jobs()
         if name == "check_gate":
             if args.get("action") or args.get("id"):
                 return self.svc.gate_check(str(args.get("action") or "execute"), args.get("id"))
