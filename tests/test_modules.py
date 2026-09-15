@@ -3,7 +3,8 @@ import json
 import pytest
 
 from threaddesk.core.errors import InvalidState, NotFound
-from threaddesk.services.modules import ModuleManifest, ModuleRegistry
+from threaddesk.core.models import KnowledgeNode
+from threaddesk.services.modules import ModuleManifest, ModuleRegistry, ModuleRuntime
 from threaddesk.storage.json_store import JsonStore
 
 
@@ -66,3 +67,54 @@ def test_invalid_module_ids_are_rejected_without_writing(tmp_path, bad_id):
     with pytest.raises(InvalidState, match="module_id"):
         registry.install(manifest(id=bad_id))
     assert not (tmp_path / "modules.json").exists()
+
+
+def enabled_runtime(tmp_path):
+    store = JsonStore(tmp_path)
+    registry = ModuleRegistry(store)
+    registry.install(manifest())
+    registry.set_enabled("workshop", True, ("knowledge:link",))
+    return store, ModuleRuntime(store, registry)
+
+
+def test_runtime_only_exposes_declared_read_scopes_and_own_data(tmp_path):
+    store, runtime = enabled_runtime(tmp_path)
+    store.save_node(KnowledgeNode(id="p1", kind="project", title="Allowed"))
+    store.save_node(KnowledgeNode(id="t1", kind="task", title="Foreign"))
+
+    def handler(context):
+        projects = context.read_nodes("project")
+        context.write_own_record("workshop:create", "event-1", {"title": "Planning"})
+        return projects
+
+    result = runtime.run("workshop", "workshop:create", handler)
+    assert result.ok is True
+    assert [item["id"] for item in result.value] == ["p1"]
+    assert store.get_node("t1").title == "Foreign"
+
+
+def test_runtime_denies_undeclared_scope_and_action_without_writing(tmp_path):
+    _, runtime = enabled_runtime(tmp_path)
+    denied_read = runtime.run("workshop", "workshop:create", lambda context: context.read_nodes("task"))
+    denied_write = runtime.run("workshop", "admin:delete", lambda context: None)
+    assert denied_read.ok is False and denied_read.error == "module_read_scope"
+    assert denied_write.ok is False and denied_write.error == "module_write_action"
+
+
+def test_module_failure_is_contained_and_core_remains_usable(tmp_path):
+    store, runtime = enabled_runtime(tmp_path)
+    result = runtime.run("workshop", "workshop:create", lambda context: 1 / 0)
+    store.save_node(KnowledgeNode(id="p1", kind="project", title="Still alive"))
+    assert result.ok is False
+    assert result.error == "division by zero"
+    assert store.get_node("p1").title == "Still alive"
+
+
+def test_disabled_module_never_calls_handler(tmp_path):
+    store = JsonStore(tmp_path)
+    registry = ModuleRegistry(store)
+    registry.install(manifest())
+    called = []
+    result = ModuleRuntime(store, registry).run("workshop", "workshop:create", lambda context: called.append(True))
+    assert result.ok is False and result.error == "module_disabled"
+    assert called == []
