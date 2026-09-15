@@ -33,3 +33,9 @@ Nach der sichtbaren Übernahme bindet ThreadDesk eine Gnom-`job_id` dauerhaft
 an `thread_id`, `task_id`, `handoff_id` und Handoff-Revision. Statusereignisse
 haben eine eigene `event_id`; identische Wiederholungen sind No-ops, veränderte
 Duplikate werden abgelehnt.
+
+Der lokale Rückkanal akzeptiert ausschließlich
+`threaddesk.gnom-callback.v1` mit bekannten Feldern und den Zuständen
+`started`, `question`, `blocked`, `error`, `delivered` oder `cancelled`.
+Eine Lieferung wird nur als `delivered/unverified` in die Review-Inbox gelegt;
+sie verändert niemals direkt bestätigtes Wissen.

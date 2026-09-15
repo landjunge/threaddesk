@@ -28,6 +28,12 @@ class GnomJobRegistry:
     def list(self) -> list[dict[str, Any]]:
         return list(self._read()["jobs"])
 
+    def get(self, job_id: str) -> dict[str, Any]:
+        for job in self._read()["jobs"]:
+            if job["job_id"] == job_id:
+                return job
+        raise NotFound(f"Gnom-Job nicht gefunden: {job_id}")
+
     def bind(self, job_id: str, packet: Mapping[str, Any]) -> dict[str, Any]:
         job_id = job_id.strip()
         if not job_id:
