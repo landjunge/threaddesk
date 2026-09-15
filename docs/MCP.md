@@ -39,4 +39,9 @@ Zielprofile: `grok` (Baukontext), `codex` (Prüfen/Bauen), `claude`
 (begrenzte Prüfung), `gnom-hub-v1` (bestätigter lokaler Auftrag) und `generic`.
 Grok- und Gnom-Pakete betten denselben Vertrag ein; Zieladapter dürfen seine
 Rechteangaben nicht eigenständig erweitern.
+
+Rückgaben folgen `threaddesk.return.v1` und enthalten Bearbeiter, Lauf,
+Ergebnis, Dateien/PR, echte Testergebnisse und offene Probleme. Eine externe
+Rückgabe kommt immer als `delivered/unverified`; sie kann sich niemals selbst
+als geprüft oder angenommen markieren.
 ```
