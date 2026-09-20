@@ -531,6 +531,46 @@ def cmd_graph(args: argparse.Namespace) -> int:
     return 0
 
 
+def _load_authority_events(path: Path) -> list[dict]:
+    raw = path.read_text(encoding="utf-8")
+    stripped = raw.lstrip()
+    if stripped.startswith("["):
+        data = json.loads(raw)
+        if not isinstance(data, list):
+            raise ValueError("authority_list")
+        return data
+    if stripped.startswith("{") and '"events"' in stripped[:400]:
+        data = json.loads(raw)
+        events = data.get("events")
+        if not isinstance(events, list):
+            raise ValueError("authority_events")
+        return events
+    events = []
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        events.append(json.loads(line))
+    return events
+
+
+def cmd_authority(args: argparse.Namespace) -> int:
+    """Import a Gnom JSON/JSONL envelope. Does not write the knowledge SQLite."""
+    from threaddesk.graph import AuthorityGraph
+
+    events = _load_authority_events(Path(args.path))
+    graph = AuthorityGraph()
+    added = graph.ingest(events)
+    snap = graph.snapshot().to_dict()
+    snap["imported"] = added
+    text = json.dumps(snap, ensure_ascii=False, indent=2)
+    if args.output:
+        Path(args.output).write_text(text + "\n", encoding="utf-8")
+    else:
+        print(text)
+    return 0
+
+
 def build_parser(language: str = i18n.DEFAULT_LANGUAGE,
                  register: str = i18n.DEFAULT_REGISTER) -> argparse.ArgumentParser:
     t = _translator(language, register)
@@ -748,6 +788,13 @@ def build_parser(language: str = i18n.DEFAULT_LANGUAGE,
     gr.add_argument("--ids", nargs="*", default=None)
     gr.add_argument("--include-private", action="store_true")
     gr.set_defaults(func=cmd_graph)
+
+    au = sub.add_parser("authority", help=t("cli.help.authority"))
+    aus = au.add_subparsers(dest="authority_cmd", required=True)
+    aui = aus.add_parser("import", help=t("cli.help.authority_import"))
+    aui.add_argument("path")
+    aui.add_argument("--output", default=None)
+    aui.set_defaults(func=cmd_authority)
 
     se = sub.add_parser("serve", aliases=["ui"], help=t("cli.help.serve"))
     se.add_argument("--host", default="127.0.0.1")

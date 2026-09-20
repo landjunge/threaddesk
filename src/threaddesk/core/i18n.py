@@ -953,6 +953,14 @@ CATALOG: dict[str, dict[str, str]] = {
         "de": "Wissen anzeigen oder als JSON/Markdown/CSV/XLSX exportieren",
         "en": "Show knowledge or export it as JSON/Markdown/CSV/XLSX",
     },
+    "cli.help.authority": {
+        "de": "Authority-Events importieren (kein Wissen-SQLite)",
+        "en": "Import authority events (not the knowledge SQLite)",
+    },
+    "cli.help.authority_import": {
+        "de": "JSON/JSONL-Envelope einlesen und Graph-Snapshot schreiben",
+        "en": "Read a JSON/JSONL envelope and write a graph snapshot",
+    },
     "cli.graph.binary_output": {
         "de": "{format} braucht einen Dateinamen, zum Beispiel --output wissen.{extension}",
         "en": "{format} needs a file name, for example --output knowledge.{extension}",
