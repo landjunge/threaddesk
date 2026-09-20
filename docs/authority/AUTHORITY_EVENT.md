@@ -38,4 +38,4 @@ Mensch, Agent/Worker, Workflow/Lauf, Aufgabe, Tool, Ressource, Projekt, Capabili
 
 Dasselbe Fixture kann ohne Produkt-UI von Hand in einen Graphen übersetzt werden. Tests in `tests/test_authority_event.py`.
 
-G1 (Renderer) kommt danach. G2 (Gnom als Live-Producer) erst nach G1.
+G1 Graph-Core: Modul `threaddesk.graph` (ingest, query, incident). Kein Sigma.js — der bestehende Knowledge-Map-Renderer bleibt getrennt. G2 (Gnom als Live-Producer) erst danach.
