@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://threaddesk.netzwerkpunkt.de/authority-event-v1.schema.json",
+  "title": "Authority Event Envelope v1",
+  "description": "ThreadDesk G0. Shared event between Gnom-Hub-V1, Agent Authority Lab, TollGate, 4AllPass, ThreadDesk. No secrets, prompts, or credentials.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_id",
+    "timestamp",
+    "trace_id",
+    "span_id",
+    "source_tool",
+    "event_type",
+    "event_hash"
+  ],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "event_id": { "type": "string", "minLength": 8 },
+    "timestamp": { "type": "string", "minLength": 10 },
+    "trace_id": { "type": "string", "minLength": 8 },
+    "span_id": { "type": "string", "minLength": 4 },
+    "parent_span_id": { "type": ["string", "null"] },
+    "workflow_id": { "type": ["string", "null"] },
+    "project_id": { "type": ["string", "null"] },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "agent_id": { "type": "string" },
+        "workload_id": { "type": "string" },
+        "role": { "type": "string" }
+      }
+    },
+    "source_tool": {
+      "type": "string",
+      "enum": [
+        "gnom-hub-v1",
+        "agent-authority-lab",
+        "tollgate",
+        "4allpass",
+        "threaddesk"
+      ]
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "work.started",
+        "agent.invoked",
+        "delegation.created",
+        "tool.intent",
+        "tool.result",
+        "work.finished",
+        "authority.requested",
+        "authority.allowed",
+        "authority.denied",
+        "authority.freeze",
+        "authority.unfreeze",
+        "budget.checked",
+        "budget.charged",
+        "loop.detected",
+        "request.blocked",
+        "consumer.frozen",
+        "capability.granted",
+        "capability.denied",
+        "capability.revoked",
+        "graph.imported",
+        "incident.opened"
+      ]
+    },
+    "action": { "type": "string" },
+    "resource": { "type": "string" },
+    "capability_id": { "type": ["string", "null"] },
+    "decision": {
+      "type": ["string", "null"],
+      "enum": ["ALLOW", "DENY", "FREEZE", null]
+    },
+    "reason_code": { "type": ["string", "null"] },
+    "budget_ref": { "type": ["string", "null"] },
+    "data_labels": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "result_ref": { "type": ["string", "null"] },
+    "previous_event_hash": { "type": ["string", "null"] },
+    "event_hash": { "type": "string", "minLength": 16 }
+  }
+}
