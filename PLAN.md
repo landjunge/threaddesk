@@ -64,6 +64,7 @@ core / storage / ui / services / api
 | 4d | Tollgate-Wrap (lokales Gate, kein Produkt-Import) | fertig |
 | 4e | Dashboard (nur Ansicht, HTML + Terminal) | fertig |
 | 5a | Gnom-Hub-Bridge → gnom-hub-v1 (Send/Execute, kein POST) | fertig |
+| 6a | Authority Event Envelope v1 (G0 Schema, keine Map) | in Arbeit |
 
 ## Sicherheit (von Anfang an)
 
