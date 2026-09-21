@@ -96,7 +96,7 @@ def test_cli_and_mcp_publish_the_current_command_and_tool_contracts(tmp_path: Pa
     assert tuple(commands) == (
         "new", "list", "switch", "current", "note", "describe", "status",
         "files", "rename", "archive", "unarchive", "delete", "snap", "prompt",
-        "handoff", "inbox", "mcp", "grok", "gnom", "gnom-job", "module", "workshop", "gate", "dash", "graph", "serve", "ui",
+        "handoff", "inbox", "mcp", "grok", "gnom", "gnom-job", "module", "workshop", "gate", "dash", "graph", "authority", "serve", "ui",
     )
 
     bridge = McpBridge(ThreadService(JsonStore(tmp_path)))

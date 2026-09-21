@@ -65,7 +65,8 @@ core / storage / ui / services / api
 | 4e | Dashboard (nur Ansicht, HTML + Terminal) | fertig |
 | 5a | Gnom-Hub-Bridge → gnom-hub-v1 (Send/Execute, kein POST) | fertig |
 | 6a | Authority Event Envelope v1 (G0 Schema, keine Map) | fertig |
-| 6b | Authority Graph Core (G1 ingest/query/incident) | in Arbeit |
+| 6b | Authority Graph Core (G1 ingest/query/incident) | fertig |
+| 6c | Gnom as live producer (G2 file import, no TD DB write) | in Arbeit |
 
 ## Sicherheit (von Anfang an)
 
