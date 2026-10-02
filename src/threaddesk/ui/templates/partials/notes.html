@@ -1,4 +1,5 @@
-<section id="notes" class="block" x-data="notesMic()">
+<section id="notes" class="block desk-notes" x-data="notesMic()">
+  {% include "partials/whiteboard.html" %}
   <h3>{{ t("notes.title") }}</h3>
   <p class="muted">{{ t("notes.hint") }}</p>
   <form
@@ -7,7 +8,7 @@
     hx-target="#workspace"
     hx-swap="innerHTML"
   >
-    <textarea name="text" rows="8" placeholder="{{ t('notes.placeholder') }}">{{ current.context.notes }}</textarea>
+    <textarea name="text" rows="4" placeholder="{{ t('notes.placeholder') }}">{{ current.context.notes }}</textarea>
     <p class="mic-interim" x-show="interim" x-cloak x-text="interim"></p>
     <p class="banner-error" x-show="err" x-cloak x-text="err"></p>
     <div class="row-actions">

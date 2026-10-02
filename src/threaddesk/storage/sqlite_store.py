@@ -8,8 +8,16 @@ from pathlib import Path
 import sqlite3
 from typing import Any, Iterator, Mapping
 
-from threaddesk.core.errors import NotFound
-from threaddesk.core.models import GraphEvent, KnowledgeNode, Relation, Snapshot, Thread
+from threaddesk.core.errors import InvalidState, NotFound
+from threaddesk.core.models import (
+    GraphEvent,
+    KnowledgeNode,
+    Relation,
+    Snapshot,
+    Thread,
+    WhiteboardEntry,
+    plan_whiteboard_append,
+)
 from threaddesk.core.provenance import SourceRecord
 from threaddesk.storage.schema import FTS_SQL, MIGRATIONS, SCHEMA_SQL, SCHEMA_VERSION
 
@@ -120,10 +128,18 @@ class SQLiteStore:
         return Thread.from_dict(self._load(row))
 
     def save_thread(self, thread: Thread) -> None:
-        self.connection.execute(
-            "INSERT OR REPLACE INTO threads(id,status,updated_at,payload) VALUES (?,?,?,?)",
-            (thread.id, thread.status, thread.updated_at, self._dump(thread.to_dict())),
+        # UPDATE keeps child rows. INSERT OR REPLACE would delete them through
+        # ON DELETE CASCADE, including snapshots and whiteboard entries.
+        payload = self._dump(thread.to_dict())
+        updated = self.connection.execute(
+            "UPDATE threads SET status=?, updated_at=?, payload=? WHERE id=?",
+            (thread.status, thread.updated_at, payload, thread.id),
         )
+        if not updated.rowcount:
+            self.connection.execute(
+                "INSERT INTO threads(id,status,updated_at,payload) VALUES (?,?,?,?)",
+                (thread.id, thread.status, thread.updated_at, payload),
+            )
         self._commit()
 
     def delete_thread(self, thread_id: str) -> None:
@@ -160,6 +176,45 @@ class SQLiteStore:
         items = [Snapshot.from_dict(self._load(row)) for row in rows]
         items.sort(key=lambda item: item.created_at, reverse=True)
         return items
+
+    def list_whiteboard(self, thread_id: str) -> list[WhiteboardEntry]:
+        self.get_thread(thread_id)
+        rows = self.connection.execute(
+            "SELECT payload FROM whiteboard_entries WHERE thread_id = ?",
+            (thread_id,),
+        ).fetchall()
+        items = [WhiteboardEntry.from_dict(self._load(row)) for row in rows]
+        items.sort(key=lambda item: (item.created_at, item.ordinal, item.id))
+        return items
+
+    def append_whiteboard_entry(self, entry: WhiteboardEntry) -> tuple[WhiteboardEntry, bool]:
+        """Insert one row. An existing contribution is never updated."""
+        self.get_thread(entry.thread_id)
+        stored, duplicate = plan_whiteboard_append(self.list_whiteboard(entry.thread_id), entry)
+        if duplicate:
+            return stored, True
+        try:
+            self.connection.execute(
+                """INSERT INTO whiteboard_entries(
+                       id, thread_id, created_at, ordinal, external_key, payload
+                   ) VALUES (?,?,?,?,?,?)""",
+                (
+                    stored.id,
+                    stored.thread_id,
+                    stored.created_at,
+                    stored.ordinal,
+                    stored.external_key,
+                    self._dump(stored.to_dict()),
+                ),
+            )
+        except sqlite3.IntegrityError as exc:
+            existing = self.list_whiteboard(entry.thread_id)
+            kept, again = plan_whiteboard_append(existing, entry)
+            if again and kept.same_body(entry):
+                return kept, True
+            raise InvalidState("whiteboard_conflict") from exc
+        self._commit()
+        return stored, False
 
     def save_node(self, node: KnowledgeNode) -> None:
         self.connection.execute(

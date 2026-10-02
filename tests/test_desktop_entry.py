@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 import socket
+import sys
 
 
 def load_desktop_entry():
@@ -35,3 +36,16 @@ def test_wait_until_ready_accepts_success(monkeypatch) -> None:
 
     monkeypatch.setattr(desktop, "urlopen", lambda *_args, **_kwargs: Response())
     desktop.wait_until_ready("http://127.0.0.1:12345", timeout=0.01)
+
+
+def test_self_test_without_console_streams_preserves_user_home(monkeypatch, tmp_path):
+    desktop = load_desktop_entry()
+    untouched = tmp_path / "synthetic-existing-user-setting"
+    monkeypatch.setenv("THREADDESK_HOME", str(untouched))
+    with monkeypatch.context() as console:
+        console.setattr(sys, "stdin", None)
+        console.setattr(sys, "stdout", None)
+        console.setattr(sys, "stderr", None)
+        result = desktop.self_test()
+    assert result == 0
+    assert not untouched.exists()

@@ -7,6 +7,8 @@ import re
 from typing import Any, Callable, Mapping
 
 from threaddesk.core.errors import InvalidState, NotFound
+from threaddesk.services.whiteboard import append as append_whiteboard_entry
+from threaddesk.services.whiteboard import list_entries
 from threaddesk.storage.protocols import ArtifactStore
 
 
@@ -219,6 +221,31 @@ class ModuleContext:
         if scope not in self.manifest.read_scopes and "knowledge:*" not in self.manifest.read_scopes:
             raise InvalidState("module_read_scope")
         return [node.to_dict() for node in self.__store.list_nodes() if node.kind == kind]
+
+    def read_thread(self, thread_id: str) -> dict[str, Any]:
+        """Untrusted thread text. No files, no store, no filesystem path."""
+        if "thread:read" not in self.manifest.read_scopes:
+            raise InvalidState("module_read_scope")
+        thread = self.__store.get_thread(thread_id)
+        return {
+            "id": thread.id,
+            "title": thread.title,
+            "status": thread.status,
+            "description": thread.description,
+            "notes": thread.context.notes,
+        }
+
+    def read_whiteboard(self, thread_id: str) -> list[dict[str, Any]]:
+        if "whiteboard:read" not in self.manifest.read_scopes:
+            raise InvalidState("module_read_scope")
+        return [entry.to_dict() for entry in list_entries(self.__store, thread_id)]
+
+    def append_whiteboard(self, thread_id: str, **fields: Any) -> dict[str, Any]:
+        """Append one entry. Modules cannot update or delete history."""
+        if "whiteboard:append" not in self.manifest.write_actions:
+            raise InvalidState("module_write_action")
+        entry, duplicate = append_whiteboard_entry(self.__store, thread_id, **fields)
+        return {"entry": entry.to_dict(), "duplicate": duplicate}
 
     def read_own_data(self) -> dict[str, Any]:
         path = self.__store.artifact_path(f"module-{self.module_id}-data.json")

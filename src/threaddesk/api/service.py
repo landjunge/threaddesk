@@ -35,6 +35,8 @@ from threaddesk.services.knowledge import KnowledgeReader
 from threaddesk.services.prompt_generator import generate as generate_prompt
 from threaddesk.services.threads import ThreadReader
 from threaddesk.services.tollgate import LocalGate
+from threaddesk.services import whiteboard as whiteboard_log
+from threaddesk.services.actors import ActorRegistry
 from threaddesk.storage.json_store import JsonStore
 from threaddesk.storage.protocols import Store
 
@@ -501,13 +503,67 @@ class ThreadService:
         self.bus.emit("dashboard.written", {"path": str(json_path)})
         return board
 
+    def actors(self) -> list[dict]:
+        return ActorRegistry(self.store).list()
+
+    def instance_id(self) -> str:
+        return ActorRegistry(self.store).instance_id()
+
+    def register_human(self, name: str, color_token: str) -> dict:
+        return ActorRegistry(self.store).add_human(name, color_token)
+
+    def register_agent(
+        self,
+        name: str,
+        person_id: str,
+        agent_type: str,
+        model: str | None = None,
+        provider: str | None = None,
+    ) -> dict:
+        return ActorRegistry(self.store).add_agent(
+            name, person_id, agent_type, model=model, provider=provider
+        )
+
+    def rename_actor(self, actor_id: str, name: str) -> dict:
+        return ActorRegistry(self.store).rename(actor_id, name)
+
+    def recolor_actor(self, actor_id: str, color_token: str) -> dict:
+        return ActorRegistry(self.store).recolor(actor_id, color_token)
+
+    def actor_appearance(self, actor_id: str) -> dict:
+        return ActorRegistry(self.store).appearance(actor_id)
+
+    def whiteboard(self, key: str) -> list:
+        thread = self.get(key)
+        return whiteboard_log.list_entries(self.store, thread.id)
+
+    def append_whiteboard(self, key: str, **fields) -> dict:
+        thread = self.get(key)
+        entry, duplicate = whiteboard_log.append(self.store, thread.id, **fields)
+        if not duplicate:
+            thread.updated_at = now_iso()
+            self.store.save_thread(thread)
+            self.bus.emit(
+                "whiteboard.appended",
+                {"thread_id": thread.id, "id": entry.id, "duplicate": False},
+            )
+        return {"entry": entry.to_dict(), "duplicate": duplicate}
+
+    def working_stand(self, key: str) -> dict:
+        thread = self.get(key)
+        return whiteboard_log.stand(self.store, thread)
+
     def handoff(self, key: str | None = None, target_system: str = "generic") -> dict:
         """Write a local payload for Gnom-Hub. Does not start anything."""
         thread = self._target(key)
         self._admit("handoff", thread.id)
         from threaddesk.services.handoff_contract import build
 
-        payload = build(thread, target_system=target_system)
+        payload = build(
+            thread,
+            target_system=target_system,
+            whiteboard=whiteboard_log.history_for_handoff(self.whiteboard(thread.id)),
+        )
         path = self.store.write_json_artifact("handoff.json", payload)
         self._record("handoff", thread.id)
         self.bus.emit("handoff.written", {"thread_id": thread.id, "path": str(path)})
@@ -518,6 +574,9 @@ class ThreadService:
         from threaddesk.services.return_inbox import ReturnInbox
 
         item = ReturnInbox(self.store).receive(payload)
+        board = whiteboard_log.append_from_return(self.store, item["return"])
+        if board is not None:
+            item = {**item, "whiteboard": board}
         self.bus.emit("return.received", {"return_id": payload.get("return_id"), "duplicate": item["duplicate"]})
         return item
 
@@ -530,6 +589,9 @@ class ThreadService:
         from threaddesk.services.return_inbox import ReturnInbox
 
         item = ReturnInbox(self.store).decide(return_id, choice, note)
+        board = whiteboard_log.append_from_decision(self.store, item)
+        if board is not None:
+            item = {**item, "whiteboard": board}
         self.bus.emit("return.decided", {"return_id": return_id, "choice": choice})
         return item
 
@@ -543,7 +605,16 @@ class ThreadService:
         thread = self._target(key)
         if (mode or "brainstorm").strip().lower() == "execute":
             self._admit("execute", thread.id)
-        packet = build_grok_packet(thread, mode=mode, variant=variant)
+        history = self.whiteboard(thread.id)
+        packet = build_grok_packet(
+            thread,
+            mode=mode,
+            variant=variant,
+            whiteboard=whiteboard_log.history_for_handoff(history),
+        )
+        extra = whiteboard_log.prompt_block(history)
+        if extra:
+            packet["prompt"] = packet["prompt"] + extra
         reject_secrets(packet["prompt"])
         prompt_path = self.store.write_text_artifact(
             "grok-prompt.md", packet["prompt"] + "\n"
@@ -569,7 +640,19 @@ class ThreadService:
         thread = self._target(key)
         if (mode or "brainstorm").strip().lower() == "execute":
             self._admit("execute", thread.id)
-        packet = validate_gnom_packet(build_gnom_packet(thread, mode=mode, variant=variant))
+        history = self.whiteboard(thread.id)
+        packet = validate_gnom_packet(
+            build_gnom_packet(
+                thread,
+                mode=mode,
+                variant=variant,
+                whiteboard=whiteboard_log.history_for_handoff(history),
+            )
+        )
+        extra = whiteboard_log.prompt_block(history)
+        if extra:
+            packet["prompt"] = packet["prompt"] + extra
+            packet["chat"] = {**packet["chat"], "text": packet["prompt"]}
         reject_secrets(packet["prompt"])
         prompt_path = self.store.write_text_artifact(
             "gnom-prompt.md", packet["prompt"] + "\n"

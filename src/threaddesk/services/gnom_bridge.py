@@ -25,7 +25,12 @@ def hub_url() -> str:
     return raw
 
 
-def build_packet(thread: Thread, mode: str = "brainstorm", variant: str = "detailed") -> dict:
+def build_packet(
+    thread: Thread,
+    mode: str = "brainstorm",
+    variant: str = "detailed",
+    whiteboard: list | None = None,
+) -> dict:
     mode = (mode or "brainstorm").strip().lower()
     variant = (variant or "detailed").strip().lower()
     if mode not in MODES:
@@ -44,7 +49,7 @@ def build_packet(thread: Thread, mode: str = "brainstorm", variant: str = "detai
             "Hub destilliert den Brainstorm und startet Worker. ThreadDesk sendet nichts."
         )
     text = f"{header}\n\n{prompt}"
-    handoff = build_handoff(thread, target_system="gnom-hub-v1")
+    handoff = build_handoff(thread, target_system="gnom-hub-v1", whiteboard=whiteboard)
     return {
         "format": FORMAT,
         "protocol_revision": 1,

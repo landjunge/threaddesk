@@ -1,0 +1,20 @@
+[
+  {
+    "package": "htmx.org",
+    "version": "2.0.4",
+    "metadata": "https://registry.npmjs.org/htmx.org/2.0.4",
+    "tarball": "https://registry.npmjs.org/htmx.org/-/htmx.org-2.0.4.tgz",
+    "integrity": "sha512-HLxMCdfXDOJirs3vBZl/ZLoY+c7PfM4Ahr2Ad4YXh6d22T5ltbTXFFkpx9Tgb2vvmWFMbIc3LqN2ToNkZJvyYQ==",
+    "file": "htmx.min.js",
+    "sha256": "e209dda5c8235479f3166defc7750e1dbcd5a5c1808b7792fc2e6733768fb447"
+  },
+  {
+    "package": "alpinejs",
+    "version": "3.14.8",
+    "metadata": "https://registry.npmjs.org/alpinejs/3.14.8",
+    "tarball": "https://registry.npmjs.org/alpinejs/-/alpinejs-3.14.8.tgz",
+    "integrity": "sha512-wT2fuP2DXpGk/jKaglwy7S/IJpm1FD+b7U6zUrhwErjoq5h27S4dxkJEXVvhbdwyPv9U+3OkUuNLkZT4h2Kfrg==",
+    "file": "alpine.min.js",
+    "sha256": "b600e363d99d95444db54acbfb2deffec9ae792aa99a09229bcda078e5b55643"
+  }
+]

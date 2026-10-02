@@ -9,6 +9,7 @@ from threaddesk.core.secrets import reject_secrets
 from threaddesk.services.gnom_jobs import GnomJobRegistry, STATUSES
 from threaddesk.services.return_contract import build as build_return
 from threaddesk.services.return_inbox import ReturnInbox
+from threaddesk.services.whiteboard import append_from_gnom_status, append_from_return
 
 FORMAT = "threaddesk.gnom-callback.v1"
 ALLOWED = {
@@ -48,7 +49,8 @@ def receive(store: Any, value: Mapping[str, Any]) -> dict[str, Any]:
         payload["job_id"], payload["event_id"], payload["status"],
         payload.get("details") or "", payload["occurred_at"],
     )
-    result = {"job": registry.get(payload["job_id"]), "return": None}
+    job = registry.get(payload["job_id"])
+    result = {"job": job, "return": None, "whiteboard": None}
     if payload["status"] == "delivered":
         returned = build_return(
             handoff_id=job["handoff_id"], handoff_revision=job["handoff_revision"],
@@ -59,4 +61,7 @@ def receive(store: Any, value: Mapping[str, Any]) -> dict[str, Any]:
             return_id=f"gnom:{job['job_id']}:{payload['event_id']}", created_at=payload["occurred_at"],
         )
         result["return"] = ReturnInbox(store).receive(returned)
+        result["whiteboard"] = append_from_return(store, result["return"]["return"])
+    else:
+        result["whiteboard"] = append_from_gnom_status(store, job, payload)
     return result

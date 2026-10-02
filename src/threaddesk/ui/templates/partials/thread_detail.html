@@ -1,77 +1,81 @@
 {% if current %}
 <article class="panel detail">
-  <header class="detail-head">
-    <div class="title-block" x-data="{ rename: false }">
-      <p class="eyebrow">{{ t("detail.active_thread") }}</p>
-      <h1>{{ current.title }}</h1>
-      <button type="button" class="btn btn-ghost btn-compact" @click="rename = !rename">
-        {{ t("detail.rename") }}
-      </button>
+  <header class="desk-head">
+    <div class="detail-head">
+      <div class="title-block" x-data="{ rename: false }">
+        <p class="eyebrow">{{ t("detail.active_thread") }}</p>
+        <h1>{{ current.title }}</h1>
+        <button type="button" class="btn btn-ghost btn-compact" @click="rename = !rename">
+          {{ t("detail.rename") }}
+        </button>
+        <form
+          class="inline-form"
+          x-show="rename"
+          x-cloak
+          hx-post="/threads/{{ current.id }}/rename"
+          hx-target="#workspace"
+          hx-swap="innerHTML"
+        >
+          <input type="text" name="title" value="{{ current.title }}" required maxlength="160" />
+          <button type="submit" class="btn btn-primary">{{ t("detail.ok") }}</button>
+        </form>
+      </div>
+      <span class="status status-{{ current.status }}">{{ current.status }}</span>
+    </div>
+    <div class="detail-meta">
+      <p class="thread-id detail-id">{{ current.id }}</p>
+      <form
+        hx-post="/threads/{{ current.id }}/archive"
+        hx-target="#workspace"
+        hx-swap="innerHTML"
+        hx-confirm="{{ t('detail.confirm_archive') }}"
+      >
+        <button type="submit" class="btn btn-ghost btn-compact">{{ t("detail.archive") }}</button>
+      </form>
+    </div>
+    <section class="block desk-status">
+      <h3>{{ t("detail.status") }}</h3>
+      <div class="status-row">
+        {% for s in statuses %}
+        <form
+          hx-post="/threads/{{ current.id }}/status"
+          hx-target="#workspace"
+          hx-swap="innerHTML"
+        >
+          <input type="hidden" name="status" value="{{ s }}" />
+          <button
+            type="submit"
+            class="chip{% if current.status == s %} is-on{% endif %}"
+          >{{ s }}</button>
+        </form>
+        {% endfor %}
+      </div>
+    </section>
+    <section class="block desk-description">
+      <h3>{{ t("detail.description") }}</h3>
       <form
         class="inline-form"
-        x-show="rename"
-        x-cloak
-        hx-post="/threads/{{ current.id }}/rename"
+        hx-post="/threads/{{ current.id }}/describe"
         hx-target="#workspace"
         hx-swap="innerHTML"
       >
-        <input type="text" name="title" value="{{ current.title }}" required maxlength="160" />
-        <button type="submit" class="btn btn-primary">{{ t("detail.ok") }}</button>
+        <input type="text" name="text" value="{{ current.description }}" maxlength="400" placeholder="{{ t('detail.description_placeholder') }}" />
+        <button type="submit" class="btn btn-primary">{{ t("detail.save") }}</button>
       </form>
-    </div>
-    <span class="status status-{{ current.status }}">{{ current.status }}</span>
+    </section>
+    {% include "partials/whiteboard_stand.html" %}
   </header>
-  <div class="detail-meta">
-    <p class="thread-id detail-id">{{ current.id }}</p>
-    <form
-      hx-post="/threads/{{ current.id }}/archive"
-      hx-target="#workspace"
-      hx-swap="innerHTML"
-      hx-confirm="{{ t('detail.confirm_archive') }}"
-    >
-      <button type="submit" class="btn btn-ghost btn-compact">{{ t("detail.archive") }}</button>
-    </form>
-  </div>
-
-  <section class="block">
-    <h3>{{ t("detail.status") }}</h3>
-    <div class="status-row">
-      {% for s in statuses %}
-      <form
-        hx-post="/threads/{{ current.id }}/status"
-        hx-target="#workspace"
-        hx-swap="innerHTML"
-      >
-        <input type="hidden" name="status" value="{{ s }}" />
-        <button
-          type="submit"
-          class="chip{% if current.status == s %} is-on{% endif %}"
-        >{{ s }}</button>
-      </form>
-      {% endfor %}
-    </div>
-  </section>
-
-  <section class="block">
-    <h3>{{ t("detail.description") }}</h3>
-    <form
-      class="stack"
-      hx-post="/threads/{{ current.id }}/describe"
-      hx-target="#workspace"
-      hx-swap="innerHTML"
-    >
-      <textarea name="text" rows="3" placeholder="{{ t('detail.description_placeholder') }}">{{ current.description }}</textarea>
-      <button type="submit" class="btn btn-primary">{{ t("detail.save") }}</button>
-    </form>
-  </section>
 
   {% include "partials/notes.html" %}
 
-  {% include "partials/files.html" %}
-
-  {% include "partials/snapshots.html" %}
-  {% include "partials/prompt.html" %}
-  {% include "partials/packet.html" %}
+  <div class="desk-side">
+    {% include "partials/files.html" %}
+    {% include "partials/snapshots.html" %}
+    {% include "partials/prompt.html" %}
+    {% include "partials/hausmeister.html" %}
+    {% include "partials/graph_links.html" %}
+    {% include "partials/packet.html" %}
+  </div>
 </article>
 {% else %}
 <article class="panel detail empty-detail">

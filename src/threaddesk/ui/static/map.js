@@ -15,10 +15,16 @@
   const svgNS = "http://www.w3.org/2000/svg";
   // Texte kommen aus dem Katalog des Servers, nie aus dieser Datei.
   let STRINGS = {};
+  let ACTORS = {};
   try {
     STRINGS = JSON.parse(root.dataset.strings || "{}");
   } catch (error) {
     STRINGS = {};
+  }
+  try {
+    ACTORS = JSON.parse(root.dataset.actorMarks || "{}");
+  } catch (error) {
+    ACTORS = {};
   }
   const t = (key, values) => {
     let text = STRINGS[key];
@@ -55,17 +61,17 @@
     rework: "fresh",
   };
   // Gerichtete Beziehungen bekommen eine Spitze, unsichere eine gestrichelte
-  // Linie, wichtige Abhängigkeiten eine stärkere.
+  // Linie. Die Stärke bleibt überall ein Haarstrich; Bedeutung liegt in Farbe.
   const EDGE = {
-    contains:    {tone: "soft",  width: 1.4, dash: null,    arrow: false, flow: false},
-    depends_on:  {tone: "bold",  width: 2.4, dash: null,    arrow: true,  flow: false},
-    blocks:      {tone: "risk",  width: 2.6, dash: null,    arrow: true,  flow: false},
-    assigned_to: {tone: "soft",  width: 1.6, dash: "7 6",   arrow: true,  flow: false},
-    produced:    {tone: "fresh", width: 2.0, dash: null,    arrow: true,  flow: true},
-    follows:     {tone: "fresh", width: 1.8, dash: null,    arrow: true,  flow: true},
-    supports:    {tone: "good",  width: 1.6, dash: null,    arrow: true,  flow: false},
-    references:  {tone: "soft",  width: 1.2, dash: "3 7",   arrow: false, flow: false},
-    related_to:  {tone: "soft",  width: 1.2, dash: "3 7",   arrow: false, flow: false},
+    contains:    {tone: "soft",  width: 1, dash: null,    arrow: false, flow: false},
+    depends_on:  {tone: "bold",  width: 1, dash: null,    arrow: true,  flow: false},
+    blocks:      {tone: "risk",  width: 1, dash: null,    arrow: true,  flow: false},
+    assigned_to: {tone: "soft",  width: 1, dash: "7 6",   arrow: true,  flow: false},
+    produced:    {tone: "fresh", width: 1, dash: null,    arrow: true,  flow: true},
+    follows:     {tone: "fresh", width: 1, dash: null,    arrow: true,  flow: true},
+    supports:    {tone: "good",  width: 1, dash: null,    arrow: true,  flow: false},
+    references:  {tone: "soft",  width: 1, dash: "3 7",   arrow: false, flow: false},
+    related_to:  {tone: "soft",  width: 1, dash: "3 7",   arrow: false, flow: false},
   };
   const GLYPH = {
     project: "M-9-7h7l2 3h9v11h-18z",
@@ -290,6 +296,33 @@
   const applyTransform = () => {
     world.setAttribute("transform", `translate(${offsetX} ${offsetY}) scale(${scale})`);
   };
+  // Programmatischer Fokus gleitet einmal hin. Ziehen und Rad bleiben direkt.
+  // effects-off deckt den Schalter und prefers-reduced-motion ab.
+  const focusOn = (point) => {
+    const targetX = VIEW_W / 2 - scale * point.x;
+    const targetY = VIEW_H / 2 - scale * point.y;
+    const motionOk = !root.classList.contains("effects-off");
+    if (!motionOk) {
+      offsetX = targetX;
+      offsetY = targetY;
+      applyTransform();
+      return;
+    }
+    root.classList.add("is-focusing");
+    const startX = offsetX;
+    const startY = offsetY;
+    const start = performance.now();
+    const step = (now) => {
+      const amount = Math.min(1, (now - start) / 220);
+      const eased = 1 - (1 - amount) ** 3;
+      offsetX = startX + (targetX - startX) * eased;
+      offsetY = startY + (targetY - startY) * eased;
+      applyTransform();
+      if (amount < 1) requestAnimationFrame(step);
+      else root.classList.remove("is-focusing");
+    };
+    requestAnimationFrame(step);
+  };
   const clamp = (value) => Math.max(MIN_SCALE, Math.min(MAX_SCALE, value));
   // Bildschirmpixel und Kartenkoordinaten sind nicht dasselbe: die viewBox
   // wird auf die Bühnenbreite skaliert. Ohne Umrechnung folgt die Karte dem
@@ -398,23 +431,40 @@
           item.append(dt, dd);
           detailMeta.appendChild(item);
         });
+      const threadId = node.metadata && node.metadata.thread_id;
+      if (typeof threadId === "string" && threadId && !/[/?#]/.test(threadId)) {
+        const item = document.createElement("div");
+        const link = document.createElement("a");
+        link.href = `/?thread=${encodeURIComponent(threadId)}&node=${encodeURIComponent(node.id)}`;
+        link.textContent = t("map.open_thread");
+        link.setAttribute("data-map-thread", threadId);
+        item.appendChild(link);
+        detailMeta.appendChild(item);
+      }
     };
 
     graph.nodes.forEach((node) => {
       const point = placed.get(node.id);
       const tone = toneOf(node);
+      const appearance = node.metadata && ACTORS[node.metadata.actor_id];
+      const ai = node.kind === "agent" || Boolean(appearance && appearance.ai);
       const group = el("g", {
-        class: `map-node map-node-${shapeOf(node)} map-tone-${tone}`,
+        class: `map-node map-node-${shapeOf(node)} map-tone-${tone}${ai ? " is-ai" : ""}`,
         transform: `translate(${point.x.toFixed(1)} ${point.y.toFixed(1)})`,
         tabindex: "0", role: "button",
         "data-status": node.status, "data-kind": node.kind, "data-tone": tone,
         "data-node-id": node.id,
         "aria-label": `${node.title}, ${node.kind}, ${node.status}`,
       });
+      const threadId = node.metadata && node.metadata.thread_id;
+      if (typeof threadId === "string" && threadId) group.dataset.threadId = threadId;
+      if (appearance && appearance.color_token) group.dataset.actorTone = appearance.color_token;
       const halo = outline(node);
       halo.setAttribute("class", "map-node-halo");
       const shape = outline(node);
       shape.setAttribute("class", "map-node-shape");
+      const ring = ai ? outline(node) : null;
+      if (ring) ring.setAttribute("class", "map-node-ai-ring");
       // Symbol im Symbol: der Typ bleibt auch ohne Farbe erkennbar.
       const glyph = el("path", {class: "map-node-glyph", d: GLYPH[node.kind] || GLYPH.project});
       const [mx, my] = MARK_AT[shapeOf(node)] || MARK_AT.circle;
@@ -422,6 +472,7 @@
       mark.appendChild(el("circle", {class: "map-node-mark-disc", r: 8}));
       mark.appendChild(el("path", {class: "map-node-mark-sign", d: MARK[tone] || MARK.idle}));
       group.append(halo, shape, glyph, mark, caption(node.title));
+      if (ring) group.insertBefore(ring, glyph);
 
       const select = (additive = false) => {
         if (!additive) {
@@ -431,6 +482,8 @@
         group.classList.toggle("is-selected");
         showDetail(node);
         highlight();
+        // Selection must not move the other click targets out of the viewport.
+        // Explicit deep-link navigation below still focuses its destination.
       };
       group.addEventListener("click", (event) => {
         if (nodeDrag && nodeDrag.moved) return;
@@ -499,6 +552,25 @@
       return true;
     };
     fit();
+    const params = new URLSearchParams(window.location.search);
+    const wantedNode = params.get("node");
+    const wantedThread = params.get("thread");
+    if (wantedNode || wantedThread) {
+      const chosen = graph.nodes.filter((node) => {
+        const linked = node.metadata && node.metadata.thread_id;
+        return wantedNode ? node.id === wantedNode : linked === wantedThread;
+      });
+      chosen.forEach((node) => {
+        const item = nodeLayer.querySelector(`[data-node-id="${CSS.escape(node.id)}"]`);
+        if (item) item.classList.add("is-selected");
+      });
+      if (chosen.length) {
+        showDetail(chosen[0]);
+        highlight();
+        const point = placed.get(chosen[0].id);
+        if (point) focusOn(point);
+      }
+    }
   };
 
   // ---------------------------------------------------------------- Bedienung

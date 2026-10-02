@@ -127,7 +127,8 @@ def test_no_hardcoded_text_in_templates(template: Path) -> None:
 # uebersetzt: t("kind." ~ kind). Statisch ist davon nur das Praefix sichtbar.
 # test_every_dropdown_value_has_a_label prueft dafuer jeden moeglichen Wert.
 DYNAMIC_PREFIXES = {"kind.", "status.", "relation.", "prompt.target.",
-                    "prompt.variant.", "register."}
+                    "prompt.variant.", "register.", "whiteboard.entry.",
+                    "hausmeister.phase.", "room.state.", "room.role."}
 
 
 @pytest.mark.parametrize("template", TEMPLATE_FILES,
@@ -156,6 +157,7 @@ def test_every_dropdown_value_has_a_label() -> None:
         "relation": models.RELATION_KINDS,
         "prompt.target": ("gnom", "grok", "generic"),
         "prompt.variant": ("detailed", "short", "steps", "agent"),
+        "whiteboard.entry": models.ENTRY_TYPES,
     }
     missing = [f"{prefix}.{value}"
                for prefix, values in groups.items()

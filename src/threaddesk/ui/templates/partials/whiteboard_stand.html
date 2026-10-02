@@ -1,0 +1,25 @@
+<section class="desk-stand" aria-label="{{ t('whiteboard.stand') }}">
+  <h3>{{ t("whiteboard.stand") }}</h3>
+  <dl class="stand-grid">
+    <div>
+      <dt>{{ t("whiteboard.status") }}</dt>
+      <dd data-stand-status>{{ stand.status }}</dd>
+    </div>
+    <div>
+      <dt>{{ t("whiteboard.open_task") }}</dt>
+      <dd data-stand-task>{{ stand.open_task or t("whiteboard.none") }}</dd>
+    </div>
+    <div>
+      <dt>{{ t("whiteboard.actor") }}</dt>
+      <dd data-stand-actor>{{ stand.actor or t("whiteboard.none") }}</dd>
+    </div>
+    <div>
+      <dt>{{ t("whiteboard.last") }}</dt>
+      <dd class="stand-last" data-stand-last>{{ stand.last_stand or t("whiteboard.none") }}</dd>
+    </div>
+    <div>
+      <dt>{{ t("whiteboard.next") }}</dt>
+      <dd data-stand-next>{{ stand.next_step or t("whiteboard.none") }}</dd>
+    </div>
+  </dl>
+</section>

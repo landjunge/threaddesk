@@ -1,0 +1,6 @@
+# These files retain the exact upstream bytes verified by ui-vendor.json.
+# Do not apply core.autocrlf to them on Windows.
+src/threaddesk/ui/static/htmx.min.js -text
+src/threaddesk/ui/static/alpine.min.js -text
+src/threaddesk/ui/static/ui-vendor.json text eol=lf
+src/threaddesk/ui/static/UI-VENDOR-LICENSES.txt text eol=lf

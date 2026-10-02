@@ -8,15 +8,20 @@ from pathlib import Path
 import tempfile
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
 
 from threaddesk.api.service import ThreadService
-from threaddesk.core.errors import ThreadDeskError
+from threaddesk.core.errors import InvalidState, NotFound, ThreadDeskError
+from threaddesk.services.actors import ActorRegistry
+from threaddesk.services.hausmeister import SURFACE_KINDS, Hausmeister, live_snapshot, note_activity
+from threaddesk.services.room_sync import RoomBook
+from threaddesk.services.ollama_local import OllamaError
 from threaddesk.core import i18n
 from threaddesk.core.models import (
+    ENTRY_TYPES,
     NODE_KINDS,
     NODE_STATUSES,
     RELATION_KINDS,
@@ -38,6 +43,18 @@ HERE = Path(__file__).resolve().parent
 TEMPLATES_DIR = HERE / "templates"
 STATIC_DIR = HERE / "static"
 WRITE_STATUSES = tuple(s for s in STATUSES if s != "archived")
+_BOARD_FIELDS = {
+    "actor",
+    "actor_type",
+    "entry_type",
+    "content",
+    "task_id",
+    "handoff_id",
+    "run_id",
+    "metadata",
+    "external_key",
+    "created_at",
+}
 
 
 def _svc() -> ThreadService:
@@ -107,6 +124,31 @@ def _browser_strings(language: str, register: str) -> str:
     )
 
 
+def _hausmeister_status(store) -> dict:
+    try:
+        return Hausmeister(store).status()
+    except (ThreadDeskError, OSError, ValueError):
+        return {
+            "enabled": False,
+            "model": "",
+            "models": [],
+            "ollama_ok": False,
+            "actor_id": "",
+            "agent_type": "",
+            "kind": "",
+            "phase": "off",
+        }
+
+
+def _linked_nodes(svc: ThreadService, thread: Thread | None) -> list:
+    if thread is None:
+        return []
+    return [
+        node for node in svc.list_nodes()
+        if isinstance(node.metadata, dict) and node.metadata.get("thread_id") == thread.id
+    ]
+
+
 def _ctx(request: Request, extra: dict | None = None) -> dict:
     svc = _svc()
     current = svc.current()
@@ -128,7 +170,19 @@ def _ctx(request: Request, extra: dict | None = None) -> dict:
         "prompt_preview": None,
         "error": None,
         "notice": None,
+        "whiteboard": svc.whiteboard(current.id) if current else [],
+        "stand": svc.working_stand(current.id) if current else None,
+        "whiteboard_types": ENTRY_TYPES,
+        "actor_marks": ActorRegistry(svc.store).marks(),
+        "linked_nodes": _linked_nodes(svc, current),
+        "focus_node": "",
+        "hausmeister": _hausmeister_status(svc.store),
+        "room": RoomBook(svc.store).view(),
     }
+    if current is not None:
+        chosen = request.query_params.get("node") or ""
+        if any(node.id == chosen for node in data["linked_nodes"]):
+            data["focus_node"] = chosen
     data.update(extra)
     return data
 
@@ -150,12 +204,22 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     def workspace(request: Request, extra: dict | None = None) -> HTMLResponse:
+        try:
+            note_activity(_svc().store)
+        except OSError:
+            pass
         return templates.TemplateResponse(
             request, "partials/workspace.html", _ctx(request, extra)
         )
 
     @app.exception_handler(ThreadDeskError)
-    async def _on_error(request: Request, exc: ThreadDeskError) -> HTMLResponse:
+    async def _on_error(request: Request, exc: ThreadDeskError) -> Response:
+        if request.url.path.startswith("/api/"):
+            status = 404 if isinstance(exc, NotFound) else 400
+            return JSONResponse(
+                {"error": type(exc).__name__, "detail": str(exc)},
+                status_code=status,
+            )
         html = workspace(
             request, {"error": i18n.translate("ui.error", _language(request))}
         )
@@ -163,7 +227,12 @@ def create_app() -> FastAPI:
         return html
 
     @app.get("/", response_class=HTMLResponse)
-    def index(request: Request) -> HTMLResponse:
+    def index(request: Request, thread: str | None = None) -> HTMLResponse:
+        if thread:
+            try:
+                _svc().switch(thread)
+            except ThreadDeskError:
+                pass
         return templates.TemplateResponse(request, "index.html", _ctx(request))
 
     @app.get("/lang/{code}", response_class=RedirectResponse)
@@ -192,6 +261,37 @@ def create_app() -> FastAPI:
     def graph(kind: str | None = None, status: str | None = None) -> dict:
         return _svc().graph(kind=kind, status=status)
 
+    @app.get("/api/threads/{thread_id}", response_class=JSONResponse)
+    def api_thread(thread_id: str) -> dict:
+        svc = _svc()
+        thread = svc.get(thread_id)
+        return {"thread": thread.to_dict(), "stand": svc.working_stand(thread.id)}
+
+    @app.get("/api/threads/{thread_id}/whiteboard", response_class=JSONResponse)
+    def api_whiteboard(thread_id: str) -> dict:
+        svc = _svc()
+        thread = svc.get(thread_id)
+        return {
+            "thread_id": thread.id,
+            "entries": [entry.to_dict() for entry in svc.whiteboard(thread.id)],
+        }
+
+    @app.post("/api/threads/{thread_id}/whiteboard", response_class=JSONResponse)
+    async def api_append_whiteboard(thread_id: str, request: Request) -> dict:
+        try:
+            body = await request.json()
+        except Exception as exc:
+            raise InvalidState("whiteboard_body") from exc
+        if not isinstance(body, dict) or set(body) - _BOARD_FIELDS:
+            raise InvalidState("whiteboard_fields")
+        if not {"actor", "actor_type", "entry_type", "content"} <= set(body):
+            raise InvalidState("whiteboard_fields")
+        return _svc().append_whiteboard(thread_id, **body)
+
+    @app.get("/api/threads/{thread_id}/stand", response_class=JSONResponse)
+    def api_stand(thread_id: str) -> dict:
+        return _svc().working_stand(thread_id)
+
     @app.get("/map", response_class=HTMLResponse)
     def map_view(request: Request) -> HTMLResponse:
         lang = _language(request)
@@ -203,6 +303,8 @@ def create_app() -> FastAPI:
             "browser_strings": _browser_strings(lang, register),
             "map_strings": json.dumps(
                 i18n.catalog_for(lang, register), ensure_ascii=False),
+            "actor_marks_json": json.dumps(
+                ActorRegistry(_svc().store).marks(), ensure_ascii=False),
         })
 
     @app.get("/migration", response_class=HTMLResponse)
@@ -387,6 +489,206 @@ def create_app() -> FastAPI:
         _svc().set_note(text, thread_id, append=bool(append))
         return workspace(request, {"notice": i18n.translate("ui.note_saved", _language(request))})
 
+    @app.post("/threads/{thread_id}/whiteboard", response_class=HTMLResponse)
+    def append_whiteboard_form(
+        thread_id: str,
+        request: Request,
+        actor: str = Form(...),
+        actor_type: str = Form("human"),
+        entry_type: str = Form("note"),
+        content: str = Form(...),
+        next_step: str = Form(""),
+        in_room: str = Form(""),
+    ) -> HTMLResponse:
+        metadata = {"next_step": next_step.strip()} if next_step.strip() else {}
+        fields: dict = {
+            "actor": actor,
+            "actor_type": actor_type,
+            "entry_type": entry_type,
+            "content": content,
+            "metadata": metadata,
+        }
+        if in_room == "1":
+            room_view = RoomBook(_svc().store).view()
+            current_room = room_view.get("current")
+            if not current_room or room_view.get("role") not in {"owner", "member"}:
+                page = _room_error(request)
+                page.status_code = 403
+                return page
+            fields["room_id"] = current_room["id"]
+        _svc().append_whiteboard(thread_id, **fields)
+        return workspace(
+            request,
+            {"notice": i18n.translate("ui.whiteboard_saved", _language(request))},
+        )
+
+    def _hausmeister_notice(request: Request, code: str) -> HTMLResponse:
+        key = {
+            "module_disabled": "hausmeister.disabled",
+            "ollama_unavailable": "hausmeister.unreachable",
+            "ollama_model_missing": "hausmeister.no_model",
+            "hausmeister_rejected": "hausmeister.failed",
+        }.get(code, "hausmeister.failed")
+        page = workspace(request, {"error": i18n.translate(key, _language(request))})
+        page.status_code = 400
+        return page
+
+    @app.post("/hausmeister/toggle", response_class=HTMLResponse)
+    def hausmeister_toggle(request: Request, enabled: str = Form("0")) -> HTMLResponse:
+        Hausmeister(_svc().store).set_enabled(enabled == "1")
+        key = "hausmeister.turn_on" if enabled == "1" else "hausmeister.turn_off"
+        return workspace(request, {"notice": i18n.translate(key, _language(request))})
+
+    @app.post("/hausmeister/model", response_class=HTMLResponse)
+    def hausmeister_model(request: Request, model: str = Form("")) -> HTMLResponse:
+        try:
+            Hausmeister(_svc().store).set_model(model)
+        except OllamaError as exc:
+            return _hausmeister_notice(request, str(exc))
+        return workspace(request, {"notice": i18n.translate("hausmeister.use_model", _language(request))})
+
+    @app.post("/threads/{thread_id}/hausmeister", response_class=HTMLResponse)
+    def hausmeister_run(
+        thread_id: str,
+        request: Request,
+        order: str = Form(...),
+        mode: str = Form("now"),
+    ) -> HTMLResponse:
+        home = Hausmeister(_svc().store)
+        try:
+            if mode == "later":
+                result = home.enqueue(thread_id, order)
+                if not result["ok"]:
+                    return _hausmeister_notice(request, result["error"])
+                return workspace(request, {"notice": i18n.translate("hausmeister.queued", _language(request))})
+            result = home.run_now(thread_id, order)
+        except ThreadDeskError as exc:
+            return _hausmeister_notice(request, str(exc))
+        if not result["ok"]:
+            return _hausmeister_notice(request, result["error"])
+        return workspace(request, {"notice": i18n.translate("hausmeister.done", _language(request))})
+
+    @app.post("/hausmeister/activity")
+    async def hausmeister_activity(request: Request) -> JSONResponse:
+        """One throttled ping from the open desk. Not a poll."""
+        try:
+            raw = await request.json()
+        except Exception:
+            raw = None
+        kind = raw.get("kind") if isinstance(raw, dict) else None
+        if not isinstance(kind, str) or kind not in SURFACE_KINDS:
+            return JSONResponse({"ok": False}, status_code=400)
+        try:
+            recorded = note_activity(_svc().store, kind=kind)
+        except OSError:
+            return JSONResponse({"ok": False}, status_code=400)
+        return JSONResponse({"ok": True, "recorded": recorded})
+
+    def _room_page(request: Request, key: str, **values: object) -> HTMLResponse:
+        return workspace(request, {"notice": i18n.translate(key, _language(request), **values)})
+
+    def _room_error(request: Request) -> HTMLResponse:
+        page = workspace(request, {"error": i18n.translate("room.failed", _language(request))})
+        page.status_code = 400
+        return page
+
+    @app.post("/rooms", response_class=HTMLResponse)
+    def create_room(request: Request, name: str = Form(...)) -> HTMLResponse:
+        try:
+            RoomBook(_svc().store).create_room(name)
+        except ThreadDeskError:
+            return _room_error(request)
+        return _room_page(request, "room.created")
+
+    @app.post("/rooms/select", response_class=HTMLResponse)
+    def select_room(request: Request, room_id: str = Form(...)) -> HTMLResponse:
+        try:
+            RoomBook(_svc().store).select_room(room_id)
+        except ThreadDeskError:
+            return _room_error(request)
+        return _room_page(request, "room.choose")
+
+    @app.post("/rooms/invite", response_class=HTMLResponse)
+    def invite_room(request: Request, role: str = Form("member")) -> HTMLResponse:
+        try:
+            code = RoomBook(_svc().store).invite(role)
+        except ThreadDeskError:
+            return _room_error(request)
+        return _room_page(request, "room.invited", code=code)
+
+    @app.post("/rooms/join", response_class=HTMLResponse)
+    def join_room(
+        request: Request,
+        code: str = Form(...),
+        base_url: str = Form(...),
+    ) -> HTMLResponse:
+        try:
+            RoomBook(_svc().store).join(code, base_url, str(request.base_url))
+        except ThreadDeskError as exc:
+            if str(exc) == "room_offline":
+                return _room_page(request, "room.state.peer_down")
+            return _room_error(request)
+        return _room_page(request, "room.paired")
+
+    @app.post("/rooms/sync", response_class=HTMLResponse)
+    def sync_room(request: Request) -> HTMLResponse:
+        try:
+            result = RoomBook(_svc().store).sync()
+        except ThreadDeskError:
+            return _room_error(request)
+        return _room_page(request, f"room.state.{result['state']}")
+
+    @app.post("/api/rooms/pair")
+    async def pair_room(request: Request) -> JSONResponse:
+        try:
+            body = await request.json()
+        except Exception:
+            body = None
+        if not isinstance(body, dict):
+            return JSONResponse({"ok": False}, status_code=403)
+        try:
+            result = RoomBook(_svc().store).accept(
+                str(body.get("code") or ""),
+                str(body.get("instance_id") or ""),
+                str(body.get("base_url") or ""),
+            )
+        except ThreadDeskError:
+            return JSONResponse({"ok": False}, status_code=403)
+        return JSONResponse(result)
+
+    @app.post("/api/rooms/pull")
+    async def pull_room(request: Request) -> JSONResponse:
+        try:
+            body = await request.json()
+        except Exception:
+            body = None
+        room_id = body.get("room_id") if isinstance(body, dict) else ""
+        try:
+            result = RoomBook(_svc().store).serve_pull(
+                request.headers.get("x-threaddesk-instance", ""),
+                request.headers.get("x-threaddesk-token", ""),
+                str(room_id or ""),
+            )
+        except ThreadDeskError:
+            return JSONResponse({"ok": False}, status_code=403)
+        return JSONResponse(result)
+
+    @app.post("/api/rooms/push")
+    async def push_room(request: Request) -> JSONResponse:
+        try:
+            body = await request.json()
+        except Exception:
+            body = None
+        try:
+            result = RoomBook(_svc().store).serve_push(
+                request.headers.get("x-threaddesk-instance", ""),
+                request.headers.get("x-threaddesk-token", ""),
+                body,
+            )
+        except ThreadDeskError:
+            return JSONResponse({"ok": False}, status_code=403)
+        return JSONResponse(result)
+
     @app.post("/threads/{thread_id}/describe", response_class=HTMLResponse)
     def set_description(
         thread_id: str,
@@ -502,6 +804,18 @@ def create_app() -> FastAPI:
 
 
 def run(host: str = "127.0.0.1", port: int = 8765) -> None:
+    import threading
+    import time
     import uvicorn
 
+    def _idle() -> None:
+        while True:
+            time.sleep(60)
+            try:
+                store = ThreadService().store
+                Hausmeister(store).tick(live_snapshot(store))
+            except Exception:
+                continue
+
+    threading.Thread(target=_idle, name="hausmeister-idle", daemon=True).start()
     uvicorn.run(create_app(), host=host, port=port, log_level="info")

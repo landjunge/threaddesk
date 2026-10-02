@@ -5,8 +5,16 @@ import hashlib
 from pathlib import Path
 from typing import Any, Mapping
 
-from threaddesk.core.errors import NotFound
-from threaddesk.core.models import GraphEvent, KnowledgeNode, Relation, Snapshot, Thread
+from threaddesk.core.errors import InvalidState, NotFound
+from threaddesk.core.models import (
+    GraphEvent,
+    KnowledgeNode,
+    Relation,
+    Snapshot,
+    Thread,
+    WhiteboardEntry,
+    plan_whiteboard_append,
+)
 from threaddesk.core.provenance import SourceRecord
 
 DEFAULT_ROOT = Path.home() / ".threaddesk"
@@ -21,6 +29,7 @@ class JsonStore:
         self.relations_dir = self.root / "relations"
         self.events_dir = self.root / "graph-events"
         self.source_records_dir = self.root / "source-records"
+        self.whiteboard_dir = self.root / "whiteboard"
         self.state_path = self.root / "state.json"
         self.threads_dir.mkdir(parents=True, exist_ok=True)
         self.snaps_dir.mkdir(parents=True, exist_ok=True)
@@ -28,6 +37,7 @@ class JsonStore:
         self.relations_dir.mkdir(parents=True, exist_ok=True)
         self.events_dir.mkdir(parents=True, exist_ok=True)
         self.source_records_dir.mkdir(parents=True, exist_ok=True)
+        self.whiteboard_dir.mkdir(parents=True, exist_ok=True)
 
     def _thread_path(self, thread_id: str) -> Path:
         return self.threads_dir / f"{thread_id}.json"
@@ -86,6 +96,11 @@ class JsonStore:
             for p in snap_dir.glob("*.json"):
                 p.unlink()
             snap_dir.rmdir()
+        board_dir = self._whiteboard_dir(thread_id)
+        if board_dir.exists():
+            for p in board_dir.glob("*.json"):
+                p.unlink()
+            board_dir.rmdir()
 
     def get_current_id(self) -> str | None:
         if not self.state_path.exists():
@@ -103,6 +118,55 @@ class JsonStore:
         for path in self.snaps_dir.glob(f"*/{snap_id}.json"):
             return Snapshot.from_dict(self._read_json(path))
         raise NotFound(f"Snapshot nicht gefunden: {snap_id}")
+
+    def _whiteboard_dir(self, thread_id: str) -> Path:
+        if (
+            not thread_id
+            or thread_id in {".", ".."}
+            or "/" in thread_id
+            or "\\" in thread_id
+            or thread_id != Path(thread_id).name
+        ):
+            raise InvalidState("whiteboard_thread")
+        folder = (self.whiteboard_dir / thread_id).resolve()
+        if folder.parent != self.whiteboard_dir.resolve():
+            raise InvalidState("whiteboard_thread")
+        return folder
+
+    def list_whiteboard(self, thread_id: str) -> list[WhiteboardEntry]:
+        folder = self._whiteboard_dir(thread_id)
+        if not folder.exists():
+            return []
+        entries = [
+            WhiteboardEntry.from_dict(self._read_json(path))
+            for path in folder.glob("*.json")
+        ]
+        entries.sort(key=lambda entry: (entry.created_at, entry.ordinal, entry.id))
+        return entries
+
+    def append_whiteboard_entry(self, entry: WhiteboardEntry) -> tuple[WhiteboardEntry, bool]:
+        """Write a new file. An existing contribution is never rewritten."""
+        self.get_thread(entry.thread_id)
+        if (
+            not entry.id
+            or entry.id in {".", ".."}
+            or "/" in entry.id
+            or "\\" in entry.id
+            or entry.id != Path(entry.id).name
+        ):
+            raise InvalidState("whiteboard_id")
+        stored, duplicate = plan_whiteboard_append(self.list_whiteboard(entry.thread_id), entry)
+        if duplicate:
+            return stored, True
+        folder = self._whiteboard_dir(entry.thread_id)
+        path = folder / f"{entry.id}.json"
+        if path.exists():
+            current = WhiteboardEntry.from_dict(self._read_json(path))
+            if current.same_body(entry):
+                return current, True
+            raise InvalidState("whiteboard_conflict")
+        self._write_json(path, stored.to_dict())
+        return stored, False
 
     def list_snapshots(self, thread_id: str) -> list[Snapshot]:
         folder = self.snaps_dir / thread_id

@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
+from threaddesk.core.errors import InvalidState
+
 STATUSES = ("idea", "active", "paused", "done", "archived")
 NODE_KINDS = (
     "project",
@@ -75,6 +77,28 @@ RELATION_KINDS = (
     "related_to",
 )
 VISIBILITIES = ("private", "shared", "public")
+ACTOR_TYPES = (
+    "human",
+    "grok",
+    "claude",
+    "codex",
+    "chatgpt",
+    "gnom-hub-v1",
+    "local-assistant",
+    "system",
+)
+AGENT_TYPES = tuple(item for item in ACTOR_TYPES if item not in {"human", "system"})
+ENTRY_TYPES = (
+    "note",
+    "task",
+    "claimed",
+    "progress",
+    "result",
+    "decision",
+    "problem",
+    "question",
+    "system",
+)
 
 
 def now_iso() -> str:
@@ -259,6 +283,97 @@ class GraphEvent:
             occurred_at=data["occurred_at"],
             payload=dict(data.get("payload") or {}),
         )
+
+
+@dataclass
+class WhiteboardEntry:
+    """One append-only contribution on a thread whiteboard.
+
+    Corrections are new entries. Nothing here is edited in place.
+    """
+
+    id: str
+    thread_id: str
+    actor: str
+    actor_type: str
+    created_at: str
+    entry_type: str
+    content: str
+    ordinal: int = 0
+    task_id: str | None = None
+    handoff_id: str | None = None
+    run_id: str | None = None
+    external_key: str | None = None
+    actor_id: str | None = None
+    instance_id: str | None = None
+    room_id: str | None = None
+    content_hash: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> WhiteboardEntry:
+        return cls(
+            id=data["id"],
+            thread_id=data["thread_id"],
+            actor=data["actor"],
+            actor_type=data["actor_type"],
+            created_at=data["created_at"],
+            entry_type=data.get("entry_type") or "note",
+            content=data["content"],
+            ordinal=int(data.get("ordinal") or 0),
+            task_id=data.get("task_id"),
+            handoff_id=data.get("handoff_id"),
+            run_id=data.get("run_id"),
+            external_key=data.get("external_key"),
+            actor_id=data.get("actor_id") or None,
+            instance_id=data.get("instance_id") or None,
+            room_id=data.get("room_id") or None,
+            content_hash=data.get("content_hash") or None,
+            metadata=dict(data.get("metadata") or {}),
+        )
+
+    def same_body(self, other: WhiteboardEntry) -> bool:
+        """Identity fields may differ. The contribution itself must not."""
+        return (
+            self.thread_id == other.thread_id
+            and self.actor == other.actor
+            and self.actor_type == other.actor_type
+            and self.entry_type == other.entry_type
+            and self.content == other.content
+            and self.task_id == other.task_id
+            and self.handoff_id == other.handoff_id
+            and self.run_id == other.run_id
+            and self.external_key == other.external_key
+            and self.actor_id == other.actor_id
+            and self.metadata == other.metadata
+        )
+
+
+def plan_whiteboard_append(
+    existing: list[WhiteboardEntry], entry: WhiteboardEntry
+) -> tuple[WhiteboardEntry, bool]:
+    """Decide whether to keep an existing entry or append this one.
+
+    Same external key or same id with the same body is a duplicate.
+    A different body never replaces the stored entry.
+    """
+    if entry.external_key:
+        for current in existing:
+            if current.external_key == entry.external_key:
+                if not current.same_body(entry):
+                    raise InvalidState("whiteboard_conflict")
+                return current, True
+    for current in existing:
+        if current.id == entry.id:
+            if not current.same_body(entry):
+                raise InvalidState("whiteboard_conflict")
+            return current, True
+    if entry.ordinal < 1:
+        entry.ordinal = 1 + max((item.ordinal for item in existing), default=0)
+    return entry, False
 
 
 def new_thread(title: str, description: str = "") -> Thread:
