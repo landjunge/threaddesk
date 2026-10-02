@@ -1,16 +1,16 @@
-name: Prepare offline UI assets
+name: Apply completion patches
 on:
   pull_request:
     paths:
       - '.github/workflows/vendor-ui-once.yml'
-      - 'scripts/vendor_ui.py'
+      - 'scripts/_finish_once.py'
 permissions:
   contents: read
 jobs:
   prepare:
     if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'feat/desktop-brand-icons'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:
@@ -20,13 +20,22 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Fetch fixed dependencies without executing package scripts
-        run: python scripts/vendor_ui.py
-      - name: Commit only the four reviewed asset destinations
+      - name: Apply exact-preimage patches
+        run: python scripts/_finish_once.py
+      - name: Install test dependencies
         run: |
-          git add -- src/threaddesk/ui/static/htmx.min.js src/threaddesk/ui/static/alpine.min.js src/threaddesk/ui/static/ui-vendor.json src/threaddesk/ui/static/UI-VENDOR-LICENSES.txt
+          python -m pip install -e '.[dev,ui,browser]'
+          python -m playwright install --with-deps chromium
+      - name: Validate patched application
+        run: |
+          python -m compileall -q src packaging tests scripts
+          node --check src/threaddesk/ui/static/map.js
+          python -m pytest -q -ra
+      - name: Commit only the bounded patch destinations
+        run: |
+          git add -- README.md packaging/desktop_entry.py src/threaddesk/ui/templates/base.html src/threaddesk/core/i18n.py src/threaddesk/ui/templates/partials/whiteboard.html src/threaddesk/ui/server.py tests/test_room_browser.py tests/test_room_sync_e2e.py
           if git diff --cached --quiet; then exit 0; fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'build: vendor fixed UI scripts for offline desktop use'
+          git commit -m 'fix: finish offline UI, explicit sharing and read-only publication guards'
           git push origin HEAD:refs/heads/feat/desktop-brand-icons
