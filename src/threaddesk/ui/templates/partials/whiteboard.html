@@ -58,6 +58,12 @@
       placeholder="{{ t('whiteboard.placeholder') }}"
       data-whiteboard-content
     ></textarea>
+    {% if room.current %}
+    <label class="inline-form">
+      <input type="checkbox" name="in_room" value="1" data-room-share />
+      <span>{{ t("room.share_entry") }}</span>
+    </label>
+    {% endif %}
     <div class="inline-form">
       <input
         type="text"

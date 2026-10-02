@@ -128,7 +128,7 @@ def test_no_hardcoded_text_in_templates(template: Path) -> None:
 # test_every_dropdown_value_has_a_label prueft dafuer jeden moeglichen Wert.
 DYNAMIC_PREFIXES = {"kind.", "status.", "relation.", "prompt.target.",
                     "prompt.variant.", "register.", "whiteboard.entry.",
-                    "hausmeister.phase."}
+                    "hausmeister.phase.", "room.state.", "room.role."}
 
 
 @pytest.mark.parametrize("template", TEMPLATE_FILES,

@@ -18,7 +18,7 @@ from threaddesk.core.models import (
     new_id,
     now_iso,
 )
-from threaddesk.services.actors import require_entry_actor
+from threaddesk.services.actors import ActorRegistry, require_entry_actor
 from threaddesk.core.secrets import reject_secrets
 from threaddesk.services.gnom_jobs import TERMINAL, GnomJobRegistry
 
@@ -72,6 +72,8 @@ def append(
     metadata: Mapping[str, Any] | None = None,
     external_key: str | None = None,
     actor_id: str | None = None,
+    instance_id: str | None = None,
+    room_id: str | None = None,
     created_at: str | None = None,
 ) -> tuple[WhiteboardEntry, bool]:
     thread = store.get_thread(thread_id)
@@ -91,6 +93,8 @@ def append(
         run_id=_ref(run_id, "run_id"),
         external_key=_ref(external_key, "external_key"),
         actor_id=require_entry_actor(store, _ref(actor_id, "actor_id"), chosen_type),
+        instance_id=_ref(instance_id, "instance_id") or ActorRegistry(store).instance_id(),
+        room_id=_ref(room_id, "room_id"),
         metadata=_metadata(metadata),
     )
     return store.append_whiteboard_entry(entry)

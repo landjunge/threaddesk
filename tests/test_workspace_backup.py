@@ -55,7 +55,11 @@ def test_backup_manifest_and_verified_restore_match_exactly(tmp_path: Path) -> N
     assert manifest["app_version"] == "0.1.0"
     assert manifest["schema_version"] == 4
     assert manifest["design_reference"] == "desk-r2"
-    assert set(manifest["files"]) == {"threaddesk.sqlite3", "artifacts/handoff.json"}
+    assert set(manifest["files"]) == {
+        "threaddesk.sqlite3",
+        "artifacts/handoff.json",
+        "artifacts/actors.json",
+    }
 
     restored_path = WorkspaceBackup(tmp_path / "backups").restore_verified(backup, tmp_path / "restored")
     restored = SQLiteStore(restored_path)
