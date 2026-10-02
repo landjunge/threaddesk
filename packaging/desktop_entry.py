@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from html import escape
+import socket
 import sys
 import threading
 import time
@@ -11,14 +12,25 @@ from urllib.request import ProxyHandler, build_opener
 from threaddesk.services.desktop_runtime import desktop_listener, isolated_self_test
 
 
+def free_port() -> int:
+    """Diagnostic compatibility helper; startup reserves its socket instead."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+        listener.bind(("127.0.0.1", 0))
+        return listener.getsockname()[1]
+
+
+def urlopen(url: str, timeout: float = 3.0):
+    """Local readiness checks must never use an environment HTTP proxy."""
+    return build_opener(ProxyHandler({})).open(url, timeout=timeout)
+
+
 def wait_until_ready(url: str, timeout: float = 15.0, thread=None) -> None:
     deadline = time.monotonic() + timeout
-    opener = build_opener(ProxyHandler({}))
     while time.monotonic() < deadline:
         if thread is not None and not thread.is_alive():
             raise RuntimeError("Der lokale ThreadDesk-Server wurde unerwartet beendet.")
         try:
-            with opener.open(url, timeout=0.5) as response:
+            with urlopen(url, timeout=0.5) as response:
                 if response.status == 200:
                     return
         except OSError:
@@ -55,14 +67,13 @@ def self_test() -> int:
         # Resolve the store only after replacing the real data-directory setting.
         from threaddesk.ui.server import _svc
         with desktop_listener(_svc().store) as listener, running_server(listener) as url:
-            opener = build_opener(ProxyHandler({}))
-            with opener.open(url + "/migration?lang=en", timeout=3) as response:
+            with urlopen(url + "/migration?lang=en", timeout=3) as response:
                 page = response.read().decode("utf-8")
                 assert response.status == 200
             assert 'data-testid="migration-center"' in page
             assert 'lang="en"' in page
             for asset in ("app.js", "map.js", "style.css"):
-                with opener.open(url + "/static/" + asset, timeout=3) as response:
+                with urlopen(url + "/static/" + asset, timeout=3) as response:
                     assert response.status == 200 and response.read(), asset
     print("ThreadDesk desktop package and migration page: OK; isolated workspace and bundled assets checked")
     return 0
