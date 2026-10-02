@@ -221,6 +221,7 @@ CATALOG: dict[str, dict[str, str]] = {
     "room.choose": {"de": "Raum wählen", "en": "Choose room"},
     "room.none": {"de": "Kein Raum gewählt", "en": "No room selected"},
     "room.invite": {"de": "Einladung erzeugen", "en": "Create invitation"},
+    "room.invite_role": {"de": "Rolle für die Einladung", "en": "Role for the invitation"},
     "room.code": {"de": "Einladungscode", "en": "Invitation code"},
     "room.peer": {"de": "Adresse der Gegenstelle", "en": "Address of the other side"},
     "room.join": {"de": "Koppeln", "en": "Pair"},

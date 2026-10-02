@@ -605,9 +605,9 @@ def create_app() -> FastAPI:
         return _room_page(request, "room.choose")
 
     @app.post("/rooms/invite", response_class=HTMLResponse)
-    def invite_room(request: Request) -> HTMLResponse:
+    def invite_room(request: Request, role: str = Form("member")) -> HTMLResponse:
         try:
-            code = RoomBook(_svc().store).invite()
+            code = RoomBook(_svc().store).invite(role)
         except ThreadDeskError:
             return _room_error(request)
         return _room_page(request, "room.invited", code=code)

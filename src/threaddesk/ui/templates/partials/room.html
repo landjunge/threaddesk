@@ -32,6 +32,13 @@
   <p data-room-current>{{ room.current.name }}</p>
   {% if room.role == "owner" %}
   <form method="post" action="/rooms/invite" hx-post="/rooms/invite" hx-target="#workspace" hx-swap="innerHTML">
+    <label>
+      <span>{{ t("room.invite_role") }}</span>
+      <select name="role" data-room-invite-role aria-label="{{ t('room.invite_role') }}">
+        <option value="member">{{ t("room.role.member") }}</option>
+        <option value="read_only">{{ t("room.role.read_only") }}</option>
+      </select>
+    </label>
     <button type="submit" class="btn" data-room-invite>{{ t("room.invite") }}</button>
   </form>
   {% endif %}
