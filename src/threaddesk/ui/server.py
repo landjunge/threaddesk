@@ -16,6 +16,8 @@ from jinja2 import pass_context
 from threaddesk.api.service import ThreadService
 from threaddesk.core.errors import InvalidState, NotFound, ThreadDeskError
 from threaddesk.services.actors import ActorRegistry
+from threaddesk.services.hausmeister import Hausmeister
+from threaddesk.services.ollama_local import OllamaError
 from threaddesk.core import i18n
 from threaddesk.core.models import (
     ENTRY_TYPES,
@@ -121,6 +123,21 @@ def _browser_strings(language: str, register: str) -> str:
     )
 
 
+def _hausmeister_status(store) -> dict:
+    try:
+        return Hausmeister(store).status()
+    except (ThreadDeskError, OSError, ValueError):
+        return {
+            "enabled": False,
+            "model": "",
+            "models": [],
+            "ollama_ok": False,
+            "actor_id": "",
+            "agent_type": "",
+            "kind": "",
+        }
+
+
 def _linked_nodes(svc: ThreadService, thread: Thread | None) -> list:
     if thread is None:
         return []
@@ -157,6 +174,7 @@ def _ctx(request: Request, extra: dict | None = None) -> dict:
         "actor_marks": ActorRegistry(svc.store).marks(),
         "linked_nodes": _linked_nodes(svc, current),
         "focus_node": "",
+        "hausmeister": _hausmeister_status(svc.store),
     }
     if current is not None:
         chosen = request.query_params.get("node") or ""
@@ -487,6 +505,41 @@ def create_app() -> FastAPI:
             request,
             {"notice": i18n.translate("ui.whiteboard_saved", _language(request))},
         )
+
+    def _hausmeister_notice(request: Request, code: str) -> HTMLResponse:
+        key = {
+            "module_disabled": "hausmeister.disabled",
+            "ollama_unavailable": "hausmeister.unreachable",
+            "ollama_model_missing": "hausmeister.no_model",
+            "hausmeister_rejected": "hausmeister.failed",
+        }.get(code, "hausmeister.failed")
+        page = workspace(request, {"error": i18n.translate(key, _language(request))})
+        page.status_code = 400
+        return page
+
+    @app.post("/hausmeister/toggle", response_class=HTMLResponse)
+    def hausmeister_toggle(request: Request, enabled: str = Form("0")) -> HTMLResponse:
+        Hausmeister(_svc().store).set_enabled(enabled == "1")
+        key = "hausmeister.turn_on" if enabled == "1" else "hausmeister.turn_off"
+        return workspace(request, {"notice": i18n.translate(key, _language(request))})
+
+    @app.post("/hausmeister/model", response_class=HTMLResponse)
+    def hausmeister_model(request: Request, model: str = Form("")) -> HTMLResponse:
+        try:
+            Hausmeister(_svc().store).set_model(model)
+        except OllamaError as exc:
+            return _hausmeister_notice(request, str(exc))
+        return workspace(request, {"notice": i18n.translate("hausmeister.use_model", _language(request))})
+
+    @app.post("/threads/{thread_id}/hausmeister", response_class=HTMLResponse)
+    def hausmeister_run(thread_id: str, request: Request, order: str = Form(...)) -> HTMLResponse:
+        try:
+            result = Hausmeister(_svc().store).run(thread_id, order)
+        except ThreadDeskError as exc:
+            return _hausmeister_notice(request, str(exc))
+        if not result["ok"]:
+            return _hausmeister_notice(request, result["error"])
+        return workspace(request, {"notice": i18n.translate("hausmeister.done", _language(request))})
 
     @app.post("/threads/{thread_id}/describe", response_class=HTMLResponse)
     def set_description(

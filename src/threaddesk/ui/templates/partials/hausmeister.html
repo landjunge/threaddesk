@@ -1,0 +1,31 @@
+<section class="block desk-hausmeister" data-hausmeister data-ollama="{{ 'up' if hausmeister.ollama_ok else 'down' }}">
+  <h3>{{ t("hausmeister.title") }}</h3>
+  <p>
+    {% if hausmeister.ollama_ok %}{{ t("hausmeister.reachable") }}{% else %}{{ t("hausmeister.unreachable") }}{% endif %}
+  </p>
+  <form class="inline-form" hx-post="/hausmeister/toggle" hx-target="#workspace" hx-swap="innerHTML">
+    <input type="hidden" name="enabled" value="{{ '0' if hausmeister.enabled else '1' }}" />
+    <button type="submit" class="btn">
+      {% if hausmeister.enabled %}{{ t("hausmeister.turn_off") }}{% else %}{{ t("hausmeister.turn_on") }}{% endif %}
+    </button>
+  </form>
+  <form class="inline-form" hx-post="/hausmeister/model" hx-target="#workspace" hx-swap="innerHTML">
+    <label>
+      <select name="model" data-hausmeister-model aria-label="{{ t('hausmeister.use_model') }}">
+        {% for name in hausmeister.models %}
+        <option value="{{ name }}" {% if name == hausmeister.model %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit" class="btn">{{ t("hausmeister.use_model") }}</button>
+  </form>
+  {% if not hausmeister.model %}
+  <p>{{ t("hausmeister.no_model") }}</p>
+  {% endif %}
+  {% if hausmeister.enabled %}
+  <form hx-post="/threads/{{ current.id }}/hausmeister" hx-target="#workspace" hx-swap="innerHTML">
+    <textarea name="order" rows="2" maxlength="500" placeholder="{{ t('hausmeister.order_placeholder') }}" data-hausmeister-order></textarea>
+    <button type="submit" class="btn btn-primary" data-hausmeister-run>{{ t("hausmeister.run") }}</button>
+  </form>
+  {% endif %}
+</section>

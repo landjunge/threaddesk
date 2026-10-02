@@ -161,6 +161,34 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "No nodes linked to this thread.",
     },
     "desk.open_map": {"de": "In der Karte zeigen", "en": "Show on the map"},
+    "hausmeister.title": {"de": "Hausmeister", "en": "Housekeeper"},
+    "hausmeister.reachable": {
+        "de": "Ollama ist lokal erreichbar",
+        "en": "Ollama is reachable on this machine",
+    },
+    "hausmeister.unreachable": {
+        "de": "Ollama ist nicht erreichbar",
+        "en": "Ollama is not reachable",
+    },
+    "hausmeister.turn_on": {"de": "Einschalten", "en": "Turn on"},
+    "hausmeister.turn_off": {"de": "Ausschalten", "en": "Turn off"},
+    "hausmeister.use_model": {"de": "Modell übernehmen", "en": "Use model"},
+    "hausmeister.no_model": {
+        "de": "Kein lokales Modell gewählt",
+        "en": "No local model selected",
+    },
+    "hausmeister.order_placeholder": {
+        "de": "Was soll aufgeräumt werden?",
+        "en": "What should be tidied?",
+    },
+    "hausmeister.run": {"de": "Auftrag ausführen", "en": "Run the job"},
+    "hausmeister.done": {"de": "Auftrag angehängt", "en": "Job appended"},
+    "hausmeister.disabled": {"de": "Hausmeister ist aus", "en": "Housekeeper is off"},
+    "hausmeister.failed": {
+        "de": "Auftrag nicht ausgeführt",
+        "en": "Job was not run",
+    },
+    "ui.hausmeister_done": {"de": "Auftrag angehängt", "en": "Job appended"},
     # --- Wissenspool ---
     "knowledge.eyebrow": {
         "de": "Projektgedächtnis · Listenansicht",

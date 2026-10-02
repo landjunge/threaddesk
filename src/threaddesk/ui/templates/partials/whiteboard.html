@@ -8,6 +8,7 @@
       class="whiteboard-entry{% if mark %} tone-{{ mark.color_token }}{% endif %}{% if mark and mark.ai %} is-ai{% endif %}"
       data-whiteboard-entry
       data-entry-id="{{ entry.id }}"
+      {% if entry.actor_type == "local-assistant" %}data-hausmeister-entry="1"{% endif %}
       {% if mark %}data-actor-kind="{{ mark.kind }}" data-color-token="{{ mark.color_token }}" data-ai="{{ '1' if mark.ai else '0' }}"{% endif %}
     >
       <p class="whiteboard-meta">
