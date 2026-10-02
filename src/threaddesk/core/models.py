@@ -305,6 +305,9 @@ class WhiteboardEntry:
     run_id: str | None = None
     external_key: str | None = None
     actor_id: str | None = None
+    instance_id: str | None = None
+    room_id: str | None = None
+    content_hash: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -326,6 +329,9 @@ class WhiteboardEntry:
             run_id=data.get("run_id"),
             external_key=data.get("external_key"),
             actor_id=data.get("actor_id") or None,
+            instance_id=data.get("instance_id") or None,
+            room_id=data.get("room_id") or None,
+            content_hash=data.get("content_hash") or None,
             metadata=dict(data.get("metadata") or {}),
         )
 
