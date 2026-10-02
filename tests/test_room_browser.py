@@ -17,7 +17,6 @@ pytest.importorskip("playwright.sync_api", reason="browser extra not installed")
 from playwright.sync_api import expect, sync_playwright
 
 from threaddesk.core.models import WhiteboardEntry
-from threaddesk.services.room_sync import RoomBook
 from threaddesk.storage.json_store import JsonStore
 from threaddesk.storage.sqlite_store import SQLiteStore
 
@@ -39,7 +38,6 @@ class Desk:
         env = os.environ.copy()
         env.update(THREADDESK_HOME=str(self.home), THREADDESK_STORAGE=self.storage,
                    THREADDESK_LANG="de", NO_PROXY="127.0.0.1,localhost")
-        # Closing this parent handle does not close the child's copied descriptor.
         with self.log.open("a", encoding="utf-8") as output:
             self.proc = subprocess.Popen(
                 [sys.executable, "-m", "threaddesk.ui.cli", "serve", "--host", "127.0.0.1",
@@ -87,7 +85,6 @@ def click_post(page, selector, path):
                               and response.url.split("?", 1)[0].endswith(path)) as result:
         page.locator(selector).click()
     assert result.value.ok, f"{path}: HTTP {result.value.status}"
-    # HTMX replaces the whole workspace; wait for the replacement, not a sleep.
     expect(page.locator("#workspace.htmx-swapping")).to_have_count(0)
     expect(page.locator(".htmx-request")).to_have_count(0)
 
@@ -114,7 +111,6 @@ def add_entry(page, thread_id, text, shared):
 
 def synchronize(page):
     click_post(page, "[data-room-sync]", "/rooms/sync")
-    expect(page.locator("[data-room-state]")).to_have_attribute("data-room-state", "synced|conflict_kept") if False else None
 
 
 def pair_via_ui(a, b, a_url, name, role):
@@ -136,12 +132,12 @@ def pair_via_ui(a, b, a_url, name, role):
 def test_team_room_real_browser(tmp_path, storage):
     left, right = Desk(tmp_path / "left", storage), Desk(tmp_path / "right", storage)
     assert left.home != right.home and left.port != right.port
-    with ExitStack() as stack:
+    with sync_playwright() as play, ExitStack() as stack:
         stack.enter_context(running(left))
         stack.enter_context(running(right))
-        with sync_playwright() as play:
+        with ExitStack() as browser_stack:
             browser = play.chromium.launch(executable_path=os.environ.get("THREADDESK_CHROMIUM") or None)
-            stack.callback(browser.close)
+            browser_stack.callback(browser.close)
             context_a = browser.new_context(locale="de-DE", viewport={"width": 1440, "height": 1000})
             context_b = browser.new_context(locale="de-DE", viewport={"width": 1440, "height": 1000})
             a, b = context_a.new_page(), context_b.new_page()
@@ -185,8 +181,8 @@ def test_team_room_real_browser(tmp_path, storage):
             select_thread(b, thread_a)
             expect(b.locator(".whiteboard-body").filter(has_text="Nach der Unterbrechung")).to_have_count(1)
 
-            # Append-only UI has no edit command. Prepare a deliberate collision
-            # only in the stopped synthetic stores, then test the real sync button.
+            # There is no edit route in the append-only board. Only the stopped
+            # synthetic stores prepare this collision; synchronization uses clicks.
             left.stop()
             right.stop()
             for desk, instance, text in ((left, instance_a, "Browser Fassung A"),
