@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -11,6 +12,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -20,14 +22,22 @@ jobs:
       - name: Install
         run: python -m pip install -e '.[dev,ui]'
       - name: Test
-        run: python -m pytest -q
-      - name: Check map JavaScript
-        run: node --check src/threaddesk/ui/static/map.js
+        run: python -m pytest -q -ra --junitxml=test-results/unit.xml
+      - name: Check JavaScript
+        run: |
+          node --check src/threaddesk/ui/static/map.js
+          node --check src/threaddesk/ui/static/app.js
+      - name: Test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-results
+          path: test-results/*.xml
+          if-no-files-found: error
 
   browser:
-    # Echte Bedienprüfung. Serverseitige Tests sehen nur das ausgelieferte
-    # HTML — sie bemerken nicht, wenn ein Overlay jeden Klick schluckt.
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -39,4 +49,20 @@ jobs:
       - name: Install Chromium
         run: python -m playwright install --with-deps chromium
       - name: Bedienprüfung
-        run: python -m pytest tests/test_ui_browser.py tests/test_migration_browser.py -q
+        run: python -m pytest tests/test_ui_browser.py tests/test_migration_browser.py tests/test_room_browser.py -q -ra --junitxml=test-results/browser.xml
+      - name: Require executed browser tests
+        run: |
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          root = ET.parse('test-results/browser.xml').getroot()
+          suites = list(root.iter('testsuite'))
+          assert suites and sum(int(s.get('tests', 0)) for s in suites) >= 30, 'Browser tests missing'
+          assert sum(int(s.get('skipped', 0)) for s in suites) == 0, 'Skipped browser tests are not an acceptance'
+          PY
+      - name: Browser results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-results
+          path: test-results/*.xml
+          if-no-files-found: error
