@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
-from typing import Any
+import os
+import time
+from typing import Any, Callable
 
 from threaddesk.core.errors import InvalidState, NotFound, SecretRejected
+from threaddesk.core.models import new_id, now_iso
 from threaddesk.core.secrets import reject_secrets
 from threaddesk.services.actors import ActorRegistry
 from threaddesk.services.modules import ModuleManifest, ModuleRegistry, ModuleRuntime
@@ -22,14 +26,62 @@ MANIFEST = ModuleManifest(
     uninstall="retain-data",
 )
 SETTINGS = "hausmeister.json"
+QUEUE = "hausmeister-queue.json"
+ACTIVITY = "hausmeister-activity.json"
 AGENT_TYPE = "local-assistant"
 ACTOR_NAME = "Hausmeister"
+IDLE_AFTER_SECONDS = 600
+LOAD_LIMIT = 1.5
+OPEN = frozenset({"waiting", "paused", "running"})
+
+
+@dataclass(frozen=True)
+class IdleSnapshot:
+    idle_seconds: float
+    user_active: bool
+    load: float
+    heavy_job: bool = False
+    desk_busy: bool = False
+
+
+def machine_is_quiet(snapshot: IdleSnapshot) -> bool:
+    """True only after a long quiet stretch and a light machine."""
+    return (
+        snapshot.idle_seconds >= IDLE_AFTER_SECONDS
+        and not snapshot.user_active
+        and snapshot.load < LOAD_LIMIT
+        and not snapshot.heavy_job
+        and not snapshot.desk_busy
+    )
+
+
+def note_activity(store: Any, now: float | None = None) -> None:
+    store.write_json_artifact(ACTIVITY, {"seen": now if now is not None else time.time()})
+
+
+def live_snapshot(store: Any) -> IdleSnapshot:
+    path = store.artifact_path(ACTIVITY)
+    seen = time.time()
+    if path.exists():
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(value.get("seen"), (int, float)):
+                seen = float(value["seen"])
+        except (OSError, json.JSONDecodeError, TypeError):
+            seen = time.time()
+    idle = max(0.0, time.time() - seen)
+    try:
+        load = float(os.getloadavg()[0])
+    except (AttributeError, OSError):
+        load = 0.0
+    return IdleSnapshot(idle_seconds=idle, user_active=idle < IDLE_AFTER_SECONDS, load=load)
 
 
 class Hausmeister:
-    def __init__(self, store: Any, transport: Any = None) -> None:
+    def __init__(self, store: Any, transport: Any = None, snapshot_fn: Callable[[], IdleSnapshot] | None = None) -> None:
         self.store = store
         self.transport = transport
+        self.snapshot_fn = snapshot_fn
         self.registry = ModuleRegistry(store)
         self.runtime = ModuleRuntime(store, self.registry)
 
@@ -58,6 +110,7 @@ class Hausmeister:
             "actor_id": actor["id"] if actor else "",
             "agent_type": AGENT_TYPE if actor else "",
             "kind": actor["kind"] if actor else "",
+            "phase": self._phase(installed.enabled, ollama_ok, self._stored_model()),
         }
 
     def set_enabled(self, enabled: bool) -> dict[str, Any]:
@@ -116,6 +169,76 @@ class Hausmeister:
             return {"ok": False, "error": _safe_error(result.error), "entries": []}
         return {"ok": True, "error": "", "entries": result.value["entries"], "actor_id": actor["id"]}
 
+    def enqueue(self, thread_id: str, order: str, task_id: str | None = None) -> dict[str, Any]:
+        self.install()
+        if not self.registry.get(MANIFEST.id).enabled:
+            return {"ok": False, "error": "module_disabled", "job": None}
+        order = _order(order)
+        existing = self._open_match(thread_id, order)
+        if existing is not None:
+            return {"ok": True, "error": "", "job": existing, "duplicate": True}
+        job = _job(thread_id, order, task_id)
+        jobs = self.jobs()
+        jobs.append(job)
+        self._write_jobs(jobs)
+        return {"ok": True, "error": "", "job": job, "duplicate": False}
+
+    def run_now(self, thread_id: str, order: str, task_id: str | None = None) -> dict[str, Any]:
+        """Start at once. Idle time is not required."""
+        self.install()
+        if not self.registry.get(MANIFEST.id).enabled:
+            return {"ok": False, "error": "module_disabled", "entries": []}
+        order = _order(order)
+        job = self._open_match(thread_id, order) or _job(thread_id, order, task_id)
+        if job not in self.jobs():
+            jobs = self.jobs()
+            jobs.append(job)
+            self._write_jobs(jobs)
+        self._mark(job["id"], "running")
+        result = self.run(thread_id, order)
+        self._mark(job["id"], "done" if result["ok"] else "error", result.get("error", ""))
+        result["job_id"] = job["id"]
+        return result
+
+    def tick(self, snapshot: IdleSnapshot) -> dict[str, Any]:
+        """Start the next open job only while the machine is quiet."""
+        self.install()
+        if not self.registry.get(MANIFEST.id).enabled:
+            return {"ok": False, "error": "module_disabled", "started": False, "phase": "off"}
+        job = self._next_open()
+        if job is None:
+            return {"ok": True, "error": "", "started": False, "phase": "waiting_for_order"}
+        if not machine_is_quiet(snapshot):
+            if job["status"] == "running":
+                self._mark(job["id"], "paused")
+            phase = "paused" if job["status"] in {"running", "paused"} else "waiting_for_quiet"
+            return {"ok": True, "error": "", "started": False, "phase": phase}
+        if not self._stored_model():
+            return {"ok": False, "error": "ollama_model_missing", "started": False, "phase": "no_model"}
+        self._mark(job["id"], "running")
+        current = self.snapshot_fn() if self.snapshot_fn else snapshot
+        if not machine_is_quiet(current):
+            self._mark(job["id"], "paused")
+            return {"ok": True, "error": "", "started": False, "phase": "paused"}
+        result = self.run(job["thread_id"], job["order"])
+        self._mark(job["id"], "done" if result["ok"] else "error", result.get("error", ""))
+        return {
+            "ok": result["ok"],
+            "error": result.get("error", ""),
+            "started": bool(result["ok"]),
+            "phase": "waiting_for_order" if result["ok"] else "error",
+            "job_id": job["id"],
+            "entries": result.get("entries", []),
+        }
+
+    def jobs(self) -> list[dict[str, Any]]:
+        path = self.store.artifact_path(QUEUE)
+        if not path.exists():
+            return []
+        value = json.loads(path.read_text(encoding="utf-8"))
+        jobs = value.get("jobs") if isinstance(value, dict) else None
+        return [dict(item) for item in jobs] if isinstance(jobs, list) else []
+
     def _work(self, context: Any, thread_id: str, order: str, model: str, actor: dict[str, Any]) -> dict[str, Any]:
         thread = context.read_thread(thread_id)
         board = context.read_whiteboard(thread_id)
@@ -139,6 +262,46 @@ class Hausmeister:
             written.append(item["entry"])
         return {"entries": written}
 
+    def _phase(self, enabled: bool, ollama_ok: bool, model: str) -> str:
+        if not enabled:
+            return "off"
+        if not ollama_ok:
+            return "ollama_down"
+        if not model:
+            return "no_model"
+        jobs = self.jobs()
+        if any(item["status"] == "running" for item in jobs):
+            return "working"
+        if any(item["status"] == "paused" for item in jobs):
+            return "paused"
+        if any(item["status"] == "waiting" for item in jobs):
+            return "waiting_for_quiet"
+        return "waiting_for_order"
+
+    def _next_open(self) -> dict[str, Any] | None:
+        open_jobs = [item for item in self.jobs() if item.get("status") in {"waiting", "paused"}]
+        open_jobs.sort(key=lambda item: (item.get("created_at", ""), item.get("id", "")))
+        return open_jobs[0] if open_jobs else None
+
+    def _open_match(self, thread_id: str, order: str) -> dict[str, Any] | None:
+        for item in self.jobs():
+            if item.get("thread_id") == thread_id and item.get("order") == order and item.get("status") in OPEN:
+                return item
+        return None
+
+    def _mark(self, job_id: str, status: str, error: str = "") -> None:
+        jobs = self.jobs()
+        for item in jobs:
+            if item["id"] != job_id:
+                continue
+            item["status"] = status
+            item["updated_at"] = now_iso()
+            item["error"] = error
+        self._write_jobs(jobs)
+
+    def _write_jobs(self, jobs: list[dict[str, Any]]) -> None:
+        self.store.write_json_artifact(QUEUE, {"version": 1, "jobs": jobs})
+
     def _stored_model(self) -> str:
         path = self.store.artifact_path(SETTINGS)
         if not path.exists():
@@ -146,6 +309,20 @@ class Hausmeister:
         value = json.loads(path.read_text(encoding="utf-8"))
         model = value.get("model") if isinstance(value, dict) else ""
         return model if isinstance(model, str) else ""
+
+
+def _job(thread_id: str, order: str, task_id: str | None) -> dict[str, Any]:
+    stamp = now_iso()
+    return {
+        "id": new_id(),
+        "thread_id": thread_id,
+        "order": order,
+        "status": "waiting",
+        "created_at": stamp,
+        "updated_at": stamp,
+        "task_id": task_id or "",
+        "error": "",
+    }
 
 
 def _find_agent(registry: ActorRegistry) -> dict[str, Any] | None:

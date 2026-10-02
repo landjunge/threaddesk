@@ -181,8 +181,33 @@ CATALOG: dict[str, dict[str, str]] = {
         "de": "Was soll aufgeräumt werden?",
         "en": "What should be tidied?",
     },
-    "hausmeister.run": {"de": "Auftrag ausführen", "en": "Run the job"},
+    "hausmeister.run": {"de": "Jetzt ausführen", "en": "Run now"},
+    "hausmeister.later": {"de": "Später erledigen", "en": "Do later"},
     "hausmeister.done": {"de": "Auftrag angehängt", "en": "Job appended"},
+    "hausmeister.queued": {"de": "Auftrag wartet", "en": "Job is waiting"},
+    "hausmeister.phase.waiting_for_order": {
+        "de": "Wartet auf Auftrag",
+        "en": "Waiting for a job",
+    },
+    "hausmeister.phase.waiting_for_quiet": {
+        "de": "Wartet auf Ruhe",
+        "en": "Waiting for a quiet moment",
+    },
+    "hausmeister.phase.working": {"de": "Arbeitet", "en": "Working"},
+    "hausmeister.phase.paused": {
+        "de": "Pausiert. Jemand ist aktiv.",
+        "en": "Paused. Someone is active.",
+    },
+    "hausmeister.phase.ollama_down": {
+        "de": "Ollama ist nicht erreichbar",
+        "en": "Ollama is not reachable",
+    },
+    "hausmeister.phase.no_model": {
+        "de": "Kein lokales Modell gewählt",
+        "en": "No local model selected",
+    },
+    "hausmeister.phase.off": {"de": "Aus", "en": "Off"},
+    "hausmeister.phase.error": {"de": "Fehler", "en": "Error"},
     "hausmeister.disabled": {"de": "Hausmeister ist aus", "en": "Housekeeper is off"},
     "hausmeister.failed": {
         "de": "Auftrag nicht ausgeführt",

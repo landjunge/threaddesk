@@ -16,7 +16,7 @@ from jinja2 import pass_context
 from threaddesk.api.service import ThreadService
 from threaddesk.core.errors import InvalidState, NotFound, ThreadDeskError
 from threaddesk.services.actors import ActorRegistry
-from threaddesk.services.hausmeister import Hausmeister
+from threaddesk.services.hausmeister import Hausmeister, live_snapshot, note_activity
 from threaddesk.services.ollama_local import OllamaError
 from threaddesk.core import i18n
 from threaddesk.core.models import (
@@ -135,6 +135,7 @@ def _hausmeister_status(store) -> dict:
             "actor_id": "",
             "agent_type": "",
             "kind": "",
+            "phase": "off",
         }
 
 
@@ -201,6 +202,10 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     def workspace(request: Request, extra: dict | None = None) -> HTMLResponse:
+        try:
+            note_activity(_svc().store)
+        except OSError:
+            pass
         return templates.TemplateResponse(
             request, "partials/workspace.html", _ctx(request, extra)
         )
@@ -532,9 +537,20 @@ def create_app() -> FastAPI:
         return workspace(request, {"notice": i18n.translate("hausmeister.use_model", _language(request))})
 
     @app.post("/threads/{thread_id}/hausmeister", response_class=HTMLResponse)
-    def hausmeister_run(thread_id: str, request: Request, order: str = Form(...)) -> HTMLResponse:
+    def hausmeister_run(
+        thread_id: str,
+        request: Request,
+        order: str = Form(...),
+        mode: str = Form("now"),
+    ) -> HTMLResponse:
+        home = Hausmeister(_svc().store)
         try:
-            result = Hausmeister(_svc().store).run(thread_id, order)
+            if mode == "later":
+                result = home.enqueue(thread_id, order)
+                if not result["ok"]:
+                    return _hausmeister_notice(request, result["error"])
+                return workspace(request, {"notice": i18n.translate("hausmeister.queued", _language(request))})
+            result = home.run_now(thread_id, order)
         except ThreadDeskError as exc:
             return _hausmeister_notice(request, str(exc))
         if not result["ok"]:
@@ -656,6 +672,18 @@ def create_app() -> FastAPI:
 
 
 def run(host: str = "127.0.0.1", port: int = 8765) -> None:
+    import threading
+    import time
     import uvicorn
 
+    def _idle() -> None:
+        while True:
+            time.sleep(60)
+            try:
+                store = ThreadService().store
+                Hausmeister(store).tick(live_snapshot(store))
+            except Exception:
+                continue
+
+    threading.Thread(target=_idle, name="hausmeister-idle", daemon=True).start()
     uvicorn.run(create_app(), host=host, port=port, log_level="info")

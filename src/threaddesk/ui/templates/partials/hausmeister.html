@@ -1,7 +1,10 @@
 <section class="block desk-hausmeister" data-hausmeister data-ollama="{{ 'up' if hausmeister.ollama_ok else 'down' }}">
   <h3>{{ t("hausmeister.title") }}</h3>
-  <p>
+  <p data-hausmeister-phase="{{ hausmeister.phase }}">
     {% if hausmeister.ollama_ok %}{{ t("hausmeister.reachable") }}{% else %}{{ t("hausmeister.unreachable") }}{% endif %}
+    {% if hausmeister.phase in ["waiting_for_order", "waiting_for_quiet", "working", "paused"] %}
+    · {{ t("hausmeister.phase." ~ hausmeister.phase) }}
+    {% endif %}
   </p>
   <form class="inline-form" hx-post="/hausmeister/toggle" hx-target="#workspace" hx-swap="innerHTML">
     <input type="hidden" name="enabled" value="{{ '0' if hausmeister.enabled else '1' }}" />
@@ -25,7 +28,8 @@
   {% if hausmeister.enabled %}
   <form hx-post="/threads/{{ current.id }}/hausmeister" hx-target="#workspace" hx-swap="innerHTML">
     <textarea name="order" rows="2" maxlength="500" placeholder="{{ t('hausmeister.order_placeholder') }}" data-hausmeister-order></textarea>
-    <button type="submit" class="btn btn-primary" data-hausmeister-run>{{ t("hausmeister.run") }}</button>
+    <button type="submit" class="btn btn-primary" name="mode" value="now" data-hausmeister-run>{{ t("hausmeister.run") }}</button>
+    <button type="submit" class="btn" name="mode" value="later" data-hausmeister-later>{{ t("hausmeister.later") }}</button>
   </form>
   {% endif %}
 </section>

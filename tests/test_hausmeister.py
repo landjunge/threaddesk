@@ -9,7 +9,7 @@ import pytest
 
 from threaddesk.api.service import ThreadService
 from threaddesk.core.errors import SecretRejected
-from threaddesk.services.hausmeister import Hausmeister
+from threaddesk.services.hausmeister import Hausmeister, IdleSnapshot
 from threaddesk.services.ollama_local import OllamaError, default_transport, local_url
 from threaddesk.storage.json_store import JsonStore
 from threaddesk.storage.sqlite_store import SQLiteStore
@@ -140,6 +140,98 @@ def test_missing_ollama_and_missing_model_stay_quiet(svc: ThreadService) -> None
     refused = home.run(thread.id, "Fasse zusammen")
     assert refused["error"] == "ollama_model_missing"
     assert svc.whiteboard(thread.id) == []
+
+
+def _quiet() -> IdleSnapshot:
+    return IdleSnapshot(idle_seconds=601, user_active=False, load=0.2)
+
+
+def _busy() -> IdleSnapshot:
+    return IdleSnapshot(idle_seconds=5, user_active=True, load=0.2)
+
+
+def _heavy() -> IdleSnapshot:
+    return IdleSnapshot(idle_seconds=601, user_active=False, load=4.0)
+
+
+def test_manual_start_ignores_idle_and_blocks_a_later_automatic_run(svc: ThreadService, tmp_path: Path) -> None:
+    thread = svc.create("Sofort")
+    svc.set_note("Original bleibt.")
+    user = svc.append_whiteboard(
+        thread.id, actor="Ada", actor_type="human", entry_type="note", content="Original bleibt stehen."
+    )
+    calls = []
+    home = Hausmeister(svc.store, _counting(calls))
+    home.set_enabled(True)
+    home.set_model("demo")
+    queued = home.enqueue(thread.id, "Fasse den Stand zusammen")
+    assert home.run_now(thread.id, "Fasse den Stand zusammen")["ok"] is True
+    assert calls.count("chat") == 1
+    assert home.jobs()[0]["id"] == queued["job"]["id"]
+    assert home.jobs()[0]["status"] == "done"
+    assert home.tick(_quiet())["started"] is False
+    assert calls.count("chat") == 1
+    assert svc.whiteboard(thread.id)[0].id == user["entry"]["id"]
+    assert svc.whiteboard(thread.id)[0].content == "Original bleibt stehen."
+    again = Hausmeister(type(svc.store)(tmp_path), _counting(calls))
+    assert again.jobs()[0]["status"] == "done"
+    assert again.jobs()[0]["id"] == queued["job"]["id"]
+
+
+def test_automatic_start_waits_for_quiet_and_can_resume(svc: ThreadService) -> None:
+    thread = svc.create("Ruhe")
+    calls = []
+    state = {"active": False}
+
+    def snap() -> IdleSnapshot:
+        return _busy() if state["active"] else _quiet()
+
+    home = Hausmeister(svc.store, _counting(calls), snapshot_fn=snap)
+    home.set_enabled(True)
+    home.set_model("demo")
+    job = home.enqueue(thread.id, "Fasse den Stand zusammen")["job"]
+    assert home.tick(_busy())["started"] is False
+    assert home.tick(_heavy())["started"] is False
+    assert calls.count("chat") == 0
+    assert home.jobs()[0]["status"] == "waiting"
+    state["active"] = True
+    paused = home.tick(_quiet())
+    assert paused["phase"] == "paused"
+    assert paused["started"] is False
+    assert calls.count("chat") == 0
+    assert home.jobs()[0]["status"] == "paused"
+    state["active"] = False
+    started = home.tick(_quiet())
+    assert started["started"] is True
+    assert started["job_id"] == job["id"]
+    assert home.jobs()[0]["status"] == "done"
+    assert {item["actor_type"] for item in started["entries"]} == {"local-assistant"}
+    assert home.tick(_quiet())["started"] is False
+    assert calls.count("chat") == 1
+
+
+def test_disabled_housekeeper_does_not_queue_or_tick(svc: ThreadService) -> None:
+    thread = svc.create("Aus")
+    calls = []
+    home = Hausmeister(svc.store, _counting(calls))
+    assert home.enqueue(thread.id, "Fasse zusammen")["error"] == "module_disabled"
+    assert home.run_now(thread.id, "Fasse zusammen")["error"] == "module_disabled"
+    assert home.tick(_quiet())["error"] == "module_disabled"
+    assert calls == []
+    assert home.jobs() == []
+
+
+def _counting(calls: list[str]):
+    def call(url: str, body=None, timeout: float = 0.4):
+        assert url.startswith("http://127.0.0.1:11434/")
+        assert "/api/pull" not in url
+        if url.endswith("/api/tags"):
+            calls.append("tags")
+            return {"models": [{"name": "demo"}]}
+        calls.append("chat")
+        return {"message": {"content": json.dumps({"summary": "Kurz gefasst.", "suggestions": ["Weiter notieren"]})}}
+
+    return call
 
 
 def test_secrets_from_the_model_are_not_stored(svc: ThreadService) -> None:
