@@ -52,7 +52,8 @@ def test_backup_manifest_and_verified_restore_match_exactly(tmp_path: Path) -> N
     manifest = json.loads((backup / "manifest.json").read_text(encoding="utf-8"))
 
     assert manifest["kind"] == "threaddesk.workspace-backup"
-    assert manifest["app_version"] == "0.1.0"
+    from threaddesk import __version__
+    assert manifest["app_version"] == __version__
     assert manifest["schema_version"] == 4
     assert manifest["design_reference"] == "desk-r2"
     assert set(manifest["files"]) == {

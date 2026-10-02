@@ -34,6 +34,20 @@ DEFAULT_REGISTER = PLAIN
 EXPERT_SUFFIX = "#expert"
 
 CATALOG: dict[str, dict[str, str]] = {
+    "data.profiles": {"de": "Wiederhergestellte Arbeitsbereiche", "en": "Restored workspaces"},
+    "data.open_profile": {"de": "Arbeitsbereich öffnen", "en": "Open workspace"},
+    "data.nav": {"de": "Daten", "en": "Data"},
+    "data.title": {"de": "Sicherung und Wiederherstellung", "en": "Backup and restore"},
+    "data.intro": {"de": "Eine Sicherung enthält deine Threads, Zwischenstände, Wissenskarte, Whiteboards und lokal gespeicherten Übergaben. Verlinkte Dateien außerhalb von ThreadDesk bleiben an ihrem bisherigen Ort.", "en": "A backup contains your threads, snapshots, knowledge map, whiteboards and locally stored handoffs. Linked files outside ThreadDesk stay in their original location."},
+    "data.download": {"de": "Sicherung herunterladen", "en": "Download backup"},
+    "data.file": {"de": "ThreadDesk-Sicherung auswählen", "en": "Choose a ThreadDesk backup"},
+    "data.confirm": {"de": "Diese Sicherung als eigenen Arbeitsbereich öffnen. Meine bisherigen Daten bleiben erhalten.", "en": "Open this backup as a separate workspace. Keep my existing data."},
+    "data.restore": {"de": "Sicherung öffnen", "en": "Open backup"},
+    "data.active": {"de": "Du arbeitest in einer wiederhergestellten Sicherung. Änderungen bleiben in diesem Arbeitsbereich gespeichert, auch nach einem Neustart.", "en": "You are working in a restored backup. Changes stay in this workspace, including after restarting."},
+    "data.original": {"de": "Zum bisherigen Arbeitsbereich", "en": "Return to original workspace"},
+    "data.private": {"de": "Die Sicherung enthält auch private Inhalte und Raum-Zugangsdaten. Bewahre sie an einem sicheren Ort auf. Der lokale Hausmeister bleibt nach dem Wiederherstellen ausgeschaltet.", "en": "The backup includes private content and room credentials. Keep it in a safe place. The local caretaker stays disabled after restoring."},
+    "data.backup_error": {"de": "Die Sicherung konnte nicht erstellt werden. Beende laufende Änderungen und versuche es erneut. Prüfe außerdem den freien Speicherplatz.", "en": "The backup could not be created. Finish pending changes and try again. Also check available disk space."},
+    "data.restore_error": {"de": "Die Sicherung konnte nicht geöffnet werden. Wähle eine vollständige ThreadDesk-Sicherung und bestätige das Öffnen. Deine bisherigen Daten bleiben erhalten.", "en": "The backup could not be opened. Choose a complete ThreadDesk backup and confirm opening it. Your existing data is preserved."},
     # --- Grundgeruest ---
     "app.tagline": {
         "de": "Kontext halten · nichts ausführen",

@@ -43,7 +43,13 @@ from threaddesk.storage.protocols import Store
 
 class ThreadService:
     def __init__(self, store: Store | None = None, bus: EventBus | None = None) -> None:
-        self.store = store or JsonStore()
+        if store is None:
+            from threaddesk.storage.portable_backup import base_root, selected_profile
+            from threaddesk.storage.sqlite_store import SQLiteStore
+            import os
+            root, backend = selected_profile(base_root())
+            store = SQLiteStore(root) if (backend or os.environ.get("THREADDESK_STORAGE")) == "sqlite" else JsonStore(root)
+        self.store = store
         self.bus = bus or EventBus()
         self.threads = ThreadReader(self.store)
         self.knowledge = KnowledgeReader(self.store)

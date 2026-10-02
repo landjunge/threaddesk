@@ -8,7 +8,7 @@ on:
     paths: ['src/**', 'packaging/**', 'scripts/**', 'brand/**', 'pyproject.toml', '.github/workflows/desktop-build.yml']
   workflow_dispatch:
 
-# Builds are artifacts only. This workflow cannot publish or replace a release.
+# Candidate publication is gated on full acceptance and all native builds.
 permissions:
   contents: read
 
@@ -122,3 +122,40 @@ jobs:
             ${{ matrix.artifact }}.*.sha256
             ${{ matrix.artifact }}.*.build.json
           if-no-files-found: error
+
+  acceptance:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/tests.yml
+
+  publish:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [build, acceptance]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ThreadDesk-*
+          path: release-files
+          merge-multiple: true
+      - name: Verify every native download and source receipt
+        run: python scripts/verify_release.py release-files --commit "$GITHUB_SHA"
+      - name: Publish versioned candidate without replacing existing downloads
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          tag="v$version"
+          if gh release view "$tag" > /dev/null 2>&1; then
+            echo "Version already published; existing downloads remain unchanged."
+            exit 0
+          fi
+          gh release create "$tag" release-files/* --target "$GITHUB_SHA" --prerelease \
+            --title "ThreadDesk $version – aktuelle Desktop-Ausgabe" --notes-file docs/RELEASE-NOTES.md

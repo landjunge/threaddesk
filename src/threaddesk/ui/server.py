@@ -28,6 +28,8 @@ from threaddesk.core.models import (
     STATUSES,
     Thread,
 )
+from threaddesk.storage.portable_backup import base_root, selected_profile, download_backup, restore_backup, LIMIT, profiles, activate_profile
+from threaddesk.storage.workspace_backup import BackupError
 from threaddesk.storage.json_store import JsonStore
 from threaddesk.storage.sqlite_store import SQLiteStore
 from threaddesk.services.migration import (
@@ -58,13 +60,10 @@ _BOARD_FIELDS = {
 
 
 def _svc() -> ThreadService:
-    home = os.environ.get("THREADDESK_HOME")
-    root = Path(home) if home else None
-    if os.environ.get("THREADDESK_STORAGE") == "sqlite":
+    root, backend = selected_profile(base_root())
+    if (backend or os.environ.get("THREADDESK_STORAGE")) == "sqlite":
         return ThreadService(store=SQLiteStore(root))
-    if root:
-        return ThreadService(store=JsonStore(root))
-    return ThreadService()
+    return ThreadService(store=JsonStore(root))
 
 
 def _last_packet(svc: ThreadService, thread: Thread | None) -> dict | None:
@@ -234,6 +233,65 @@ def create_app() -> FastAPI:
             except ThreadDeskError:
                 pass
         return templates.TemplateResponse(request, "index.html", _ctx(request))
+
+    def data_page(request: Request, **extra) -> HTMLResponse:
+        active, _ = selected_profile(base_root())
+        return templates.TemplateResponse(request, "data.html", _ctx(request, {
+            "restored_profile": active != base_root(), "profiles": profiles(base_root()),
+            "active_profile": active.name, **extra,
+        }))
+
+    @app.get("/data", response_class=HTMLResponse)
+    def data_view(request: Request) -> HTMLResponse:
+        return data_page(request)
+
+    @app.post("/data/download")
+    def data_download(request: Request) -> Response:
+        store = _svc().store
+        try:
+            body = download_backup(store)
+            return Response(body, media_type="application/zip", headers={
+                "Content-Disposition": 'attachment;filename="ThreadDesk-backup.zip"',
+                "Cache-Control": "no-store",
+            })
+        except BackupError:
+            response = data_page(request, error=i18n.translate("data.backup_error", _language(request)))
+            response.status_code = 400
+            return response
+        finally:
+            if isinstance(store, SQLiteStore):
+                store.connection.close()
+
+    @app.post("/data/restore", response_class=HTMLResponse)
+    async def data_restore(request: Request, backup: UploadFile = File(...),
+                           confirm: str = Form("")) -> Response:
+        try:
+            if confirm != "yes":
+                raise BackupError("backup_confirmation")
+            body = await backup.read(LIMIT + 1)
+            restore_backup(body, base_root())
+            return RedirectResponse("/?restored=1", status_code=303)
+        except BackupError:
+            response = data_page(request, error=i18n.translate("data.restore_error", _language(request)))
+            response.status_code = 400
+            return response
+        finally:
+            await backup.close()
+
+    @app.post("/data/profile")
+    def data_profile(request: Request, name: str = Form(...)) -> Response:
+        try:
+            activate_profile(base_root(), name)
+            return RedirectResponse("/", status_code=303)
+        except BackupError:
+            response = data_page(request, error=i18n.translate("data.restore_error", _language(request)))
+            response.status_code = 400
+            return response
+
+    @app.post("/data/original")
+    def data_original() -> Response:
+        (base_root() / "active-profile.json").unlink(missing_ok=True)
+        return RedirectResponse("/", status_code=303)
 
     @app.get("/lang/{code}", response_class=RedirectResponse)
     def switch_language(code: str, request: Request) -> RedirectResponse:

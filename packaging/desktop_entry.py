@@ -9,6 +9,8 @@ import threading
 import time
 from urllib.request import ProxyHandler, build_opener
 
+from threaddesk.storage.portable_backup import base_root
+from threaddesk.storage.json_store import JsonStore
 from threaddesk.services.desktop_runtime import desktop_listener, isolated_self_test
 
 
@@ -68,7 +70,7 @@ def self_test() -> int:
     with isolated_self_test():
         # Resolve the store only after replacing the real data-directory setting.
         from threaddesk.ui.server import _svc
-        with desktop_listener(_svc().store) as listener, running_server(listener) as url:
+        with desktop_listener(JsonStore(base_root())) as listener, running_server(listener) as url:
             with urlopen(url + "/migration?lang=en", timeout=3) as response:
                 page = response.read().decode("utf-8")
                 assert response.status == 200
@@ -88,7 +90,7 @@ def main() -> int:
     from threaddesk.ui.server import _svc
 
     try:
-        with desktop_listener(_svc().store) as listener, running_server(listener) as url:
+        with desktop_listener(JsonStore(base_root())) as listener, running_server(listener) as url:
             webview.create_window(
                 "ThreadDesk", url + "/", width=1360, height=900,
                 min_size=(940, 640), background_color="#0d0e13",
