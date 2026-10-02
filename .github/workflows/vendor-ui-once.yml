@@ -1,0 +1,32 @@
+name: Prepare offline UI assets
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/vendor-ui-once.yml'
+      - 'scripts/vendor_ui.py'
+permissions:
+  contents: read
+jobs:
+  prepare:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'feat/desktop-brand-icons'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fetch fixed dependencies without executing package scripts
+        run: python scripts/vendor_ui.py
+      - name: Commit only the four reviewed asset destinations
+        run: |
+          git add -- src/threaddesk/ui/static/htmx.min.js src/threaddesk/ui/static/alpine.min.js src/threaddesk/ui/static/ui-vendor.json src/threaddesk/ui/static/UI-VENDOR-LICENSES.txt
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'build: vendor fixed UI scripts for offline desktop use'
+          git push origin HEAD:refs/heads/feat/desktop-brand-icons
