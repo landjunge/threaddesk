@@ -1,6 +1,6 @@
 <p align="center"><img src="brand/mark.svg" width="180" alt="ThreadDesk Bildmarke"></p>
 <p align="center"><img src="brand/wordmark.svg" width="520" alt="ThreadDesk"></p>
-<p align="center"><a href="https://github.com/landjunge/threaddesk/releases/tag/preview"><img src="brand/download-button.svg" width="320" alt="ThreadDesk herunterladen"></a></p>
+<p align="center"><a href="https://github.com/landjunge/threaddesk/releases/tag/v0.1.1rc1"><img src="brand/download-button.svg" width="320" alt="ThreadDesk herunterladen"></a></p>
 
 <p align="center"><strong>Ein Arbeitsplatz, der den Stand deiner KI-Projekte behält.</strong></p>
 
@@ -38,13 +38,17 @@ ThreadDesk merkt sich diesen Stand. Jeder Arbeitsbereich wird zu einem eigenen T
 
 ### Heutiger Stand – ehrlich
 
-**Abschlussstand vom 2. Oktober 2026:** Dieser Branch ist ein Release-Kandidat,
-keine bereits veröffentlichte stabile Ausgabe. Die aktuelle Abnahme und die
-zugehörigen Build-Läufe stehen in [PR #62](https://github.com/landjunge/threaddesk/pull/62).
-Der Download oben führt zur bisherigen Vorschau; er ist nicht automatisch der
-neueste Commit dieses Branches. Neue Pakete tragen einen Herkunftsbeleg mit
-Commit-Kennung und Prüfsumme. Ohne geprüften Build kein neuer Release.
+**Aktuelle Desktop-Ausgabe: [0.1.1rc1](https://github.com/landjunge/threaddesk/releases/tag/v0.1.1rc1)**,
+veröffentlicht am 2. Oktober 2026. Der Download oben führt zu dieser geprüften
+Ausgabe für Intel-Mac, Apple Silicon und Windows. [PR #63](https://github.com/landjunge/threaddesk/pull/63)
+ist nach `main` übernommen. Die vollständige Testsuite hat 554 Prüfungen zweimal
+ohne Fehler oder übersprungene Tests bestanden. Alle drei nativen Pakete haben
+ihren Selbsttest bestanden; Quell-Commit und Prüfsummen wurden vor der
+Veröffentlichung abgeglichen.
 
+Die Ausgabe bleibt ein Release-Kandidat: Der erste Start auf deinem konkreten
+Mac und die Qualität deines ausgewählten lokalen LLM müssen am jeweiligen Gerät
+geprüft werden. macOS-Pakete sind ad-hoc signiert, nicht Apple-notarisiert.
 
 | Bereich | Aktueller Stand |
 |---|---|
@@ -82,6 +86,23 @@ Der lokale Austausch verwendet HTTP; er ist keine Ende-zu-Ende-Verschlüsselung.
 Ein Sync-Paket ist auf 1.000.000 Bytes begrenzt. Zu große oder fehlerhafte Pakete
 werden abgewiesen, nicht als erfolgreich abgeschnitten. Externer Server-Sync bleibt
 ein eigener, noch abzunehmender Ausbau.
+
+### Deine Daten sichern
+
+Oben **Daten** öffnen und **Sicherung herunterladen** wählen. Die ZIP-Datei enthält
+Threads, Notizen, Zwischenstände, Wissenskarte, Whiteboards und lokal gespeicherte
+Übergaben für JSON oder SQLite. Verlinkte Dateien außerhalb von ThreadDesk bleiben
+an ihrem ursprünglichen Ort und sind nicht Teil dieser Sicherung.
+
+Zum Wiederherstellen die Sicherung auswählen, das Öffnen bestätigen und
+**Sicherung öffnen** wählen. ThreadDesk prüft die Dateien und öffnet einen eigenen
+Arbeitsbereich. Der bisherige Bereich bleibt erhalten. Unter **Daten** kannst du
+zwischen dem Original und den wiederhergestellten Bereichen wechseln. Die Auswahl
+und spätere Änderungen bleiben über Neustarts erhalten; CLI und MCP verwenden
+dieselbe Auswahl. Der lokale Hausmeister bleibt nach dem Wiederherstellen aus.
+
+Die ZIP-Datei enthält auch private Inhalte und Raum-Zugangsdaten. Bewahre sie an
+einem sicheren Ort auf. Beschädigte oder zu große Sicherungen werden abgewiesen.
 
 ### Lokaler Hausmeister / Local caretaker
 
