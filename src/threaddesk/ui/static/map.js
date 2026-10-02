@@ -61,17 +61,17 @@
     rework: "fresh",
   };
   // Gerichtete Beziehungen bekommen eine Spitze, unsichere eine gestrichelte
-  // Linie, wichtige Abhängigkeiten eine stärkere.
+  // Linie. Die Stärke bleibt überall ein Haarstrich; Bedeutung liegt in Farbe.
   const EDGE = {
-    contains:    {tone: "soft",  width: 1.4, dash: null,    arrow: false, flow: false},
-    depends_on:  {tone: "bold",  width: 2.4, dash: null,    arrow: true,  flow: false},
-    blocks:      {tone: "risk",  width: 2.6, dash: null,    arrow: true,  flow: false},
-    assigned_to: {tone: "soft",  width: 1.6, dash: "7 6",   arrow: true,  flow: false},
-    produced:    {tone: "fresh", width: 2.0, dash: null,    arrow: true,  flow: true},
-    follows:     {tone: "fresh", width: 1.8, dash: null,    arrow: true,  flow: true},
-    supports:    {tone: "good",  width: 1.6, dash: null,    arrow: true,  flow: false},
-    references:  {tone: "soft",  width: 1.2, dash: "3 7",   arrow: false, flow: false},
-    related_to:  {tone: "soft",  width: 1.2, dash: "3 7",   arrow: false, flow: false},
+    contains:    {tone: "soft",  width: 1, dash: null,    arrow: false, flow: false},
+    depends_on:  {tone: "bold",  width: 1, dash: null,    arrow: true,  flow: false},
+    blocks:      {tone: "risk",  width: 1, dash: null,    arrow: true,  flow: false},
+    assigned_to: {tone: "soft",  width: 1, dash: "7 6",   arrow: true,  flow: false},
+    produced:    {tone: "fresh", width: 1, dash: null,    arrow: true,  flow: true},
+    follows:     {tone: "fresh", width: 1, dash: null,    arrow: true,  flow: true},
+    supports:    {tone: "good",  width: 1, dash: null,    arrow: true,  flow: false},
+    references:  {tone: "soft",  width: 1, dash: "3 7",   arrow: false, flow: false},
+    related_to:  {tone: "soft",  width: 1, dash: "3 7",   arrow: false, flow: false},
   };
   const GLYPH = {
     project: "M-9-7h7l2 3h9v11h-18z",

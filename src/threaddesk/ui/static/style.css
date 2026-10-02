@@ -361,12 +361,12 @@ button:not(:disabled),
   padding: var(--space-2) 0;
 }
 
-.whiteboard-entry.tone-ink { border-left: 3px solid #8b909a; }
-.whiteboard-entry.tone-moss { border-left: 3px solid #6f8f78; }
-.whiteboard-entry.tone-clay { border-left: 3px solid #a68462; }
-.whiteboard-entry.tone-sea { border-left: 3px solid #6d8ea3; }
-.whiteboard-entry.tone-plum { border-left: 3px solid #8d7ea8; }
-.whiteboard-entry.tone-sand { border-left: 3px solid #b1a27a; }
+.whiteboard-entry.tone-ink { border-left: 1px solid #8b909a; }
+.whiteboard-entry.tone-moss { border-left: 1px solid #6f8f78; }
+.whiteboard-entry.tone-clay { border-left: 1px solid #a68462; }
+.whiteboard-entry.tone-sea { border-left: 1px solid #6d8ea3; }
+.whiteboard-entry.tone-plum { border-left: 1px solid #8d7ea8; }
+.whiteboard-entry.tone-sand { border-left: 1px solid #b1a27a; }
 
 .whiteboard-entry.is-ai {
   outline: 1px solid #d5d8de;
@@ -644,7 +644,7 @@ textarea:focus,
 .btn:focus-visible,
 .chip:focus-visible,
 .thread-item:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 1px solid var(--accent);
   outline-offset: 2px;
 }
 
