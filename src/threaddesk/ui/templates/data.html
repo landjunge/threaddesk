@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block body %}
+<main class="panel migration-center" data-testid="data-center">
+  <h1>{{ t("data.title") }}</h1>
+  <p>{{ t("data.intro") }}</p>
+  {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+  {% if restored_profile %}
+  <p role="status">{{ t("data.active") }}</p>
+  <form method="post" action="/data/original">
+    <button class="btn btn-ghost" type="submit">{{ t("data.original") }}</button>
+  </form>
+  {% endif %}
+  <form method="post" action="/data/download">
+    <button class="btn btn-primary" type="submit">{{ t("data.download") }}</button>
+  </form>
+  <hr>
+  <form method="post" action="/data/restore" enctype="multipart/form-data">
+    <label for="backup-file">{{ t("data.file") }}</label>
+    <input id="backup-file" name="backup" type="file" accept=".zip" required>
+    <label><input name="confirm" type="checkbox" value="yes" required> {{ t("data.confirm") }}</label>
+    <button class="btn btn-primary" type="submit">{{ t("data.restore") }}</button>
+  </form>
+  {% if profiles %}
+  <h2>{{ t("data.profiles") }}</h2>
+  {% for profile in profiles %}
+  <form method="post" action="/data/profile">
+    <input type="hidden" name="name" value="{{ profile.name }}">
+    <span>{{ profile.created_at }} · {{ profile.name[:8] }}</span>
+    <button class="btn btn-ghost" type="submit" {% if profile.name == active_profile %}disabled{% endif %}>{{ t("data.open_profile") }}</button>
+  </form>
+  {% endfor %}
+  {% endif %}
+  <p class="muted">{{ t("data.private") }}</p>
+</main>
+{% endblock %}

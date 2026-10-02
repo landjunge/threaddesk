@@ -633,3 +633,8 @@ select:focus-visible {
   .map-page { padding: var(--space-3); }
   .map-detail dl { grid-template-columns: repeat(2, minmax(100px, 1fr)); }
 }
+
+/* Data management uses the existing panel and controls, with room to read. */
+[data-testid="data-center"] form { margin: 16px 0; }
+[data-testid="data-center"] label { display: block; margin: 12px 0; }
+[data-testid="data-center"] input[type="checkbox"] { width: auto; }

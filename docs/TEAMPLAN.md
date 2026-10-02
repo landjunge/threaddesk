@@ -57,3 +57,23 @@ Diese Punkte bleiben offen und dürfen nicht aus grünen lokalen Tests als erled
 abgeleitet werden. Der lokale HTTP-Sync ist keine Ende-zu-Ende-Verschlüsselung.
 Der frühere Wunsch nach einem Wechsel zwischen 5–10 Threads in unter zwei Sekunden
 bleibt ein Nutzerziel, keine ungeprüfte Leistungsbehauptung.
+
+## Umsetzung der Nutzbarkeits-Abnahme, 2. Oktober 2026
+
+PR #62 ist inzwischen nach `main` gemergt. Die nächste Ausgabe ergänzt eine
+bedienbare Datenseite mit herunterladbaren, geprüften Sicherungen für JSON und
+SQLite. Wiederherstellung öffnet einen getrennten Arbeitsbereich; das Original
+bleibt erhalten. Die Auswahl bleibt über Neustarts erhalten und gilt für Desktop,
+CLI und MCP. Die lokale Desktop-Adresse und Start-Sperre bleiben an die
+Installation gebunden.
+
+Die vom Nutzer beauftragte Auslieferung ersetzt die frühere Beschränkung auf
+unveröffentlichte Build-Artefakte: Eine neue Versionsnummer wird als Release-Kandidat
+veröffentlicht, sobald alle drei nativen Builds und die vollständige Testsuite
+zweimal ohne Fehler oder übersprungene Tests durchgelaufen sind. Vor dem Upload
+werden Dateien, Plattform, Architektur, Commit, Größe und Prüfsumme geprüft.
+Bereits veröffentlichte Versionen werden nicht ersetzt.
+
+Externe Agenten werden weiterhin über vorbereitete Übergaben angebunden. Die
+lokale KI benötigt ein vom Nutzer ausgewähltes und vorhandenes Ollama-Modell.
+Internet-Teamhosting bleibt außerhalb dieser lokalen Ausgabe.
