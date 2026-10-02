@@ -509,9 +509,13 @@ def create_app() -> FastAPI:
             "metadata": metadata,
         }
         if in_room == "1":
-            current_room = RoomBook(_svc().store).view().get("current")
-            if current_room:
-                fields["room_id"] = current_room["id"]
+            room_view = RoomBook(_svc().store).view()
+            current_room = room_view.get("current")
+            if not current_room or room_view.get("role") not in {"owner", "member"}:
+                page = _room_error(request)
+                page.status_code = 403
+                return page
+            fields["room_id"] = current_room["id"]
         _svc().append_whiteboard(thread_id, **fields)
         return workspace(
             request,

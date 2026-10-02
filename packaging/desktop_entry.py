@@ -72,7 +72,7 @@ def self_test() -> int:
                 assert response.status == 200
             assert 'data-testid="migration-center"' in page
             assert 'lang="en"' in page
-            for asset in ("app.js", "map.js", "style.css"):
+            for asset in ("app.js", "map.js", "style.css", "htmx.min.js", "alpine.min.js"):
                 with urlopen(url + "/static/" + asset, timeout=3) as response:
                     assert response.status == 200 and response.read(), asset
     print("ThreadDesk desktop package and migration page: OK; isolated workspace and bundled assets checked")

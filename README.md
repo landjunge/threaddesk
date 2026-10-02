@@ -38,14 +38,50 @@ ThreadDesk merkt sich diesen Stand. Jeder Arbeitsbereich wird zu einem eigenen T
 
 ### Heutiger Stand – ehrlich
 
+**Abschlussstand vom 2. Oktober 2026:** Dieser Branch ist ein Release-Kandidat,
+keine bereits veröffentlichte stabile Ausgabe. Die aktuelle Abnahme und die
+zugehörigen Build-Läufe stehen in [PR #62](https://github.com/landjunge/threaddesk/pull/62).
+Der Download oben führt zur bisherigen Vorschau; er ist nicht automatisch der
+neueste Commit dieses Branches. Neue Pakete tragen einen Herkunftsbeleg mit
+Commit-Kennung und Prüfsumme. Ohne geprüften Build kein neuer Release.
+
+
 | Bereich | Aktueller Stand |
 |---|---|
 | Threads | Anlegen, wechseln, archivieren und löschen |
 | Kontext | Notizen, Dateien, History und Snapshots |
-| Daten | JSON unter ~/.threaddesk; lokal |
-| Oberfläche | CLI, lokale Tafel und optionale Weboberfläche |
+| Daten | Lokal: JSON, optional SQLite; getrennt vom Programmcode |
+| Oberfläche | CLI, lokale Weboberfläche und Desktop-Pakete; UI-Bibliotheken werden lokal mitgeliefert |
 | Übergaben | Vorbereitete Pakete für Grok und Gnom-Hub-V1 |
 | Grenze | Keine versteckte externe Ausführung; lokaler Hausmeister nur innerhalb dokumentierter Grenzen |
+
+### Gemeinsam arbeiten – ausdrücklich freigeben
+
+Im Bereich **Raum** einen Namen eingeben und **Raum anlegen** wählen. Die Leitung
+kann eine Einladung als **Mitglied** oder **Nur lesen** erzeugen. Auf der zweiten
+Installation den Einladungscode und die lokale Adresse der ersten Installation
+eintragen und **Koppeln** wählen. Die eingeblendeten Mitglieder zeigen die Kopplung.
+
+Ein Whiteboard-Eintrag bleibt standardmäßig privat. Nur mit dem Freigabehäkchen
+werden **der Eintrag einschließlich seiner Zuordnungen und der Thread-Titel**
+für den ausgewählten Raum geteilt. Die separate private Thread-Notiz wird dadurch
+nicht freigegeben. **Synchronisieren** stößt den Austausch bewusst an; es gibt
+keine heimliche Komplettübertragung des Arbeitsbereichs.
+
+**Nur lesen** darf empfangen, aber keine Raum-Einträge veröffentlichen. Eigene
+neue Notizen bleiben privat. Ein Offline-Fehler bedeutet nicht, dass deine Daten
+weg sind: Nach Rückkehr der Gegenstelle erneut synchronisieren. Bei einem
+Inhaltskonflikt bleiben beide Fassungen erhalten. Wiederholter Sync darf keine
+zusätzlichen Kopien erzeugen. Die Desktop-Adresse bleibt nach Neustarts gleich;
+ist ihr Port belegt, erscheint ein Fehler statt einer Verbindung zu einer fremden App.
+
+**Aktuelle Grenzen:** Die Abnahme prüft zwei getrennte lokale Serverprozesse, nicht
+die Zusammenarbeit über einen Internet-Server. Die Oberfläche ist keine öffentlich
+abgesicherte Server-Anwendung und darf nicht unverändert ins Internet gestellt werden.
+Der lokale Austausch verwendet HTTP; er ist keine Ende-zu-Ende-Verschlüsselung.
+Ein Sync-Paket ist auf 1.000.000 Bytes begrenzt. Zu große oder fehlerhafte Pakete
+werden abgewiesen, nicht als erfolgreich abgeschnitten. Externer Server-Sync bleibt
+ein eigener, noch abzunehmender Ausbau.
 
 ### Lokaler Hausmeister / Local caretaker
 
@@ -86,14 +122,14 @@ Without explicit permission, the caretaker may not delete or overwrite the user'
 ### macOS
 
 1. Oben auf **ThreadDesk herunterladen** klicken.
-2. **ThreadDesk-macOS.dmg** laden und ThreadDesk nach „Programme“ ziehen — fertig. Die Ausgabe unterstützt Intel-Macs (i7) nativ.
+2. **ThreadDesk-macOS.dmg** für Intel laden und ThreadDesk nach „Programme“ ziehen. Ein Apple-Silicon-Paket ist separat gekennzeichnet. Ein erfolgreicher CI-Build ersetzt nicht den Starttest auf deinem konkreten Mac und seiner macOS-Version.
 
 Falls macOS den Doppelklick blockiert: Rechtsklick auf die Datei → **Öffnen**.
 
 ### Windows
 
 1. Oben auf **ThreadDesk herunterladen** klicken.
-2. **ThreadDesk-Windows.exe** laden und doppelklicken — fertig.
+2. **ThreadDesk-Windows.exe** laden und doppelklicken. Die native Oberfläche benötigt eine funktionierende WebView2-Laufzeit; deren Einrichtung ist nicht durch einen bestandenen Paket-Build bewiesen.
 
 ### Ein Terminal-Befehl
 

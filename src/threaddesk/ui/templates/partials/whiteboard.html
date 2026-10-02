@@ -60,8 +60,8 @@
     ></textarea>
     {% if room.current %}
     <label class="inline-form">
-      <input type="checkbox" name="in_room" value="1" data-room-share />
-      <span>{{ t("room.share_entry") }}</span>
+      <input type="checkbox" name="in_room" value="1" data-room-share {% if room.role == "read_only" %}disabled{% endif %} />
+      <span>{{ t("room.local_only") if room.role == "read_only" else t("room.share_entry") }}</span>
     </label>
     {% endif %}
     <div class="inline-form">

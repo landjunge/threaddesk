@@ -305,10 +305,11 @@ def test_two_live_servers_sync_a_room(tmp_path: Path) -> None:
         })
         _request(URL_B, "/rooms/sync", {})
         assert "leseraum-von-a" in _contents(home_b)
-        _request(URL_B, f"/threads/{thread_b}/whiteboard", {
-            "actor": "Bea", "actor_type": "human", "entry_type": "note",
-            "content": "leseraum-von-b", "next_step": "", "in_room": "1",
-        })
+        with pytest.raises(AssertionError, match="-> 403"):
+            _request(URL_B, f"/threads/{thread_b}/whiteboard", {
+                "actor": "Bea", "actor_type": "human", "entry_type": "note",
+                "content": "leseraum-von-b", "next_step": "", "in_room": "1",
+            })
         _request(URL_A, "/rooms/sync", {})
         _request(URL_B, "/rooms/sync", {})
         assert "leseraum-von-b" not in _contents(home_a)

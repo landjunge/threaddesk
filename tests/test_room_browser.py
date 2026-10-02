@@ -104,7 +104,11 @@ def select_thread(page, thread_id):
 
 def add_entry(page, thread_id, text, shared):
     page.locator("[data-whiteboard-content]").fill(text)
-    page.locator("[data-room-share]").set_checked(shared)
+    share = page.locator("[data-room-share]")
+    if shared:
+        share.check()
+    elif share.is_checked():
+        share.uncheck()
     click_post(page, "[data-whiteboard-submit]", f"/threads/{thread_id}/whiteboard")
     expect(page.locator(".whiteboard-body").filter(has_text=text)).to_have_count(1)
 
@@ -140,6 +144,16 @@ def test_team_room_real_browser(tmp_path, storage):
             browser_stack.callback(browser.close)
             context_a = browser.new_context(locale="de-DE", viewport={"width": 1440, "height": 1000})
             context_b = browser.new_context(locale="de-DE", viewport={"width": 1440, "height": 1000})
+            external = []
+            def local_only(route):
+                from urllib.parse import urlparse
+                if urlparse(route.request.url).hostname != "127.0.0.1":
+                    external.append(route.request.url)
+                    route.abort()
+                else:
+                    route.continue_()
+            context_a.route("**/*", local_only)
+            context_b.route("**/*", local_only)
             a, b = context_a.new_page(), context_b.new_page()
             a.goto(left.url)
             b.goto(right.url)
@@ -217,7 +231,13 @@ def test_team_room_real_browser(tmp_path, storage):
             add_entry(a, thread_a, "Nur lesen von A", True)
             synchronize(b)
             expect(b.locator("[data-whiteboard-log]")).to_contain_text("Nur lesen von A")
-            add_entry(b, thread_a, "Leser darf nicht senden", True)
+            expect(b.locator("[data-room-share]")).to_be_disabled()
+            rejected = b.request.post(right.url + f"/threads/{thread_a}/whiteboard", form={
+                "actor": "Synthetic reader", "actor_type": "human", "entry_type": "note",
+                "content": "Verbotene Freigabe", "in_room": "1",
+            })
+            assert rejected.status == 403
+            add_entry(b, thread_a, "Leser darf nicht senden", False)
             synchronize(a)
             synchronize(b)
             assert "Leser darf nicht senden" not in [entry.content for entry in left.store().list_whiteboard(thread_a)]
@@ -232,6 +252,7 @@ def test_team_room_real_browser(tmp_path, storage):
             assert b.locator("[data-room-instance]").inner_text().split()[-1] == instance_b
             synchronize(a)
             expect(a.locator("[data-room-state]")).to_have_attribute("data-room-state", "synced")
+            assert external == [], "The local UI must not request a CDN or another external host"
             assert left.store().get_thread(thread_a).context.notes == "PRIVAT-NOTIZ-NICHT-TEILEN"
             assert right.store().get_thread(thread_a).context.notes == ""
             assert "PRIVAT-WHITEBOARD-NICHT-TEILEN" not in [entry.content for entry in right.store().list_whiteboard(thread_a)]
