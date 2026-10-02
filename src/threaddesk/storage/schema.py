@@ -1,6 +1,6 @@
 """Versioned SQLite schema for ThreadDesk's local workspace."""
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 TABLES = (
     "threads",
@@ -12,6 +12,7 @@ TABLES = (
     "source_records",
     "artifacts",
     "node_artifacts",
+    "whiteboard_entries",
 )
 
 V1_SCHEMA_SQL = """
@@ -110,9 +111,29 @@ CREATE INDEX IF NOT EXISTS idx_node_artifacts_sha
 
 SCHEMA_SQL += ARTIFACTS_SQL
 
+WHITEBOARD_SQL = """
+CREATE TABLE IF NOT EXISTS whiteboard_entries (
+    id TEXT PRIMARY KEY,
+    thread_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    ordinal INTEGER NOT NULL,
+    external_key TEXT,
+    payload TEXT NOT NULL,
+    FOREIGN KEY(thread_id) REFERENCES threads(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_whiteboard_thread_created
+    ON whiteboard_entries(thread_id, created_at, ordinal, id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_whiteboard_external
+    ON whiteboard_entries(thread_id, external_key)
+    WHERE external_key IS NOT NULL;
+"""
+
+SCHEMA_SQL += WHITEBOARD_SQL
+
 MIGRATIONS = {
     2: SOURCE_RECORDS_SQL,
     3: ARTIFACTS_SQL,
+    4: WHITEBOARD_SQL,
 }
 
 FTS_SQL = """

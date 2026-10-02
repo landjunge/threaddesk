@@ -8,15 +8,16 @@ from pathlib import Path
 import tempfile
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
 
 from threaddesk.api.service import ThreadService
-from threaddesk.core.errors import ThreadDeskError
+from threaddesk.core.errors import InvalidState, NotFound, ThreadDeskError
 from threaddesk.core import i18n
 from threaddesk.core.models import (
+    ENTRY_TYPES,
     NODE_KINDS,
     NODE_STATUSES,
     RELATION_KINDS,
@@ -38,6 +39,18 @@ HERE = Path(__file__).resolve().parent
 TEMPLATES_DIR = HERE / "templates"
 STATIC_DIR = HERE / "static"
 WRITE_STATUSES = tuple(s for s in STATUSES if s != "archived")
+_BOARD_FIELDS = {
+    "actor",
+    "actor_type",
+    "entry_type",
+    "content",
+    "task_id",
+    "handoff_id",
+    "run_id",
+    "metadata",
+    "external_key",
+    "created_at",
+}
 
 
 def _svc() -> ThreadService:
@@ -128,6 +141,9 @@ def _ctx(request: Request, extra: dict | None = None) -> dict:
         "prompt_preview": None,
         "error": None,
         "notice": None,
+        "whiteboard": svc.whiteboard(current.id) if current else [],
+        "stand": svc.working_stand(current.id) if current else None,
+        "whiteboard_types": ENTRY_TYPES,
     }
     data.update(extra)
     return data
@@ -155,7 +171,13 @@ def create_app() -> FastAPI:
         )
 
     @app.exception_handler(ThreadDeskError)
-    async def _on_error(request: Request, exc: ThreadDeskError) -> HTMLResponse:
+    async def _on_error(request: Request, exc: ThreadDeskError) -> Response:
+        if request.url.path.startswith("/api/"):
+            status = 404 if isinstance(exc, NotFound) else 400
+            return JSONResponse(
+                {"error": type(exc).__name__, "detail": str(exc)},
+                status_code=status,
+            )
         html = workspace(
             request, {"error": i18n.translate("ui.error", _language(request))}
         )
@@ -191,6 +213,37 @@ def create_app() -> FastAPI:
     @app.get("/api/graph", response_class=JSONResponse)
     def graph(kind: str | None = None, status: str | None = None) -> dict:
         return _svc().graph(kind=kind, status=status)
+
+    @app.get("/api/threads/{thread_id}", response_class=JSONResponse)
+    def api_thread(thread_id: str) -> dict:
+        svc = _svc()
+        thread = svc.get(thread_id)
+        return {"thread": thread.to_dict(), "stand": svc.working_stand(thread.id)}
+
+    @app.get("/api/threads/{thread_id}/whiteboard", response_class=JSONResponse)
+    def api_whiteboard(thread_id: str) -> dict:
+        svc = _svc()
+        thread = svc.get(thread_id)
+        return {
+            "thread_id": thread.id,
+            "entries": [entry.to_dict() for entry in svc.whiteboard(thread.id)],
+        }
+
+    @app.post("/api/threads/{thread_id}/whiteboard", response_class=JSONResponse)
+    async def api_append_whiteboard(thread_id: str, request: Request) -> dict:
+        try:
+            body = await request.json()
+        except Exception as exc:
+            raise InvalidState("whiteboard_body") from exc
+        if not isinstance(body, dict) or set(body) - _BOARD_FIELDS:
+            raise InvalidState("whiteboard_fields")
+        if not {"actor", "actor_type", "entry_type", "content"} <= set(body):
+            raise InvalidState("whiteboard_fields")
+        return _svc().append_whiteboard(thread_id, **body)
+
+    @app.get("/api/threads/{thread_id}/stand", response_class=JSONResponse)
+    def api_stand(thread_id: str) -> dict:
+        return _svc().working_stand(thread_id)
 
     @app.get("/map", response_class=HTMLResponse)
     def map_view(request: Request) -> HTMLResponse:
@@ -386,6 +439,30 @@ def create_app() -> FastAPI:
     ) -> HTMLResponse:
         _svc().set_note(text, thread_id, append=bool(append))
         return workspace(request, {"notice": i18n.translate("ui.note_saved", _language(request))})
+
+    @app.post("/threads/{thread_id}/whiteboard", response_class=HTMLResponse)
+    def append_whiteboard_form(
+        thread_id: str,
+        request: Request,
+        actor: str = Form(...),
+        actor_type: str = Form("human"),
+        entry_type: str = Form("note"),
+        content: str = Form(...),
+        next_step: str = Form(""),
+    ) -> HTMLResponse:
+        metadata = {"next_step": next_step.strip()} if next_step.strip() else {}
+        _svc().append_whiteboard(
+            thread_id,
+            actor=actor,
+            actor_type=actor_type,
+            entry_type=entry_type,
+            content=content,
+            metadata=metadata,
+        )
+        return workspace(
+            request,
+            {"notice": i18n.translate("ui.whiteboard_saved", _language(request))},
+        )
 
     @app.post("/threads/{thread_id}/describe", response_class=HTMLResponse)
     def set_description(

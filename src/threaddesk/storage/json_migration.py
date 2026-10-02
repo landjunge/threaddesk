@@ -22,6 +22,11 @@ def _read(source: JsonStore) -> dict:
         "relations": source.list_relations(),
         "events": source.list_graph_events(),
         "source_records": source.list_source_records(),
+        "whiteboard": [
+            entry
+            for thread in threads
+            for entry in source.list_whiteboard(thread.id)
+        ],
         "current_id": source.get_current_id(),
     }
 
@@ -53,7 +58,13 @@ def migrate_json_store(
     if any(
         existing[key]
         for key in (
-            "threads", "snapshots", "nodes", "relations", "events", "source_records"
+            "threads",
+            "snapshots",
+            "nodes",
+            "relations",
+            "events",
+            "source_records",
+            "whiteboard",
         )
     ):
         raise MigrationError("SQLite-Ziel enthält bereits einen anderen Bestand.")
@@ -64,6 +75,8 @@ def migrate_json_store(
         with target.transaction():
             for thread in incoming["threads"]:
                 target.save_thread(thread)
+            for entry in incoming["whiteboard"]:
+                target.append_whiteboard_entry(entry)
             if fault:
                 fault("after_threads")
             for snapshot in incoming["snapshots"]:

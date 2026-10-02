@@ -6,7 +6,14 @@ from contextlib import AbstractContextManager
 from pathlib import Path
 from typing import Any, Mapping, Protocol
 
-from threaddesk.core.models import GraphEvent, KnowledgeNode, Relation, Snapshot, Thread
+from threaddesk.core.models import (
+    GraphEvent,
+    KnowledgeNode,
+    Relation,
+    Snapshot,
+    Thread,
+    WhiteboardEntry,
+)
 from threaddesk.core.provenance import SourceRecord
 
 
@@ -23,6 +30,13 @@ class SnapshotStore(Protocol):
     def save_snapshot(self, snap: Snapshot) -> None: ...
     def get_snapshot(self, snap_id: str) -> Snapshot: ...
     def list_snapshots(self, thread_id: str) -> list[Snapshot]: ...
+
+
+class WhiteboardStore(Protocol):
+    def list_whiteboard(self, thread_id: str) -> list[WhiteboardEntry]: ...
+    def append_whiteboard_entry(
+        self, entry: WhiteboardEntry
+    ) -> tuple[WhiteboardEntry, bool]: ...
 
 
 class GraphStore(Protocol):
@@ -60,6 +74,7 @@ class UnitOfWork(Protocol):
 class Store(
     ThreadStore,
     SnapshotStore,
+    WhiteboardStore,
     GraphStore,
     ArtifactStore,
     SourceRecordStore,

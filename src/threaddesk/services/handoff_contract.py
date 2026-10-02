@@ -23,6 +23,28 @@ REQUIRED = (
 )
 
 
+def _whiteboard(value: list[Mapping[str, Any]] | None) -> list[dict[str, Any]]:
+    """Recent contributions travel with the handoff. Old packets omit this."""
+    board = []
+    for item in value or []:
+        if not isinstance(item, Mapping):
+            raise InvalidState("handoff_whiteboard")
+        board.append(
+            {
+                "id": item.get("id"),
+                "created_at": item.get("created_at"),
+                "actor": item.get("actor"),
+                "actor_type": item.get("actor_type"),
+                "entry_type": item.get("entry_type"),
+                "content": item.get("content"),
+                "task_id": item.get("task_id"),
+                "handoff_id": item.get("handoff_id"),
+                "run_id": item.get("run_id"),
+            }
+        )
+    return board[-30:]
+
+
 def _string_list(value: Any) -> list[str]:
     if value is None:
         return []
@@ -31,7 +53,12 @@ def _string_list(value: Any) -> list[str]:
     return [item.strip() for item in value if item.strip()]
 
 
-def build(thread: Thread, *, target_system: str = "generic") -> dict[str, Any]:
+def build(
+    thread: Thread,
+    *,
+    target_system: str = "generic",
+    whiteboard: list[Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
     target = (target_system or "generic").strip().lower()
     if target not in TARGETS:
         raise InvalidState(f"target_system: {', '.join(TARGETS)}")
@@ -53,6 +80,7 @@ def build(thread: Thread, *, target_system: str = "generic") -> dict[str, Any]:
             "description": thread.description,
             "notes": thread.context.notes,
             "snapshot_id": thread.current_snapshot_id,
+            "whiteboard": _whiteboard(whiteboard),
         },
         # Compatibility fields for existing local consumers.
         "title": thread.title,

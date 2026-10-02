@@ -17,6 +17,13 @@ def workspace(root: Path) -> SQLiteStore:
     service.set_note("Darf nicht verloren gehen", thread.id)
     service.snapshot("Sicherer Stand", thread.id)
     service.create_node("project", "ThreadDesk", status="active")
+    service.append_whiteboard(
+        thread.id,
+        actor="Mensch",
+        actor_type="human",
+        entry_type="note",
+        content="Verlauf bleibt im Backup",
+    )
     store.write_text_artifact("handoff.json", '{"kind":"threaddesk.handoff"}\n')
     return store
 
@@ -29,6 +36,11 @@ def logical(store: SQLiteStore) -> dict:
         "nodes": [item.to_dict() for item in store.list_nodes()],
         "relations": [item.to_dict() for item in store.list_relations()],
         "events": [item.to_dict() for item in store.list_graph_events()],
+        "whiteboard": [
+            item.to_dict()
+            for thread in threads
+            for item in store.list_whiteboard(thread.id)
+        ],
         "current_id": store.get_current_id(),
     }
 
@@ -41,7 +53,7 @@ def test_backup_manifest_and_verified_restore_match_exactly(tmp_path: Path) -> N
 
     assert manifest["kind"] == "threaddesk.workspace-backup"
     assert manifest["app_version"] == "0.1.0"
-    assert manifest["schema_version"] == 3
+    assert manifest["schema_version"] == 4
     assert manifest["design_reference"] == "desk-r2"
     assert set(manifest["files"]) == {"threaddesk.sqlite3", "artifacts/handoff.json"}
 

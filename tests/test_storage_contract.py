@@ -82,7 +82,7 @@ def test_sqlite_schema_is_versioned_indexed_and_fts_ready(tmp_path: Path) -> Non
         )
     }
 
-    assert version == 3
+    assert version == 4
     assert objects["idx_threads_status_updated"] == "index"
     assert objects["idx_snapshots_thread_created"] == "index"
     assert objects["idx_nodes_kind_status_updated"] == "index"
@@ -92,6 +92,9 @@ def test_sqlite_schema_is_versioned_indexed_and_fts_ready(tmp_path: Path) -> Non
     assert objects["artifacts"] == "table"
     assert objects["node_artifacts"] == "table"
     assert objects["idx_node_artifacts_sha"] == "index"
+    assert objects["whiteboard_entries"] == "table"
+    assert objects["idx_whiteboard_thread_created"] == "index"
+    assert objects["idx_whiteboard_external"] == "index"
 
 
 def test_application_code_uses_no_private_json_store_members() -> None:
