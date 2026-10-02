@@ -3,10 +3,17 @@
   {% if whiteboard %}
   <ol class="whiteboard-log" data-whiteboard-log>
     {% for entry in whiteboard %}
-    <li class="whiteboard-entry" data-whiteboard-entry data-entry-id="{{ entry.id }}">
+    {% set mark = actor_marks.get(entry.actor_id) if entry.actor_id else none %}
+    <li
+      class="whiteboard-entry{% if mark %} tone-{{ mark.color_token }}{% endif %}{% if mark and mark.ai %} is-ai{% endif %}"
+      data-whiteboard-entry
+      data-entry-id="{{ entry.id }}"
+      {% if mark %}data-actor-kind="{{ mark.kind }}" data-color-token="{{ mark.color_token }}" data-ai="{{ '1' if mark.ai else '0' }}"{% endif %}
+    >
       <p class="whiteboard-meta">
         <time datetime="{{ entry.created_at }}">{{ entry.created_at[:16].replace('T', ' ') }}</time>
         {{ entry.actor }}
+        {% if mark and mark.ai %}<span class="ai-mark">{{ t("whiteboard.ai_mark") }}</span>{% endif %}
         <span>{{ t('whiteboard.entry.' ~ entry.entry_type) }}</span>
       </p>
       <p class="whiteboard-body">{{ entry.content }}</p>

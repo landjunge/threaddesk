@@ -153,6 +153,14 @@ CATALOG: dict[str, dict[str, str]] = {
     "map.field_source": {"de": "Herkunft", "en": "Origin"},
     "map.field_visibility": {"de": "Sichtbarkeit", "en": "Visibility"},
     "map.field_revision": {"de": "Revision", "en": "Revision"},
+    "map.open_thread": {"de": "Im Thread zeigen", "en": "Show in thread"},
+    "map.legend_ai": {"de": "KI, helle Kontur", "en": "AI, light outline"},
+    "desk.links": {"de": "Verknüpfte Knoten", "en": "Linked nodes"},
+    "desk.links_empty": {
+        "de": "Keine Knoten mit diesem Thread.",
+        "en": "No nodes linked to this thread.",
+    },
+    "desk.open_map": {"de": "In der Karte zeigen", "en": "Show on the map"},
     # --- Wissenspool ---
     "knowledge.eyebrow": {
         "de": "Projektgedächtnis · Listenansicht",
@@ -368,6 +376,7 @@ CATALOG: dict[str, dict[str, str]] = {
     "whiteboard.title": {"de": "Verlauf", "en": "History"},
     "whiteboard.empty": {"de": "Noch kein Beitrag.", "en": "No entries yet."},
     "whiteboard.actor.human": {"de": "Mensch", "en": "Human"},
+    "whiteboard.ai_mark": {"de": "KI", "en": "AI"},
     "whiteboard.entry_label": {"de": "Art", "en": "Kind"},
     "whiteboard.placeholder": {"de": "Was ist neu?", "en": "What is new?"},
     "whiteboard.next_placeholder": {

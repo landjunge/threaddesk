@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block body %}
-<main class="map-page" data-graph-endpoint="/api/graph" data-strings='{{ map_strings|safe }}'>
+<main class="map-page" data-graph-endpoint="/api/graph" data-strings='{{ map_strings|safe }}' data-actor-marks="{{ actor_marks_json }}">
   <header class="map-toolbar">
     <div>
       <p class="eyebrow">{{ t("map.eyebrow") }}</p>
@@ -31,6 +31,7 @@
       <li><span class="key key-tone tone-wait"></span>{{ t("map.legend_wait") }}</li>
       <li><span class="key key-tone tone-fresh"></span>{{ t("map.legend_fresh") }}</li>
       <li><span class="key key-tone tone-risk"></span>{{ t("map.legend_risk") }}</li>
+      <li><span class="key key-circle key-ai"></span>{{ t("map.legend_ai") }}</li>
     </ul>
   </section>
   <section class="panel map-detail" data-map-detail aria-live="polite">

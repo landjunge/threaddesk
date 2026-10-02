@@ -15,6 +15,7 @@ from jinja2 import pass_context
 
 from threaddesk.api.service import ThreadService
 from threaddesk.core.errors import InvalidState, NotFound, ThreadDeskError
+from threaddesk.services.actors import ActorRegistry
 from threaddesk.core import i18n
 from threaddesk.core.models import (
     ENTRY_TYPES,
@@ -120,6 +121,15 @@ def _browser_strings(language: str, register: str) -> str:
     )
 
 
+def _linked_nodes(svc: ThreadService, thread: Thread | None) -> list:
+    if thread is None:
+        return []
+    return [
+        node for node in svc.list_nodes()
+        if isinstance(node.metadata, dict) and node.metadata.get("thread_id") == thread.id
+    ]
+
+
 def _ctx(request: Request, extra: dict | None = None) -> dict:
     svc = _svc()
     current = svc.current()
@@ -144,7 +154,14 @@ def _ctx(request: Request, extra: dict | None = None) -> dict:
         "whiteboard": svc.whiteboard(current.id) if current else [],
         "stand": svc.working_stand(current.id) if current else None,
         "whiteboard_types": ENTRY_TYPES,
+        "actor_marks": ActorRegistry(svc.store).marks(),
+        "linked_nodes": _linked_nodes(svc, current),
+        "focus_node": "",
     }
+    if current is not None:
+        chosen = request.query_params.get("node") or ""
+        if any(node.id == chosen for node in data["linked_nodes"]):
+            data["focus_node"] = chosen
     data.update(extra)
     return data
 
@@ -185,7 +202,12 @@ def create_app() -> FastAPI:
         return html
 
     @app.get("/", response_class=HTMLResponse)
-    def index(request: Request) -> HTMLResponse:
+    def index(request: Request, thread: str | None = None) -> HTMLResponse:
+        if thread:
+            try:
+                _svc().switch(thread)
+            except ThreadDeskError:
+                pass
         return templates.TemplateResponse(request, "index.html", _ctx(request))
 
     @app.get("/lang/{code}", response_class=RedirectResponse)
@@ -256,6 +278,8 @@ def create_app() -> FastAPI:
             "browser_strings": _browser_strings(lang, register),
             "map_strings": json.dumps(
                 i18n.catalog_for(lang, register), ensure_ascii=False),
+            "actor_marks_json": json.dumps(
+                ActorRegistry(_svc().store).marks(), ensure_ascii=False),
         })
 
     @app.get("/migration", response_class=HTMLResponse)

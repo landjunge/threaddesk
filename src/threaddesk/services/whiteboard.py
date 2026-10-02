@@ -18,6 +18,7 @@ from threaddesk.core.models import (
     new_id,
     now_iso,
 )
+from threaddesk.services.actors import require_entry_actor
 from threaddesk.core.secrets import reject_secrets
 from threaddesk.services.gnom_jobs import TERMINAL, GnomJobRegistry
 
@@ -70,16 +71,18 @@ def append(
     run_id: str | None = None,
     metadata: Mapping[str, Any] | None = None,
     external_key: str | None = None,
+    actor_id: str | None = None,
     created_at: str | None = None,
 ) -> tuple[WhiteboardEntry, bool]:
     thread = store.get_thread(thread_id)
     if "/" in thread.id or "\\" in thread.id or thread.id in {".", ".."}:
         raise InvalidState("whiteboard_thread")
+    chosen_type = _choice(actor_type, ACTOR_TYPES, "whiteboard_actor_type")
     entry = WhiteboardEntry(
         id=new_id(),
         thread_id=thread.id,
         actor=_actor(actor),
-        actor_type=_choice(actor_type, ACTOR_TYPES, "whiteboard_actor_type"),
+        actor_type=chosen_type,
         created_at=_time(created_at),
         entry_type=_choice(entry_type, ENTRY_TYPES, "whiteboard_entry_type"),
         content=_content(content),
@@ -87,6 +90,7 @@ def append(
         handoff_id=_ref(handoff_id, "handoff_id"),
         run_id=_ref(run_id, "run_id"),
         external_key=_ref(external_key, "external_key"),
+        actor_id=require_entry_actor(store, _ref(actor_id, "actor_id"), chosen_type),
         metadata=_metadata(metadata),
     )
     return store.append_whiteboard_entry(entry)
@@ -210,6 +214,7 @@ def history_for_handoff(entries: list[WhiteboardEntry]) -> list[dict[str, Any]]:
             "task_id": entry.task_id,
             "handoff_id": entry.handoff_id,
             "run_id": entry.run_id,
+            "actor_id": entry.actor_id,
         }
         for entry in entries[-30:]
     ]

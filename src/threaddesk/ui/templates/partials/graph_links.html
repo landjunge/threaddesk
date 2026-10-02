@@ -1,0 +1,15 @@
+<section class="block desk-links" data-thread-links>
+  <h3>{{ t("desk.links") }}</h3>
+  {% if linked_nodes %}
+  <ul>
+    {% for node in linked_nodes %}
+    <li class="{% if node.id == focus_node %}is-selected{% endif %}" data-linked-node="{{ node.id }}">
+      <a href="/map?thread={{ current.id | urlencode }}&amp;node={{ node.id | urlencode }}">{{ node.title }}</a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>{{ t("desk.links_empty") }}</p>
+  {% endif %}
+  <a href="/map?thread={{ current.id | urlencode }}">{{ t("desk.open_map") }}</a>
+</section>

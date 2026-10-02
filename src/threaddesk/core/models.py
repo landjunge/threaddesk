@@ -84,8 +84,10 @@ ACTOR_TYPES = (
     "codex",
     "chatgpt",
     "gnom-hub-v1",
+    "local-assistant",
     "system",
 )
+AGENT_TYPES = tuple(item for item in ACTOR_TYPES if item not in {"human", "system"})
 ENTRY_TYPES = (
     "note",
     "task",
@@ -302,6 +304,7 @@ class WhiteboardEntry:
     handoff_id: str | None = None
     run_id: str | None = None
     external_key: str | None = None
+    actor_id: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -322,6 +325,7 @@ class WhiteboardEntry:
             handoff_id=data.get("handoff_id"),
             run_id=data.get("run_id"),
             external_key=data.get("external_key"),
+            actor_id=data.get("actor_id") or None,
             metadata=dict(data.get("metadata") or {}),
         )
 
@@ -337,6 +341,7 @@ class WhiteboardEntry:
             and self.handoff_id == other.handoff_id
             and self.run_id == other.run_id
             and self.external_key == other.external_key
+            and self.actor_id == other.actor_id
             and self.metadata == other.metadata
         )
 

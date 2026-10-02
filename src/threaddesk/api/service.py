@@ -36,6 +36,7 @@ from threaddesk.services.prompt_generator import generate as generate_prompt
 from threaddesk.services.threads import ThreadReader
 from threaddesk.services.tollgate import LocalGate
 from threaddesk.services import whiteboard as whiteboard_log
+from threaddesk.services.actors import ActorRegistry
 from threaddesk.storage.json_store import JsonStore
 from threaddesk.storage.protocols import Store
 
@@ -501,6 +502,36 @@ class ThreadService:
         )
         self.bus.emit("dashboard.written", {"path": str(json_path)})
         return board
+
+    def actors(self) -> list[dict]:
+        return ActorRegistry(self.store).list()
+
+    def instance_id(self) -> str:
+        return ActorRegistry(self.store).instance_id()
+
+    def register_human(self, name: str, color_token: str) -> dict:
+        return ActorRegistry(self.store).add_human(name, color_token)
+
+    def register_agent(
+        self,
+        name: str,
+        person_id: str,
+        agent_type: str,
+        model: str | None = None,
+        provider: str | None = None,
+    ) -> dict:
+        return ActorRegistry(self.store).add_agent(
+            name, person_id, agent_type, model=model, provider=provider
+        )
+
+    def rename_actor(self, actor_id: str, name: str) -> dict:
+        return ActorRegistry(self.store).rename(actor_id, name)
+
+    def recolor_actor(self, actor_id: str, color_token: str) -> dict:
+        return ActorRegistry(self.store).recolor(actor_id, color_token)
+
+    def actor_appearance(self, actor_id: str) -> dict:
+        return ActorRegistry(self.store).appearance(actor_id)
 
     def whiteboard(self, key: str) -> list:
         thread = self.get(key)
