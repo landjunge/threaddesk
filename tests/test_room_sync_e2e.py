@@ -33,12 +33,10 @@ URL_B = f"http://127.0.0.1:{PORT_B}"
 
 
 def _port_free(port: int) -> bool:
+    """True when nothing is accepting connections. A closed socket may still sit in wait."""
     with socket.socket() as sock:
-        try:
-            sock.bind(("127.0.0.1", port))
-        except OSError:
-            return False
-    return True
+        sock.settimeout(0.2)
+        return sock.connect_ex(("127.0.0.1", port)) != 0
 
 
 def _wait_until_free(port: int) -> bool:
