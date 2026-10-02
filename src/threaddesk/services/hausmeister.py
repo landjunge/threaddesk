@@ -32,6 +32,8 @@ AGENT_TYPE = "local-assistant"
 ACTOR_NAME = "Hausmeister"
 IDLE_AFTER_SECONDS = 600
 LOAD_LIMIT = 1.5
+ACTIVITY_GAP_SECONDS = 15
+SURFACE_KINDS = frozenset({"pointer", "click", "key", "scroll", "touch"})
 OPEN = frozenset({"waiting", "paused", "running"})
 
 
@@ -55,20 +57,36 @@ def machine_is_quiet(snapshot: IdleSnapshot) -> bool:
     )
 
 
-def note_activity(store: Any, now: float | None = None) -> None:
-    store.write_json_artifact(ACTIVITY, {"seen": now if now is not None else time.time()})
+def activity_is_due(previous: float | None, now: float, gap: float = ACTIVITY_GAP_SECONDS) -> bool:
+    """True when the last accepted ping is old enough for another one."""
+    if previous is None:
+        return True
+    return now - previous >= gap
+
+
+def note_activity(store: Any, now: float | None = None, kind: str = "page") -> bool:
+    """Remember that someone used the desk.
+
+    Live surface pings are dropped inside the gap. An explicit timestamp
+    is a test clock and is stored as given, so tests never wait.
+    """
+    if kind != "page" and kind not in SURFACE_KINDS:
+        raise InvalidState("activity_kind")
+    stamp = time.time() if now is None else float(now)
+    current = _read_activity(store)
+    previous = current.get("seen")
+    previous_seen = float(previous) if isinstance(previous, (int, float)) else None
+    if now is None and kind != "page" and not activity_is_due(previous_seen, stamp):
+        return False
+    store.write_json_artifact(ACTIVITY, {"seen": stamp, "kind": kind})
+    return True
 
 
 def live_snapshot(store: Any) -> IdleSnapshot:
-    path = store.artifact_path(ACTIVITY)
+    value = _read_activity(store)
     seen = time.time()
-    if path.exists():
-        try:
-            value = json.loads(path.read_text(encoding="utf-8"))
-            if isinstance(value.get("seen"), (int, float)):
-                seen = float(value["seen"])
-        except (OSError, json.JSONDecodeError, TypeError):
-            seen = time.time()
+    if isinstance(value.get("seen"), (int, float)):
+        seen = float(value["seen"])
     idle = max(0.0, time.time() - seen)
     try:
         load = float(os.getloadavg()[0])
@@ -323,6 +341,17 @@ def _job(thread_id: str, order: str, task_id: str | None) -> dict[str, Any]:
         "task_id": task_id or "",
         "error": "",
     }
+
+
+def _read_activity(store: Any) -> dict[str, Any]:
+    path = store.artifact_path(ACTIVITY)
+    if not path.exists():
+        return {}
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, TypeError):
+        return {}
+    return value if isinstance(value, dict) else {}
 
 
 def _find_agent(registry: ActorRegistry) -> dict[str, Any] | None:

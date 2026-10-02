@@ -157,6 +157,55 @@ document.body.addEventListener("htmx:afterSwap", (event) => {
   }
 });
 
+// One ping per quiet gap, plus one trailing ping if more input arrived.
+const ACTIVITY_GAP_MS = 15000;
+const activityState = { lastSent: 0, timer: 0, waitingKind: "" };
+
+function activityKind(event) {
+  const type = event.type;
+  if (type === "keydown") return "key";
+  if (type === "wheel" || type === "scroll") return "scroll";
+  if (type === "touchstart" || type === "touchmove") return "touch";
+  if (type === "pointerdown" || type === "mousedown" || type === "click") return "click";
+  if (type === "pointermove" || type === "mousemove") return "pointer";
+  return "";
+}
+
+function sendActivity(kind) {
+  fetch("/hausmeister/activity", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kind }),
+    keepalive: true,
+  }).catch(() => {});
+}
+
+function reportActivity(event) {
+  const kind = activityKind(event);
+  if (!kind) return;
+  const now = Date.now();
+  if (now - activityState.lastSent >= ACTIVITY_GAP_MS) {
+    activityState.lastSent = now;
+    activityState.waitingKind = "";
+    sendActivity(kind);
+    return;
+  }
+  activityState.waitingKind = kind;
+  if (activityState.timer) return;
+  activityState.timer = window.setTimeout(() => {
+    activityState.timer = 0;
+    const queued = activityState.waitingKind;
+    activityState.waitingKind = "";
+    if (!queued) return;
+    activityState.lastSent = Date.now();
+    sendActivity(queued);
+  }, ACTIVITY_GAP_MS - (now - activityState.lastSent));
+}
+
+["pointermove", "mousemove", "pointerdown", "mousedown", "click", "keydown", "wheel", "scroll", "touchstart", "touchmove"].forEach((name) => {
+  document.addEventListener(name, reportActivity, { passive: true });
+});
+
 document.body.addEventListener("htmx:sendError", () => {
   console.warn(`ThreadDesk UI: ${uiText("browser.request_failed")}`);
 });

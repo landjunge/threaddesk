@@ -3,13 +3,21 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 
 import pytest
 
 from threaddesk.api.service import ThreadService
-from threaddesk.core.errors import SecretRejected
-from threaddesk.services.hausmeister import Hausmeister, IdleSnapshot
+from threaddesk.core.errors import InvalidState, SecretRejected
+from threaddesk.services.hausmeister import (
+    ACTIVITY_GAP_SECONDS,
+    Hausmeister,
+    IdleSnapshot,
+    activity_is_due,
+    live_snapshot,
+    note_activity,
+)
 from threaddesk.services.ollama_local import OllamaError, default_transport, local_url
 from threaddesk.storage.json_store import JsonStore
 from threaddesk.storage.sqlite_store import SQLiteStore
@@ -232,6 +240,116 @@ def _counting(calls: list[str]):
         return {"message": {"content": json.dumps({"summary": "Kurz gefasst.", "suggestions": ["Weiter notieren"]})}}
 
     return call
+
+
+def _from_activity(store) -> IdleSnapshot:
+    """Use the recorded desk time and a light load. No real waiting."""
+    live = live_snapshot(store)
+    return IdleSnapshot(idle_seconds=live.idle_seconds, user_active=live.user_active, load=0.2)
+
+
+def _armed(svc: ThreadService):
+    thread = svc.create("Aktiv")
+    calls: list[str] = []
+    home = Hausmeister(svc.store, _counting(calls))
+    home.set_enabled(True)
+    home.set_model("demo")
+    home.enqueue(thread.id, "Fasse den Stand zusammen")
+    return thread, calls, home
+
+
+def _kind(store, kind: str) -> None:
+    assert note_activity(store, now=time.time(), kind=kind) is True
+    saved = json.loads(store.artifact_path("hausmeister-activity.json").read_text(encoding="utf-8"))
+    assert saved["kind"] == kind
+
+
+def test_pointer_and_key_activity_block_automatic_start(svc: ThreadService) -> None:
+    _thread, calls, home = _armed(svc)
+    for kind in ("pointer", "click", "key", "touch"):
+        _kind(svc.store, kind)
+        snapshot = _from_activity(svc.store)
+        assert snapshot.user_active is True
+        assert snapshot.idle_seconds < 600
+        assert home.tick(snapshot)["started"] is False
+    assert calls.count("chat") == 0
+    assert home.jobs()[0]["status"] == "waiting"
+
+
+def test_scroll_activity_blocks_automatic_start(svc: ThreadService) -> None:
+    _thread, calls, home = _armed(svc)
+    _kind(svc.store, "scroll")
+    assert home.tick(_from_activity(svc.store))["started"] is False
+    assert calls.count("chat") == 0
+    assert home.jobs()[0]["status"] == "waiting"
+
+
+def test_simulated_quiet_allows_automatic_start(svc: ThreadService) -> None:
+    _thread, calls, home = _armed(svc)
+    _kind(svc.store, "scroll")
+    assert home.tick(_from_activity(svc.store))["started"] is False
+    assert note_activity(svc.store, now=time.time() - 700, kind="scroll") is True
+    quiet = _from_activity(svc.store)
+    assert quiet.user_active is False
+    assert quiet.idle_seconds >= 600
+    started = home.tick(quiet)
+    assert started["started"] is True
+    assert calls.count("chat") == 1
+    assert home.jobs()[0]["status"] == "done"
+
+
+def test_manual_start_still_runs_while_the_surface_is_active(svc: ThreadService) -> None:
+    thread, calls, home = _armed(svc)
+    _kind(svc.store, "key")
+    assert home.tick(_from_activity(svc.store))["started"] is False
+    assert home.run_now(thread.id, "Fasse den Stand zusammen")["ok"] is True
+    assert calls.count("chat") == 1
+    home.enqueue(thread.id, "Später noch einmal")
+    assert home.tick(_from_activity(svc.store))["started"] is False
+    assert calls.count("chat") == 1
+    assert any(job["status"] == "waiting" for job in home.jobs())
+
+
+def test_surface_pings_are_throttled_without_waiting(svc: ThreadService) -> None:
+    assert activity_is_due(None, 1000) is True
+    assert activity_is_due(1000, 1000 + ACTIVITY_GAP_SECONDS - 0.1) is False
+    assert activity_is_due(1000, 1000 + ACTIVITY_GAP_SECONDS) is True
+    assert note_activity(svc.store, kind="pointer") is True
+    assert note_activity(svc.store, kind="key") is False
+    saved = json.loads(svc.store.artifact_path("hausmeister-activity.json").read_text(encoding="utf-8"))
+    assert saved["kind"] == "pointer"
+    with pytest.raises(InvalidState, match="activity_kind"):
+        note_activity(svc.store, kind="network")
+
+
+def test_desk_script_throttles_surface_activity() -> None:
+    script = (
+        Path(__file__).resolve().parents[1] / "src" / "threaddesk" / "ui" / "static" / "app.js"
+    ).read_text(encoding="utf-8")
+    for name in ("pointermove", "mousedown", "keydown", "wheel", "scroll", "touchstart", "touchmove"):
+        assert name in script
+    assert "ACTIVITY_GAP_MS = 15000" in script
+    assert "/hausmeister/activity" in script
+    assert "waitingKind" in script
+
+
+def test_activity_route_records_one_surface_ping(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from threaddesk.ui.server import create_app
+
+    monkeypatch.setenv("THREADDESK_HOME", str(tmp_path))
+    client = TestClient(create_app())
+    assert client.post("/hausmeister/activity", json={"kind": "page"}).status_code == 400
+    recorded = client.post("/hausmeister/activity", json={"kind": "scroll"})
+    assert recorded.status_code == 200
+    assert recorded.json()["recorded"] is True
+    held = client.post("/hausmeister/activity", json={"kind": "pointer"})
+    assert held.status_code == 200
+    assert held.json()["recorded"] is False
+    saved = json.loads((tmp_path / "hausmeister-activity.json").read_text(encoding="utf-8"))
+    assert saved["kind"] == "scroll"
 
 
 def test_secrets_from_the_model_are_not_stored(svc: ThreadService) -> None:

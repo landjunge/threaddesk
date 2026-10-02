@@ -16,7 +16,7 @@ from jinja2 import pass_context
 from threaddesk.api.service import ThreadService
 from threaddesk.core.errors import InvalidState, NotFound, ThreadDeskError
 from threaddesk.services.actors import ActorRegistry
-from threaddesk.services.hausmeister import Hausmeister, live_snapshot, note_activity
+from threaddesk.services.hausmeister import SURFACE_KINDS, Hausmeister, live_snapshot, note_activity
 from threaddesk.services.ollama_local import OllamaError
 from threaddesk.core import i18n
 from threaddesk.core.models import (
@@ -556,6 +556,22 @@ def create_app() -> FastAPI:
         if not result["ok"]:
             return _hausmeister_notice(request, result["error"])
         return workspace(request, {"notice": i18n.translate("hausmeister.done", _language(request))})
+
+    @app.post("/hausmeister/activity")
+    async def hausmeister_activity(request: Request) -> JSONResponse:
+        """One throttled ping from the open desk. Not a poll."""
+        try:
+            raw = await request.json()
+        except Exception:
+            raw = None
+        kind = raw.get("kind") if isinstance(raw, dict) else None
+        if not isinstance(kind, str) or kind not in SURFACE_KINDS:
+            return JSONResponse({"ok": False}, status_code=400)
+        try:
+            recorded = note_activity(_svc().store, kind=kind)
+        except OSError:
+            return JSONResponse({"ok": False}, status_code=400)
+        return JSONResponse({"ok": True, "recorded": recorded})
 
     @app.post("/threads/{thread_id}/describe", response_class=HTMLResponse)
     def set_description(
