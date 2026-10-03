@@ -49,7 +49,7 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 - Nutzerziel: zwischen Threads wechseln, Beschreibung ändern, umbenennen, archivieren und wiederfinden.
 - Voraussetzungen: mindestens zwei Threads.
 - Rolle: lokale Einzelperson.
-- Status: Wechsel und Umbenennen nachgewiesen in `test_user_renames_switches_archives_and_keeps_file_paths`, Chrome vorn, 20,17 Sekunden, 2026-10-03. Beschreibung ändern und die Statuschips idea/active/paused/done bleiben offen. Archivieren nimmt den Thread aus der Liste. Der Datensatz bleibt im Arbeitsbereich. Eine Schaltfläche, ihn wieder in die Liste zu holen, gibt es nicht. Dafür gibt es nur `td unarchive` auf der Kommandozeile.
+- Status: Wechsel und Umbenennen nachgewiesen in `test_user_renames_switches_archives_and_keeps_file_paths`, Chrome vorn, 20,17 Sekunden, 2026-10-03. Beschreibung ändern und die Statuschips idea, active, paused, done sind nachgewiesen in `test_user_edits_description_status_and_whiteboard_order`, Chrome vorn, 14,56 Sekunden, 2026-10-03. Die Beschreibung „Neuer Zweck mit ÄÖÜ“ und der Status done bleiben nach Neuladen und nach dem Wechsel zu einem zweiten Thread. Ein zweiter Klick auf done lässt den Status stehen, ohne Fehlermeldung. Archivieren nimmt den Thread aus der Liste. Der Datensatz bleibt im Arbeitsbereich. Eine Schaltfläche, ihn wieder in die Liste zu holen, gibt es nicht. Dafür gibt es nur `td unarchive` auf der Kommandozeile.
 
 ## TD-NOTE-01 Notiz bleibt
 
@@ -83,7 +83,7 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 ## TD-BOARD-02 Herkunft, Konflikt, Wiederholung
 
 - Nutzerziel: dieselbe externe Kennung nicht doppelt schreiben und einen abweichenden Text als Konflikt behalten.
-- Status: Vertragstests vorhanden (`tests/test_whiteboard.py`, `tests/test_whiteboard_merge.py`). Sichtbarer Browsernachweis für Konflikt und Wiederholung offen. TD-SNAP-01 deckt nur das einmalige Anhängen ab.
+- Status: Herkunft, Reihenfolge und Wiederholung über die Schaltfläche Anhängen sind im selben Chrome-Lauf nachgewiesen. Leeres Absenden hängt nichts an. Der erste Beitrag zeigt Prüferin und Entscheidung. Derselbe zweite Text bleibt zweimal stehen, mit zwei Kennungen, in derselben Reihenfolge nach Neuladen. Der aktuelle Stand zeigt die letzte Person, den letzten Text und den früheren nächsten Schritt. Ein abweichender Text zur selben externen Kennung hat im Schreibtisch keine Schaltfläche. Das bleibt in `tests/test_whiteboard.py` und `tests/test_whiteboard_merge.py`. TD-SNAP-01 deckt nur das einmalige Anhängen ab.
 
 ## TD-KNOW-01 Wissen
 

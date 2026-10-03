@@ -391,3 +391,127 @@ def test_user_renames_switches_archives_and_keeps_file_paths(tmp_path: Path) -> 
     finally:
         desk.stop()
     assert page_errors == []
+
+
+def _append(page, actor: str, content: str, kind: str, next_step: str = "") -> None:
+    form = page.locator("[data-whiteboard]")
+    form.locator("[data-whiteboard-actor]").fill(actor)
+    form.locator("[data-whiteboard-type]").select_option(kind)
+    form.locator("[data-whiteboard-content]").fill(content)
+    form.locator("[data-whiteboard-next]").fill(next_step)
+    form.locator("[data-whiteboard-submit]").click()
+    expect(page.get_by_role("status")).to_have_text("Beitrag angehängt")
+
+
+def test_user_edits_description_status_and_whiteboard_order(tmp_path: Path) -> None:
+    """TD-THREAD-03, TD-BOARD-02. Konflikt ohne externe Kennung hat keine Schaltfläche."""
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    page_errors: list[str] = []
+    first = "Erster Verlauf ÄÖÜ"
+    second = "Zweiter Verlauf, noch einmal"
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            before = _chrome_pids()
+            try:
+                browser = play.chromium.launch(
+                    executable_path=CHROME,
+                    headless=not HEADED,
+                    slow_mo=200 if HEADED else 0,
+                    args=["--start-fullscreen"] if HEADED else [],
+                )
+            except Exception as exc:  # pragma: no cover - Umgebung ohne Browser
+                pytest.skip(f"kein Chromium verfügbar: {exc}")
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            page.bring_to_front()
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.on("dialog", lambda dialog: dialog.accept())
+            page.goto(url + "/lang/de", wait_until="networkidle")
+            page.wait_for_function("() => window.Alpine !== undefined")
+            _raise_chrome(before)
+
+            page.locator("[data-new-thread]").click()
+            page.locator("[data-new-title]").fill("Statusfaden")
+            page.locator('#thread-list input[name="description"]').fill("Erster Zweck")
+            page.locator("#thread-list").get_by_role("button", name="Anlegen", exact=True).click()
+            expect(page.locator("h1")).to_have_text("Statusfaden")
+            description = page.locator('.desk-description input[name="text"]')
+            expect(description).to_have_value("Erster Zweck")
+            expect(page.locator(".desk-status button.is-on")).to_have_text("idea")
+            expect(page.locator("[data-whiteboard-empty]")).to_have_text("Noch kein Beitrag.")
+
+            page.locator("[data-whiteboard-submit]").click()
+            expect(page.locator("[data-whiteboard-entry]")).to_have_count(0)
+
+            description.fill("Neuer Zweck mit ÄÖÜ")
+            page.locator(".desk-description").get_by_role(
+                "button", name="Speichern", exact=True
+            ).click()
+            expect(page.get_by_role("status")).to_have_text("Beschreibung gespeichert")
+            expect(description).to_have_value("Neuer Zweck mit ÄÖÜ")
+
+            for name in ("active", "paused", "done"):
+                page.locator(".desk-status").get_by_role("button", name=name, exact=True).click()
+                expect(page.locator(".desk-status button.is-on")).to_have_text(name)
+                expect(page.locator(".detail-head .status")).to_have_text(name)
+                expect(page.locator(".thread-item.is-current .status")).to_have_text(name)
+                expect(page.get_by_role("status")).to_have_text(f"Status: {name}")
+            page.locator(".desk-status").get_by_role("button", name="done", exact=True).click()
+            expect(page.locator(".desk-status button.is-on")).to_have_text("done")
+            expect(page.locator(".banner-error:visible")).to_have_count(0)
+
+            _append(page, "Prüferin", first, "decision", "Danach prüfen")
+            expect(page.locator("[data-whiteboard-entry]")).to_have_count(1)
+            expect(page.locator(".whiteboard-body")).to_have_text(first)
+            expect(page.locator(".whiteboard-meta")).to_contain_text("Prüferin")
+            expect(page.locator(".whiteboard-meta")).to_contain_text("Entscheidung")
+            expect(page.locator("[data-stand-actor]")).to_have_text("Prüferin")
+            expect(page.locator("[data-stand-next]")).to_have_text("Danach prüfen")
+            expect(page.locator("[data-stand-last]")).to_have_text(first)
+            expect(page.locator("[data-stand-status]")).to_have_text("done")
+
+            _append(page, "Zweite Person", second, "problem", "")
+            _append(page, "Zweite Person", second, "problem", "")
+            bodies = page.locator(".whiteboard-body")
+            expect(bodies).to_have_count(3)
+            expect(bodies.nth(0)).to_have_text(first)
+            expect(bodies.nth(1)).to_have_text(second)
+            expect(bodies.nth(2)).to_have_text(second)
+            metas = page.locator(".whiteboard-meta")
+            expect(metas.nth(1)).to_contain_text("Zweite Person")
+            expect(metas.nth(1)).to_contain_text("Problem")
+            expect(metas.nth(2)).to_contain_text("Zweite Person")
+            ids = page.locator("[data-whiteboard-entry]").evaluate_all(
+                "nodes => nodes.map(node => node.getAttribute('data-entry-id'))"
+            )
+            assert len(set(ids)) == 3
+            expect(page.locator("[data-stand-actor]")).to_have_text("Zweite Person")
+            expect(page.locator("[data-stand-last]")).to_have_text(second)
+            expect(page.locator("[data-stand-next]")).to_have_text("Danach prüfen")
+
+            page.reload(wait_until="networkidle")
+            page.wait_for_function("() => window.Alpine !== undefined")
+            expect(page.locator('.desk-description input[name="text"]')).to_have_value(
+                "Neuer Zweck mit ÄÖÜ"
+            )
+            expect(page.locator(".desk-status button.is-on")).to_have_text("done")
+            expect(page.locator(".whiteboard-body")).to_have_count(3)
+            expect(page.locator(".whiteboard-body").nth(0)).to_have_text(first)
+            expect(page.locator(".whiteboard-body").nth(2)).to_have_text(second)
+
+            _create(page, "Nur zum Wechseln")
+            page.locator(".thread-item", has_text="Statusfaden").click()
+            expect(page.locator("h1")).to_have_text("Statusfaden")
+            expect(page.locator('.desk-description input[name="text"]')).to_have_value(
+                "Neuer Zweck mit ÄÖÜ"
+            )
+            expect(page.locator(".desk-status button.is-on")).to_have_text("done")
+            expect(page.locator(".whiteboard-body")).to_have_count(3)
+            _raise_chrome(before, "fenster-status.png")
+            _shot(page, "07-status.png")
+            browser.close()
+    finally:
+        desk.stop()
+    assert page_errors == []
