@@ -27,6 +27,8 @@ ROOT = Path(__file__).resolve().parents[1]
 CHROME = os.environ.get("THREADDESK_CHROMIUM") or None
 HEADED = os.environ.get("THREADDESK_BROWSER_HEADED") == "1"
 SHOTS = os.environ.get("THREADDESK_SHOTS")
+# Sichtbares Fenster: jede Aktion wartet 1,5 Sekunden. Kopflos bleibt schnell.
+PACE_MS = 1500
 
 TITLE = "Prüfthread ÄÖÜ"
 DESCRIPTION = "Sichtbarer Zweck für den ersten Thread"
@@ -145,6 +147,18 @@ def _raise_chrome(before: set[int], shot: str | None = None) -> int | None:
     return pid
 
 
+def _launch(play):
+    try:
+        return play.chromium.launch(
+            executable_path=CHROME,
+            headless=not HEADED,
+            slow_mo=PACE_MS if HEADED else 0,
+            args=["--start-fullscreen"] if HEADED else [],
+        )
+    except Exception as exc:  # pragma: no cover - Umgebung ohne Browser
+        pytest.skip(f"kein Chromium verfügbar: {exc}")
+
+
 def _shot(page, name: str) -> None:
     if not SHOTS:
         return
@@ -162,15 +176,7 @@ def test_user_keeps_notes_and_snapshot_across_restart(tmp_path: Path) -> None:
         url = desk.start()
         with sync_playwright() as play:
             before = _chrome_pids()
-            try:
-                browser = play.chromium.launch(
-                    executable_path=CHROME,
-                    headless=not HEADED,
-                    slow_mo=250 if HEADED else 0,
-                    args=["--start-fullscreen"] if HEADED else [],
-                )
-            except Exception as exc:  # pragma: no cover - Umgebung ohne Browser
-                pytest.skip(f"kein Chromium verfügbar: {exc}")
+            browser = _launch(play)
             page = browser.new_page(viewport={"width": 1440, "height": 900})
             _raise_chrome(before)
             page.bring_to_front()
@@ -250,12 +256,7 @@ def test_user_keeps_notes_and_snapshot_across_restart(tmp_path: Path) -> None:
         url = desk.start()
         with sync_playwright() as play:
             before = _chrome_pids()
-            browser = play.chromium.launch(
-                executable_path=CHROME,
-                headless=not HEADED,
-                slow_mo=250 if HEADED else 0,
-                args=["--start-fullscreen"] if HEADED else [],
-            )
+            browser = _launch(play)
             page = browser.new_page(viewport={"width": 1440, "height": 900})
             _raise_chrome(before)
             page.bring_to_front()
@@ -292,15 +293,7 @@ def test_user_renames_switches_archives_and_keeps_file_paths(tmp_path: Path) -> 
         url = desk.start()
         with sync_playwright() as play:
             before = _chrome_pids()
-            try:
-                browser = play.chromium.launch(
-                    executable_path=CHROME,
-                    headless=not HEADED,
-                    slow_mo=200 if HEADED else 0,
-                    args=["--start-fullscreen"] if HEADED else [],
-                )
-            except Exception as exc:  # pragma: no cover - Umgebung ohne Browser
-                pytest.skip(f"kein Chromium verfügbar: {exc}")
+            browser = _launch(play)
             page = browser.new_page(viewport={"width": 1440, "height": 900})
             page.bring_to_front()
             page.on("pageerror", lambda exc: page_errors.append(str(exc)))
@@ -416,15 +409,7 @@ def test_user_edits_description_status_and_whiteboard_order(tmp_path: Path) -> N
         url = desk.start()
         with sync_playwright() as play:
             before = _chrome_pids()
-            try:
-                browser = play.chromium.launch(
-                    executable_path=CHROME,
-                    headless=not HEADED,
-                    slow_mo=200 if HEADED else 0,
-                    args=["--start-fullscreen"] if HEADED else [],
-                )
-            except Exception as exc:  # pragma: no cover - Umgebung ohne Browser
-                pytest.skip(f"kein Chromium verfügbar: {exc}")
+            browser = _launch(play)
             page = browser.new_page(viewport={"width": 1440, "height": 900})
             page.bring_to_front()
             page.on("pageerror", lambda exc: page_errors.append(str(exc)))
@@ -529,15 +514,7 @@ def test_user_creates_filters_and_opens_knowledge_on_the_map(tmp_path: Path) -> 
         url = desk.start()
         with sync_playwright() as play:
             before = _chrome_pids()
-            try:
-                browser = play.chromium.launch(
-                    executable_path=CHROME,
-                    headless=not HEADED,
-                    slow_mo=200 if HEADED else 0,
-                    args=["--start-fullscreen"] if HEADED else [],
-                )
-            except Exception as exc:  # pragma: no cover - Umgebung ohne Browser
-                pytest.skip(f"kein Chromium verfügbar: {exc}")
+            browser = _launch(play)
             page = browser.new_page(viewport={"width": 1440, "height": 900})
             page.bring_to_front()
             page.on("pageerror", lambda exc: page_errors.append(str(exc)))
