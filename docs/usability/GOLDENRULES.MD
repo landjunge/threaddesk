@@ -389,6 +389,10 @@ Kontrollstände sind im Protokoll festzulegen; keine unbelegte Audit-Garantie.
 
 ## 12. Baufolge und Abschlussbedingungen
 
+B0 wird im [Vertragsentwurf für Firmenaufrufe](../contracts/company-execution-v1.md)
+konkretisiert. Dessen Modellprüfung und offene Review-Gates sind keine
+Produktimplementierung und keine bestandene Gesamtabnahme.
+
 Die Produktentscheidung ist getroffen. Vor Produktcode fehlen noch konkrete
 Protokollnachweise; diese Tabelle ist der vorbereitete Bauauftrag, keine
 Behauptung, dass die Mechanismen bereits laufen. Keine Phase überspringen.
