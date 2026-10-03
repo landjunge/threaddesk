@@ -1365,3 +1365,121 @@ def test_user_reads_error_notices_in_english(tmp_path: Path) -> None:
     finally:
         desk.stop()
     assert page_errors == []
+
+
+def _expert(key: str, language: str) -> str:
+    from threaddesk.core import i18n
+
+    return i18n.translate(key, language, "expert")
+
+
+def test_user_reads_expert_wording_on_the_desk(tmp_path: Path) -> None:
+    """TD-I18N-01. Fachsprache an Schranke, Zwischenstand, Übergabe und Prompt."""
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    page_errors: list[str] = []
+    dialogs: list[str] = []
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            before = _chrome_pids()
+            browser = _launch(play, ["--disable-features=Translate"])
+            page = browser.new_page(
+                viewport={"width": 1440, "height": 900},
+                locale="en-US",
+            )
+            page.bring_to_front()
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.on(
+                "dialog",
+                lambda dialog: (dialogs.append(dialog.message), dialog.dismiss()),
+            )
+            page.goto(url + "/lang/en", wait_until="networkidle")
+            page.wait_for_function("() => window.Alpine !== undefined")
+            _raise_chrome(before)
+            expect(page.locator("html")).to_have_attribute("lang", "en")
+            _create_en(page, "Expert wording")
+            page.get_by_role(
+                "link", name=_sentence("register.expert", "en"), exact=True
+            ).click()
+            expect(page.locator("html")).to_have_attribute("lang", "en")
+
+            gate = page.locator("#gate")
+            snaps = page.locator("#snapshots")
+            packet = page.locator("#packet")
+            prompt = page.locator("#prompt")
+            gate.scroll_into_view_if_needed()
+            expect(gate.locator("h2")).to_have_text(_expert("gate.title", "en"))
+            expect(gate).to_contain_text(_expert("gate.execute_today", "en"))
+            expect(gate).to_contain_text(_expert("gate.handoff_today", "en"))
+            expect(gate).to_contain_text(_expert("gate.cooldown", "en"))
+            expect(gate).to_contain_text(_expert("gate.hint", "en"))
+            expect(gate.get_by_role(
+                "button", name=_expert("gate.freeze", "en"), exact=True
+            )).to_be_visible()
+            expect(gate).not_to_contain_text(_sentence("gate.execute_today", "en"))
+            expect(gate).not_to_contain_text(_sentence("gate.hint", "en"))
+            snaps.scroll_into_view_if_needed()
+            expect(snaps.locator("h3")).to_have_text(_expert("snapshots.title", "en"))
+            expect(snaps).to_contain_text(_expert("snapshots.hint", "en"))
+            expect(snaps).not_to_contain_text(_sentence("snapshots.title", "en"))
+            expect(snaps).not_to_contain_text(_sentence("snapshots.hint", "en"))
+            packet.scroll_into_view_if_needed()
+            expect(packet.locator("h3")).to_have_text(_expert("packet.title", "en"))
+            expect(packet).to_contain_text(_expert("packet.hint", "en"))
+            expect(packet.get_by_role(
+                "button", name=_expert("packet.write_handoff", "en"), exact=True
+            )).to_be_visible()
+            expect(packet).not_to_contain_text(_sentence("packet.title", "en"))
+            expect(packet).not_to_contain_text(_sentence("packet.hint", "en"))
+            prompt.scroll_into_view_if_needed()
+            expect(prompt).to_contain_text(_expert("prompt.hint", "en"))
+            expect(prompt).not_to_contain_text(_sentence("prompt.hint", "en"))
+            gate.locator("button").click()
+            assert dialogs == [_expert("gate.confirm_freeze", "en")]
+            expect(gate.locator(".status")).to_have_text(_sentence("gate.open", "en"))
+            _raise_chrome(before, "fenster-fachsprache.png")
+            _shot(page, "24-fachsprache.png")
+
+            page.get_by_role("link", name="DE", exact=True).click()
+            expect(page.locator("html")).to_have_attribute("lang", "de")
+            gate.scroll_into_view_if_needed()
+            expect(gate.locator("h2")).to_have_text(_expert("gate.title", "de"))
+            expect(gate).to_contain_text(_expert("gate.execute_today", "de"))
+            expect(gate).to_contain_text(_expert("gate.handoff_today", "de"))
+            expect(gate).to_contain_text(_expert("gate.hint", "de"))
+            expect(gate.get_by_role(
+                "button", name=_expert("gate.freeze", "de"), exact=True
+            )).to_be_visible()
+            expect(gate).not_to_contain_text(_expert("gate.execute_today", "en"))
+            expect(gate).not_to_contain_text(_expert("gate.hint", "en"))
+            snaps.scroll_into_view_if_needed()
+            expect(snaps.locator("h3")).to_have_text(_expert("snapshots.title", "de"))
+            expect(snaps).to_contain_text(_expert("snapshots.hint", "de"))
+            expect(snaps).not_to_contain_text(_expert("snapshots.hint", "en"))
+            packet.scroll_into_view_if_needed()
+            expect(packet.locator("h3")).to_have_text(_expert("packet.title", "de"))
+            expect(packet).to_contain_text(_expert("packet.hint", "de"))
+            expect(packet.get_by_role(
+                "button", name=_expert("packet.write_handoff", "de"), exact=True
+            )).to_be_visible()
+            expect(packet).not_to_contain_text(_expert("packet.hint", "en"))
+            prompt.scroll_into_view_if_needed()
+            expect(prompt).to_contain_text(_expert("prompt.hint", "de"))
+            expect(prompt).not_to_contain_text(_expert("prompt.hint", "en"))
+            _shot(page, "25-fachsprache-de.png")
+
+            page.get_by_role(
+                "link", name=_sentence("register.plain", "de"), exact=True
+            ).click()
+            gate.scroll_into_view_if_needed()
+            expect(gate.locator("h2")).to_have_text(_sentence("gate.title", "de"))
+            expect(gate).to_contain_text(_sentence("gate.hint", "de"))
+            expect(gate).not_to_contain_text(_expert("gate.hint", "de"))
+            snaps.scroll_into_view_if_needed()
+            expect(snaps.locator("h3")).to_have_text(_sentence("snapshots.title", "de"))
+            browser.close()
+    finally:
+        desk.stop()
+    assert page_errors == []
