@@ -463,3 +463,113 @@ Externe Primärquellen, am 3. Oktober 2026 geprüft:
 Die konkrete Aufteilung in Executor, Budgetjournal und Produktphasen ist eine
 Projektentscheidung aus den Befunden, keine von diesen Quellen zertifizierte
 Architektur.
+
+## 15. Notizen, Grundgedanken und verbindliche Planprüfung
+
+Ergänzt am 3. Oktober 2026 nach ausdrücklichem Nutzerauftrag. Diese Regeln gelten
+produktübergreifend, auch für bestehende Tools. Der Sicherheitsplan oben bleibt
+erhalten; dieser Abschnitt erweitert die Arbeitsweise, nicht bestehende Rechte.
+
+**Der Mensch darf unsortiert denken; die KI übernimmt das Einordnen.** Sie trennt
+Grundgedanke, Entscheidung, Aufgabe, Frage und belegtes Ergebnis, ordnet sie dem
+bestehenden Zusammenhang zu und erhält Herkunft sowie Begründung. Ein flüchtiger
+Gedanke wird nicht still zum Bauauftrag. Ausdrücklich getroffene Entscheidungen
+werden dagegen festgehalten und angewendet. Philosophische Gedanken gehören mit
+ihrem Sinn und ihren Folgen dazu; sie sind keine ungeprüften Tatsachenbehauptungen.
+
+Leitgedanken: **einmal durchdenken, oft zuverlässig ausführen**; Nutzen für den
+Tool-Nutzer ebenso wie für die Entwicklung; **GELD – GOLD – ENERGIE** als Erinnerung,
+Zeit, Geld, Aufmerksamkeit und Rechenressourcen bewusst einzusetzen. Wiederverwendung
+ist ein gewünschter Nutzen, keine gemessene „100000 %“-Einsparung.
+
+Vor Ausführung jedes Plans gilt:
+
+1. Ziel und beobachtbaren Nutzen festlegen; vorhandenen Code und aktuellen
+   Arbeitsstand lesen.
+2. Plan gegen diese GOLDENRULES prüfen. Widersprüche vor dem Bauen auflösen.
+3. **Was kann weg?** Erledigte, doppelte, überholte oder für das Ziel unnötige
+   Schritte aus dem aktiven Plan nehmen und den Grund im Verlauf erhalten.
+   Daten-, Sicherheits- und Abnahmeanforderungen nicht als „Ballast“ streichen.
+4. Vorhandene Module und Prüfabläufe verwenden; nur die tatsächlich fehlende
+   Funktion ergänzen. Keinen parallelen Plan oder eine konkurrierende Regeldatei
+   anlegen. Entscheidend sind klare Zuständigkeiten, kleine Schnittstellen und
+   verständlicher, wartbarer Code; keine neue Abstraktion ohne konkreten Bedarf.
+5. Modell und Arbeitsweg passend zur Aufgabe wählen, Abnahme durchführen, Ergebnis
+   und Belege festhalten. Danach ohne Umweg im bereinigten bestehenden Plan weiter.
+
+## 16. Nutzerprüfung, Hilfe, Voice und Erklärvideos
+
+**Hilfe/Voice folgt der für ThreadDesk vereinbarten Ausgestaltung.** Diese wird als
+wiederverwendbarer Ablauf auf die anderen Tools angewendet. Der genaue frühere
+Voice-Entwurf liegt dieser Fassung nicht vor; vor seiner Umsetzung muss der
+Originalbeschluss verknüpft und mit dem Code abgeglichen werden. Weder eine neue
+Voice-Architektur noch bereits vorhandene Sprachhilfe wird hier behauptet.
+
+Für jedes relevante Nutzerziel entsteht ein durchgehender, wiederholbarer Ablauf:
+Vorbereitung, tatsächliche Bedienung, erwartetes sichtbares Ergebnis, Fehlerweg
+und Wiederherstellung. Er prüft den Weg, den ein Nutzer wirklich benutzt,
+einschließlich passender Desktop-/Browser-Umgebung. Ein reiner Backend-Test
+beweist keinen funktionierenden Speichern-Dialog in einer nativen App.
+
+Aus diesen **erfolgreich geprüften Nutzer-E2E-Abläufen** werden verständliche
+Erklärvideos und die dazugehörige Hilfe abgeleitet. Prüfschritte, Hilfetext und
+Video verweisen auf dieselbe Ablauf-ID und den geprüften Versionsstand. Die
+Aufnahme zeigt den echten Ablauf mit synthetischen Daten; kein nachgestellter
+Erfolg und keine privaten Arbeitsinhalte. Erklärungen zeigen Ziel, Handlung und
+Ergebnis; bei einer relevanten Bedienänderung werden Prüfung, Hilfe und Video
+gemeinsam aktualisiert. Ein Video ersetzt weder automatisierte Assertions noch
+die Abnahme. Voice ergänzt den verständlichen Ablauf; lesbare Hilfe bleibt nutzbar.
+
+Einmal gewonnene Prüfabläufe werden wiederverwendet und **rückwirkend auf bestehende
+Tools und Funktionen angewendet**. Vorhandene Tests zuerst zuordnen, Lücken gezielt
+schließen; keine kosmetischen Doppeltests. Je Tool werden Datenverlust/Recovery,
+wichtige Integrationen und häufige Nutzerabläufe zuerst geprüft. Ein übertragener
+Test zählt erst nach tatsächlichem Lauf für das jeweilige Tool und seine Version
+als bestanden. „Nicht geprüft“, „fehlgeschlagen“ und „bestanden“ bleiben getrennt.
+Die 22 Sicherheitsfälle oben sind dadurch weiterhin nicht automatisch erfüllt.
+
+Die gemeldete ThreadDesk-Sicherungsstörung hat Vorrang: tatsächlichen Fehlerpfad
+eingrenzen, Sicherung und Öffnen in einem getrennten Arbeitsbereich prüfen,
+Originaldaten erhalten. Notion bleibt bis zur nachgewiesenen Umschaltung das
+Arbeitsgedächtnis. Eine erfolgreiche Serverantwort allein ist keine Auslieferung
+einer nutzbaren Sicherungsdatei an den Nutzer.
+
+## 17. Aufgabenbezogene Modellwahl und kleiner Whiteboard-Hook
+
+**Wähle das günstigste verfügbare und zugelassene Modell, das die konkrete Aufgabe
+mit ausreichender Qualität erfüllt.** Qualität, Datengrenzen, erforderliche
+Werkzeuge, Kontextumfang, Zuverlässigkeit und Abnahmekriterien sind Bedingungen;
+Kosten werden innerhalb dieser Bedingungen minimiert. Einfach das billigste
+Modell zu wählen, obwohl es die Aufgabe nicht schafft, erfüllt die Regel nicht.
+
+Der geplante kleine Hook am Whiteboard prüft vor einer KI-Aufgabenübergabe und
+bei einer wesentlichen Aufgabenänderung:
+
+- Was muss erreicht und woran wird Erfolg erkannt? Welche Fähigkeiten, Daten,
+  Rechte, Werkzeuge und Zeitgrenzen werden tatsächlich gebraucht?
+- Reicht ein vorhandener deterministischer Ablauf, ein vorhandenes Ergebnis oder
+  eine lokale Lösung ohne neuen bezahlten Modellaufruf?
+- Welches zulässige Modell erfüllt die Anforderungen mit den niedrigsten
+  erwarteten Gesamtkosten einschließlich absehbarer Wiederholungen und Prüfung?
+- Sind Modellverfügbarkeit, Preisgrundlage und Budget ausreichend aktuell?
+  Unsichere Angaben kenntlich machen; keine erfundenen Preise oder Energiezahlen.
+
+Der Hook hält Aufgabe, Auswahl, kurze Begründung, Preis-/Fähigkeitsstand und
+erwartete Kosten fest; tatsächliche Kosten und Qualitätsbefund kommen nach dem
+Lauf dazu, soweit messbar. Energie wird nur mit belastbaren Daten beziffert;
+Tokenzahl und Antwortzeit sind nicht automatisch gemessener Stromverbrauch.
+Er verwendet vorhandene Metadaten und einfache Regeln zuerst und darf nicht für
+jede triviale Aufgabe selbst einen teuren Modellaufruf auslösen.
+
+Reicht ein Modell nachweislich nicht, folgt eine begrenzte, begründete Eskalation
+innerhalb der Freigabe und des Budgets. Kein endloses Wiederholen, keine stille
+Budgeterhöhung, kein Wechsel über die Datengrenze. Bei fehlender geeigneter Option
+wird die Aufgabe sichtbar angehalten. Ein Modellwechsel erteilt keinerlei neue
+Rechte und umgeht weder 4AllPass noch TollGate.
+
+Der Hook ist eine kleine Ergänzung am bestehenden Übergabepunkt, kein neuer
+Orchestrator. Der ThreadDesk-Kern führt dadurch keine externen Agenten aus.
+**Status: verbindlicher Baupunkt, noch nicht implementiert.** In der bestehenden
+Baufolge nach den akuten Datensicherungsfehlern einordnen; nicht als parallele
+Baustelle vorziehen. Die zukünftige Abnahme umfasst einfache und schwierige
+Aufgaben, unzureichende Qualität, veraltete Preise, Budgetmangel und Datenfreigaben.
