@@ -170,6 +170,13 @@ class Gecko:
     def refresh(self) -> None:
         self._call("POST", f"/session/{self.session}/refresh", {})
 
+    def alert_text(self) -> str:
+        payload = self._call("GET", f"/session/{self.session}/alert/text")
+        return str(payload["value"])
+
+    def dismiss_alert(self) -> None:
+        self._call("POST", f"/session/{self.session}/alert/dismiss", {})
+
     def wait_script(self, source: str, expected: str, seconds: float = 15) -> str:
         deadline = time.monotonic() + seconds
         found = ""
@@ -195,7 +202,9 @@ def _driver(port: int) -> subprocess.Popen[bytes]:
     )
 
 
-def _session(port: int, *, accept_prompts: bool = False) -> tuple[str, str]:
+def _session(
+    port: int, *, accept_prompts: bool = False, ignore_prompts: bool = False,
+) -> tuple[str, str]:
     always: dict = {
         "browserName": "firefox",
         "moz:firefoxOptions": {
@@ -209,6 +218,8 @@ def _session(port: int, *, accept_prompts: bool = False) -> tuple[str, str]:
     }
     if accept_prompts:
         always["unhandledPromptBehavior"] = "accept"
+    elif ignore_prompts:
+        always["unhandledPromptBehavior"] = "ignore"
     body = {"capabilities": {"alwaysMatch": always}}
     deadline = time.monotonic() + 20
     last = ""
@@ -371,6 +382,43 @@ def _shown(gecko: Gecko, css: str, expected: str, seconds: float = 3) -> str:
         "return node.textContent.trim();"
     )
     return gecko.wait_script(source, expected, seconds=seconds)
+
+
+def _surface(gecko: Gecko, css: str) -> str:
+    return str(gecko.script(
+        "const node = document.querySelector(" + json.dumps(css) + ");"
+        "return node ? node.textContent : ''"
+    ))
+
+
+def _see(gecko: Gecko, css: str, text: str) -> None:
+    if text not in _surface(gecko, css):
+        raise AssertionError(text)
+
+
+def _miss(gecko: Gecko, css: str, text: str) -> None:
+    if text in _surface(gecko, css):
+        raise AssertionError(text)
+
+
+def _heading(gecko: Gecko, css: str) -> str:
+    return str(gecko.script(
+        "const node = document.querySelector(" + json.dumps(css) + ");"
+        "return node ? node.textContent.trim() : ''"
+    ))
+
+
+def _has_button(gecko: Gecko, css: str, label: str) -> None:
+    found = gecko.script(
+        "const root = document.querySelector(" + json.dumps(css) + ");"
+        "if (!root) return '';"
+        "const wanted = " + json.dumps(label) + ";"
+        "const hit = [...root.querySelectorAll('button')]"
+        ".find(item => item.textContent.trim() === wanted);"
+        "return hit ? hit.textContent.trim() : '';"
+    )
+    if found != label:
+        raise AssertionError(label)
 
 
 def test_user_keeps_a_note_and_snapshot_in_firefox(tmp_path: Path) -> None:
@@ -661,6 +709,204 @@ def test_user_reads_error_notices_in_firefox(tmp_path: Path) -> None:
         assert gecko.script(
             "return document.querySelectorAll('[data-thread-id]').length"
         ) == 1
+    finally:
+        if gecko is not None:
+            try:
+                gecko._call("DELETE", f"/session/{gecko.session}")
+            except Exception:
+                pass
+        if driver is not None and driver.poll() is None:
+            os.killpg(driver.pid, 15)
+            try:
+                driver.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                os.killpg(driver.pid, 9)
+                driver.wait(timeout=5)
+        desk.stop()
+
+
+def _wait_clear(gecko: Gecko) -> None:
+    """Der Hinweis liegt 3,2 Sekunden über der Navigation."""
+    deadline = time.monotonic() + 6
+    while time.monotonic() < deadline:
+        gone = gecko.script(
+            "const node = document.querySelector('.toast-stack');"
+            "if (!node) return true;"
+            "const style = getComputedStyle(node);"
+            "const box = node.getBoundingClientRect();"
+            "return style.display === 'none' || style.visibility === 'hidden'"
+            " || Number(style.opacity) === 0 || box.height < 1;"
+        )
+        if gone:
+            return
+        time.sleep(0.2)
+    raise AssertionError("Hinweis verdeckt die Navigation")
+
+
+def _expert_dialog(gecko: Gecko) -> str:
+    # Der WebDriver-Klick bleibt in der Rückfrage stehen. Der Timer öffnet sie.
+    gecko.script(
+        "const button = document.querySelector('#gate form button[type=submit]');"
+        "setTimeout(() => button.click(), 100);"
+        "return true;"
+    )
+    deadline = time.monotonic() + 5
+    last = ""
+    while time.monotonic() < deadline:
+        try:
+            return gecko.alert_text()
+        except AssertionError as exc:
+            last = str(exc)
+            time.sleep(0.2)
+    raise AssertionError(last)
+
+
+def test_user_reads_expert_wording_in_firefox(tmp_path: Path) -> None:
+    """TD-I18N-01. Fachsprache in installiertem Firefox. Die Rückfrage wird gelesen."""
+    if os.environ.get("THREADDESK_FIREFOX") != "1":
+        return
+    from test_desk_browser import Desk, _free_port
+    from threaddesk.core import i18n
+
+    def plain(key: str, language: str) -> str:
+        return i18n.translate(key, language)
+
+    def expert(key: str, language: str) -> str:
+        return i18n.translate(key, language, "expert")
+
+    title = "Expert wording"
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    driver = None
+    gecko: Gecko | None = None
+    try:
+        url = desk.start()
+        port = _free_port()
+        before = _firefox_pids()
+        driver = _driver(port)
+        session, version = _session(port, ignore_prompts=True)
+        assert version == _firefox_version(), version
+        gecko = Gecko(port, session)
+        gecko.rect()
+        time.sleep(PACE_S)
+        gecko.url(url + "/lang/en")
+        _ready(gecko)
+        assert gecko.script("return document.documentElement.lang") == "en"
+        _raise(before)
+        _open_new(gecko)
+        gecko.fill("[data-new-title]", title)
+        time.sleep(PACE_S)
+        gecko.click("#thread-list button[type=submit]")
+        assert gecko.wait_script(
+            "const node = document.querySelector('h1');"
+            "return node ? node.textContent.trim() : ''",
+            title,
+        ) == title
+
+        time.sleep(PACE_S)
+        _wait_clear(gecko)
+        gecko.click('a[href="/mode/expert"]')
+        expert_hint = expert("gate.hint", "en")
+        found = gecko.wait_script(
+            "const node = document.querySelector('#gate');"
+            "return node && node.textContent.includes("
+            + json.dumps(expert_hint)
+            + ") ? 'fach' : ''",
+            "fach",
+        )
+        if found != "fach":
+            state = gecko.script(
+                "const gate = document.querySelector('#gate');"
+                "return [location.href, document.documentElement.lang, document.cookie,"
+                " gate ? gate.textContent.replace(/\\s+/g, ' ').trim().slice(0, 240) : 'keine Schranke'"
+                "].join(' | ')"
+            )
+            raise AssertionError(state)
+        assert gecko.script("return document.documentElement.lang") == "en"
+        gecko.script("document.querySelector('#gate').scrollIntoView({block:'center'})")
+        assert _heading(gecko, "#gate h2") == expert("gate.title", "en")
+        _see(gecko, "#gate", expert("gate.execute_today", "en"))
+        _see(gecko, "#gate", expert("gate.handoff_today", "en"))
+        _see(gecko, "#gate", expert("gate.cooldown", "en"))
+        _see(gecko, "#gate", expert("gate.hint", "en"))
+        _has_button(gecko, "#gate", expert("gate.freeze", "en"))
+        _miss(gecko, "#gate", plain("gate.execute_today", "en"))
+        _miss(gecko, "#gate", plain("gate.hint", "en"))
+        gecko.script("document.querySelector('#snapshots').scrollIntoView({block:'center'})")
+        assert _heading(gecko, "#snapshots h3") == expert("snapshots.title", "en")
+        _see(gecko, "#snapshots", expert("snapshots.hint", "en"))
+        _miss(gecko, "#snapshots", plain("snapshots.title", "en"))
+        _miss(gecko, "#snapshots", plain("snapshots.hint", "en"))
+        gecko.script("document.querySelector('#packet').scrollIntoView({block:'center'})")
+        assert _heading(gecko, "#packet h3") == expert("packet.title", "en")
+        _see(gecko, "#packet", expert("packet.hint", "en"))
+        _has_button(gecko, "#packet", expert("packet.write_handoff", "en"))
+        _miss(gecko, "#packet", plain("packet.title", "en"))
+        _miss(gecko, "#packet", plain("packet.hint", "en"))
+        gecko.script("document.querySelector('#prompt').scrollIntoView({block:'center'})")
+        _see(gecko, "#prompt", expert("prompt.hint", "en"))
+        _miss(gecko, "#prompt", plain("prompt.hint", "en"))
+
+        time.sleep(PACE_S)
+        gecko.script("document.querySelector('#gate').scrollIntoView({block:'center'})")
+        assert _expert_dialog(gecko) == expert("gate.confirm_freeze", "en")
+        gecko.dismiss_alert()
+        time.sleep(PACE_S)
+        assert _heading(gecko, "#gate .status") == plain("gate.open", "en")
+        _has_button(gecko, "#gate", expert("gate.freeze", "en"))
+        _raise(before, "fenster-firefox-fachsprache.png")
+        _page_shot(gecko, "32-firefox-fachsprache.png")
+
+        time.sleep(PACE_S)
+        _wait_clear(gecko)
+        gecko.click('a[href="/lang/de"]')
+        assert gecko.wait_script(
+            "const node = document.querySelector('#gate');"
+            "return node && node.textContent.includes("
+            + json.dumps(expert("gate.hint", "de"))
+            + ") ? 'fach' : ''",
+            "fach",
+        ) == "fach"
+        assert gecko.script("return document.documentElement.lang") == "de"
+        gecko.script("document.querySelector('#gate').scrollIntoView({block:'center'})")
+        assert _heading(gecko, "#gate h2") == expert("gate.title", "de")
+        _see(gecko, "#gate", expert("gate.execute_today", "de"))
+        _see(gecko, "#gate", expert("gate.handoff_today", "de"))
+        _see(gecko, "#gate", expert("gate.hint", "de"))
+        _has_button(gecko, "#gate", expert("gate.freeze", "de"))
+        _miss(gecko, "#gate", expert("gate.execute_today", "en"))
+        _miss(gecko, "#gate", expert("gate.hint", "en"))
+        gecko.script("document.querySelector('#snapshots').scrollIntoView({block:'center'})")
+        assert _heading(gecko, "#snapshots h3") == expert("snapshots.title", "de")
+        _see(gecko, "#snapshots", expert("snapshots.hint", "de"))
+        _miss(gecko, "#snapshots", expert("snapshots.hint", "en"))
+        gecko.script("document.querySelector('#packet').scrollIntoView({block:'center'})")
+        assert _heading(gecko, "#packet h3") == expert("packet.title", "de")
+        _see(gecko, "#packet", expert("packet.hint", "de"))
+        _has_button(gecko, "#packet", expert("packet.write_handoff", "de"))
+        _miss(gecko, "#packet", expert("packet.hint", "en"))
+        gecko.script("document.querySelector('#prompt').scrollIntoView({block:'center'})")
+        _see(gecko, "#prompt", expert("prompt.hint", "de"))
+        _miss(gecko, "#prompt", expert("prompt.hint", "en"))
+        _raise(before, "fenster-firefox-fachsprache-de.png")
+        _page_shot(gecko, "33-firefox-fachsprache-de.png")
+
+        time.sleep(PACE_S)
+        _wait_clear(gecko)
+        gecko.click('a[href="/mode/plain"]')
+        assert gecko.wait_script(
+            "const node = document.querySelector('#gate h2');"
+            "return node ? node.textContent.trim() : ''",
+            plain("gate.title", "de"),
+        ) == plain("gate.title", "de")
+        gecko.script("document.querySelector('#gate').scrollIntoView({block:'center'})")
+        _see(gecko, "#gate", plain("gate.hint", "de"))
+        _miss(gecko, "#gate", expert("gate.hint", "de"))
+        gecko.script("document.querySelector('#snapshots').scrollIntoView({block:'center'})")
+        assert _heading(gecko, "#snapshots h3") == plain("snapshots.title", "de")
+        _raise(before, "fenster-firefox-klartext.png")
+        _page_shot(gecko, "34-firefox-klartext.png")
     finally:
         if gecko is not None:
             try:
