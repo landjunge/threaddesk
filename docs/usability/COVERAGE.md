@@ -73,7 +73,7 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 - Fehlerfälle in diesem Lauf: bestätigtes Laden. Offen: Abbrechen im Dialog, zweites Laden, beschädigte Snapshot-Datei.
 - Test: derselbe Browserfall. Die Erwartung entspricht dem bestehenden Speichermodell: ein Zwischenstand kopiert den Kontext, nicht den Verlauf.
 - Status: nachgewiesen, gleicher Lauf wie TD-START-01. Nach dem Neustart waren Notiz, Verlauf und Label noch da. Der ersetzte Notiztext war weg.
-- Fehler: keiner bekannt. Daneben sichtbar, nicht Teil dieses Ablaufs: der Schreibtisch zeigt bei dieser Fenstergröße eine innere Laufleiste (TD-LAYOUT-01, offen). Der Hausmeister zeigt ein Modell in der Liste, während der Satz sagt, dass keines gewählt ist (TD-HAUS-01, offen).
+- Fehler: keiner bekannt. Daneben sichtbar, nicht Teil dieses Ablaufs: der Schreibtisch zeigt bei dieser Fenstergröße eine innere Laufleiste (TD-LAYOUT-01, offen). Die leere Hausmeister-Auswahl bleibt „keins“ (TD-HAUS-01).
 
 ## TD-FILE-01 Dateien
 
@@ -103,7 +103,7 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 ## TD-HAUS-01 Hausmeister
 
 - Nutzerziel: einschalten, ausschalten, ein vorhandenes lokales Modell wählen, Ausfall und Abbruch sehen.
-- Status: Die leere Auswahl heißt jetzt „keins“ und ist gewählt, solange kein Modell gespeichert ist. „Modell übernehmen“ auf dieser leeren Auswahl löscht die Wahl und ruft dafür kein Modell auf. Das ist im Chrome-Lauf und in `test_blank_model_clears_the_choice_without_calling_ollama` nachgewiesen. Einschalten, Ausschalten und ein echter Auftrag an Ollama sind offen. Ein Lauf beweist keine Antwortqualität.
+- Status: Die leere Auswahl heißt „keins“ und bleibt gewählt, solange kein Modell gespeichert ist. „Modell übernehmen“ auf dieser leeren Auswahl löscht die Wahl und ruft dafür kein Modell auf. Nachweis im Chrome-Lauf und in `test_blank_model_clears_the_choice_without_calling_ollama`. Einschalten, Ausschalten, leerer Auftrag, fehlendes Modell und „Später erledigen“ sind auf diesem Mac im vorderen Chrome nachgewiesen, `test_user_switches_the_housekeeper_without_a_model`, 26,38 Sekunden, 2026-10-03. Leeres „Jetzt ausführen“ zeigt „Auftrag nicht ausgeführt“ und hängt nichts an. Ein ausgefüllter Auftrag ohne gespeichertes Modell zeigt „Kein lokales Modell gewählt“. „Später erledigen“ schreibt den Text in die lokale Warteschlange und meldet „Auftrag wartet“. Eine Abbruch-Schaltfläche gibt es in der Oberfläche nicht. Zusätzlich ein echter Auftrag an das bereits installierte `llama3.2:1b`, vorderes Chrome, 38,46 Sekunden, nur wenn `THREADDESK_HAUSMEISTER_LIVE=1`. Die normale Suite setzt die Variable nicht und ruft Ollama dafür nicht auf. Es wurde kein Modell heruntergeladen. Die Meldung ist „Auftrag angehängt“, der Verlauf enthält einen Eintrag des lokalen Hausmeisters. Der gespeicherte Text ist die Modellantwort. Das beweist keine brauchbare Zusammenfassung.
 
 ## TD-ROOM-01 Zwei Schreibtische
 
@@ -128,7 +128,7 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 ## TD-EXPORT-01 Export
 
 - Nutzerziel: angebotene Exportformate erzeugen und öffnen können.
-- Status: Wissens-Export existiert im Dienst und in der Kommandozeile. Eine eigene Export-Seite im Schreibtisch ist nicht der aktuelle Hauptweg. Browsernachweis offen. Formate nicht erfinden.
+- Status: Auf diesem Mac am 2026-10-03, `test_user_opens_graph_json_and_exports_private_knowledge`, Chrome vorn, 19,59 Sekunden. „Graph-JSON“ zeigt den privaten Knoten „Export ÄÖÜ“ und das Schema `threaddesk.graph.v1`. Die Kommandozeile schreibt json, markdown und csv mit `--include-private`, jeweils mit dem Titel. svg, pdf, xlsx und package sind in diesem Lauf nicht geöffnet. Eine eigene Export-Seite ist nicht der aktuelle Hauptweg. Formate nicht erfinden.
 
 ## TD-I18N-01 Sprache und Ebene
 

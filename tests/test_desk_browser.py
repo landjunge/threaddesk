@@ -275,8 +275,16 @@ def test_user_keeps_notes_and_snapshot_across_restart(tmp_path: Path) -> None:
 
 
 def _create(page, title: str) -> None:
-    page.locator("[data-new-thread]").click()
+    page.wait_for_function(
+        "() => { const root = document.querySelector('.new-thread');"
+        " return !!(root && root._x_dataStack); }"
+    )
+    button = page.locator("[data-new-thread]")
     field = page.locator("[data-new-title]")
+    button.click()
+    # Ein Klick während des Vollbildwechsels trifft die Schaltfläche manchmal nicht.
+    if not field.is_visible():
+        button.evaluate("el => el.click()")
     expect(field).to_be_visible()
     field.fill(title)
     page.locator("#thread-list").get_by_role("button", name="Anlegen", exact=True).click()
@@ -618,6 +626,174 @@ def test_user_switches_plain_and_expert_wording(tmp_path: Path) -> None:
             expect(page.locator(".banner-error:visible")).to_have_count(0)
             _raise_chrome(before, "fenster-sprache.png")
             _shot(page, "09-sprache.png")
+            browser.close()
+    finally:
+        desk.stop()
+    assert page_errors == []
+
+
+def _export(home: Path, fmt: str, target: Path) -> None:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(ROOT / "src")
+    env["THREADDESK_HOME"] = str(home)
+    env.pop("THREADDESK_STORAGE", None)
+    completed = subprocess.run(
+        [
+            sys.executable, "-m", "threaddesk.ui.cli", "graph", "--export",
+            "--format", fmt, "--include-private", "--output", str(target),
+        ],
+        cwd=ROOT,
+        env=env,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+
+def test_user_opens_graph_json_and_exports_private_knowledge(tmp_path: Path) -> None:
+    """TD-EXPORT-01. Graph-JSON im Schreibtisch, dazu die vorhandenen Textformate."""
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    page_errors: list[str] = []
+    title = "Export ÄÖÜ"
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            before = _chrome_pids()
+            browser = _launch(play)
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            page.bring_to_front()
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.goto(url + "/lang/de", wait_until="networkidle")
+            page.wait_for_function("() => window.Alpine !== undefined")
+            _raise_chrome(before)
+            page.get_by_role("link", name="Wissenspool", exact=True).click()
+            form = page.locator('form[action="/knowledge/nodes"]')
+            form.locator('select[name="kind"]').select_option("project")
+            form.locator('input[name="title"]').fill(title)
+            form.locator('textarea[name="details"]').fill("Sichtbarer Export")
+            form.get_by_role("button", name="Knoten speichern", exact=True).click()
+            expect(page.locator(".node-row", has_text=title)).to_be_visible()
+            page.get_by_role("link", name="Graph-JSON", exact=True).click()
+            expect(page.locator("body")).to_contain_text(title)
+            expect(page.locator("body")).to_contain_text("threaddesk.graph.v1")
+            for fmt, name in (("json", "export.json"), ("markdown", "export.md"), ("csv", "export.csv")):
+                target = tmp_path / name
+                _export(home, fmt, target)
+                assert title in target.read_text(encoding="utf-8")
+            _raise_chrome(before, "fenster-export.png")
+            _shot(page, "12-export.png")
+            browser.close()
+    finally:
+        desk.stop()
+    assert page_errors == []
+
+
+def test_user_switches_the_housekeeper_without_a_model(tmp_path: Path) -> None:
+    """TD-HAUS-01. Ein, aus, fehlendes Modell, wartender Auftrag. Kein Modellergebnis."""
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    page_errors: list[str] = []
+    order = "Nur vormerken, nicht ausführen"
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            before = _chrome_pids()
+            browser = _launch(play)
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            page.bring_to_front()
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.goto(url + "/lang/de", wait_until="networkidle")
+            page.wait_for_function("() => window.Alpine !== undefined")
+            _raise_chrome(before)
+            _create(page, "Hausmeister")
+            section = page.locator("[data-hausmeister]")
+            section.scroll_into_view_if_needed()
+            probe = section.inner_text()
+            assert (
+                "Ollama ist lokal erreichbar" in probe
+                or "Ollama ist nicht erreichbar" in probe
+            )
+            section.get_by_role("button", name="Einschalten", exact=True).click()
+            expect(section.get_by_role("button", name="Ausschalten", exact=True)).to_be_visible()
+            expect(page.locator("[data-hausmeister-order]")).to_be_visible()
+            expect(page.get_by_role("status")).to_have_text("Einschalten")
+            page.locator("[data-hausmeister-run]").click()
+            expect(page.get_by_role("alert")).to_have_text("Auftrag nicht ausgeführt")
+            expect(page.locator("[data-hausmeister-entry]")).to_have_count(0)
+            page.locator("[data-hausmeister-order]").fill(order)
+            page.locator("[data-hausmeister-run]").click()
+            expect(page.get_by_role("alert")).to_have_text("Kein lokales Modell gewählt")
+            expect(page.locator("h1")).to_have_text("Hausmeister")
+            page.locator("[data-hausmeister-order]").fill(order)
+            page.locator("[data-hausmeister-later]").click()
+            expect(page.get_by_role("status")).to_have_text("Auftrag wartet")
+            queued = (home / "hausmeister-queue.json").read_text(encoding="utf-8")
+            assert order in queued
+            page.locator("[data-hausmeister]").get_by_role(
+                "button", name="Ausschalten", exact=True
+            ).click()
+            expect(page.locator("[data-hausmeister-order]")).to_have_count(0)
+            expect(page.locator("[data-hausmeister]").get_by_role(
+                "button", name="Einschalten", exact=True
+            )).to_be_visible()
+            expect(page.get_by_role("status")).to_have_text("Ausschalten")
+            _raise_chrome(before, "fenster-hausmeister.png")
+            _shot(page, "13-hausmeister.png")
+            browser.close()
+    finally:
+        desk.stop()
+    assert page_errors == []
+
+
+def test_user_runs_the_housekeeper_on_an_installed_model(tmp_path: Path) -> None:
+    """TD-HAUS-01. Echter lokaler Auftrag nur mit THREADDESK_HAUSMEISTER_LIVE=1.
+
+    Die normale Suite setzt die Variable nicht und ruft Ollama dafür nicht auf.
+    Ein Lauf beweist keine Antwortqualität.
+    """
+    if os.environ.get("THREADDESK_HAUSMEISTER_LIVE") != "1":
+        return
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    page_errors: list[str] = []
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            before = _chrome_pids()
+            browser = _launch(play)
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            page.bring_to_front()
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.goto(url + "/lang/de", wait_until="networkidle")
+            page.wait_for_function("() => window.Alpine !== undefined")
+            _raise_chrome(before)
+            _create(page, "Hausmeister live")
+            section = page.locator("[data-hausmeister]")
+            section.scroll_into_view_if_needed()
+            section.get_by_role("button", name="Einschalten", exact=True).click()
+            names = page.locator("[data-hausmeister-model] option").evaluate_all(
+                "els => els.map((el) => el.value).filter(Boolean)"
+            )
+            small = next((name for name in names if str(name).endswith(":1b")), "")
+            assert small, names
+            page.locator("[data-hausmeister-model]").select_option(small)
+            section.get_by_role("button", name="Modell übernehmen", exact=True).click()
+            expect(page.get_by_role("status")).to_have_text("Modell übernehmen")
+            page.locator("[data-hausmeister-order]").fill(
+                "Fasse den Thread in einem Satz zusammen"
+            )
+            page.locator("[data-hausmeister-run]").click()
+            expect(page.get_by_role("status")).to_have_text(
+                "Auftrag angehängt", timeout=120000
+            )
+            expect(page.locator("[data-hausmeister-entry]").first).to_be_visible()
+            _raise_chrome(before, "fenster-hausmeister-lauf.png")
+            _shot(page, "14-hausmeister-lauf.png")
             browser.close()
     finally:
         desk.stop()
