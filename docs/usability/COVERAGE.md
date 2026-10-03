@@ -29,7 +29,7 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 - Erwartet: Hinweis zum Auswählen und der leere Listenzustand, kein Anmeldedialog.
 - Fehlerfälle: noch nicht geprüft sind Abbruch vor dem ersten Thread und englische Leermeldung.
 - Test: `tests/test_desk_browser.py::test_user_keeps_notes_and_snapshot_across_restart`
-- Status: nachgewiesen am 2026-10-03 auf diesem Mac. Echtes Chrome-Fenster vorn, Playwright 1.63.0, Python 3.12.13, synthetischer Arbeitsbereich, 26,42 Sekunden, ein bestandener Lauf. Kein Safari, kein Firefox, keine Nutzerinstallation.
+- Status: nachgewiesen am 2026-10-03 auf diesem Mac. Echtes Chrome-Fenster vorn, Playwright 1.63.0, Python 3.12.13, synthetischer Arbeitsbereich, 26,42 Sekunden, ein bestandener Lauf. Zusätzlich `test_user_creates_a_thread_in_firefox`, installiertes Firefox 149, geckodriver 0.36.0, vorderes Fenster, 18,14 Sekunden, 1,5 Sekunden je Aktion. Deutsch, „Wähle links einen Thread“, leeres Absenden legt nichts an, „Prüfthread ÄÖÜ“ steht in der Überschrift, die Schranke heißt „Schranke“. Im Fenster steht „Angelegt: Prüfthread ÄÖÜ“. Die normale Suite öffnet Firefox nicht. Neuladen, zweiter Prozess, Notiz und Zwischenstand sind in Firefox nicht gelaufen. Safari und die Nutzerinstallation bleiben offen.
 - Fehler: keiner in diesem Ablauf. Belege liegen außerhalb des Repos, weil sie nur synthetische Oberfläche zeigen und nicht mitversioniert werden: `Desktop/ThreadDesk-Abnahme/`.
 
 ## TD-THREAD-01 Thread anlegen
@@ -41,7 +41,7 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 - Erwartet: leeres Absenden legt nichts an. Danach steht der Titel in der Liste und die Beschreibung im Schreibtisch.
 - Fehlerfälle in diesem Lauf: leerer Titel. Offen: Doppelklick, zu langer Titel, Archiv, Umbenennen, Wechsel zweier Threads.
 - Test: derselbe Browserfall.
-- Status: Anlegen mit Umlaut und leerem Absenden nachgewiesen, gleicher Lauf wie TD-START-01.
+- Status: Anlegen mit Umlaut und leerem Absenden nachgewiesen, gleicher Lauf wie TD-START-01. Im Firefox-Lauf, 18,14 Sekunden, legt leeres Absenden nichts an und der Umlaut-Titel steht. Eine Beschreibung wurde dort nicht eingetragen.
 - Fehler: keiner bekannt.
 
 ## TD-THREAD-02 bis TD-THREAD-05 Wechsel, Beschreibung, Umbenennen, Archiv
