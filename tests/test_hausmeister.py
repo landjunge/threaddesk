@@ -131,6 +131,22 @@ def test_disabled_housekeeper_does_not_call_ollama(svc: ThreadService) -> None:
     assert svc.whiteboard(thread.id) == []
 
 
+def test_blank_model_clears_the_choice_without_calling_ollama(svc: ThreadService) -> None:
+    called: list[str] = []
+
+    def transport(url, body=None, timeout=0.4):
+        called.append(url)
+        return {"models": [{"name": "demo"}]}
+
+    home = Hausmeister(svc.store, transport)
+    home.set_model("demo")
+    assert home.status()["model"] == "demo"
+    called.clear()
+    cleared = home.set_model("  ")
+    assert cleared["model"] == ""
+    assert len(called) == 1 and called[0].endswith("/api/tags")
+
+
 def test_missing_ollama_and_missing_model_stay_quiet(svc: ThreadService) -> None:
     thread = svc.create("Leer")
     down = Hausmeister(svc.store, lambda *args, **kwargs: (_ for _ in ()).throw(OllamaError("ollama_unavailable")))

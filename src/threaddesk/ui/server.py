@@ -600,10 +600,11 @@ def create_app() -> FastAPI:
     @app.post("/hausmeister/model", response_class=HTMLResponse)
     def hausmeister_model(request: Request, model: str = Form("")) -> HTMLResponse:
         try:
-            Hausmeister(_svc().store).set_model(model)
+            chosen = Hausmeister(_svc().store).set_model(model)
         except OllamaError as exc:
             return _hausmeister_notice(request, str(exc))
-        return workspace(request, {"notice": i18n.translate("hausmeister.use_model", _language(request))})
+        key = "hausmeister.no_model" if not chosen["model"] else "hausmeister.use_model"
+        return workspace(request, {"notice": i18n.translate(key, _language(request))})
 
     @app.post("/threads/{thread_id}/hausmeister", response_class=HTMLResponse)
     def hausmeister_run(

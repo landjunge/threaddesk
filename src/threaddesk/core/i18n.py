@@ -191,6 +191,7 @@ CATALOG: dict[str, dict[str, str]] = {
         "de": "Kein lokales Modell gewählt",
         "en": "No local model selected",
     },
+    "hausmeister.model_none": {"de": "keins", "en": "none"},
     "hausmeister.order_placeholder": {
         "de": "Was soll aufgeräumt werden?",
         "en": "What should be tidied?",

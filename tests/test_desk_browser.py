@@ -270,3 +270,124 @@ def test_user_keeps_notes_and_snapshot_across_restart(tmp_path: Path) -> None:
     finally:
         desk.stop()
     assert page_errors == []
+
+
+def _create(page, title: str) -> None:
+    page.locator("[data-new-thread]").click()
+    field = page.locator("[data-new-title]")
+    expect(field).to_be_visible()
+    field.fill(title)
+    page.locator("#thread-list").get_by_role("button", name="Anlegen", exact=True).click()
+    expect(page.locator(".thread-title").filter(has_text=title)).to_be_visible()
+
+
+def test_user_renames_switches_archives_and_keeps_file_paths(tmp_path: Path) -> None:
+    """TD-THREAD-02, TD-THREAD-04, TD-THREAD-05, TD-FILE-01, TD-HAUS-01, TD-HELP-01."""
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    page_errors: list[str] = []
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            before = _chrome_pids()
+            try:
+                browser = play.chromium.launch(
+                    executable_path=CHROME,
+                    headless=not HEADED,
+                    slow_mo=200 if HEADED else 0,
+                    args=["--start-fullscreen"] if HEADED else [],
+                )
+            except Exception as exc:  # pragma: no cover - Umgebung ohne Browser
+                pytest.skip(f"kein Chromium verfügbar: {exc}")
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            page.bring_to_front()
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.on("dialog", lambda dialog: dialog.accept())
+            page.goto(url + "/lang/de", wait_until="networkidle")
+            page.wait_for_function("() => window.Alpine !== undefined")
+            _raise_chrome(before)
+
+            _create(page, "Erster Thread")
+            _create(page, "Zweiter Faden")
+            page.locator(".thread-item", has_text="Erster Thread").click()
+            expect(page.locator("h1")).to_have_text("Erster Thread")
+
+            page.get_by_role("button", name="Umbenennen", exact=True).click()
+            rename = page.locator('form[hx-post*="/rename"] input[name="title"]')
+            expect(rename).to_be_visible()
+            rename.fill("Erster umbenannt")
+            page.locator('form[hx-post*="/rename"]').get_by_role(
+                "button", name="OK", exact=True
+            ).click()
+            expect(page.locator("h1")).to_have_text("Erster umbenannt")
+            expect(page.locator(".thread-title").filter(has_text="Erster umbenannt")).to_be_visible()
+
+            path = "Notizen/Überblick.txt"
+            page.locator('#files input[name="path"]').fill(path)
+            page.locator("#files").get_by_role("button", name="Hinzufügen", exact=True).click()
+            expect(page.locator("#files code")).to_have_text(path)
+            page.locator("#files").get_by_role("button", name="Weg", exact=True).click()
+            expect(page.locator("#files code")).to_have_count(0)
+            page.locator("#files").scroll_into_view_if_needed()
+            expect(page.locator("#files")).to_contain_text("Keine Dateipfade.")
+
+            page.locator("[data-hausmeister]").scroll_into_view_if_needed()
+            model = page.locator("[data-hausmeister-model]")
+            expect(model).to_have_value("")
+            expect(page.locator("[data-hausmeister]")).to_contain_text("Kein lokales Modell gewählt")
+            page.locator("[data-hausmeister]").get_by_role(
+                "button", name="Modell übernehmen", exact=True
+            ).click()
+            expect(model).to_have_value("")
+            expect(page.locator("[data-hausmeister]")).to_contain_text("Kein lokales Modell gewählt")
+            expect(page.get_by_role("status")).to_have_text("Kein lokales Modell gewählt")
+            expect(page.locator(".banner-error:visible")).to_have_count(0)
+
+            page.locator("[data-help-open]").click()
+            expect(page.locator("#help")).to_be_visible()
+            expect(page.locator("#help-title")).to_be_visible()
+            page.keyboard.press("Escape")
+            expect(page.locator("#help")).to_be_hidden()
+
+            page.get_by_role("link", name="EN", exact=True).click()
+            expect(page.locator("[data-new-thread]")).to_contain_text("New")
+            page.get_by_role("link", name="DE", exact=True).click()
+            expect(page.locator("[data-new-thread]")).to_contain_text("Neu")
+
+            layout = page.evaluate(
+                """() => {
+                  const over = (sel) => {
+                    const node = document.querySelector(sel);
+                    if (!node) return null;
+                    return node.scrollHeight > node.clientHeight + 1;
+                  };
+                  return {
+                    page: document.documentElement.scrollHeight > document.documentElement.clientHeight + 1,
+                    notes: over('.desk-notes'),
+                    side: over('.desk-side'),
+                  };
+                }"""
+            )
+            if SHOTS:
+                Path(SHOTS, "layout.txt").write_text(str(layout), encoding="utf-8")
+            assert layout["page"] is False, layout
+
+            page.locator(".thread-item", has_text="Zweiter Faden").click()
+            expect(page.locator("h1")).to_have_text("Zweiter Faden")
+            page.get_by_role("button", name="Archivieren", exact=True).click()
+            expect(page.locator(".thread-title").filter(has_text="Zweiter Faden")).to_have_count(0)
+            expect(page.locator(".thread-title").filter(has_text="Erster umbenannt")).to_be_visible()
+            expect(page.get_by_text("Wähle links einen Thread")).to_be_visible()
+            stored = "\n".join(
+                item.read_text(encoding="utf-8")
+                for item in home.rglob("*.json")
+                if item.is_file()
+            )
+            assert "Zweiter Faden" in stored
+            _raise_chrome(before, "fenster-archiv.png")
+            _shot(page, "06-archiv.png")
+            browser.close()
+    finally:
+        desk.stop()
+    assert page_errors == []

@@ -41,7 +41,7 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 - Erwartet: leeres Absenden legt nichts an. Danach steht der Titel in der Liste und die Beschreibung im Schreibtisch.
 - Fehlerfälle in diesem Lauf: leerer Titel. Offen: Doppelklick, zu langer Titel, Archiv, Umbenennen, Wechsel zweier Threads.
 - Test: derselbe Browserfall.
-- Status: Anlegen mit Umlaut und leerem Absenden nachgewiesen, gleicher Lauf wie TD-START-01. Archiv, Umbenennen und Wechsel bleiben TD-THREAD-02 bis TD-THREAD-05, Status offen.
+- Status: Anlegen mit Umlaut und leerem Absenden nachgewiesen, gleicher Lauf wie TD-START-01.
 - Fehler: keiner bekannt.
 
 ## TD-THREAD-02 bis TD-THREAD-05 Wechsel, Beschreibung, Umbenennen, Archiv
@@ -49,7 +49,7 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 - Nutzerziel: zwischen Threads wechseln, Beschreibung ändern, umbenennen, archivieren und wiederfinden.
 - Voraussetzungen: mindestens zwei Threads.
 - Rolle: lokale Einzelperson.
-- Status: Oberfläche vorhanden (`switch`, `describe`, `rename`, `archive`). Browsernachweis offen. Nicht doppelt zur Liste in TD-THREAD-01 bauen, bevor dieser Lauf steht.
+- Status: Wechsel und Umbenennen nachgewiesen in `test_user_renames_switches_archives_and_keeps_file_paths`, Chrome vorn, 20,17 Sekunden, 2026-10-03. Beschreibung ändern und die Statuschips idea/active/paused/done bleiben offen. Archivieren nimmt den Thread aus der Liste. Der Datensatz bleibt im Arbeitsbereich. Eine Schaltfläche, ihn wieder in die Liste zu holen, gibt es nicht. Dafür gibt es nur `td unarchive` auf der Kommandozeile.
 
 ## TD-NOTE-01 Notiz bleibt
 
@@ -78,7 +78,7 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 ## TD-FILE-01 Dateien
 
 - Nutzerziel: eine Datei verknüpfen, den Verweis entfernen, eine fehlende Datei verstehen.
-- Status: Formular vorhanden (`partials/files.html`). Browsernachweis offen. Kein natives Dateidialog-Nachweis in dieser Runde.
+- Status: Pfad `Notizen/Überblick.txt` anlegen und wieder entfernen ist im selben Chrome-Lauf nachgewiesen. Die Oberfläche merkt sich nur den Pfad und öffnet die Datei nicht. Eine eigene Meldung „Datei fehlt“ ist deshalb nicht vorgesehen. Der native Dateidialog gehört zur späteren App-Runde.
 
 ## TD-BOARD-02 Herkunft, Konflikt, Wiederholung
 
@@ -103,7 +103,7 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 ## TD-HAUS-01 Hausmeister
 
 - Nutzerziel: einschalten, ausschalten, ein vorhandenes lokales Modell wählen, Ausfall und Abbruch sehen.
-- Status: Oberfläche vorhanden. Am 2026-10-03 antwortete Ollama auf diesem Mac und lieferte lokale Modellnamen. Der Lauf hat kein Modell beauftragt. Die Liste zeigt dabei den ersten Namen, der Satz darunter sagt „Kein lokales Modell gewählt“. Das ist ein offener Anzeigefehler, keine bestandene Modellwahl. Ein Lauf beweist keine Antwortqualität.
+- Status: Die leere Auswahl heißt jetzt „keins“ und ist gewählt, solange kein Modell gespeichert ist. „Modell übernehmen“ auf dieser leeren Auswahl löscht die Wahl und ruft dafür kein Modell auf. Das ist im Chrome-Lauf und in `test_blank_model_clears_the_choice_without_calling_ollama` nachgewiesen. Einschalten, Ausschalten und ein echter Auftrag an Ollama sind offen. Ein Lauf beweist keine Antwortqualität.
 
 ## TD-ROOM-01 Zwei Schreibtische
 
@@ -133,12 +133,12 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 ## TD-I18N-01 Sprache und Ebene
 
 - Nutzerziel: Deutsch und Englisch sowie Klartext und Fachsprache wechseln, ohne gemischte Oberfläche.
-- Status: Umschalter vorhanden. Ein englischer Migrationsfall liegt in `tests/test_migration_browser.py` (Linux). Der ganze Schreibtisch ist offen. TD-START-01 stellt in diesem Lauf nur Deutsch ein.
+- Status: DE und EN wechseln die Beschriftung von Neu/New und zurück. Nachweis im selben Chrome-Lauf. Klartext/Fachsprache und der übrige Satzbestand sind offen. Ein englischer Migrationsfall liegt zusätzlich in `tests/test_migration_browser.py` vom Linux-Stand.
 
 ## TD-HELP-01 Hilfe und Rückweg
 
 - Nutzerziel: Hilfe öffnen, lesen, schließen und von einem Fehler zurückkehren.
-- Status: Hilfe-Schaltfläche vorhanden. Browsernachweis offen. Voice ist nicht Teil dieser Hilfe, solange Abschnitt 16 Voice nach hinten stellt.
+- Status: Tasten-Hilfe öffnet und schließt mit Escape. Nachweis im selben Chrome-Lauf. Ob jeder Satz zur aktuellen Oberfläche passt, ist noch nicht Satz für Satz geprüft. Voice ist nicht Teil dieser Hilfe.
 
 ## TD-SEC-T01 bis T22
 
@@ -148,7 +148,7 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 ## TD-LAYOUT-01 Schreibtisch im Fenster
 
 - Nutzerziel: den offenen Thread ohne Seitenlaufleiste bedienen.
-- Status: offen. Im vorderen Chrome-Fenster vom 2026-10-03 lag eine innere Laufleiste über dem Verlauf. Notiz und Zwischenstand blieben trotzdem sichtbar. Kein Datenfehler. Ursache noch nicht eingegrenzt.
+- Status: gemessen. Bei 1440×900 scrollt die Seite nicht (`page`, `notes` und `side` ohne Überlauf im kurzen Thread). Eine innere Laufleiste erscheint, wenn Verlauf oder Seitenspalte höher sind als das Fenster. Das ist die vorhandene Spaltenscrollung, kein Seitenfehler. Offen bleibt, ob bei vollem Inhalt eine wichtige Schaltfläche nur durch Scrollen erreichbar ist.
 
 ## TD-VOICE-01 und TD-NATIVE-01
 
