@@ -914,3 +914,97 @@ def test_user_reads_the_main_pages_in_both_languages(tmp_path: Path) -> None:
     finally:
         desk.stop()
     assert page_errors == []
+
+
+def _notice(page, text: str) -> None:
+    banner = page.locator(".toast-stack .banner-ok")
+    expect(banner).to_be_visible()
+    expect(banner).to_have_text(text)
+
+
+def test_user_reads_action_notices_in_english(tmp_path: Path) -> None:
+    """TD-I18N-01. Hinweise nach Anlegen, Beschreibung, Notiz, Verlauf und Pfad."""
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    page_errors: list[str] = []
+    title = "Notice ÄÖÜ"
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            before = _chrome_pids()
+            browser = _launch(play)
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            page.bring_to_front()
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.goto(url + "/lang/en", wait_until="networkidle")
+            page.wait_for_function("() => window.Alpine !== undefined")
+            _raise_chrome(before)
+            expect(page.locator("html")).to_have_attribute("lang", "en")
+
+            page.wait_for_function(
+                "() => { const root = document.querySelector('.new-thread');"
+                " return !!(root && root._x_dataStack); }"
+            )
+            button = page.locator("[data-new-thread]")
+            field = page.locator("[data-new-title]")
+            button.click()
+            if not field.is_visible():
+                button.evaluate("el => el.click()")
+            expect(field).to_be_visible()
+            field.fill(title)
+            page.locator("#thread-list").get_by_role(
+                "button", name=_sentence("list.create", "en"), exact=True
+            ).click()
+            _notice(page, _sentence("ui.created", "en").format(title=title))
+            expect(page.locator("h1")).to_have_text(title)
+            expect(page.locator("body")).not_to_contain_text(
+                _sentence("ui.created", "de").format(title=title)
+            )
+
+            expect(page.locator("#files")).to_contain_text(_sentence("files.hint", "en"))
+            expect(page.locator("#files")).to_contain_text(_sentence("files.empty", "en"))
+            _hides(page, "de", "files.hint", "files.empty")
+
+            page.locator('.desk-description input[name="text"]').fill("A visible purpose")
+            page.locator(".desk-description").get_by_role(
+                "button", name=_sentence("detail.save", "en"), exact=True
+            ).click()
+            _notice(page, _sentence("ui.description_saved", "en"))
+            _hides(page, "de", "ui.description_saved")
+
+            page.locator("#notes textarea[name='text']").fill("A note that stays")
+            page.locator("#notes").get_by_role(
+                "button", name=_sentence("notes.save", "en"), exact=True
+            ).click()
+            _notice(page, _sentence("ui.note_saved", "en"))
+            expect(page.locator("#notes textarea[name='text']")).to_have_value(
+                "A note that stays"
+            )
+            _hides(page, "de", "ui.note_saved")
+
+            form = page.locator("[data-whiteboard]")
+            form.locator("[data-whiteboard-actor]").fill("Checker")
+            form.locator("[data-whiteboard-type]").select_option("decision")
+            form.locator("[data-whiteboard-content]").fill("English entry")
+            form.locator("[data-whiteboard-submit]").click()
+            _notice(page, _sentence("ui.whiteboard_saved", "en"))
+            expect(page.locator(".whiteboard-body")).to_have_text("English entry")
+            _hides(page, "de", "ui.whiteboard_saved")
+
+            page.locator("#files input[name='path']").fill("src/notice.py")
+            page.locator("#files").get_by_role(
+                "button", name=_sentence("files.add", "en"), exact=True
+            ).click()
+            _notice(page, _sentence("ui.file_added", "en").format(path="src/notice.py"))
+            expect(page.locator("#files code")).to_have_text("src/notice.py")
+            expect(page.locator("body")).not_to_contain_text(
+                _sentence("ui.file_added", "de").format(path="src/notice.py")
+            )
+
+            _raise_chrome(before, "fenster-hinweise.png")
+            _shot(page, "17-hinweise.png")
+            browser.close()
+    finally:
+        desk.stop()
+    assert page_errors == []
