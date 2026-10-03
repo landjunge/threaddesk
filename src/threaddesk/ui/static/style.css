@@ -1,55 +1,41 @@
 /* Gemeinsame Designregeln: GOLDENRULES.MD, Abschnitt 18.
    Komponentenmaße werden hier definiert, nicht pro Ansicht überschrieben. */
 :root {
-  --bg: #111318;
-  --bg-elevated: #191c22;
-  --bg-subtle: #191c22;
-  --bg-card: #1e1f24;
-  --bg-raised: #24262d;
-  --bg-strip: #15171b;
-  --fg: #eef0f4;
-  --fg-muted: #b0b6c2;
-  --fg-subtle: #a0a8b8;
-  /* Zwei Linienstaerken mit verschiedenen Aufgaben:
-     --border trennt Flaechen (Deko, kein Kontrastwert noetig).
-     --border-strong zeichnet die Kante von Bedienelementen und haelt
-     dafuer 3:1 gegen den Hintergrund ein (WCAG 2.2, 1.4.11). */
-  --border: #2e3138;
-  --border-strong: #737d8d;
-  --border-hover: #a8afbd;
-  /* Markenfarbe des Schriftzugs, wie auf threaddesk.netzwerkpunkt.de
-     und in brand/wordmark.svg. Gilt nur fuer den Namen — die
-     Oberfläche verwendet denselben Akzent sparsam für Auswahl und Hauptaktion. */
+  --bg: var(--np-canvas);
+  --bg-elevated: var(--np-surface);
+  --bg-subtle: var(--np-surface);
+  --bg-card: var(--np-surface);
+  --bg-raised: var(--np-hover);
+  --bg-strip: var(--np-canvas);
+  --fg: var(--np-text);
+  --fg-muted: var(--np-muted);
+  --fg-subtle: var(--np-muted);
+  --border: var(--np-divider);
+  --border-strong: var(--np-control-border);
+  --border-hover: var(--np-text);
+  --accent: var(--np-action);
+  --accent-fg: var(--np-action-text);
+  --ok: var(--np-success);
+  --warn: var(--np-warning);
+  --idle: var(--np-muted);
+  --done: var(--np-muted);
+  --risk: var(--np-danger);
+  --control: var(--np-control);
+  --control-touch: var(--np-control-touch);
+  --font: var(--np-font);
+  --text-sm: var(--np-meta);
+  --text-base: var(--np-body);
+  --text-lg: var(--np-heading);
+  --text-xl: var(--np-title);
+  --space-1: var(--np-space-1);
+  --space-2: var(--np-space-2);
+  --space-3: var(--np-space-3);
+  --space-4: var(--np-space-4);
+  --space-5: var(--np-space-5);
+  --space-6: var(--np-space-6);
   --brand: #b99cff;
-  --accent: #c3aff0;
-  --accent-fg: #121316;
-  --ok: #7bdaa7;
-  --warn: #c9a227;
-  --idle: #aab0bb;
-  --done: #8aa4b5;
-  --risk: #f49b9b;
-  /* Keine Rundungen. border-radius ist ueberall 0; die einzige Ausnahme
-     sind die Kartensymbole, dort bedeutet die Form die Knotenart. */
-  /* Ein Maß für alle Aktionen und einzeiligen Felder. */
-  --control: 40px;
-  --control-sm: var(--control);
-  --control-touch: 44px;
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
-  /* Dieselbe Schrift in allen Werkzeugen. Die des Betriebssystems, damit
-     nichts nachgeladen werden muss und ThreadDesk auch ohne Netz so
-     aussieht wie mit. */
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: var(--font);
-  /* Vier Rollen: Metadaten, Lesetext/Bedienung, Abschnitt, Seitentitel. */
-  --text-sm: 12px;
-  --text-base: 14px;
-  --text-lg: 16px;
-  --text-xl: 24px;
+  --control-sm: var(--control);
   --motion-quick: 150ms;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
@@ -510,11 +496,7 @@ button:not(:disabled),
   overflow-wrap: anywhere;
 }
 
-@media (max-width: 760px) {
-  .migration-comparison {
-    grid-template-columns: 1fr;
-  }
-}
+
 
 code {
   font-family: var(--font-mono);
@@ -834,42 +816,4 @@ hr { border: 0; border-top: 1px solid var(--border); margin: var(--space-5) 0; }
 .file-item > code, .snap-item > div { min-width: 0; flex: 1; }
 .empty-detail { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: var(--space-3); text-align: center; padding: var(--space-5); }
 
-/* Reflow into a single scrollable work surface when columns become cramped. */
-@container desk (max-width: 920px) {
-  .detail { display: block; overflow: auto; }
-  .desk-head, .desk-notes { margin-bottom: var(--space-4); }
-  .desk-notes, .desk-side { overflow: visible; }
-  .desk-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
-  .empty-detail { display: flex; }
-}
-@container desk (max-width: 600px) {
-  .desk-side { grid-template-columns: minmax(0, 1fr); }
-  .title-block { grid-template-columns: minmax(0, 1fr); }
-  .detail-meta { flex-wrap: wrap; }
-  .whiteboard-form > .inline-form { flex-wrap: wrap; }
-  .whiteboard-form > .inline-form > input { flex-basis: 100%; }
-  .row-actions { flex-wrap: wrap; }
-}
-@media (max-width: 800px) {
-  html, body { height: auto; min-height: 100%; overflow: auto; }
-  .shell { height: auto; min-height: 100dvh; overflow: visible; }
-  .topbar { flex-wrap: wrap; }
-  .workspace { display: flex; flex-direction: column; overflow: visible; }
-  .sidebar { overflow: visible; border-right: 0; border-bottom: 1px solid var(--border); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .threads { grid-column: 1 / -1; }
-  .main { overflow: visible; display: block; }
-  .detail { overflow: visible; }
-}
-@media (max-width: 480px) {
-  .sidebar { grid-template-columns: minmax(0, 1fr); }
-  .topbar, .main, .sidebar { padding: var(--space-3); }
-  .detail-head { flex-wrap: wrap; }
-  .inline-form { flex-wrap: wrap; }
-  .inline-form > input:not([type="checkbox"]) { flex-basis: 100%; }
-  .inline-form > .btn { flex: 1; }
-  .snap-item, .file-item { flex-wrap: wrap; }
-  .stand-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (pointer: coarse) {
-  :root { --control: 44px; }
-}
+/* Desktop layout is stable; see GOLDENRULES §19. */

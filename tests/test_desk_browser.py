@@ -210,6 +210,7 @@ def test_user_keeps_notes_and_snapshot_across_restart(tmp_path: Path) -> None:
             expect(page.get_by_role("status")).to_contain_text(TITLE)
             _shot(page, "02-angelegt.png")
 
+            _open_section(page, "notes")
             notes = page.locator('#notes textarea[name="text"]')
             notes.fill(NOTE)
             page.locator("#notes").get_by_role(
@@ -219,6 +220,7 @@ def test_user_keeps_notes_and_snapshot_across_restart(tmp_path: Path) -> None:
             expect(notes).to_have_value(NOTE)
 
             page.reload(wait_until="networkidle")
+            _open_section(page, "notes")
             notes = page.locator('#notes textarea[name="text"]')
             expect(notes).to_have_value(NOTE)
             expect(page.locator(".thread-title")).to_have_text(TITLE)
@@ -228,12 +230,14 @@ def test_user_keeps_notes_and_snapshot_across_restart(tmp_path: Path) -> None:
             page.locator("[data-whiteboard-submit]").click()
             expect(page.locator(".whiteboard-body")).to_have_text(BOARD)
 
+            _open_section(page, "snapshots")
             page.locator("[data-snapshot-label]").fill(LABEL)
             page.locator("#snapshots").get_by_role(
                 "button", name="Speichern", exact=True
             ).click()
             expect(page.locator(".snap-label")).to_have_text(LABEL)
 
+            _open_section(page, "notes")
             notes = page.locator('#notes textarea[name="text"]')
             notes.fill(LATER)
             page.locator("#notes").get_by_role(
@@ -244,6 +248,7 @@ def test_user_keeps_notes_and_snapshot_across_restart(tmp_path: Path) -> None:
             page.locator("#snapshots").get_by_role(
                 "button", name="Laden", exact=True
             ).click()
+            _open_section(page, "notes")
             notes = page.locator('#notes textarea[name="text"]')
             expect(notes).to_have_value(NOTE)
             expect(page.locator(".whiteboard-body")).to_have_text(BOARD)
@@ -273,6 +278,12 @@ def test_user_keeps_notes_and_snapshot_across_restart(tmp_path: Path) -> None:
         desk.stop()
     assert page_errors == []
 
+
+
+def _open_section(page, name: str) -> None:
+    section = page.locator(f'details[data-disclosure="{name}"]')
+    if not section.evaluate("el => el.open"):
+        section.locator(":scope > summary").click()
 
 def _create(page, title: str) -> None:
     page.locator("[data-new-thread]").click()
@@ -307,6 +318,7 @@ def test_user_renames_switches_archives_and_keeps_file_paths(tmp_path: Path) -> 
             page.locator(".thread-item", has_text="Erster Thread").click()
             expect(page.locator("h1")).to_have_text("Erster Thread")
 
+            _open_section(page, "thread-edit")
             page.get_by_role("button", name="Umbenennen", exact=True).click()
             rename = page.locator('form[hx-post*="/rename"] input[name="title"]')
             expect(rename).to_be_visible()
@@ -317,6 +329,7 @@ def test_user_renames_switches_archives_and_keeps_file_paths(tmp_path: Path) -> 
             expect(page.locator("h1")).to_have_text("Erster umbenannt")
             expect(page.locator(".thread-title").filter(has_text="Erster umbenannt")).to_be_visible()
 
+            _open_section(page, "files")
             path = "Notizen/Überblick.txt"
             page.locator('#files input[name="path"]').fill(path)
             page.locator("#files").get_by_role("button", name="Hinzufügen", exact=True).click()
@@ -326,6 +339,7 @@ def test_user_renames_switches_archives_and_keeps_file_paths(tmp_path: Path) -> 
             page.locator("#files").scroll_into_view_if_needed()
             expect(page.locator("#files")).to_contain_text("Keine Dateipfade.")
 
+            _open_section(page, "hausmeister")
             page.locator("[data-hausmeister]").scroll_into_view_if_needed()
             model = page.locator("[data-hausmeister-model]")
             expect(model).to_have_value("")
@@ -344,8 +358,10 @@ def test_user_renames_switches_archives_and_keeps_file_paths(tmp_path: Path) -> 
             page.keyboard.press("Escape")
             expect(page.locator("#help")).to_be_hidden()
 
+            _open_section(page, "preferences")
             page.get_by_role("link", name="EN", exact=True).click()
             expect(page.locator("[data-new-thread]")).to_contain_text("New")
+            _open_section(page, "preferences")
             page.get_by_role("link", name="DE", exact=True).click()
             expect(page.locator("[data-new-thread]")).to_contain_text("Neu")
 
@@ -369,6 +385,7 @@ def test_user_renames_switches_archives_and_keeps_file_paths(tmp_path: Path) -> 
 
             page.locator(".thread-item", has_text="Zweiter Faden").click()
             expect(page.locator("h1")).to_have_text("Zweiter Faden")
+            _open_section(page, "thread-edit")
             page.get_by_role("button", name="Archivieren", exact=True).click()
             expect(page.locator(".thread-title").filter(has_text="Zweiter Faden")).to_have_count(0)
             expect(page.locator(".thread-title").filter(has_text="Erster umbenannt")).to_be_visible()
@@ -425,6 +442,7 @@ def test_user_edits_description_status_and_whiteboard_order(tmp_path: Path) -> N
             expect(page.locator("h1")).to_have_text("Statusfaden")
             description = page.locator('.desk-description input[name="text"]')
             expect(description).to_have_value("Erster Zweck")
+            _open_section(page, "thread-edit")
             expect(page.locator(".desk-status button.is-on")).to_have_text("idea")
             expect(page.locator("[data-whiteboard-empty]")).to_have_text("Noch kein Beitrag.")
 
@@ -602,17 +620,23 @@ def test_user_switches_plain_and_expert_wording(tmp_path: Path) -> None:
             _create(page, "Sprachebene")
             heading = page.locator("#snapshots h3")
             expect(heading).to_have_text("Zwischenstände")
+            _open_section(page, "preferences")
             page.get_by_role("link", name="Fachsprache", exact=True).click()
             expect(heading).to_have_text("Snapshots")
             expect(page.locator("#snapshots .muted").first).to_contain_text("Snapshot-ID")
+            _open_section(page, "preferences")
             page.get_by_role("link", name="Klartext", exact=True).click()
             expect(heading).to_have_text("Zwischenstände")
+            _open_section(page, "preferences")
             page.get_by_role("link", name="EN", exact=True).click()
             expect(heading).to_have_text("Saved states")
+            _open_section(page, "preferences")
             page.get_by_role("link", name="Expert", exact=True).click()
             expect(heading).to_have_text("Snapshots")
+            _open_section(page, "preferences")
             page.get_by_role("link", name="Plain", exact=True).click()
             expect(heading).to_have_text("Saved states")
+            _open_section(page, "preferences")
             page.get_by_role("link", name="DE", exact=True).click()
             expect(heading).to_have_text("Zwischenstände")
             expect(page.locator(".banner-error:visible")).to_have_count(0)

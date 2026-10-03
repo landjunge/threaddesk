@@ -4,14 +4,16 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ThreadDesk</title>
+    <link rel="stylesheet" href="/static/networkpunkt.css" />
     <link rel="stylesheet" href="/static/style.css" />
     <link rel="stylesheet" href="/static/polish.css" />
+    <script src="/static/networkpunkt.js" defer></script>
     <script src="/static/app.js" defer></script>
     <script src="/static/htmx.min.js" defer></script>
     <script src="/static/alpine.min.js" defer></script>
   </head>
-  <body data-language="{{ lang }}" data-ui-strings="{{ browser_strings|default('{}')|e }}">
-    <div class="shell">
+  <body class="np-ui" data-language="{{ lang }}" data-ui-strings="{{ browser_strings|default('{}')|e }}">
+    <div class="shell np-desktop">
       <header class="topbar">
         <div class="brand">
           <div>
@@ -26,6 +28,9 @@
             <a href="/data" class="btn btn-ghost btn-compact"{% if request.url.path == '/data' %} aria-current="page"{% endif %}>{{ t("data.nav") }}</a>
             <a href="/map" class="btn btn-ghost btn-compact"{% if request.url.path == '/map' %} aria-current="page"{% endif %}>{{ t("nav.map") }}</a>
           </nav>
+          <details class="np-disclosure preferences" data-disclosure="preferences">
+            <summary>{{ lang|upper }} · {{ t('register.' ~ register) }}</summary>
+            <div class="preferences-menu">
           <nav class="lang-switch" aria-label="{{ t('nav.language') }}">
             {% for code in languages %}
             <a href="/lang/{{ code }}" class="btn btn-ghost btn-compact{{ ' is-active' if code == lang else '' }}"
@@ -41,6 +46,8 @@
                aria-current="{{ 'true' if value == register else 'false' }}">{{ t('register.' ~ value) }}</a>
             {% endfor %}
           </nav>
+            </div>
+          </details>
           <button type="button" class="btn btn-ghost btn-compact" data-help-open>
             {{ t("help.open") }} <kbd>?</kbd>
           </button>

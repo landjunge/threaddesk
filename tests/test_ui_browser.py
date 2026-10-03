@@ -321,7 +321,7 @@ def test_chrome_uses_shared_tokens_and_map_has_its_own_tones(page):
         }"""
     )
     # Aktuelle Designentscheidung; die Karte behält ihre semantischen Töne.
-    assert values["accent"].lower() == "#c3aff0"
+    assert values["accent"].lower() == "#edf0f4"
     # Die Karte übernimmt ihn gerade nicht.
     assert values["toneGood"] != values["mutedOk"]
     assert values["toneGood"] and values["toneRisk"]

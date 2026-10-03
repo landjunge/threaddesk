@@ -145,6 +145,10 @@ def synchronize(page):
 
 
 def pair_via_ui(a, b, a_url, name, role):
+    for page in (a, b):
+        section = page.locator('details[data-disclosure="room"]')
+        if not section.evaluate("el => el.open"):
+            section.locator(":scope > summary").click()
     a.locator("[data-room-name]").fill(name)
     click_post(a, "[data-room-create]", "/rooms")
     expect(a.locator("[data-room-current]")).to_have_text(name)
@@ -190,6 +194,8 @@ def test_team_room_real_browser(tmp_path, storage):
             a, b = context_a.new_page(), context_b.new_page()
             a.goto(left.url)
             b.goto(right.url)
+            for page in (a, b):
+                page.locator('details[data-disclosure="room"] > summary').click()
             a.bring_to_front()
             _raise_chrome(before)
             instance_a = a.locator("[data-room-instance]").inner_text().split()[-1]
@@ -200,6 +206,7 @@ def test_team_room_real_browser(tmp_path, storage):
             expect(a.locator("[data-room-members] li")).to_have_count(2)
             thread_a = create_thread(a, "Browser A")
             thread_b = create_thread(b, "Browser B")
+            a.locator('details[data-disclosure="notes"] > summary').click()
             note_form = a.locator(f'form[hx-post="/threads/{thread_a}/note"]')
             note_form.locator('textarea[name="text"]').fill("PRIVAT-NOTIZ-NICHT-TEILEN")
             click_post(a, f'form[hx-post="/threads/{thread_a}/note"] button[type="submit"]',

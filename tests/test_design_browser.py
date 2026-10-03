@@ -1,6 +1,6 @@
-"""Measured user-facing layout and keyboard regression checks, TD-DESIGN-01.
+"""Measured user-facing layout and keyboard regression checks, TD-DESIGN-02.
 
-The five real pages are checked at desktop and reflow widths, in both languages.
+The five real pages retain their desktop composition, in both languages.
 No screenshots substitute for behaviour assertions. All data is synthetic.
 """
 import os
@@ -10,7 +10,7 @@ import pytest
 pytest.importorskip("playwright.sync_api")
 from playwright.sync_api import expect, sync_playwright
 
-from test_desk_browser import Desk
+from test_desk_browser import Desk, _open_section
 from threaddesk.api.service import ThreadService
 from threaddesk.storage.json_store import JsonStore
 
@@ -28,6 +28,9 @@ def design_browser(tmp_path_factory):
     for n in range(12):
         service.append_whiteboard(thread.id, actor="Testperson", actor_type="human",
                                   entry_type="note", content=f"Beitrag {n}: " + "Text " * 50)
+    for n in range(15):
+        service.create(f"Weiterer Thread {n}")
+    service.switch(thread.id)
     desk = Desk(home)
     url = desk.start()
     try:
@@ -42,13 +45,13 @@ def design_browser(tmp_path_factory):
 
 def assert_layout(page, control_height=40):
     result = page.evaluate("""height => {
-      const visible = e => e.getClientRects().length && e.getBoundingClientRect().width > 0;
-      const controls = [...document.querySelectorAll('.btn,.chip,input:not([type=hidden]):not([type=checkbox]):not([type=radio]),select')].filter(visible);
+      const visible = e => e.checkVisibility() && e.getClientRects().length && e.getBoundingClientRect().width > 0;
+      const controls = [...document.querySelectorAll('.btn,.chip,.np-button,input:not([type=hidden]):not([type=checkbox]):not([type=radio]),select')].filter(visible);
       return {
         width: innerWidth, documentWidth: document.documentElement.scrollWidth,
         wrongHeight: controls.filter(e => Math.abs(e.getBoundingClientRect().height - height) > 1).map(e => [e.tagName,e.textContent,e.getBoundingClientRect().height]),
         outside: controls.filter(e => {const r=e.getBoundingClientRect(); return r.left < -1 || r.right > innerWidth + 1}).map(e => [e.tagName,e.textContent]),
-        clippedLabels: controls.filter(e => e.matches('.btn,.chip') && e.scrollWidth > e.clientWidth + 1).map(e => e.textContent),
+        clippedLabels: controls.filter(e => e.matches('.btn,.chip,.np-button') && e.scrollWidth > e.clientWidth + 1).map(e => e.textContent),
         scrollbars: [...document.querySelectorAll('body *')].filter(e => visible(e) && ['auto','scroll'].includes(getComputedStyle(e).overflowY) && e.scrollHeight > e.clientHeight + 1 && getComputedStyle(e).scrollbarWidth !== 'none').map(e => e.className)
       };
     }""", control_height)
@@ -59,9 +62,9 @@ def assert_layout(page, control_height=40):
     assert not result["scrollbars"], result
 
 
-@pytest.mark.parametrize("width,height", [(1440,1000),(1280,800),(1024,768),(768,900),(375,812),(320,800)])
+@pytest.mark.parametrize("width,height", [(1920,1080),(1440,900),(1280,800),(1180,760)])
 @pytest.mark.parametrize("language", ["de", "en"])
-def test_five_pages_reflow_with_consistent_controls(design_browser, width, height, language):
+def test_five_pages_use_consistent_desktop_controls(design_browser, width, height, language):
     browser, url = design_browser
     page = browser.new_page(viewport={"width":width,"height":height})
     errors = []
@@ -82,6 +85,8 @@ def test_hidden_scrollbars_keep_keyboard_access_and_dialog_focus(design_browser)
     page = browser.new_page(viewport={"width":1440,"height":800})
     try:
         page.goto(url + "/", wait_until="networkidle")
+        for name in ["files", "snapshots", "prompt", "hausmeister", "graph_links", "packet", "notes"]:
+            _open_section(page, name)
         for selector in [".sidebar", ".desk-side", ".desk-notes", ".whiteboard-log"]:
             region = page.locator(selector)
             assert region.evaluate("e => e.scrollHeight > e.clientHeight"), selector
@@ -103,11 +108,12 @@ def test_hidden_scrollbars_keep_keyboard_access_and_dialog_focus(design_browser)
         page.close()
 
 
-def test_small_window_edit_and_error_remain_usable(design_browser):
+def test_desktop_edit_and_error_remain_usable(design_browser):
     browser, url = design_browser
-    page = browser.new_page(viewport={"width":320,"height":800})
+    page = browser.new_page(viewport={"width":1180,"height":760})
     try:
         page.goto(url + "/lang/de", wait_until="networkidle")
+        _open_section(page, "thread-edit")
         page.locator('.desk-description input[name="text"]').fill("Beschreibung " * 25)
         page.locator('.desk-description button').click()
         expect(page.locator('[role="status"]')).to_contain_text("Beschreibung gespeichert")
@@ -124,12 +130,81 @@ def test_small_window_edit_and_error_remain_usable(design_browser):
         page.close()
 
 
-def test_touch_controls_grow_together(design_browser):
+def test_coarse_pointer_does_not_rearrange_desktop(design_browser):
     browser, url = design_browser
-    page = browser.new_page(viewport={"width":390,"height":844}, is_mobile=True, has_touch=True)
+    page = browser.new_page(viewport={"width":1280,"height":800}, has_touch=True)
     try:
         for route in ["/", "/knowledge", "/data", "/migration", "/map"]:
             page.goto(url + route, wait_until="networkidle")
-            assert_layout(page, control_height=44)
+            assert_layout(page, control_height=40)
+    finally:
+        page.close()
+
+
+@pytest.mark.parametrize("width", [1440, 1180])
+def test_disclosed_tools_remain_usable(design_browser, width):
+    browser, url = design_browser
+    page = browser.new_page(viewport={"width": width, "height": 900})
+    try:
+        page.goto(url, wait_until="networkidle")
+        expect(page.locator('.btn-primary:visible')).to_have_count(1)
+        for name in ["thread-edit", "stand", "notes", "files", "snapshots", "prompt", "hausmeister", "graph_links", "packet", "room", "preferences"]:
+            _open_section(page, name)
+            assert_layout(page)
+        page.reload(wait_until="networkidle")
+        expect(page.locator('details[data-disclosure="snapshots"]')).to_have_attribute("open", "")
+        page.locator('[data-whiteboard-content]').fill("Die neue Ordnung bleibt nach dem Speichern benutzbar.")
+        page.locator('[data-whiteboard-submit]').click()
+        expect(page.locator('[role="status"]')).to_have_text("Beitrag angehängt")
+        expect(page.locator('details[data-disclosure="snapshots"]')).to_have_attribute("open", "")
+        page.locator('details[data-disclosure="snapshots"] > summary').click()
+        page.locator('h1').click()
+        page.keyboard.press("s")
+        expect(page.locator('[data-snapshot-label]')).to_be_focused()
+    finally:
+        page.close()
+
+
+@pytest.mark.parametrize("width", [1440, 1280, 1180])
+def test_same_portable_components_for_five_products(design_browser, width):
+    browser, url = design_browser
+    page = browser.new_page(viewport={"width": width, "height": 1000})
+    foreign_requests = []
+    page.on("request", lambda request: foreign_requests.append(request.url) if not request.url.startswith(url) else None)
+    try:
+        page.goto(url + "/static/design-reference.html", wait_until="networkidle")
+        for key, title in [("netzwerkpunkt", "NetzwerkPunkt"), ("gnom", "Gnom-Hub-V1"), ("threaddesk", "ThreadDesk"), ("tollgate", "TollGate"), ("4allpass", "4AllPass")]:
+            page.locator(f'[data-product="{key}"]').click()
+            expect(page.locator('[data-name]')).to_have_text(title)
+            expect(page.locator('[data-product][aria-pressed="true"]')).to_have_count(1)
+            assert_layout(page)
+        page.locator('[data-action]').click()
+        expect(page.locator('#feedback')).to_contain_text("Es wurde nichts ausgeführt")
+        assert not foreign_requests
+    finally:
+        page.close()
+
+
+def test_smaller_viewport_keeps_desktop_order_and_access(design_browser):
+    browser, url = design_browser
+    page = browser.new_page(viewport={"width":1024,"height":700})
+    try:
+        page.goto(url, wait_until="networkidle")
+        sizes = page.evaluate("""() => {
+          const sidebar=document.querySelector('.sidebar').getBoundingClientRect();
+          const main=document.querySelector('.main').getBoundingClientRect();
+          const side=document.querySelector('.desk-side').getBoundingClientRect();
+          const notes=document.querySelector('.desk-notes').getBoundingClientRect();
+          return {width:document.querySelector('.shell').clientWidth,
+            height:document.querySelector('.shell').clientHeight,
+            columns:sidebar.right<=main.left && notes.right<=side.left,
+            scrollable:getComputedStyle(document.documentElement).overflowX};
+        }""")
+        assert sizes["width"] >= 1180 and sizes["height"] >= 760, sizes
+        assert sizes["columns"] and sizes["scrollable"] == "auto", sizes
+        _open_section(page, "packet")
+        page.locator('details[data-disclosure="packet"] .btn').last.focus()
+        assert page.locator('details[data-disclosure="packet"] .btn').last.evaluate(
+            "e => { const r=e.getBoundingClientRect(); return r.left>=0 && r.right<=innerWidth && r.top>=0 && r.bottom<=innerHeight; }")
     finally:
         page.close()

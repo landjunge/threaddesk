@@ -151,12 +151,12 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 - Nutzerziel: den offenen Thread ohne Seitenlaufleiste bedienen.
 - Historischer Status vor der Designüberarbeitung: gemessen. Bei 1440×900 scrollt die Seite nicht (`page`, `notes` und `side` ohne Überlauf im kurzen Thread). Eine innere Laufleiste erscheint, wenn Verlauf oder Seitenspalte höher sind als das Fenster. Das ist die vorhandene Spaltenscrollung, kein Seitenfehler. Offen bleibt, ob bei vollem Inhalt eine wichtige Schaltfläche nur durch Scrollen erreichbar ist.
 
-- Aktualisierung 03.10.2026: Der neue Designstand verbirgt Balken bei erhaltener Spaltenscrollung. Tastaturzugang zu allen vier inneren Scrollflächen ist nachgewiesen; schmale Fenster verwenden einen erreichbaren Seitenfluss. Details siehe TD-DESIGN-01.
+- Erster Designstand 03.10.2026: Balken verborgen, Spaltenscrollung erhalten. Dieser Stand verwendete bei schmalen Fenstern noch einen Seitenfluss. Der anschließende Desktop-Beschluss ersetzt diesen Umbau; aktueller Nachweis unter TD-DESIGN-02.
 
 ## TD-VOICE-01 und TD-NATIVE-01
 
 - Nutzerziel: gesprochene Hilfe sowie Installation auf Mac, Windows und Linux.
-- Status: zurückgestellt bis die Browser-Abnahme steht. Der Desktop-Workflow startet native Builds bei einem Pull Request, der `src/`, `packaging/`, `scripts/`, `brand/` oder `pyproject.toml` ändert, und bei einem solchen Push auf `main`. Deshalb bleibt dieser Branch lokal, bis die Browser-Runde einen eigenen, bewussten Bauauftrag hat.
+- Status: zurückgestellt bis die Browser-Abnahme steht. Der Desktop-Workflow startet native Builds bei einem Pull Request, der `src/`, `packaging/`, `scripts/`, `brand/` oder `pyproject.toml` ändert, und bei einem solchen Push auf `main`. Deshalb wird der Designstand als Feature-Branch ohne Code-PR gesichert; native Builds folgen erst dem späteren Bauauftrag.
 
 ## Gestrichen oder verschoben
 
@@ -168,6 +168,9 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 
 ## TD-DESIGN-01 Einheitliche Oberfläche
 
+- Historischer Nachweis für Commit `a443dcd`, erster Durchgang. Die folgende
+  Responsive-/Touch-Beschreibung ist durch TD-DESIGN-02 und GOLDENRULES §19
+  abgelöst; die 172 bestandenen Tests gehören ausschließlich zu diesem Stand.
 - Auftrag: alle vorhandenen Ansichten vereinheitlichen; scrollbar ohne sichtbare
   Scrollbalken. Verbindliche Regeln und Recherche: GOLDENRULES Abschnitt 18.
 - Codebasis: `design/unified-interface`, aufgebaut auf dem gepushten Browserstand
@@ -213,3 +216,59 @@ Für einen bereits installierten Chromium kann `THREADDESK_CHROMIUM` auf dessen
 Binary zeigen. Der Designnachweis darf nicht als übersprungener Test grün werden,
 wenn kein Browser vorhanden ist. Es wurde kein nativer Build ausgelöst; der
 Code wird als Branch ohne den native Builds auslösenden Code-PR gesichert.
+
+## TD-DESIGN-02 Gemeinsame Bedienbasis, fester Desktop
+
+- Abschluss am 03.10.2026: **174 Tests bestanden, 0 fehlgeschlagen,
+  0 übersprungen**, 133,64 Sekunden. JavaScript-Syntaxprüfung beider geänderter
+  Skripte und Git-Diff-Prüfung bestanden. Die vorherigen fehlgeschlagenen
+  Durchgänge waren Reparaturrunden und zählen nicht als Abnahme.
+- Auftrag: alle fünf Produkte sollen derselben Gestaltungsfamilie folgen;
+  Hierarchie beruhigen und die neue Desktop-Entscheidung von Daniel umsetzen.
+  Verbindliche Begründungen und Übernahmeplan: GOLDENRULES Abschnitt 19.
+- Gemeinsamer Kern: `networkpunkt.css` und optionales `networkpunkt.js` ohne
+  externe Laufzeitabhängigkeiten. ThreadDesk lädt den Kern und verwendet dessen
+  Tokens. Die interaktive `design-reference.html` zeigt alle fünf Produkte mit
+  denselben Komponenten und kennzeichnet ihre Inhalte als synthetische Probe.
+  Die anderen vier Produkt-Repositories sind noch nicht umgestellt.
+- Figma: [Familientafel und Grundlagen](https://www.figma.com/design/B9Cj8P12JwXo7BGmW3Icu0?node-id=2-59),
+  51 Variablen (27 semantische Aliase), vier Textstile. Roboto ist der vorhandene
+  Fallback für die Figma-Darstellung. Kein fertiges Figma-Komponentenpaket.
+- ThreadDesk: Arbeitsaufgabe vor Verlauf, eine dominante Hauptaktion,
+  Threadpflege und Zusatzwerkzeuge in benannten aufklappbaren Bereichen.
+  Öffnungszustände überstehen Neuladen und HTMX-Aktualisierung; Tastaturkürzel
+  öffnen ihre Zielbereiche. Fehler und der Schrankenstatus bleiben sichtbar.
+- Desktop statt automatischem Mobilumbau: feste Spalten, mindestens 1180×760
+  CSS-Pixel, Referenz 1440×900. Größere Fenster geben der Mitte mehr Raum;
+  kleinere Ausschnitte scrollen bei gleicher Anordnung. Bedienhöhe 40 Pixel,
+  auch bei einem groben Zeiger. Keine Smartphone- oder WCAG-Reflow-Abnahme.
+- 17 Designfälle: fünf echte Seiten bei 1920×1080, 1440×900, 1280×800 und
+  1180×760, jeweils DE/EN (40 Kombinationen); fünf zusätzliche Ansichten mit
+  grobem Zeiger; alle fünf Familienproben bei drei Breiten (15 Kombinationen).
+  Dazu geöffnete Zusatzbereiche bei zwei Breiten, gespeicherte Bearbeitung,
+  ungültige Sicherung, Tastatur-Scrollen, Hilfedialog, Zustandserhalt und
+  Snapshot-Kürzel. Bei 1024×700 bleiben die Spalten bestehen und die letzte
+  Übergabeaktion gelangt durch Tastaturfokus vollständig in den Ausschnitt.
+- Gemessen: Bedienhöhe, Seitenbreite im vorgesehenen Arbeitsbereich,
+  abgeschnittene Beschriftungen, sichtbare Balken und Skriptfehler. Verdeckte
+  Inhalte geschlossener Bereiche zählen nicht als sichtbare Elemente; ihre
+  geöffneten Zustände werden separat geprüft. Die bestehenden Funktionsfälle
+  öffnen die neuen Bereiche durch echte Klicks. Sicherungsprüfungen lesen nach
+  Öffnen der Notizen den tatsächlichen gespeicherten Feldwert.
+- Sichtprüfung: echte ThreadDesk-Oberfläche mit synthetischen Inhalten bei
+  Referenz- und Mindestgröße sowie die Familientafel. Behoben wurde ein echter
+  Engpass: Geöffnete Kopffelder mit langem Titel verdrängten die Notizen. Der
+  Kopf kann jetzt selbst scrollen; Notizen und Werkzeuge bleiben erreichbar.
+- Kontrast der Text-/Statustokens gegen die drei Grundflächen: mindestens
+  7,04:1; Eingaberahmen mindestens 4,18:1. Kein vollständiger WCAG-Audit.
+- Umgebung: Linux, Python 3.12, Playwright 1.58.0, Chromium 145.0.7632.6,
+  kopflos, echte lokale Server, ausschließlich synthetische Arbeitsbereiche.
+- Grenzen: keine Auslieferung auf Daniels Installation, keine Abnahme aller
+  fünf Produkte, kein Mac-/Safari-/Firefox-Nachweis und keine native Ausgabe.
+  Die sichtbare Nutzerabnahme des Designs bleibt eigenständig. Groks
+  Hilfe-/Videoauftrag, aktive Voice und native Apps behalten ihre Reihenfolge.
+- Gespeicherte Bilder: [Desktop](design-2026-10-03/desktop.png),
+  [gemeinsame Familienprobe](design-2026-10-03/family.png).
+
+Der oben dokumentierte pytest-Aufruf ist weiterhin der reproduzierbare
+Browser-/Asset-/Sprach-Prüfumfang; er ist keine vollständige Projekttestsuite.

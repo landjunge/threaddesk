@@ -123,13 +123,17 @@ document.addEventListener("keydown", (event) => {
 
   if (event.key === "s") {
     event.preventDefault();
-    document.querySelector("[data-snapshot-label]")?.focus();
+    const field = document.querySelector("[data-snapshot-label]");
+    window.npReveal?.(field);
+    field?.focus();
     return;
   }
 
   if (event.key === "m") {
     event.preventDefault();
-    document.querySelector("[data-mic]")?.click();
+    const mic = document.querySelector("[data-mic]");
+    window.npReveal?.(mic);
+    mic?.click();
     return;
   }
 

@@ -593,6 +593,10 @@ Aufgaben, unzureichende Qualität, veraltete Preise, Budgetmangel und Datenfreig
 
 ## 18. Verbindliche Designregeln und Überarbeitung vom 3. Oktober 2026
 
+**Erster Durchgang. Die anschließende Nutzerkritik und der gemeinsame Kern in
+Abschnitt 19 ergänzen und präzisieren diesen Stand. Der Nachweis mit 172 Tests
+bezieht sich auf Commit a443dcd, nicht auf spätere Änderungen.**
+
 Der Nutzer verwirft die uneinheitliche Oberfläche ausdrücklich: Schriften,
 Button- und Feldgrößen, Abstände und Flächennutzung müssen zusammenpassen.
 Diese Entscheidung ersetzt die bisherigen R2-Maße 28/32 Pixel und 10-Pixel-Text.
@@ -662,3 +666,135 @@ Die zusätzliche Browser-Abnahme `828320d` wurde während der Designarbeit
 übernommen. Der aktuelle Prüfstatus steht unter TD-DESIGN-01 in COVERAGE.md;
 die dort genannte Umgebung begrenzt den Nachweis. Keine Abnahme der konkreten
 Nutzerinstallation und kein Ersatz für Groks Hilfe-/Videoarbeit.
+
+
+## 19. Gemeinsame Bedienbasis für die fünf Produkte
+
+### Auftrag und Entscheidung
+
+Daniel am 3. Oktober 2026: Das momentane Design klingt wie „Bahnhofgeräusche“.
+Am Ende sollen alle fünf Tools dieselbe Melodie spielen. Notion-Entscheidungen
+sind zu prüfen, nicht blind abzuschreiben. Der Auftrag umfasst die gemeinsame
+Gestaltung für **NetzwerkPunkt, Gnom-Hub-V1, ThreadDesk, TollGate und 4AllPass**.
+Die fünf Namen stammen aus dem bestehenden Markenauftrag; NetzwerkPunkt ist
+hier die Dachoberfläche. Agent-X-Files und versteh-mir sind nicht still als
+fünftes Produkt umgedeutet worden.
+
+Die erste Vereinheitlichung der Maße war unzureichend: In ThreadDesk hatten
+Bearbeitung, Status, Verlauf, Notizen, Dateien, Modellwahl und Übergabe fast
+gleiches Gewicht. Das Problem ist die Gewichtung der Arbeit, nicht nur Farbe.
+
+| Frühere Vorgabe | Entscheidung | Begründung |
+|---|---|---|
+| Gemeinsame Familie, eckig, Systemschrift, Klartext | Behalten | Wiedererkennung, Offline-Fähigkeit und Verständlichkeit |
+| R2: 10/12/14/16, 28/32 und später 20 px Höhe | Ersetzen durch 12/14/16/24 und 40 px | Widersprüchliche historische Zahlen; Lesbarkeit und gleichartige Bedienung haben Vorrang |
+| Alle Funktionen gleichzeitig in Karten | Ersetzen | Arbeitsaufgabe sichtbar, sekundäre Details bei Bedarf; keine Wand gleichwertiger Formulare |
+| Violett für jede Aktion im ersten ThreadDesk-Durchgang | Ersetzen durch neutrale Hauptaktion | Produktmarke ist keine zusätzliche Status- oder Aktionssprache |
+| Status nur mit Farbe | Weiter untersagt | Text und Bedeutung bleiben auch ohne Farbwahrnehmung verständlich |
+| Marken und Produktgrenzen | Behalten | Gemeinsame Gestaltung vereinigt weder Geheimnisse noch Ausführungsrechte |
+| Websites zuvor nur mit Extraauftrag | NetzwerkPunkt in den aktuellen Familienauftrag aufnehmen | Die Nutzeranweisung umfasst alle fünf; andere öffentliche Marketingseiten bleiben gesonderte Arbeit |
+
+### Ein Kern, verschiedene Aufgaben
+
+**Source of truth:** `src/threaddesk/ui/static/networkpunkt.css`, Version 0.1.
+Der vorläufige Ort ist das Repository des ersten Anwenders, keine zweite
+Regeldatei und kein neues Produkt. Regeln bleiben hier. `style.css` enthält
+ThreadDesk-Aliase, keine eigene zweite Farb- oder Größentabelle.
+
+Der Kern enthält Grundflächen, Schriftrollen, Abstände, Bedienhöhe, Zustände,
+Fokus sowie wiederverwendbare Buttons, Felder, Navigation, Hinweise und native
+aufklappbare Bereiche. Namen beginnen mit `np-`. Er hat keine Abhängigkeit von
+React, Alpine, HTMX, einem CSS-Framework, Google Fonts oder einem Server.
+`networkpunkt.js` ist optional: Es merkt ausschließlich offene/geschlossene
+Bereiche in der Browser-Sitzung und öffnet Bereiche für Tastaturkürzel. Die
+native Details-Bedienung funktioniert auch ohne dieses Modul.
+
+- **Orientierung:** Produktname und Navigation bleiben an vertrauten Orten.
+- **Arbeitsbereich:** Titel, nächster Schritt und Aufgabe dominieren. Formulare
+  zeigen Inhalt vor Nebenparametern. Eine hervorgehobene Hauptaktion je aktuellem
+  Arbeitsbereich; Nebenaktionen neutral und ruhiger.
+- **Ergänzungen:** Details, Verlauf, seltene Einstellungen und Zusatzwerkzeuge
+  bleiben benannt erreichbar. Fehler, Sperren, Freigabeumfang und Konsequenzen
+  dürfen nicht aus gestalterischen Gründen versteckt werden.
+- **Flächen:** Grundfläche `#121316`, Arbeitsfläche `#1a1c20`, Auswahl/Hover
+  `#25282e`; Text `#edf0f4`, Nebentext `#afb6c1`. Rahmen eines Eingabefelds
+  `#808996`, dekorative Trennlinie `#353940`. Markenfarbe nur an Markenpositionen.
+- **Rollen statt Einzelfälle:** vier Schriftrollen und dieselbe Abstandsreihe
+  wie Abschnitt 18. Kein eigenes Größen- oder Farbsystem je Tool.
+- **Bewegung:** keine zusätzliche Animation als Ersatz für Hierarchie.
+  Reduzierte Bewegung respektieren. Browser zuerst, native Apps und aktive Voice
+  zuletzt. Groks Hilfeproduktion soll auf den geprüften Oberflächen aufbauen.
+
+### Prüfbare Artefakte
+
+- [Figma-Grundlage](https://www.figma.com/design/B9Cj8P12JwXo7BGmW3Icu0?node-id=2-59):
+  51 Variablen in zwei Sammlungen, davon 27 semantische Aliase, vier Textstile,
+  eine geprüfte Familientafel. Kein fertiges Figma-Komponentenpaket behauptet.
+  Roboto ist dort der vorhandene Fallback aus dem Browser-Schriftstack;
+  die Browserfassung nutzt weiterhin die jeweilige Systemschrift.
+- `src/threaddesk/ui/static/design-reference.html`: interaktive Vergleichsansicht
+  aller fünf Produkte, identische CSS-Datei, Desktop-Aufbauprobe,
+  Haupt-/Neben-/Gefahren-/Deaktiviert-Zustände und verständliche Feldfehler.
+  Ausdrücklich synthetische Gestaltungsprobe, keine echte Produktfreigabe.
+- ThreadDesk: Kopf und Navigation beruhigt, Threadpflege und Zusatzwerkzeuge
+  öffnen sich bei Bedarf, geöffnete Bereiche bleiben nach Speichern/Neuladen
+  erhalten. Tastaturkürzel öffnen ihren Zielbereich. Nächster Schritt sichtbar,
+  Fortschrittseingabe vor dem vergangenen Verlauf.
+
+### Übernahmeplan ohne fünf neue Entwürfe
+
+| Produkt | Adapter / Aufgabe | Stand |
+|---|---|---|
+| ThreadDesk | `base.html` lädt den Kern; alte Variablen aliasieren `--np-*`; echte Browserabläufe erhalten | Implementiert auf Design-Branch; aktueller Prüfstand in COVERAGE |
+| 4AllPass | `frontend/src/tokens.css` auf dieselben Rollen abbilden; React-Komponenten verwenden dieselben Klassen/Zustände; Freigabeumfang und Sperrstatus sichtbar | Gestaltungsprobe und Zuordnung vorbereitet; Produktcode noch nicht umgestellt |
+| TollGate | eingebetteten Stil in `src/tollgate/dashboard_html.py` auf denselben Kern abbilden; Allow/Deny und Begründung unverändert klar trennen | Gestaltungsprobe und Zuordnung vorbereitet; Produktcode noch nicht umgestellt |
+| Gnom-Hub-V1 | gemeinsame Navigation/Felder/Aktionen übernehmen; Agentenfarben nur als Identifikation; Senden und Ausführen getrennt lassen | R2-Code geprüft; Gestaltungsprobe vorbereitet; Produktcode noch nicht umgestellt |
+| NetzwerkPunkt | Orientierung und Produktzugänge aus derselben Familie; Dachmarke behalten; keine zusätzlichen aktiven Steuerfunktionen erfinden | Familienrahmen vorbereitet; öffentliche Seite noch nicht umgestellt |
+
+Bei Übernahme die beiden lokalen Quelldateien einer festgehaltenen Git-Version
+kopieren, alte Tokens über einen kleinen Adapter abbilden und die
+Standard-/Hover-/Fokus-/Fehler-/Deaktiviert-Zustände prüfen. Keine Laufzeit-CDN
+und keine automatische Aktualisierung fremder Repositories. Markenassets aus
+dem separaten Grok-Auftrag bleiben produktspezifisch. Gemeinsame Änderungen
+werden im Kern gemacht und in allen fünf Vergleichsansichten geprüft.
+
+Die Abnahme pro Produkt umfasst den echten Hauptablauf, Nebenaktionen,
+Fehler/Sperren, lange Inhalte, DE/EN, Tastatur und Desktop-Fenster. Erst dann
+ist ein Produkt übernommen. Die gemeinsame Gestaltungsprobe allein zählt
+nicht als Umsetzung oder Abnahme der fünf Produkt-Repositories.
+
+### Forschung und Grenzen
+
+[GOV.UK Buttons](https://design-system.service.gov.uk/components/button/) begründet
+die Zurückhaltung mit mehreren gleichgewichtigen Hauptaktionen.
+[NN/g Progressive Disclosure](https://www.nngroup.com/articles/progressive-disclosure/)
+begründet die schrittweise Freilegung sekundärer Funktionen. Die konkrete
+Aufteilung und Zahlen bleiben unsere begründete Produktentscheidung.
+Carbon, W3C und MDN aus Abschnitt 18 ergänzen diese Grundlage.
+
+Die Bezeichnung „fertig“ setzt die sichtbare Nutzerabnahme voraus; eine grüne
+Testsuite ist kein Beleg, dass Daniel das Design akzeptiert hat. Diese Fassung
+ist ein überprüfbarer gemeinsamer Kern mit ThreadDesk-Implementierung.
+
+
+### Präzisierung durch Daniel: kein Responsive-Pflichtziel
+
+Im selben Arbeitsgang ausdrücklich entschieden: Die Werkzeuge brauchen keinen
+kompromisshaften automatischen Mobilumbau. **Desktop-Arbeitsplatz zuerst.**
+Das ersetzt die entsprechende Reflow-/Mobilanforderung aus Abschnitt 18 und
+dem ersten Entwurf von Abschnitt 19; historische Prüfergebnisse bleiben datiert.
+
+- Gemeinsame Desktop-Komposition mit Navigation links, Arbeit in der Mitte,
+  Ergänzungen rechts; keine Breakpoints, die diese Bereiche neu stapeln.
+- Vorgesehene kleinste Arbeitsfläche: 1180 × 760 CSS-Pixel, Referenz 1440 × 900.
+  Das ist die Implementierungsfestlegung für diesen Entwurf, kein gemessener
+  Bildschirm des Nutzers. Größere Fenster geben dem Arbeitsbereich mehr Raum.
+- 40 Pixel Bedienhöhe in diesem Desktop-Entwurf. Der optionale 44-Pixel-Token
+  bleibt als Reserve, wird aber nicht automatisch über Pointer-/Viewportregeln
+  aktiviert. Mobile/Touch-Produkte sind gesonderte spätere Entwürfe.
+- Unterhalb der vorgesehenen Arbeitsfläche bleibt dieselbe Komposition per
+  Scrollen erreichbar. Vergrößerung, lange Texte und Tastaturfokus dürfen keine
+  Daten oder Aktionen unerreichbar machen. Das ist kein Mobil-Layout und keine
+  WCAG-Reflow-Konformitätsbehauptung.
+- Die Prüffälle richten sich nach dieser Entscheidung: Desktop-Maße und
+  Erreichbarkeit bei kleinerem Ausschnitt, nicht mehr Smartphone-Reflow.

@@ -1,10 +1,17 @@
 {% if current %}
 <article class="panel detail" tabindex="0" aria-label="{{ current.title }}">
-  <header class="desk-head" x-data="{ rename: false }">
+  <header class="desk-head" tabindex="0" aria-label="{{ t('detail.active_thread') }}" x-data="{ rename: false }">
     <div class="detail-head">
       <div class="title-block">
         <p class="eyebrow">{{ t("detail.active_thread") }}</p>
         <h1>{{ current.title }}</h1>
+
+      </div>
+      <span class="status status-{{ current.status }}">{{ current.status }}</span>
+    </div>
+    <p class="thread-description">{{ current.description or t('detail.description_placeholder') }}</p>
+    <details class="np-disclosure thread-edit" data-disclosure="thread-edit">
+      <summary>{{ t('ui.edit_thread') }}</summary>
         <form
           class="inline-form"
           x-show="rename"
@@ -16,9 +23,6 @@
           <input type="text" name="title" value="{{ current.title }}" required maxlength="160" />
           <button type="submit" class="btn btn-primary">{{ t("detail.ok") }}</button>
         </form>
-      </div>
-      <span class="status status-{{ current.status }}">{{ current.status }}</span>
-    </div>
     <div class="detail-meta">
       <p class="thread-id detail-id">{{ current.id }}</p>
       <div class="detail-actions">
@@ -67,18 +71,39 @@
         <button type="submit" class="btn btn-primary">{{ t("detail.save") }}</button>
       </form>
     </section>
+    </details>
     {% include "partials/whiteboard_stand.html" %}
   </header>
 
   {% include "partials/notes.html" %}
 
   <div class="desk-side" tabindex="0" role="region" aria-label="{{ t('ui.tools') }}">
-    {% include "partials/files.html" %}
-    {% include "partials/snapshots.html" %}
-    {% include "partials/prompt.html" %}
-    {% include "partials/hausmeister.html" %}
-    {% include "partials/graph_links.html" %}
-    {% include "partials/packet.html" %}
+    <h2 class="tools-heading">{{ t('ui.tools') }}</h2>
+    <p class="muted tools-hint">{{ t('ui.tools_hint') }}</p>
+    <details class="np-disclosure tool-disclosure" data-disclosure="files">
+      <summary>{{ t('files.title') }}</summary>
+      {% include "partials/files.html" %}
+    </details>
+    <details class="np-disclosure tool-disclosure" data-disclosure="snapshots">
+      <summary>{{ t('snapshots.title') }}</summary>
+      {% include "partials/snapshots.html" %}
+    </details>
+    <details class="np-disclosure tool-disclosure" data-disclosure="prompt">
+      <summary>{{ t('prompt.title') }}</summary>
+      {% include "partials/prompt.html" %}
+    </details>
+    <details class="np-disclosure tool-disclosure" data-disclosure="hausmeister">
+      <summary>{{ t('hausmeister.title') }}</summary>
+      {% include "partials/hausmeister.html" %}
+    </details>
+    <details class="np-disclosure tool-disclosure" data-disclosure="graph_links">
+      <summary>{{ t('desk.links') }}</summary>
+      {% include "partials/graph_links.html" %}
+    </details>
+    <details class="np-disclosure tool-disclosure" data-disclosure="packet">
+      <summary>{{ t('packet.title') }}</summary>
+      {% include "partials/packet.html" %}
+    </details>
   </div>
 </article>
 {% else %}

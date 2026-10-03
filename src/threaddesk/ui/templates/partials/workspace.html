@@ -18,7 +18,10 @@
 <aside class="sidebar" tabindex="0" aria-label="{{ t('list.title') }}">
   {% include "partials/thread_list.html" %}
   {% include "partials/gate.html" %}
-  {% include "partials/room.html" %}
+  <details class="np-disclosure room-disclosure" data-disclosure="room">
+    <summary>{{ t('room.title') }} <span class="np-meta">{{ t('room.state.' ~ room.state) }}</span></summary>
+    {% include "partials/room.html" %}
+  </details>
 </aside>
 <main id="main" class="main">
   {% include "partials/thread_detail.html" %}

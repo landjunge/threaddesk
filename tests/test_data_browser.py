@@ -6,10 +6,17 @@ import time
 import tempfile
 
 import pytest
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import expect, sync_playwright
 import uvicorn
 
 from threaddesk.ui.server import create_app, _svc
+
+
+def _expect_saved_note(page, text):
+    notes = page.locator('details[data-disclosure="notes"]')
+    if not notes.evaluate('(element) => element.open'):
+        notes.locator(':scope > summary').click()
+    expect(page.locator('#notes textarea[name="text"]')).to_have_value(text)
 
 
 @pytest.mark.parametrize('backend', ['json', 'sqlite'])
@@ -67,18 +74,18 @@ def test_user_downloads_opens_and_switches_back(tmp_path, monkeypatch, backend, 
             page.locator('[name=confirm]').check()
             page.get_by_role('button', name='Sicherung öffnen', exact=True).click()
             page.wait_for_url(url + '/?restored=1')
-            assert 'Mein gespeicherter Stand' in page.locator('body').inner_text()
+            _expect_saved_note(page, 'Mein gespeicherter Stand')
             page.get_by_role('link', name='Daten', exact=True).click()
             if backend == 'json':
                 page.screenshot(path='/tmp/threaddesk-data-qa.png', full_page=True)
             page.get_by_role('button', name='Zum bisherigen Arbeitsbereich', exact=True).click()
             page.wait_for_url(url + '/')
-            assert 'Späterer Originalstand' in page.locator('body').inner_text()
+            _expect_saved_note(page, 'Späterer Originalstand')
             page.goto(url + '/data?lang=en')
             assert page.get_by_role('button', name='Download backup', exact=True).is_visible()
             page.get_by_role('button', name='Open workspace', exact=True).click()
             page.wait_for_url(url + '/')
-            assert 'Mein gespeicherter Stand' in page.locator('body').inner_text()
+            _expect_saved_note(page, 'Mein gespeicherter Stand')
             browser.close()
     finally:
         server.should_exit = True
