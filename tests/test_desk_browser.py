@@ -10,6 +10,7 @@ stehen.
 from __future__ import annotations
 
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -511,6 +512,93 @@ def test_user_edits_description_status_and_whiteboard_order(tmp_path: Path) -> N
             expect(page.locator(".whiteboard-body")).to_have_count(3)
             _raise_chrome(before, "fenster-status.png")
             _shot(page, "07-status.png")
+            browser.close()
+    finally:
+        desk.stop()
+    assert page_errors == []
+
+
+def test_user_creates_filters_and_opens_knowledge_on_the_map(tmp_path: Path) -> None:
+    """TD-KNOW-01. Knoten, Filter, Verbindung und derselbe Knoten auf der Karte."""
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    page_errors: list[str] = []
+    title = "Projekt ÄÖÜ"
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            before = _chrome_pids()
+            try:
+                browser = play.chromium.launch(
+                    executable_path=CHROME,
+                    headless=not HEADED,
+                    slow_mo=200 if HEADED else 0,
+                    args=["--start-fullscreen"] if HEADED else [],
+                )
+            except Exception as exc:  # pragma: no cover - Umgebung ohne Browser
+                pytest.skip(f"kein Chromium verfügbar: {exc}")
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            page.bring_to_front()
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.goto(url + "/lang/de", wait_until="networkidle")
+            page.wait_for_function("() => window.Alpine !== undefined")
+            _raise_chrome(before)
+            page.get_by_role("link", name="Wissenspool", exact=True).click()
+            expect(page.locator("h1")).to_have_text("Wissenspool")
+            expect(page.get_by_text("Noch keine Knoten. Der erste Knoten kann ein Projekt sein.")).to_be_visible()
+            expect(page.get_by_text("Für eine Verbindung werden mindestens zwei Knoten benötigt.")).to_be_visible()
+
+            form = page.locator('form[action="/knowledge/nodes"]')
+            form.get_by_role("button", name="Knoten speichern", exact=True).click()
+            expect(page.locator(".node-row")).to_have_count(0)
+
+            form.locator('select[name="kind"]').select_option("project")
+            form.locator('input[name="title"]').fill(title)
+            form.locator('select[name="status"]').select_option("idea")
+            form.locator('textarea[name="details"]').fill("Sichtbarer Zweck")
+            form.get_by_role("button", name="Knoten speichern", exact=True).click()
+            row = page.locator(".node-row", has_text=title)
+            expect(row).to_be_visible()
+            expect(row).to_contain_text("Sichtbarer Zweck")
+            expect(row.locator(".status")).to_have_text("idea")
+
+            filters = page.locator("form.knowledge-filter")
+            filters.locator('select[name="kind"]').select_option("task")
+            filters.get_by_role("button", name="Filtern", exact=True).click()
+            expect(page.locator(".node-row")).to_have_count(0)
+            expect(page).to_have_url(re.compile(r"kind=task"))
+            page.get_by_role("link", name="Zurücksetzen", exact=True).click()
+            expect(page.locator(".node-row", has_text=title)).to_be_visible()
+
+            form = page.locator('form[action="/knowledge/nodes"]')
+            form.locator('select[name="kind"]').select_option("person")
+            form.locator('input[name="title"]').fill("Prüferin")
+            form.locator('select[name="status"]').select_option("active")
+            form.get_by_role("button", name="Knoten speichern", exact=True).click()
+            expect(page.locator(".node-row")).to_have_count(2)
+
+            relation = page.locator('form[action="/knowledge/relations"]')
+            relation.locator('select[name="source_id"]').select_option(label=f"{title} · Projekt")
+            relation.locator('select[name="kind"]').select_option("contains")
+            relation.locator('select[name="target_id"]').select_option(label="Prüferin · Person")
+            relation.get_by_role("button", name="Linie speichern", exact=True).click()
+            expect(page.locator(".relation-row")).to_have_count(1)
+            expect(page.locator(".relation-row")).to_contain_text("contains")
+
+            page.reload(wait_until="networkidle")
+            expect(page.locator(".node-row")).to_have_count(2)
+            expect(page.locator(".relation-row")).to_have_count(1)
+
+            page.get_by_role("link", name="Karte", exact=True).click()
+            expect(page.locator("[data-map-canvas]")).to_be_visible()
+            expect(page.locator("[data-map-world]")).to_contain_text(title)
+            expect(page.locator("[data-map-world]")).to_contain_text("Prüferin")
+            page.locator(f'[data-map-world] [aria-label^="{title},"]').click()
+            expect(page.locator("[data-map-detail-title]")).to_have_text(title)
+            expect(page.locator("[data-map-detail-text]")).to_have_text("Sichtbarer Zweck")
+            _raise_chrome(before, "fenster-wissen.png")
+            _shot(page, "08-wissen.png")
             browser.close()
     finally:
         desk.stop()
