@@ -147,13 +147,16 @@ def _raise_chrome(before: set[int], shot: str | None = None) -> int | None:
     return pid
 
 
-def _launch(play):
+def _launch(play, extra_args: list[str] | None = None):
+    args = list(extra_args or [])
+    if HEADED:
+        args.append("--start-fullscreen")
     try:
         return play.chromium.launch(
             executable_path=CHROME,
             headless=not HEADED,
             slow_mo=PACE_MS if HEADED else 0,
-            args=["--start-fullscreen"] if HEADED else [],
+            args=args,
         )
     except Exception as exc:  # pragma: no cover - Umgebung ohne Browser
         pytest.skip(f"kein Chromium verfügbar: {exc}")
@@ -1004,6 +1007,184 @@ def test_user_reads_action_notices_in_english(tmp_path: Path) -> None:
 
             _raise_chrome(before, "fenster-hinweise.png")
             _shot(page, "17-hinweise.png")
+            browser.close()
+    finally:
+        desk.stop()
+    assert page_errors == []
+
+
+def _alert(page, text: str) -> None:
+    banner = page.locator(".toast-stack .banner-error")
+    expect(banner).to_be_visible()
+    expect(banner).to_have_text(text)
+
+
+def test_user_reads_housekeeper_phases_in_english(tmp_path: Path) -> None:
+    """TD-HAUS-01. Englische Hausmeister-Sätze. Kein Auftrag an Ollama.
+
+    „Waiting for a job“ steht nur, wenn ein bereits gelistetes Modell
+    gespeichert ist und kein Auftrag wartet. „Working“ und „Paused“
+    brauchen einen laufenden Auftrag und bleiben in diesem Lauf weg.
+    """
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    page_errors: list[str] = []
+    title = "Housekeeper"
+    order = "Remember this, do not run it"
+    phase_keys = (
+        "hausmeister.phase.waiting_for_order",
+        "hausmeister.phase.waiting_for_quiet",
+        "hausmeister.phase.working",
+        "hausmeister.phase.paused",
+    )
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            before = _chrome_pids()
+            browser = _launch(play, ["--disable-features=Translate"])
+            page = browser.new_page(
+                viewport={"width": 1440, "height": 900},
+                locale="en-US",
+            )
+            page.bring_to_front()
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.goto(url + "/lang/en", wait_until="networkidle")
+            page.wait_for_function("() => window.Alpine !== undefined")
+            _raise_chrome(before)
+            expect(page.locator("html")).to_have_attribute("lang", "en")
+            page.wait_for_function(
+                "() => { const root = document.querySelector('.new-thread');"
+                " return !!(root && root._x_dataStack); }"
+            )
+            button = page.locator("[data-new-thread]")
+            field = page.locator("[data-new-title]")
+            button.click()
+            if not field.is_visible():
+                button.evaluate("el => el.click()")
+            expect(field).to_be_visible()
+            field.fill(title)
+            page.locator("#thread-list").get_by_role(
+                "button", name=_sentence("list.create", "en"), exact=True
+            ).click()
+            expect(page.locator("h1")).to_have_text(title)
+
+            section = page.locator("[data-hausmeister]")
+            section.scroll_into_view_if_needed()
+            phase = page.locator("[data-hausmeister-phase]")
+            probe = section.inner_text()
+            reachable = _sentence("hausmeister.reachable", "en")
+            unreachable = _sentence("hausmeister.unreachable", "en")
+            assert reachable in probe or unreachable in probe
+            ollama_up = reachable in probe
+            expect(phase).to_have_attribute("data-hausmeister-phase", "off")
+            for key in phase_keys:
+                expect(phase).not_to_contain_text(_sentence(key, "en"))
+            expect(page.locator("[data-hausmeister-model]")).to_have_value("")
+            expect(page.locator("[data-hausmeister-model] option:checked")).to_have_text(
+                _sentence("hausmeister.model_none", "en")
+            )
+            expect(section).to_contain_text(_sentence("hausmeister.title", "en"))
+            expect(section).to_contain_text(_sentence("hausmeister.no_model", "en"))
+            expect(section.get_by_role(
+                "button", name=_sentence("hausmeister.turn_on", "en"), exact=True
+            )).to_be_visible()
+            _hides(
+                page, "de",
+                "hausmeister.title", "hausmeister.reachable", "hausmeister.unreachable",
+                "hausmeister.no_model", "hausmeister.model_none", "hausmeister.turn_on",
+                "hausmeister.turn_off", "hausmeister.use_model", "hausmeister.run",
+                "hausmeister.later", "hausmeister.failed", "hausmeister.queued",
+                "hausmeister.phase.waiting_for_order", "hausmeister.phase.waiting_for_quiet",
+                "hausmeister.phase.working", "hausmeister.phase.paused",
+                "hausmeister.disabled",
+            )
+
+            names = page.locator("[data-hausmeister-model] option").evaluate_all(
+                "els => els.map((el) => el.value).filter(Boolean)"
+            )
+            if ollama_up and names:
+                page.locator("[data-hausmeister-model]").select_option(names[0])
+                section.get_by_role(
+                    "button", name=_sentence("hausmeister.use_model", "en"), exact=True
+                ).click()
+                _notice(page, _sentence("hausmeister.use_model", "en"))
+                expect(phase).to_have_attribute("data-hausmeister-phase", "off")
+                expect(section).not_to_contain_text(_sentence("hausmeister.no_model", "en"))
+                section.get_by_role(
+                    "button", name=_sentence("hausmeister.turn_on", "en"), exact=True
+                ).click()
+                _notice(page, _sentence("hausmeister.turn_on", "en"))
+                expect(phase).to_have_attribute("data-hausmeister-phase", "waiting_for_order")
+                expect(phase).to_contain_text(_sentence("hausmeister.reachable", "en"))
+                expect(phase).to_contain_text(
+                    _sentence("hausmeister.phase.waiting_for_order", "en")
+                )
+                for key in phase_keys[1:]:
+                    expect(phase).not_to_contain_text(_sentence(key, "en"))
+                _raise_chrome(before, "fenster-hausmeister-en.png")
+                _shot(page, "19-hausmeister.png")
+                page.locator("[data-hausmeister-model]").select_option("")
+                section.get_by_role(
+                    "button", name=_sentence("hausmeister.use_model", "en"), exact=True
+                ).click()
+                _notice(page, _sentence("hausmeister.no_model", "en"))
+                expect(phase).to_have_attribute("data-hausmeister-phase", "no_model")
+                expect(phase).not_to_contain_text(
+                    _sentence("hausmeister.phase.waiting_for_order", "en")
+                )
+            else:
+                section.get_by_role(
+                    "button", name=_sentence("hausmeister.turn_on", "en"), exact=True
+                ).click()
+                _notice(page, _sentence("hausmeister.turn_on", "en"))
+                expect(phase).to_have_attribute(
+                    "data-hausmeister-phase",
+                    "no_model" if ollama_up else "ollama_down",
+                )
+                for key in phase_keys:
+                    expect(phase).not_to_contain_text(_sentence(key, "en"))
+                _raise_chrome(before, "fenster-hausmeister-en.png")
+                _shot(page, "19-hausmeister.png")
+
+            expect(page.locator("[data-hausmeister-order]")).to_be_visible()
+            expect(page.locator("[data-hausmeister-order]")).to_have_attribute(
+                "placeholder", _sentence("hausmeister.order_placeholder", "en")
+            )
+            expect(section.get_by_role(
+                "button", name=_sentence("hausmeister.run", "en"), exact=True
+            )).to_be_visible()
+            expect(section.get_by_role(
+                "button", name=_sentence("hausmeister.later", "en"), exact=True
+            )).to_be_visible()
+            page.locator("[data-hausmeister-run]").click()
+            _alert(page, _sentence("hausmeister.failed", "en"))
+            expect(page.locator("[data-hausmeister-entry]")).to_have_count(0)
+            page.locator("[data-hausmeister-order]").fill(order)
+            page.locator("[data-hausmeister-run]").click()
+            _alert(page, _sentence("hausmeister.no_model", "en"))
+            expect(page.locator("h1")).to_have_text(title)
+            expect(page.locator("[data-hausmeister-entry]")).to_have_count(0)
+            page.locator("[data-hausmeister-order]").fill(order)
+            page.locator("[data-hausmeister-later]").click()
+            _notice(page, _sentence("hausmeister.queued", "en"))
+            queued = (home / "hausmeister-queue.json").read_text(encoding="utf-8")
+            assert order in queued
+            expect(phase).to_have_attribute(
+                "data-hausmeister-phase",
+                "no_model" if ollama_up else "ollama_down",
+            )
+            for key in phase_keys:
+                expect(phase).not_to_contain_text(_sentence(key, "en"))
+            section.get_by_role(
+                "button", name=_sentence("hausmeister.turn_off", "en"), exact=True
+            ).click()
+            expect(page.locator("[data-hausmeister-order]")).to_have_count(0)
+            expect(section.get_by_role(
+                "button", name=_sentence("hausmeister.turn_on", "en"), exact=True
+            )).to_be_visible()
+            _notice(page, _sentence("hausmeister.turn_off", "en"))
+            expect(phase).to_have_attribute("data-hausmeister-phase", "off")
             browser.close()
     finally:
         desk.stop()
