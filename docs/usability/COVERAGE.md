@@ -4,7 +4,8 @@ Technischer Nachweis zum aktuellen Funktionsumfang. Verbindliche Entscheidungen
 stehen nur in `GOLDENRULES.MD`. Diese Datei hält Ablaufkennungen, Prüfstatus und
 Belege fest. Sie ist keine zweite Regelquelle.
 
-Stand der Matrix: 2026-10-03. Codebasis: Branch `accept/browser-coverage`
+Stand der Matrix: 2026-10-03. Designergänzung: siehe TD-DESIGN-01 unten.
+Vorherige Codebasis: Branch `accept/browser-coverage`
 (Backup-Reparatur `54f2ac0` plus Dokumentationsstand `70b0051`). Die frühere
 Linux-Runde am Reparaturcommit bleibt ein Beleg für genau diesen Commit:
 560 bestanden, 0 übersprungen, zweimal, darunter 34 Chromium-Fälle. Sie ist kein
@@ -148,7 +149,9 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 ## TD-LAYOUT-01 Schreibtisch im Fenster
 
 - Nutzerziel: den offenen Thread ohne Seitenlaufleiste bedienen.
-- Status: gemessen. Bei 1440×900 scrollt die Seite nicht (`page`, `notes` und `side` ohne Überlauf im kurzen Thread). Eine innere Laufleiste erscheint, wenn Verlauf oder Seitenspalte höher sind als das Fenster. Das ist die vorhandene Spaltenscrollung, kein Seitenfehler. Offen bleibt, ob bei vollem Inhalt eine wichtige Schaltfläche nur durch Scrollen erreichbar ist.
+- Historischer Status vor der Designüberarbeitung: gemessen. Bei 1440×900 scrollt die Seite nicht (`page`, `notes` und `side` ohne Überlauf im kurzen Thread). Eine innere Laufleiste erscheint, wenn Verlauf oder Seitenspalte höher sind als das Fenster. Das ist die vorhandene Spaltenscrollung, kein Seitenfehler. Offen bleibt, ob bei vollem Inhalt eine wichtige Schaltfläche nur durch Scrollen erreichbar ist.
+
+- Aktualisierung 03.10.2026: Der neue Designstand verbirgt Balken bei erhaltener Spaltenscrollung. Tastaturzugang zu allen vier inneren Scrollflächen ist nachgewiesen; schmale Fenster verwenden einen erreichbaren Seitenfluss. Details siehe TD-DESIGN-01.
 
 ## TD-VOICE-01 und TD-NATIVE-01
 
@@ -161,3 +164,52 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 - Zweiter Orchestrator und Modellaufruf für jede triviale Auswahl: gestrichen. Der kleine Whiteboard-Hook bleibt die geplante Ergänzung aus Abschnitt 17, noch nicht implementiert.
 - Native Builds jetzt: verschoben, Grund ist die Reihenfolge in Abschnitt 16 und der Workflow-Auslöser oben.
 - Konkurrenzdatei zu GOLDENRULES: nicht angelegt.
+
+
+## TD-DESIGN-01 Einheitliche Oberfläche
+
+- Auftrag: alle vorhandenen Ansichten vereinheitlichen; scrollbar ohne sichtbare
+  Scrollbalken. Verbindliche Regeln und Recherche: GOLDENRULES Abschnitt 18.
+- Codebasis: `design/unified-interface`, aufgebaut auf dem gepushten Browserstand
+  `828320d` (einschließlich neuer Import-/Backup-Nachweise). Keine Produktänderungen
+  der anderen Arbeitslinie überschrieben.
+- Umsetzung: eine Schriftfamilie und vier Rollen, gemeinsame 40-Pixel-Bedienhöhe
+  (44 für Touch), feste Abstände, gleiche Breiten innerhalb zusammengehöriger
+  Aktionsgruppen, gezielte Hauptaktion/Auswahl, vollständige Formularstile für
+  Daten und Import, verständlich umbrechende schmale Ansichten, Dialogfokus.
+- Designprüfung: `tests/test_design_browser.py`, 15 Fälle. Fünf echte Seiten bei
+  1440×1000, 1280×800, 1024×768, 768×900, 375×812 und 320×800, jeweils DE und EN:
+  60 Kombinationen. Hinzu kommen fünf Touch-Ansichten, Tastatur-Scrollen in
+  Seitenleiste/Werkzeugen/Notizen/Verlauf, Dialogfokus, gespeicherte Bearbeitung und
+  lesbare Fehlermeldung bei ungültiger Sicherung. Lange Inhalte sind synthetisch.
+- Gemessen werden Seitenüberlauf, Bedienhöhe, abgeschnittene Buttonbeschriftungen
+  und sichtbare Balken. Eine grüne DOM-Prüfung allein reicht nicht: Schreibtisch,
+  Wissen, Karte, Daten, Import, leerer Start, Fehlerzustand und Hilfedialog wurden
+  zusätzlich als Browserbilder angesehen und nachgebessert.
+- Kontrastprüfung der gemeinsamen Text-/Statustokens gegen die drei Grundflächen:
+  mindestens 5,8:1; Hauptaktion 9,47:1; Eingaberahmen über 3:1. Kein vollständiger
+  WCAG-Audit. Native Dateiauswahldialoge und Browsermeldungen folgen weiterhin dem
+  Betriebssystem bzw. Browser.
+- Gefundene und behobene Darstellungsfehler: gebrochene Statusmarken, zu hohe
+  Kopfbelegung, Navigation bei schmaler Restbreite, uneinheitliche Datei-Eingaben
+  und eine zu schwache graue Statusfarbe. Ein alter Test erwartete noch den
+  verworfenen grauen Akzent und wurde an den dokumentierten Beschluss angepasst.
+- Abschluss: **172 Tests bestanden, 0 fehlgeschlagen, 0 übersprungen**, 135,05 Sekunden am 03.10.2026. Darunter die 15 neuen Designfälle sowie bestehende Schreibtisch-, Karten-, Raum-, Sicherungs-, Import-, Sprach- und Assetprüfungen. JavaScript-Syntax und Git-Diff-Prüfung bestanden.
+- Umgebung: Linux, Python 3.12, Playwright 1.58.0, Chromium 145.0.7632.6, kopflos,
+  echte lokale Server und ausschließlich synthetische Arbeitsbereiche.
+- Grenzen: keine Mac-/Safari-/Firefox-/Windows-/Linux-App-Abnahme, keine automatische
+  Auslieferung auf das Nutzergerät, keine neuen Firmen-Sicherheitsnachweise. Voice,
+  Videos und native Builds bleiben in der vereinbarten Reihenfolge.
+- [Gespeicherte Designvorschau des Schreibtischs](design-2026-10-03/desk.png).
+  Das Bild zeigt synthetische Inhalte, keine echte Nutzerinstallation.
+
+Reproduzierbarer Aufruf (installierte UI-/Dev-/Browser-Abhängigkeiten vorausgesetzt):
+
+```sh
+python -m pytest tests/test_design_browser.py tests/test_data_browser.py tests/test_migration_browser.py tests/test_ui_assets.py tests/test_ui_desk_layout.py tests/test_i18n.py tests/test_desk_browser.py tests/test_ui_browser.py tests/test_room_browser.py -q
+```
+
+Für einen bereits installierten Chromium kann `THREADDESK_CHROMIUM` auf dessen
+Binary zeigen. Der Designnachweis darf nicht als übersprungener Test grün werden,
+wenn kein Browser vorhanden ist. Es wurde kein nativer Build ausgelöst; der
+Code wird als Branch ohne den native Builds auslösenden Code-PR gesichert.

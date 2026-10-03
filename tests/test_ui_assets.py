@@ -122,23 +122,23 @@ def test_at_most_four_font_tokens_are_defined() -> None:
     assert len(defined) <= 4, defined
 
 
-def test_r2_tokens_match_the_shared_desk_reference() -> None:
-    """Die bestätigten R2-Zahlen dürfen nicht wieder zum alten Satz driften."""
+def test_tokens_match_the_current_design_decision() -> None:
+    """Abschnitt 18 ersetzt die vom Nutzer verworfenen R2-Maße."""
     text = (STYLESHEETS[0].parent / "style.css").read_text(encoding="utf-8")
     expected = {
-        "--border-strong": "#5c616a",
-        "--border-hover": "#6b7280",
-        "--risk": "#c45c5c",
-        "--control": "28px",
-        "--control-sm": "32px",
-        "--text-sm": "10px",
-        "--text-base": "12px",
-        "--text-lg": "14px",
-        "--text-xl": "16px",
+        "--border-strong": "#737d8d",
+        "--border-hover": "#a8afbd",
+        "--risk": "#f49b9b",
+        "--control": "40px",
+        "--control-sm": "var(--control)",
+        "--text-sm": "12px",
+        "--text-base": "14px",
+        "--text-lg": "16px",
+        "--text-xl": "24px",
     }
     for token, value in expected.items():
         assert re.search(rf"{re.escape(token)}:\s*{re.escape(value)}\s*;", text), (
-            f"{token} muss laut Desk-Design R2 {value} sein"
+            f"{token} muss laut GOLDENRULES Abschnitt 18 {value} sein"
         )
 
 

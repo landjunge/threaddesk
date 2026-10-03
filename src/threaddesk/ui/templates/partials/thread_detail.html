@@ -1,13 +1,10 @@
 {% if current %}
-<article class="panel detail">
-  <header class="desk-head">
+<article class="panel detail" tabindex="0" aria-label="{{ current.title }}">
+  <header class="desk-head" x-data="{ rename: false }">
     <div class="detail-head">
-      <div class="title-block" x-data="{ rename: false }">
+      <div class="title-block">
         <p class="eyebrow">{{ t("detail.active_thread") }}</p>
         <h1>{{ current.title }}</h1>
-        <button type="button" class="btn btn-ghost btn-compact" @click="rename = !rename">
-          {{ t("detail.rename") }}
-        </button>
         <form
           class="inline-form"
           x-show="rename"
@@ -24,6 +21,11 @@
     </div>
     <div class="detail-meta">
       <p class="thread-id detail-id">{{ current.id }}</p>
+      <div class="detail-actions">
+        <button type="button" class="btn btn-ghost btn-compact" @click="rename = !rename">
+          {{ t("detail.rename") }}
+        </button>
+
       <form
         hx-post="/threads/{{ current.id }}/archive"
         hx-target="#workspace"
@@ -32,6 +34,7 @@
       >
         <button type="submit" class="btn btn-ghost btn-compact">{{ t("detail.archive") }}</button>
       </form>
+      </div>
     </div>
     <section class="block desk-status">
       <h3>{{ t("detail.status") }}</h3>
@@ -46,6 +49,7 @@
           <button
             type="submit"
             class="chip{% if current.status == s %} is-on{% endif %}"
+            aria-pressed="{{ 'true' if current.status == s else 'false' }}"
           >{{ s }}</button>
         </form>
         {% endfor %}
@@ -68,7 +72,7 @@
 
   {% include "partials/notes.html" %}
 
-  <div class="desk-side">
+  <div class="desk-side" tabindex="0" role="region" aria-label="{{ t('ui.tools') }}">
     {% include "partials/files.html" %}
     {% include "partials/snapshots.html" %}
     {% include "partials/prompt.html" %}

@@ -1,7 +1,7 @@
 <div class="whiteboard" data-whiteboard>
   <h3>{{ t("whiteboard.title") }}</h3>
   {% if whiteboard %}
-  <ol class="whiteboard-log" data-whiteboard-log>
+  <ol class="whiteboard-log" tabindex="0" aria-label="{{ t('whiteboard.title') }}" data-whiteboard-log>
     {% for entry in whiteboard %}
     {% set mark = actor_marks.get(entry.actor_id) if entry.actor_id else none %}
     <li

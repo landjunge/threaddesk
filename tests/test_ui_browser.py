@@ -301,9 +301,9 @@ def test_directed_relations_carry_an_arrow(page):
 
 
 def test_chrome_uses_shared_tokens_and_map_has_its_own_tones(page):
-    """Arbeitsteilung: Grundgerüst gedämpft, Karte leuchtend.
+    """Arbeitsteilung: Grundgerüst lesbar, Karte mit eigenen Zustandstönen.
 
-    Buttons und Rahmen folgen dem gemeinsamen Netzwerkpunkt-Design. Die
+    Buttons und Rahmen folgen GOLDENRULES Abschnitt 18. Die
     Landkarte ist der Schauplatz und bringt eigene, leuchtende Zustandstöne
     mit — sonst verschwinden Zustände auf dunklem Grund.
     """
@@ -320,8 +320,8 @@ def test_chrome_uses_shared_tokens_and_map_has_its_own_tones(page):
             };
         }"""
     )
-    # Grundgeruest folgt dem gemeinsamen Akzent aller Werkzeuge.
-    assert values["accent"].lower() == "#8f98a8"
+    # Aktuelle Designentscheidung; die Karte behält ihre semantischen Töne.
+    assert values["accent"].lower() == "#c3aff0"
     # Die Karte übernimmt ihn gerade nicht.
     assert values["toneGood"] != values["mutedOk"]
     assert values["toneGood"] and values["toneRisk"]

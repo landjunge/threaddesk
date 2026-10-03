@@ -589,3 +589,76 @@ Orchestrator. Der ThreadDesk-Kern führt dadurch keine externen Agenten aus.
 Baufolge nach den akuten Datensicherungsfehlern einordnen; nicht als parallele
 Baustelle vorziehen. Die zukünftige Abnahme umfasst einfache und schwierige
 Aufgaben, unzureichende Qualität, veraltete Preise, Budgetmangel und Datenfreigaben.
+
+
+## 18. Verbindliche Designregeln und Überarbeitung vom 3. Oktober 2026
+
+Der Nutzer verwirft die uneinheitliche Oberfläche ausdrücklich: Schriften,
+Button- und Feldgrößen, Abstände und Flächennutzung müssen zusammenpassen.
+Diese Entscheidung ersetzt die bisherigen R2-Maße 28/32 Pixel und 10-Pixel-Text.
+Sie gilt für Schreibtisch, Wissen, Karte, Daten, Import und Dialoge einschließlich
+Deutsch/Englisch, langer Inhalte, Leer- und Fehlerzustände.
+
+### Gemeinsame Regeln
+
+- Eine lokal verfügbare Systemschrift; keine zusätzlichen Webfonts. Vier feste
+  Rollen: 12 Pixel für Metadaten, 14 für Lesetext und Bedienung, 16 für Abschnitte,
+  24 für Seitentitel. Normale Browser-Vergrößerung bleibt nutzbar. Keine zufälligen
+  Browser-Standardgrößen, Versalienüberschriften oder Schriftwechsel in Formularen.
+- Alle Aktionsbuttons, Reiter und einzeiligen Felder haben dieselbe Höhe:
+  40 Pixel, bei grobem Zeigegerät gemeinsam 44 Pixel. Keine kleinere „compact“-
+  Variante. Gleiche Aktionen einer Gruppe teilen Breiten; freie Texteingaben
+  nutzen den Rest. Mehrzeilige Inhalte und Thread-Zeilen dürfen mit Inhalt wachsen.
+- Abstandsreihe 4/8/12/16/24/32 Pixel. 8 zwischen verbundenen Bedienelementen,
+  16 für Panelinnenraum und zwischen Arbeitsflächen, 24 für getrennte Abschnitte.
+  Formen, Labels, Bedienelemente und Überschriften an gemeinsamen Linien ausrichten.
+- Dunkle ruhige Flächen, klare lesbare Texte, Akzent für Hauptaktion/Auswahl,
+  Status zusätzlich als Text. Ein einheitlicher eckiger Komponentenstil; Formen
+  der Wissenskarte behalten ihre Bedeutung. Sichtbarer Tastaturfokus.
+- Desktop: Threadliste und Raum links, Arbeitsinhalt in der Mitte, Werkzeuge rechts.
+  Arbeitsbereiche füllen die verfügbare Fläche. Bei schmalem Fenster werden Spalten
+  geordnet untereinander gestellt; keine abgeschnittenen Aktionen oder überbreiten
+  Textzeilen. Eine Karte darf als zweidimensionale Arbeitsfläche bedient werden.
+- **Keine sichtbaren Scrollbalken.** Scrollen per Rad, Trackpad, Touch und Tastatur
+  bleibt erhalten. Innere Scrollflächen sind fokussierbar und benannt; Fokus ist
+  sichtbar. Inhalte nicht mit `overflow:hidden` unzugänglich machen. Das Verbergen
+  der Balken ist ein ausdrücklicher Nutzerwunsch, keine allgemeine Empfehlung für
+  Barrierefreiheit. Keine pauschale WCAG-Konformitätsbehauptung.
+- Hilfedialog: im Fenster scrollbar, Fokus beim Öffnen hinein und beim Schließen
+  zurück; Escape schließt. Hintergrundbedienung während des Dialogs gesperrt.
+- Bestehende Funktionen und Datenspeicherung erhalten. Groks Nutzer-E2E-/Medien-
+  Auftrag bleibt bestehen; Screenshots dieser Überarbeitung sind keine fertigen
+  Erklärvideos. Native Builds und aktive Voice bleiben nachgeordnet.
+
+### Recherchegrundlage und eigene Festlegung
+
+Carbon liefert Rollen für Typografie und Komponenten, konsistente Buttonmaße
+und eine Abstandsreihe. Die hier gewählten vier Schriftrollen, 40-Pixel-Höhe und
+ThreadDesk-Flächenaufteilung sind unsere konkrete Produktentscheidung, keine
+Behauptung, Carbon verlange überall genau diese Werte. MDN beschreibt, dass
+`scrollbar-width:none` die Scrollbarkeit erhält und zusätzliche Tastaturwege
+wichtig sind. W3C Reflow ist die Grundlage für die Prüfung schmaler Ansichten.
+
+- [Carbon: Typografie](https://www.carbondesignsystem.com/building-blocks/foundations/typography/type-sets)
+- [Carbon: Button-Spezifikation](https://www.carbondesignsystem.com/building-blocks/core/components/button/specifications)
+- [Carbon: Abstände](https://www.carbondesignsystem.com/building-blocks/foundations/spacing/overview)
+- [MDN: scrollbar-width](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/scrollbar-width)
+- [W3C: Reflow](https://www.w3.org/WAI/WCAG22/Understanding/reflow.html)
+
+### Umsetzungsplan und Abschluss
+
+1. Gesicherten Stand `accept/browser-coverage` bei `d3fdf51` übernehmen und alle
+   vorhandenen Ansichten erfassen. Erledigt; eigener Branch `design/unified-interface`.
+2. Gemeinsame Tokens und Komponenten korrigieren, widersprüchliche Überschreibungen
+   entfernen, alle Ansichten damit aufbauen. Umgesetzt.
+3. Im echten Browser mit synthetischen Daten prüfen: Desktop, schmales Fenster,
+   320-Pixel-Reflow, beide Sprachen, lange Texte, Leer-/Fehlerzustände, Dialog und
+   Tastatur-Scrollen. Vorhandene Funktionsprüfungen für betroffene Seiten ausführen.
+   Abgeschlossen: 172 Tests bestanden; Umfang und Grenzen in COVERAGE.md.
+4. Auffälligkeiten korrigieren, Ergebnis mit Grenzen in COVERAGE festhalten,
+   Änderungen pushen und im bestehenden Notion-Plan verknüpfen. Kein nativer Build.
+
+Die zusätzliche Browser-Abnahme `828320d` wurde während der Designarbeit
+übernommen. Der aktuelle Prüfstatus steht unter TD-DESIGN-01 in COVERAGE.md;
+die dort genannte Umgebung begrenzt den Nachweis. Keine Abnahme der konkreten
+Nutzerinstallation und kein Ersatz für Groks Hilfe-/Videoarbeit.

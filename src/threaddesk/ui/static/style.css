@@ -1,39 +1,38 @@
-/* Gemeinsames Desk-Design R2: neutrale Produktoberflaeche. ThreadDesk
-   bleibt nur an der Wortmarke als eigenes Produkt erkennbar. */
+/* Gemeinsame Designregeln: GOLDENRULES.MD, Abschnitt 18.
+   Komponentenmaße werden hier definiert, nicht pro Ansicht überschrieben. */
 :root {
-  --bg: #121316;
-  --bg-elevated: #1a1b1f;
-  --bg-subtle: #1e1f24;
+  --bg: #111318;
+  --bg-elevated: #191c22;
+  --bg-subtle: #191c22;
   --bg-card: #1e1f24;
   --bg-raised: #24262d;
   --bg-strip: #15171b;
-  --fg: #e2e4e9;
-  --fg-muted: #8b909a;
-  --fg-subtle: #6b7280;
+  --fg: #eef0f4;
+  --fg-muted: #b0b6c2;
+  --fg-subtle: #a0a8b8;
   /* Zwei Linienstaerken mit verschiedenen Aufgaben:
      --border trennt Flaechen (Deko, kein Kontrastwert noetig).
      --border-strong zeichnet die Kante von Bedienelementen und haelt
      dafuer 3:1 gegen den Hintergrund ein (WCAG 2.2, 1.4.11). */
   --border: #2e3138;
-  --border-strong: #5c616a;
-  --border-hover: #6b7280;
+  --border-strong: #737d8d;
+  --border-hover: #a8afbd;
   /* Markenfarbe des Schriftzugs, wie auf threaddesk.netzwerkpunkt.de
      und in brand/wordmark.svg. Gilt nur fuer den Namen — die
-     Oberflaeche bleibt auf dem neutralen Akzent. */
+     Oberfläche verwendet denselben Akzent sparsam für Auswahl und Hauptaktion. */
   --brand: #b99cff;
-  --accent: #8f98a8;
+  --accent: #c3aff0;
   --accent-fg: #121316;
-  --ok: #3d9b6a;
+  --ok: #7bdaa7;
   --warn: #c9a227;
-  --idle: #85887e;
+  --idle: #aab0bb;
   --done: #8aa4b5;
-  --risk: #c45c5c;
+  --risk: #f49b9b;
   /* Keine Rundungen. border-radius ist ueberall 0; die einzige Ausnahme
      sind die Kartensymbole, dort bedeutet die Form die Knotenart. */
-  /* R2: Knoepfe 28px, Reiter und kompakte Navigation 32px. Unter dem
-     Finger waechst nur die Trefferflaeche auf mindestens 44px. */
-  --control: 28px;
-  --control-sm: 32px;
+  /* Ein Maß für alle Aktionen und einzeiligen Felder. */
+  --control: 40px;
+  --control-sm: var(--control);
   --control-touch: 44px;
   --space-1: 4px;
   --space-2: 8px;
@@ -45,12 +44,12 @@
      nichts nachgeladen werden muss und ThreadDesk auch ohne Netz so
      aussieht wie mit. */
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  /* Genau vier R2-Schriftstufen. */
-  --text-sm: 10px;     /* Meta, Zeit, kleine Etiketten */
-  --text-base: 12px;   /* Text, Knoepfe, Reiter */
-  --text-lg: 14px;     /* Karten- und Abschnittstitel */
-  --text-xl: 16px;     /* App-Titel, sonst nichts */
+  --font-mono: var(--font);
+  /* Vier Rollen: Metadaten, Lesetext/Bedienung, Abschnitt, Seitentitel. */
+  --text-sm: 12px;
+  --text-base: 14px;
+  --text-lg: 16px;
+  --text-xl: 24px;
   --motion-quick: 150ms;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
@@ -131,7 +130,7 @@ button:not(:disabled),
 .workspace {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  grid-template-columns: 280px minmax(0, 1fr);
   min-height: 0;
   overflow: clip;
 }
@@ -141,17 +140,17 @@ button:not(:disabled),
   flex-direction: column;
   gap: var(--space-3);
   min-height: 0;
-  padding: var(--space-3);
+  padding: var(--space-4);
   overflow: auto;
   overscroll-behavior: contain;
   border-right: 1px solid var(--border);
-  background: var(--bg-elevated);
+  background: var(--bg);
 }
 
 .main {
   min-width: 0;
   min-height: 0;
-  padding: var(--space-3);
+  padding: var(--space-4);
   overflow: clip;
   display: flex;
   container-type: inline-size;
@@ -162,7 +161,7 @@ button:not(:disabled),
   background: var(--bg-subtle);
   border: 1px solid var(--border);
   border-radius: 0;
-  padding: var(--space-3);
+  padding: var(--space-4);
 }
 
 .panel-head,
@@ -176,11 +175,10 @@ button:not(:disabled),
 .panel-head h2,
 .block h3 {
   margin: 0;
-  font-size: var(--text-sm);
+  font-size: var(--text-lg);
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--fg-muted);
+  letter-spacing: 0;
+  color: var(--fg);
 }
 
 .count {
@@ -283,12 +281,15 @@ button:not(:disabled),
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(17rem, 1fr);
+  grid-template-columns: minmax(0, 1.65fr) minmax(320px, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   grid-template-areas:
     "head side"
     "notes side";
-  gap: var(--space-3);
+  gap: var(--space-4);
+  background: transparent;
+  border: 0;
+  padding: 0;
 }
 
 .desk-head {
@@ -299,7 +300,7 @@ button:not(:disabled),
 .desk-notes {
   grid-area: notes;
   min-width: 0;
-  min-height: 8rem;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: auto;
@@ -307,15 +308,14 @@ button:not(:disabled),
 }
 
 .desk-notes .stack {
-  flex: 1 1 auto;
+  flex: 1 0 auto;
   min-height: 0;
 }
 
 .desk-notes textarea {
   flex: 0 0 auto;
-  min-height: 4.5rem;
-  height: 4.5rem;
-  resize: none;
+  min-height: 112px;
+  resize: vertical;
 }
 
 .desk-stand {
@@ -324,7 +324,7 @@ button:not(:disabled),
 
 .stand-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2) var(--space-3);
   margin: var(--space-2) 0 0;
 }
@@ -341,17 +341,14 @@ button:not(:disabled),
 }
 
 .stand-last {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
 .whiteboard-log {
   list-style: none;
   margin: var(--space-2) 0;
   padding: 0;
-  max-height: 11rem;
+  max-height: 240px;
   overflow: auto;
   overscroll-behavior: contain;
 }
@@ -449,20 +446,6 @@ button:not(:disabled),
   display: none;
 }
 
-@container desk (max-width: 520px) {
-  .detail {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(10rem, 1fr) minmax(0, 40%);
-    grid-template-areas:
-      "head"
-      "notes"
-      "side";
-  }
-
-  .stand-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
 
 .prose,
 
@@ -475,7 +458,7 @@ button:not(:disabled),
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 0;
-  padding: var(--space-3);
+  padding: var(--space-4);
 }
 
 .files {
@@ -496,7 +479,7 @@ button:not(:disabled),
 
 .migration-version {
   min-width: 0;
-  padding: var(--space-3);
+  padding: var(--space-4);
   background: var(--bg);
   border: 1px solid var(--border);
 }
@@ -580,10 +563,15 @@ code {
   border: 1px solid var(--border-strong);
   background: var(--bg-elevated);
   color: var(--fg);
-  font: 500 var(--text-base)/1 var(--font);
+  font: 500 var(--text-base)/1.4 var(--font);
+  height: var(--control);
+  flex-shrink: 0;
+  gap: var(--space-2);
+  text-decoration: none;
+  white-space: nowrap;
   transition: background var(--motion-quick) var(--ease-out),
     border-color var(--motion-quick) var(--ease-out),
-    transform var(--motion-quick) var(--ease-out);
+    color var(--motion-quick) var(--ease-out);
 }
 
 .btn:hover {
@@ -591,7 +579,7 @@ code {
 }
 
 .btn:active {
-  transform: scale(0.98);
+  filter: brightness(.92);
 }
 
 .btn-primary {
@@ -619,7 +607,22 @@ code {
   color: var(--fg-muted);
 }
 
-input[type="text"],
+input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
+textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
+  color: var(--fg);
+  border-radius: 0;
+  padding: var(--space-2) var(--space-3);
+  font: 400 var(--text-base)/1.5 var(--font);
+}
+
+input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]) {
+  height: var(--control);
+}
+
 textarea {
   width: 100%;
   min-height: var(--control);
@@ -627,7 +630,7 @@ textarea {
   background: var(--bg);
   color: var(--fg);
   border-radius: 0;
-  padding: var(--space-3);
+  padding: var(--space-4);
   font: 400 var(--text-base)/1.45 var(--font);
 }
 
@@ -644,7 +647,7 @@ textarea:focus,
 .btn:focus-visible,
 .chip:focus-visible,
 .thread-item:focus-visible {
-  outline: 1px solid var(--accent);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -668,15 +671,14 @@ textarea:focus,
 }
 
 .chip {
-  min-height: var(--control-sm);
-  padding: 0 var(--space-3);
+  height: var(--control);
+  min-height: var(--control);
+  padding: 0 var(--space-4);
   border-radius: 0;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--fg-muted);
-  font: 500 var(--text-sm)/1 var(--font);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font: 500 var(--text-base)/1.4 var(--font);
 }
 
 .chip.is-on {
@@ -693,6 +695,7 @@ textarea:focus,
 
 .inline-form input {
   flex: 1;
+  min-width: 0;
 }
 
 .snap-list {
@@ -709,7 +712,7 @@ textarea:focus,
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-3);
+  padding: var(--space-4);
   border: 1px solid var(--border);
   border-radius: 0;
   background: var(--bg);
@@ -725,7 +728,7 @@ textarea:focus,
 .banner-error {
   grid-column: 1 / -1;
   margin: var(--space-3) var(--space-4) 0;
-  padding: var(--space-3);
+  padding: var(--space-4);
   border-radius: 0;
   font-size: var(--text-base);
 }
@@ -757,32 +760,116 @@ textarea:focus,
   display: block;
 }
 
-@media (max-width: 720px) {
-  .workspace {
-    grid-template-columns: 1fr;
-  }
-
-  .sidebar {
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-  }
-
-}
-
-@media (pointer: coarse) {
-  /* Unter dem Finger werden alle Ziele 44px. Das ist die Zahl, die Apple
-     und Material dafuer nennen — kein eigener Geschmack. */
-  .btn,
-  .chip,
-  select,
-  input[type="text"],
-  .thread-item {
-    min-height: var(--control-touch);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
   }
+}
+
+/* Shared type, focus and surface rules. */
+h1, h2, h3, h4, p { overflow-wrap: anywhere; }
+h1 { margin: 0; font-size: var(--text-xl); line-height: 1.25; font-weight: 600; }
+h2, h3, h4 { margin: 0; font-size: var(--text-lg); line-height: 1.5; font-weight: 600; }
+p { margin: var(--space-2) 0; }
+button, input, select, textarea { font-family: var(--font); }
+a { color: var(--accent); text-underline-offset: 3px; }
+button:disabled, .btn:disabled { opacity: .55; cursor: not-allowed; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+::placeholder { color: var(--fg-subtle); opacity: 1; }
+input[type="checkbox"], input[type="radio"] { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+code, pre, .thread-id, [data-room-instance], [data-room-code], [data-room-members] { overflow-wrap: anywhere; }
+pre { white-space: pre-wrap; }
+hr { border: 0; border-top: 1px solid var(--border); margin: var(--space-5) 0; }
+
+/* Requested: no visible bars. Native wheel/touch/keyboard scrolling remains. */
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+.topbar { padding: var(--space-4); gap: var(--space-5); }
+.brand { flex: 0 0 auto; }
+.brand-name { font-size: var(--text-lg); }
+.brand-tag { margin-top: var(--space-1); }
+.sidebar { gap: var(--space-4); }
+.panel-head { margin-bottom: var(--space-3); flex-wrap: wrap; }
+.panel { min-width: 0; }
+.thread-item { min-height: var(--control); font: 400 var(--text-base)/1.5 var(--font); align-items: start; padding: var(--space-3); }
+.thread-title { overflow-wrap: anywhere; }
+.thread-meta { flex: 0 0 auto; flex-direction: column; align-items: start; gap: var(--space-1); }
+.thread-item.is-current { box-shadow: inset 3px 0 var(--accent); }
+.new-thread > .btn, .sidebar form > .btn { width: 100%; }
+.sidebar form { display: grid; gap: var(--space-2); margin-top: var(--space-3); }
+.sidebar form label { display: grid; gap: var(--space-1); }
+.sidebar select { width: 100%; }
+.gate-hint { margin-top: var(--space-3); }
+.status { line-height: 1.5; white-space: nowrap; overflow-wrap: normal; text-transform: none; letter-spacing: 0; }
+
+.desk-head, .desk-notes, .desk-side > .block {
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.desk-head .block, .desk-stand { margin-top: var(--space-4); }
+.desk-head .detail-meta { margin: var(--space-3) 0 0; }
+.title-block { min-width: 0; flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2) var(--space-3); align-items: center; }
+.title-block .eyebrow, .title-block form { grid-column: 1 / -1; }
+.detail-head { align-items: start; }
+.detail-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.detail-actions .btn { width: 100%; }
+.detail-head > .status { margin-top: var(--space-1); }
+.status-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.status-row .chip { width: 100%; padding-inline: var(--space-2); }
+.desk-side { gap: var(--space-4); }
+.desk-side .block { flex-shrink: 0; }
+.desk-notes > .whiteboard { margin-bottom: var(--space-5); }
+.desk-notes > .stack > textarea { flex: 1 0 112px; }
+.whiteboard-form textarea { min-height: 80px; }
+.whiteboard-log { padding-right: var(--space-1); }
+.whiteboard-entry { padding: var(--space-3); }
+.whiteboard-kind { flex: 1; min-width: 0; }
+.whiteboard-kind select { flex: 1; min-width: 0; }
+.inline-form { align-items: end; }
+.inline-form > .field, .inline-form > label:has(select) { flex: 1; min-width: 0; }
+.inline-form > .field select, .inline-form > label select { width: 100%; }
+.desk-notes > .stack > .inline-form > .btn { flex: 1; }
+.file-item > code, .snap-item > div { min-width: 0; flex: 1; }
+.empty-detail { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: var(--space-3); text-align: center; padding: var(--space-5); }
+
+/* Reflow into a single scrollable work surface when columns become cramped. */
+@container desk (max-width: 920px) {
+  .detail { display: block; overflow: auto; }
+  .desk-head, .desk-notes { margin-bottom: var(--space-4); }
+  .desk-notes, .desk-side { overflow: visible; }
+  .desk-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .empty-detail { display: flex; }
+}
+@container desk (max-width: 600px) {
+  .desk-side { grid-template-columns: minmax(0, 1fr); }
+  .title-block { grid-template-columns: minmax(0, 1fr); }
+  .detail-meta { flex-wrap: wrap; }
+  .whiteboard-form > .inline-form { flex-wrap: wrap; }
+  .whiteboard-form > .inline-form > input { flex-basis: 100%; }
+  .row-actions { flex-wrap: wrap; }
+}
+@media (max-width: 800px) {
+  html, body { height: auto; min-height: 100%; overflow: auto; }
+  .shell { height: auto; min-height: 100dvh; overflow: visible; }
+  .topbar { flex-wrap: wrap; }
+  .workspace { display: flex; flex-direction: column; overflow: visible; }
+  .sidebar { overflow: visible; border-right: 0; border-bottom: 1px solid var(--border); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .threads { grid-column: 1 / -1; }
+  .main { overflow: visible; display: block; }
+  .detail { overflow: visible; }
+}
+@media (max-width: 480px) {
+  .sidebar { grid-template-columns: minmax(0, 1fr); }
+  .topbar, .main, .sidebar { padding: var(--space-3); }
+  .detail-head { flex-wrap: wrap; }
+  .inline-form { flex-wrap: wrap; }
+  .inline-form > input:not([type="checkbox"]) { flex-basis: 100%; }
+  .inline-form > .btn { flex: 1; }
+  .snap-item, .file-item { flex-wrap: wrap; }
+  .stand-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (pointer: coarse) {
+  :root { --control: 44px; }
 }

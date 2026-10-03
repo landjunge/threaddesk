@@ -34,6 +34,7 @@ DEFAULT_REGISTER = PLAIN
 EXPERT_SUFFIX = "#expert"
 
 CATALOG: dict[str, dict[str, str]] = {
+    "ui.tools": {"de": "Werkzeuge zum Thread", "en": "Thread tools"},
     "data.profiles": {"de": "Wiederhergestellte Arbeitsbereiche", "en": "Restored workspaces"},
     "data.open_profile": {"de": "Arbeitsbereich öffnen", "en": "Open workspace"},
     "data.nav": {"de": "Daten", "en": "Data"},
