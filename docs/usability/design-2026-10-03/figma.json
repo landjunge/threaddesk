@@ -1,0 +1,11 @@
+{
+  "file": "https://www.figma.com/design/B9Cj8P12JwXo7BGmW3Icu0",
+  "frame": "2:59",
+  "scope": "tokens and foundations",
+  "direction": "desktop",
+  "variables": 51,
+  "textStyles": 4,
+  "systemFontFallback": "Roboto",
+  "source": "src/threaddesk/ui/static/networkpunkt.css",
+  "date": "2026-10-03"
+}
