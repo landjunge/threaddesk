@@ -88,12 +88,12 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 ## TD-KNOW-01 Wissen
 
 - Nutzerziel: Knoten und Beziehung anlegen, filtern, zwischen Liste und Karte wechseln.
-- Status: Anlegen, leeres Absenden, Filter und der Weg zur Karte sind nachgewiesen in `test_user_creates_filters_and_opens_knowledge_on_the_map`, Chrome vorn, 13,20 Sekunden, 2026-10-03. Ein leerer Knoten wird nicht gespeichert. Der Filter auf den Typ task blendet „Projekt ÄÖÜ“ aus, Zurücksetzen holt ihn zurück. Eine Person und die Verbindung contains bleiben nach Neuladen. Die Karte zeigt beide Titel, die Linie und nach dem Klick den Zweck „Sichtbarer Zweck“. Die 19 Kartenfälle in `tests/test_ui_browser.py` bleiben der Linux-Stand von `54f2ac0`. Zoom, Tastatur und Fenstergrößen sind auf diesem Mac nicht wiederholt.
+- Status: Anlegen, leeres Absenden, Filter und der Weg zur Karte sind nachgewiesen in `test_user_creates_filters_and_opens_knowledge_on_the_map`, Chrome vorn, 13,20 Sekunden, 2026-10-03. Ein leerer Knoten wird nicht gespeichert. Der Filter auf den Typ task blendet „Projekt ÄÖÜ“ aus, Zurücksetzen holt ihn zurück. Eine Person und die Verbindung contains bleiben nach Neuladen. Die Karte zeigt beide Titel, die Linie und nach dem Klick den Zweck „Sichtbarer Zweck“. Die 19 Kartenfälle sind zusätzlich auf diesem Mac wiederholt, siehe TD-MAP-01.
 
 ## TD-MAP-01 Karte bedienen
 
 - Nutzerziel: Auswahl, Zoom, Fokus, Detail, Tastatur, reduzierte Bewegung, mehrere Breiten.
-- Status: 19 Fälle in `tests/test_ui_browser.py`, Linux-Chromium `54f2ac0`. Auf diesem Mac zeigt derselbe Wissenslauf zwei Knoten, eine Linie und eine Auswahl. Zoom, Tastatur, Fokus und Fenstergrößen sind hier nicht wiederholt. Safari und Firefox offen.
+- Status: 19 Fälle in `tests/test_ui_browser.py` auf diesem Mac, System-Chrome, 2026-10-03. Kopflos 9,58 Sekunden. Dieselben Fälle im vorderen Chrome, 75,53 Sekunden, 1,5 Sekunden je Aktion: Klick, Umschalt-Klick, Tastatur, Zoom um die Mitte, Einpassen, Ziehen bei 1280 und 600 Pixeln, Formen, Status ohne Farbe, Pfeil, reduzierte Bewegung und Ziehen eines Knotens. Der Linux-Stand von `54f2ac0` bleibt der ältere Beleg. Safari und Firefox sind offen.
 
 ## TD-HAND-01 Übergabe
 
