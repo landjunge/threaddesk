@@ -534,6 +534,22 @@ Originaldaten erhalten. Notion bleibt bis zur nachgewiesenen Umschaltung das
 Arbeitsgedächtnis. Eine erfolgreiche Serverantwort allein ist keine Auslieferung
 einer nutzbaren Sicherungsdatei an den Nutzer.
 
+### Verbindliche Reihenfolge: Browser vor Voice und nativen Apps
+
+Zwischenentscheidung des Nutzers vom 3. Oktober 2026: **Zuerst müssen alle
+vorgesehenen Nutzerabläufe im Browser funktionieren und dort geprüft sein. Aktive
+Voice-Hilfe sowie Bau und Auslieferung nativer Mac-, Windows- und Linux-Apps
+kommen zum Schluss.** Das betrifft auch erneute native Build-Runden; ein grüner
+Backend-Test allein erfüllt die Browser-Abnahme nicht.
+
+Die Browser-Abnahme verwendet den bereinigten aktuellen Funktionsumfang, keine
+unbegrenzte Liste künftiger Funktionen. Fehlende oder fehlerhafte Browserabläufe
+werden sichtbar nachgeführt und abgearbeitet. Hilfe-/Video-Abläufe können dabei
+aus echten Prüfungen vorbereitet werden; aktive Voice-Integration und native
+Pakete werden dadurch nicht vorgezogen. Bereits erkannte kleine Codekorrekturen
+am Desktop dürfen als nachvollziehbarer Entwurf erhalten bleiben; sie sind kein
+Nachweis einer getesteten oder ausgelieferten nativen App.
+
 ## 17. Aufgabenbezogene Modellwahl und kleiner Whiteboard-Hook
 
 **Wähle das günstigste verfügbare und zugelassene Modell, das die konkrete Aufgabe
