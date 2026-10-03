@@ -1189,3 +1189,103 @@ def test_user_reads_housekeeper_phases_in_english(tmp_path: Path) -> None:
     finally:
         desk.stop()
     assert page_errors == []
+
+
+def _create_en(page, title: str) -> None:
+    page.wait_for_function(
+        "() => { const root = document.querySelector('.new-thread');"
+        " return !!(root && root._x_dataStack); }"
+    )
+    button = page.locator("[data-new-thread]")
+    field = page.locator("[data-new-title]")
+    button.click()
+    if not field.is_visible():
+        button.evaluate("el => el.click()")
+    expect(field).to_be_visible()
+    field.fill(title)
+    page.locator("#thread-list").get_by_role(
+        "button", name=_sentence("list.create", "en"), exact=True
+    ).click()
+    expect(page.locator("h1")).to_have_text(title)
+
+
+def test_user_reads_rename_and_archive_in_english(tmp_path: Path) -> None:
+    """TD-I18N-01. Englische Hinweise für Umbenennen und Archiv. Keine Rückholtaste."""
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    page_errors: list[str] = []
+    dialogs: list[str] = []
+    first = "First thread"
+    renamed = "First renamed"
+    second = "Second thread"
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            before = _chrome_pids()
+            browser = _launch(play, ["--disable-features=Translate"])
+            page = browser.new_page(
+                viewport={"width": 1440, "height": 900},
+                locale="en-US",
+            )
+            page.bring_to_front()
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.on(
+                "dialog",
+                lambda dialog: (dialogs.append(dialog.message), dialog.accept()),
+            )
+            page.goto(url + "/lang/en", wait_until="networkidle")
+            page.wait_for_function("() => window.Alpine !== undefined")
+            _raise_chrome(before)
+            expect(page.locator("html")).to_have_attribute("lang", "en")
+            _create_en(page, first)
+            _create_en(page, second)
+            page.locator(".thread-item", has_text=first).click()
+            expect(page.locator("h1")).to_have_text(first)
+            page.get_by_role(
+                "button", name=_sentence("detail.rename", "en"), exact=True
+            ).click()
+            rename = page.locator('form[hx-post*="/rename"] input[name="title"]')
+            expect(rename).to_be_visible()
+            rename.fill(renamed)
+            page.locator('form[hx-post*="/rename"]').get_by_role(
+                "button", name=_sentence("detail.ok", "en"), exact=True
+            ).click()
+            expect(page.locator("h1")).to_have_text(renamed)
+            expect(page.locator(".thread-title").filter(has_text=renamed)).to_be_visible()
+            _notice(page, _sentence("ui.renamed", "en").format(title=renamed))
+            expect(page.locator("body")).not_to_contain_text(
+                _sentence("ui.renamed", "de").format(title=renamed)
+            )
+            _hides(page, "de", "detail.rename", "detail.archive")
+            _shot(page, "20-umbenennen.png")
+
+            page.locator(".thread-item", has_text=second).click()
+            expect(page.locator("h1")).to_have_text(second)
+            page.get_by_role(
+                "button", name=_sentence("detail.archive", "en"), exact=True
+            ).click()
+            assert dialogs == [_sentence("detail.confirm_archive", "en")]
+            expect(page.locator(".thread-title").filter(has_text=second)).to_have_count(0)
+            expect(page.locator(".thread-title").filter(has_text=renamed)).to_be_visible()
+            expect(page.get_by_text(_sentence("detail.pick", "en"))).to_be_visible()
+            _notice(page, _sentence("ui.archived", "en").format(title=second))
+            expect(page.locator("body")).not_to_contain_text(
+                _sentence("ui.archived", "de").format(title=second)
+            )
+            expect(page.locator("body")).not_to_contain_text(
+                _sentence("detail.confirm_archive", "de")
+            )
+            _hides(page, "de", "detail.pick")
+            stored = "\n".join(
+                item.read_text(encoding="utf-8")
+                for item in home.rglob("*.json")
+                if item.is_file()
+            )
+            assert second in stored
+            _raise_chrome(before, "fenster-archiv-en.png")
+            _shot(page, "21-archiv.png")
+            browser.close()
+    finally:
+        desk.stop()
+    assert page_errors == []
