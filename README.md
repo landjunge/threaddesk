@@ -314,6 +314,7 @@ Produktvision, gewünschtes Verhalten und Grenzen kommen von mir. KI unterstütz
 
 ### Dokumentation
 
+- [GOLDENRULES.MD: Sicherheitsplan und Baufolge](docs/usability/GOLDENRULES.MD) — vor Änderungen an Identität, Sync oder Firmenzugriff lesen; neue Mechanismen noch nicht implementiert.
 - [Benutzeroberfläche](docs/UI.md)
 - [MCP](docs/MCP.md)
 - [Grok-Handoff](docs/GROK.md)
