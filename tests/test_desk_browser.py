@@ -798,3 +798,119 @@ def test_user_runs_the_housekeeper_on_an_installed_model(tmp_path: Path) -> None
     finally:
         desk.stop()
     assert page_errors == []
+
+
+def _sentence(key: str, language: str) -> str:
+    from threaddesk.core import i18n
+
+    return i18n.translate(key, language)
+
+
+def _shows(page, language: str, *keys: str) -> None:
+    for key in keys:
+        expect(page.locator("body")).to_contain_text(_sentence(key, language))
+
+
+def _hides(page, language: str, *keys: str) -> None:
+    for key in keys:
+        expect(page.locator("body")).not_to_contain_text(_sentence(key, language))
+
+
+def _register_name(page, language: str) -> None:
+    """nav.register ist der zugängliche Name der Ebene, kein eigener Satz im Text."""
+    expect(
+        page.get_by_role("navigation", name=_sentence("nav.register", language))
+    ).to_be_visible()
+
+
+def test_user_reads_the_main_pages_in_both_languages(tmp_path: Path) -> None:
+    """TD-I18N-01. Sichtbare Sätze auf Schreibtisch, Hilfe, Wissen, Karte und Sicherung."""
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    page_errors: list[str] = []
+    desk_keys = (
+        "app.tagline", "app.local_note", "nav.knowledge", "data.nav", "nav.map",
+        "register.plain", "register.expert", "help.open",
+        "list.new", "list.empty", "detail.pick", "detail.or_new",
+        "gate.title", "room.title", "room.create",
+    )
+    help_keys = (
+        "help.title", "help.new_thread", "help.next_prev", "help.pick_thread",
+        "help.snapshot_field", "help.microphone", "help.save_form",
+        "help.this_help", "help.no_agent",
+    )
+    knowledge_keys = (
+        "knowledge.lead", "knowledge.graph_json", "knowledge.save_node",
+        "knowledge.filter", "knowledge.reset",
+    )
+    map_keys = (
+        "map.title", "map.eyebrow", "map.fit", "map.no_selection",
+        "map.legend_circle", "map.legend_rect", "map.legend_risk", "map.legend_ai",
+    )
+    data_keys = (
+        "data.title", "data.intro", "data.download", "data.file",
+        "data.confirm", "data.restore", "data.private",
+    )
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            before = _chrome_pids()
+            browser = _launch(play)
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            page.bring_to_front()
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.goto(url + "/lang/de", wait_until="networkidle")
+            page.wait_for_function("() => window.Alpine !== undefined")
+            _raise_chrome(before)
+            expect(page.locator("html")).to_have_attribute("lang", "de")
+            _register_name(page, "de")
+            _shows(page, "de", *desk_keys)
+            expect(page.locator("[data-room-name]")).to_have_attribute(
+                "placeholder", _sentence("room.name", "de")
+            )
+            page.locator("[data-help-open]").click()
+            help_box = page.locator("#help")
+            expect(help_box).to_be_visible()
+            for key in help_keys:
+                expect(help_box).to_contain_text(_sentence(key, "de"))
+            page.keyboard.press("Escape")
+            expect(help_box).to_be_hidden()
+
+            page.get_by_role("link", name="Wissenspool", exact=True).click()
+            _shows(page, "de", *knowledge_keys)
+            page.get_by_role("link", name="Karte", exact=True).click()
+            _shows(page, "de", *map_keys)
+            page.get_by_role("link", name="Daten", exact=True).click()
+            _shows(page, "de", *data_keys)
+
+            page.get_by_role("link", name="EN", exact=True).click()
+            expect(page.locator("html")).to_have_attribute("lang", "en")
+            _shows(page, "en", *data_keys)
+            _hides(
+                page, "de",
+                "data.title", "data.intro", "app.tagline", "knowledge.save_node",
+                "map.title", "help.no_agent", "detail.pick",
+            )
+            page.get_by_role("link", name="Map", exact=True).click()
+            _shows(page, "en", *map_keys)
+            page.get_by_role("link", name="Knowledge", exact=True).click()
+            _shows(page, "en", *knowledge_keys)
+            page.get_by_role("link", name="Threads", exact=True).click()
+            _register_name(page, "en")
+            _shows(page, "en", *desk_keys)
+            expect(page.locator("[data-room-name]")).to_have_attribute(
+                "placeholder", _sentence("room.name", "en")
+            )
+            page.locator("[data-help-open]").click()
+            expect(help_box).to_be_visible()
+            for key in help_keys:
+                expect(help_box).to_contain_text(_sentence(key, "en"))
+            _raise_chrome(before, "fenster-saetze.png")
+            _shot(page, "16-saetze.png")
+            page.keyboard.press("Escape")
+            expect(help_box).to_be_hidden()
+            browser.close()
+    finally:
+        desk.stop()
+    assert page_errors == []

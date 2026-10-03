@@ -133,12 +133,12 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 ## TD-I18N-01 Sprache und Ebene
 
 - Nutzerziel: Deutsch und Englisch sowie Klartext und Fachsprache wechseln, ohne gemischte Oberfläche.
-- Status: DE und EN wechseln Neu/New. Zusätzlich `test_user_switches_plain_and_expert_wording`, Chrome vorn, 25,64 Sekunden, 2026-10-03. „Zwischenstände“ wird zu „Snapshots“ und auf Englisch zu „Saved states“, jeweils zurück. Der übrige Satzbestand ist nicht Satz für Satz geprüft. Ein englischer Migrationsfall liegt zusätzlich in `tests/test_migration_browser.py` vom Linux-Stand.
+- Status: DE und EN wechseln Neu/New. Zusätzlich `test_user_switches_plain_and_expert_wording`, Chrome vorn, 25,64 Sekunden, 2026-10-03. „Zwischenstände“ wird zu „Snapshots“ und auf Englisch zu „Saved states“, jeweils zurück. Zusätzlich `test_user_reads_the_main_pages_in_both_languages`, Chrome vorn, 26,10 Sekunden, 2026-10-03. Leerer Schreibtisch, Tasten-Hilfe, Wissenspool, Karte und Sicherung zeigen die immer sichtbaren Sätze in beiden Sprachen. „Sprachebene“ und „Wording“ sind der Name der Navigation. Nach EN fehlen die geprüften deutschen Sätze auf der Sicherung; Karte, Wissenspool und Schreibtisch zeigen danach die englischen Sätze. Fehlermeldungen, Hinweise, Raumzustände, Hausmeister-Phasen und die übrige Fachsprache sind nicht Satz für Satz geprüft. Ein englischer Migrationsfall liegt zusätzlich in `tests/test_migration_browser.py` vom Linux-Stand.
 
 ## TD-HELP-01 Hilfe und Rückweg
 
 - Nutzerziel: Hilfe öffnen, lesen, schließen und von einem Fehler zurückkehren.
-- Status: Tasten-Hilfe öffnet und schließt mit Escape. Nachweis im selben Chrome-Lauf. Ob jeder Satz zur aktuellen Oberfläche passt, ist noch nicht Satz für Satz geprüft. Voice ist nicht Teil dieser Hilfe.
+- Status: Tasten-Hilfe öffnet und schließt mit Escape. Im selben Lauf, 26,10 Sekunden, stehen die Tastensätze in der Hilfe auf Deutsch und auf Englisch. Ob jeder Satz zur Oberfläche eines offenen Threads passt, ist noch offen. Voice ist nicht Teil dieser Hilfe.
 
 ## TD-SEC-T01 bis T22
 
