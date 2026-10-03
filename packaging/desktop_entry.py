@@ -89,6 +89,10 @@ def main() -> int:
     import webview
     from threaddesk.ui.server import _svc
 
+    # The data page returns an attachment; native webviews disable downloads
+    # by default even when the same workflow succeeds in a regular browser.
+    webview.settings["ALLOW_DOWNLOADS"] = True
+
     try:
         with desktop_listener(JsonStore(base_root())) as listener, running_server(listener) as url:
             webview.create_window(

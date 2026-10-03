@@ -3,6 +3,7 @@ import os
 import socket
 import threading
 import time
+import tempfile
 
 import pytest
 from playwright.sync_api import sync_playwright
@@ -12,8 +13,22 @@ from threaddesk.ui.server import create_app, _svc
 
 
 @pytest.mark.parametrize('backend', ['json', 'sqlite'])
-def test_user_downloads_opens_and_switches_back(tmp_path, monkeypatch, backend):
-    monkeypatch.setenv('THREADDESK_HOME', str(tmp_path))
+@pytest.mark.parametrize('system_alias', [False, True])
+def test_user_downloads_opens_and_switches_back(tmp_path, monkeypatch, backend, system_alias):
+    root = tmp_path / 'workspace'
+    if system_alias:
+        physical = tmp_path / 'physical'
+        physical.mkdir()
+        alias = tmp_path / 'system-alias'
+        try:
+            alias.symlink_to(physical, target_is_directory=True)
+        except OSError:
+            pytest.skip('Creating directory symlinks is unavailable on this platform')
+        temporary = alias / 'folders' / 'temporary'
+        temporary.mkdir(parents=True)
+        monkeypatch.setattr(tempfile, 'tempdir', str(temporary))
+        root = alias / 'users' / 'workspace'
+    monkeypatch.setenv('THREADDESK_HOME', str(root))
     monkeypatch.setenv('THREADDESK_STORAGE', backend)
     svc = _svc()
     thread = svc.create('Browser-Sicherung')
