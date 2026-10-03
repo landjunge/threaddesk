@@ -743,10 +743,10 @@ def _wait_clear(gecko: Gecko) -> None:
     raise AssertionError("Hinweis verdeckt die Navigation")
 
 
-def _expert_dialog(gecko: Gecko) -> str:
+def _read_dialog(gecko: Gecko, css: str) -> str:
     # Der WebDriver-Klick bleibt in der Rückfrage stehen. Der Timer öffnet sie.
     gecko.script(
-        "const button = document.querySelector('#gate form button[type=submit]');"
+        "const button = document.querySelector(" + json.dumps(css) + ");"
         "setTimeout(() => button.click(), 100);"
         "return true;"
     )
@@ -759,6 +759,10 @@ def _expert_dialog(gecko: Gecko) -> str:
             last = str(exc)
             time.sleep(0.2)
     raise AssertionError(last)
+
+
+def _expert_dialog(gecko: Gecko) -> str:
+    return _read_dialog(gecko, "#gate form button[type=submit]")
 
 
 def test_user_reads_expert_wording_in_firefox(tmp_path: Path) -> None:
@@ -920,4 +924,126 @@ def test_user_reads_expert_wording_in_firefox(tmp_path: Path) -> None:
             except subprocess.TimeoutExpired:
                 os.killpg(driver.pid, 9)
                 driver.wait(timeout=5)
+        desk.stop()
+
+
+def test_user_cancels_snapshot_load_in_firefox(tmp_path: Path) -> None:
+    """TD-SNAP-01. Die Rückfrage zum Laden wird gelesen und abgebrochen."""
+    if os.environ.get("THREADDESK_FIREFOX") != "1":
+        return
+    from test_desk_browser import BOARD, LABEL, LATER, NOTE, TITLE, Desk, _free_port
+    from threaddesk.core import i18n
+
+    question = i18n.translate("snapshots.confirm_restore", "de")
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    driver = None
+    gecko: Gecko | None = None
+    try:
+        url = desk.start()
+        port = _free_port()
+        before = _firefox_pids()
+        driver = _driver(port)
+        session, version = _session(port, ignore_prompts=True)
+        assert version == _firefox_version(), version
+        gecko = Gecko(port, session)
+        gecko.rect()
+        time.sleep(PACE_S)
+        gecko.url(url + "/lang/de")
+        _ready(gecko)
+        assert gecko.script("return document.documentElement.lang") == "de"
+        _raise(before)
+        _open_new(gecko)
+        gecko.fill("[data-new-title]", TITLE)
+        time.sleep(PACE_S)
+        gecko.click("#thread-list button[type=submit]")
+        assert gecko.wait_script(
+            "const node = document.querySelector('h1');"
+            "return node ? node.textContent.trim() : ''",
+            TITLE,
+        ) == TITLE
+
+        time.sleep(PACE_S)
+        gecko.fill('#notes textarea[name="text"]', NOTE)
+        time.sleep(PACE_S)
+        gecko.click_xpath("//section[@id='notes']//button[normalize-space()='Notiz speichern']")
+        assert gecko.wait_script(
+            "return document.querySelector('#notes textarea[name=\"text\"]').value",
+            NOTE,
+        ) == NOTE
+
+        time.sleep(PACE_S)
+        gecko.script(
+            "document.querySelector('[data-whiteboard-content]').scrollIntoView({block:'center'})"
+        )
+        gecko.fill("[data-whiteboard-content]", BOARD)
+        time.sleep(PACE_S)
+        gecko.click("[data-whiteboard-submit]")
+        assert gecko.wait_script(
+            "const node = document.querySelector('.whiteboard-body');"
+            "return node ? node.textContent.trim() : ''",
+            BOARD,
+        ) == BOARD
+
+        time.sleep(PACE_S)
+        gecko.script("document.querySelector('#snapshots').scrollIntoView({block:'center'})")
+        gecko.fill("[data-snapshot-label]", LABEL)
+        time.sleep(PACE_S)
+        gecko.click("#snapshots form.inline-form button[type=submit]")
+        assert gecko.wait_script(
+            "const node = document.querySelector('.snap-label');"
+            "return node ? node.textContent.trim() : ''",
+            LABEL,
+        ) == LABEL
+
+        time.sleep(PACE_S)
+        gecko.fill('#notes textarea[name="text"]', LATER)
+        time.sleep(PACE_S)
+        gecko.click_xpath("//section[@id='notes']//button[normalize-space()='Notiz speichern']")
+        assert gecko.wait_script(
+            "return document.querySelector('#notes textarea[name=\"text\"]').value",
+            LATER,
+        ) == LATER
+
+        time.sleep(PACE_S)
+        _wait_clear(gecko)
+        gecko.script("document.querySelector('#snapshots').scrollIntoView({block:'center'})")
+        assert _read_dialog(gecko, "#snapshots .snap-item button[type=submit]") == question
+        _raise(before, "fenster-firefox-abbruch.png")
+        gecko.dismiss_alert()
+        time.sleep(PACE_S)
+        assert gecko.script(
+            "return document.querySelector('#notes textarea[name=\"text\"]').value"
+        ) == LATER
+        assert gecko.script(
+            "return document.querySelector('.whiteboard-body').textContent.trim()"
+        ) == BOARD
+        assert gecko.script(
+            "return document.querySelector('.snap-label').textContent.trim()"
+        ) == LABEL
+        assert "Geladen:" not in str(gecko.script("return document.body.textContent"))
+        gecko.script(
+            "document.querySelector('#notes textarea[name=\"text\"]').scrollIntoView({block:'center'})"
+        )
+        _raise(before, "fenster-firefox-abbruch-notiz.png")
+        _page_shot(gecko, "36-firefox-abbruch-notiz.png")
+    finally:
+        if gecko is not None:
+            try:
+                gecko._call("DELETE", f"/session/{gecko.session}")
+            except Exception:
+                pass
+        if driver is not None and driver.poll() is None:
+            os.killpg(driver.pid, 15)
+            try:
+                driver.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                os.killpg(driver.pid, 9)
+                driver.wait(timeout=5)
+        for pid in _firefox_pids() - before:
+            try:
+                os.kill(pid, 15)
+            except OSError:
+                pass
         desk.stop()
