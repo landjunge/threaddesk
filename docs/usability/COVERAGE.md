@@ -108,12 +108,12 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 ## TD-ROOM-01 Zwei Schreibtische
 
 - Nutzerziel: Raum anlegen, beitreten, in zwei getrennten Prozessen synchronisieren.
-- Status: `tests/test_room_browser.py` und `tests/test_room_sync_e2e.py` am Linux-Stand `54f2ac0`. Das ist lokales HTTP, kein Internet-Sync. Dieser Mac nicht wiederholt. Firmen-Sync bleibt geplant (B2).
+- Status: Auf diesem Mac am 2026-10-03. `test_team_room_real_browser` mit JSON im vorderen Chrome, 126,15 Sekunden, 1,5 Sekunden je Aktion. SQLite derselbe Fall kopflos, 20,21 Sekunden. `test_two_live_servers_sync_a_room` in 7,72 Sekunden, die Ports 8765 und 8766 danach frei. Zwei getrennte Arbeitsbereiche, lokales HTTP auf 127.0.0.1. Firmen-Sync bleibt geplant (B2). Die Nutzerinstallation bleibt offen.
 
 ## TD-PRIV-01 und TD-ROLE-01
 
 - Nutzerziel: private Einträge bleiben lokal. Nur-Lesen empfängt und veröffentlicht nicht. Offline, Neustart und Konflikt behalten beide Fassungen.
-- Status: Vertrags- und Zwei-Prozess-Tests am Linux-Stand. Sichtbare Wiederholung auf diesem Mac offen. Ein Raumrecht ist keine 4AllPass-Freigabe.
+- Status: Derselbe JSON-Fensterlauf. Die private Notiz und der private Verlauf bleiben auf dem ersten Schreibtisch. Nur-Lesen empfängt den freigegebenen Eintrag, die Freigabe ist gesperrt, ein erzwungenes Mitschicken antwortet 403. Nach dem Stopp der Gegenstelle steht „Gegenstelle nicht erreichbar“, nach dem Neustart kommt der neue Eintrag an. Zwei abweichende Fassungen bleiben beide stehen. Wiederholtes Synchronisieren ändert die Anzahl nicht. Ein Raumrecht ist keine 4AllPass-Freigabe.
 
 ## TD-NOTION-01 Übernahme
 
@@ -133,7 +133,7 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 ## TD-I18N-01 Sprache und Ebene
 
 - Nutzerziel: Deutsch und Englisch sowie Klartext und Fachsprache wechseln, ohne gemischte Oberfläche.
-- Status: DE und EN wechseln die Beschriftung von Neu/New und zurück. Nachweis im selben Chrome-Lauf. Klartext/Fachsprache und der übrige Satzbestand sind offen. Ein englischer Migrationsfall liegt zusätzlich in `tests/test_migration_browser.py` vom Linux-Stand.
+- Status: DE und EN wechseln Neu/New. Zusätzlich `test_user_switches_plain_and_expert_wording`, Chrome vorn, 25,64 Sekunden, 2026-10-03. „Zwischenstände“ wird zu „Snapshots“ und auf Englisch zu „Saved states“, jeweils zurück. Der übrige Satzbestand ist nicht Satz für Satz geprüft. Ein englischer Migrationsfall liegt zusätzlich in `tests/test_migration_browser.py` vom Linux-Stand.
 
 ## TD-HELP-01 Hilfe und Rückweg
 

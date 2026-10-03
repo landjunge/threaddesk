@@ -580,3 +580,45 @@ def test_user_creates_filters_and_opens_knowledge_on_the_map(tmp_path: Path) -> 
     finally:
         desk.stop()
     assert page_errors == []
+
+
+def test_user_switches_plain_and_expert_wording(tmp_path: Path) -> None:
+    """TD-I18N-01. Klartext und Fachsprache, danach dieselbe Ebene auf Englisch."""
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    page_errors: list[str] = []
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            before = _chrome_pids()
+            browser = _launch(play)
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            page.bring_to_front()
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.goto(url + "/lang/de", wait_until="networkidle")
+            page.wait_for_function("() => window.Alpine !== undefined")
+            _raise_chrome(before)
+            _create(page, "Sprachebene")
+            heading = page.locator("#snapshots h3")
+            expect(heading).to_have_text("Zwischenstände")
+            page.get_by_role("link", name="Fachsprache", exact=True).click()
+            expect(heading).to_have_text("Snapshots")
+            expect(page.locator("#snapshots .muted").first).to_contain_text("Snapshot-ID")
+            page.get_by_role("link", name="Klartext", exact=True).click()
+            expect(heading).to_have_text("Zwischenstände")
+            page.get_by_role("link", name="EN", exact=True).click()
+            expect(heading).to_have_text("Saved states")
+            page.get_by_role("link", name="Expert", exact=True).click()
+            expect(heading).to_have_text("Snapshots")
+            page.get_by_role("link", name="Plain", exact=True).click()
+            expect(heading).to_have_text("Saved states")
+            page.get_by_role("link", name="DE", exact=True).click()
+            expect(heading).to_have_text("Zwischenstände")
+            expect(page.locator(".banner-error:visible")).to_have_count(0)
+            _raise_chrome(before, "fenster-sprache.png")
+            _shot(page, "09-sprache.png")
+            browser.close()
+    finally:
+        desk.stop()
+    assert page_errors == []

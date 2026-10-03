@@ -21,6 +21,9 @@ from threaddesk.storage.json_store import JsonStore
 from threaddesk.storage.sqlite_store import SQLiteStore
 
 ROOT = Path(__file__).resolve().parents[1]
+HEADED = os.environ.get("THREADDESK_BROWSER_HEADED") == "1"
+# Sichtbares Fenster: jede Aktion wartet 1,5 Sekunden. Kopflos bleibt schnell.
+PACE_MS = 1500
 
 
 class Desk:
@@ -37,7 +40,8 @@ class Desk:
     def start(self):
         env = os.environ.copy()
         env.update(THREADDESK_HOME=str(self.home), THREADDESK_STORAGE=self.storage,
-                   THREADDESK_LANG="de", NO_PROXY="127.0.0.1,localhost")
+                   THREADDESK_LANG="de", NO_PROXY="127.0.0.1,localhost",
+                   PYTHONPATH=str(ROOT / "src"))
         with self.log.open("a", encoding="utf-8") as output:
             self.proc = subprocess.Popen(
                 [sys.executable, "-m", "threaddesk.ui.cli", "serve", "--host", "127.0.0.1",
@@ -78,6 +82,29 @@ def running(desk):
         yield desk
     finally:
         desk.stop()
+
+
+def _chrome_pids() -> set[int]:
+    out = subprocess.check_output(["ps", "-ax", "-o", "pid=,command="], text=True)
+    found: set[int] = set()
+    for line in out.splitlines():
+        if "Google Chrome.app/Contents/MacOS/Google Chrome" in line and "Helper" not in line:
+            found.add(int(line.split(None, 1)[0]))
+    return found
+
+
+def _raise_chrome(before: set[int]) -> None:
+    helper = Path("/tmp/td-raise")
+    if not HEADED or not helper.exists():
+        return
+    new = sorted(_chrome_pids() - before)
+    if not new:
+        return
+    pid = new[-1]
+    subprocess.run([str(helper), str(pid), "activate"], check=False)
+    front = subprocess.run([str(helper), str(pid), "front"], capture_output=True, text=True)
+    if front.returncode != 0:
+        raise AssertionError(f"Chrome ist nicht das vordere Fenster: {front.stdout.strip()}")
 
 
 def click_post(page, selector, path):
@@ -140,7 +167,13 @@ def test_team_room_real_browser(tmp_path, storage):
         stack.enter_context(running(left))
         stack.enter_context(running(right))
         with ExitStack() as browser_stack:
-            browser = play.chromium.launch(executable_path=os.environ.get("THREADDESK_CHROMIUM") or None)
+            before = _chrome_pids()
+            browser = play.chromium.launch(
+                executable_path=os.environ.get("THREADDESK_CHROMIUM") or None,
+                headless=not HEADED,
+                slow_mo=PACE_MS if HEADED else 0,
+                args=["--start-fullscreen"] if HEADED else [],
+            )
             browser_stack.callback(browser.close)
             context_a = browser.new_context(locale="de-DE", viewport={"width": 1440, "height": 1000})
             context_b = browser.new_context(locale="de-DE", viewport={"width": 1440, "height": 1000})
@@ -157,6 +190,8 @@ def test_team_room_real_browser(tmp_path, storage):
             a, b = context_a.new_page(), context_b.new_page()
             a.goto(left.url)
             b.goto(right.url)
+            a.bring_to_front()
+            _raise_chrome(before)
             instance_a = a.locator("[data-room-instance]").inner_text().split()[-1]
             instance_b = b.locator("[data-room-instance]").inner_text().split()[-1]
             assert instance_a != instance_b
