@@ -1,0 +1,465 @@
+# GOLDENRULES.MD
+
+Stand: 3. Oktober 2026. Verantwortliche Entscheidung: Kira, im Auftrag des Nutzers.
+
+**Status: beschlossener Sicherheitsplan und vorbereiteter Bauauftrag. Die unten
+beschriebenen neuen Sicherheitsmechanismen sind nicht implementiert oder als
+Gesamtsystem nachgewiesen. Dieser Dokumentationsschritt startet keinen Bau.**
+
+Diese Fassung hält die Entscheidungen zur Verbindung von ThreadDesk, 4AllPass
+und TollGate fest. Der vereinbarte Pfad ist `docs/usability/GOLDENRULES.MD`.
+Die früher erwähnte lokale Arbeitskopie war nicht verfügbar; auf dem geprüften
+`main` und `feat/desktop-brand-icons` existierte diese Datei nicht. Ihr unbekannter
+Wortlaut wird hier nicht als wiederhergestellt ausgegeben. Vor einer späteren
+Zusammenführung sind zusätzliche ältere Regeln zu erhalten und Widersprüche
+ausdrücklich aufzulösen. Keine konkurrierende `IMPLEMENTATION.md` anlegen.
+
+## 1. Ziel und Entscheidung
+
+Eine Person arbeitet allein sofort lokal. Mehrere eigene Geräte können später
+ausdrücklich verbunden werden. Ein Team kann gemeinsame Inhalte bearbeiten und
+firmenfinanzierte Dienste nutzen, ohne private Tresore anderer Menschen zu öffnen.
+
+**Für kontrollierte Firmenaufrufe wird der dauerhafte Anbieterschlüssel nicht an
+Mitarbeitergeräte oder Agenten ausgegeben.** Ein von der Firma kontrollierter
+4AllPass-Ausführungsdienst benutzt ihn für einen konkret erlaubten Anbieteraufruf.
+TollGate gibt dafür das Budget frei. ThreadDesk hält Auftrag und Ergebnis fest.
+
+Dieser Ausführungsdienst ist ein optionales 4AllPass-Modul mit eigener
+Vertrauensgrenze, kein vierter Produktkern und kein Umbau des verschlüsselten
+Speicherservers. Er muss Geheimnisse für seine Aufgabe im Arbeitsspeicher
+verarbeiten können. Der 4AllPass-CAS-/Sync-Server bleibt ein Speicher für
+verschlüsselte Daten und erhält weder Tresorschlüssel noch Klartextgeheimnisse.
+
+## 2. Geprüfter Ist-Stand
+
+Die Aussagen in dieser Tabelle sind Codebefunde, keine neue Funktion.
+
+| Produkt und geprüfter Commit | Vorhanden | Grenze für diesen Plan |
+| --- | --- | --- |
+| ThreadDesk `1de98700bbb6b14f32edde94a2fdabe7e3fa2338` | Räume, Rollen, lokale Gegenstellen, gemeinsame Whiteboard-Einträge, Konflikterhalt und lokale Gate-Regeln | `RoomBook` bindet Mitglieder heute an `instance_id`. HTTP-Sync ist auf Loopback/private IPv4-Adressen begrenzt. Das ist weder Personenidentität noch E2E-verschlüsselter Internet-Sync. |
+| 4AllPass `47cc823d36f7731001a83f7fbda87d38ccc8e9b4` | Konten, mehrere Tresore pro Konto, `owner_user_id`, Geräte, Sitzungen, verschlüsselte Snapshots, lokaler Freigabe-Broker | Der laufende Broker liefert nach Allow `raw_secret`. `mediated` wird mit `handoff_unavailable` abgelehnt. Pairing-Token und Gerätekennung allein sind kein kryptografischer Agenten-/Gerätebeweis. |
+| TollGate `d07c3ffb7513473a3de1c87bd01e9a1c9ea39c85` | Kostenprüfung, Consumer-Grenzen, Freeze, Ereignisse und atomare Reservierung einer Tagesaufrufzahl | `secrets.py` lädt Schlüssel aus `Key.txt`/Umgebung. `try_reserve_day_call` reserviert Aufrufzahlen, keinen gemeinsamen Geldhöchstbetrag. USD-Werte sind teilweise Schätzwerte. |
+
+Die pauschale Aussage „TollGate hat heute keine API-Schlüssel“ ist damit falsch.
+Für das neue kontrollierte Profil wird Schlüsselverarbeitung außerhalb von
+TollGate verlangt; das ist eine Änderung am künftigen Ausführungsweg.
+
+`4AllPass/docs/team-mode.md` vom 23. August ist weiterhin „Review only. Not
+implemented.“ Dessen Phase 1 enthält ausdrücklich keinen Firmentresor.
+**Gemeinsame Firmeneinträge und ihre Eintragsrechte bleiben Phase 2.** Ein
+`organization_id` am privaten Tresor ersetzt keine dieser Voraussetzungen.
+
+## 3. Zuständigkeiten und Begriffe
+
+| Gegenstand | Zuständig | Bedeutung und Grenze |
+| --- | --- | --- |
+| Konto/Person | 4AllPass; ThreadDesk verknüpft seine Akteur-ID nach bestätigter Zuordnung | Anmeldung identifiziert ein Konto. Sie entschlüsselt keinen Tresor. Anzeigename, E-Mail-Text oder `actor_id` allein beweisen nichts. |
+| Installation/Gerät | 4AllPass bestätigt den Gerätezugang; ThreadDesk behält `instance_id` | Person und Installation bleiben verschieden. Kopieren eines Arbeitsordners erzeugt kein zugelassenes Gerät. |
+| Firma | 4AllPass-Firmenmodell, Phase 2 | Verwaltung, eigenes Eigentum, getrennte Wiederherstellung. Keine automatische Macht über private Mitarbeitertresore. |
+| Team/Raum | ThreadDesk | Gemeinsame Inhalte und Rollen. Mitgliedschaft erzeugt weder Tresorrechte noch Geld. |
+| Tresor/Eintrag | 4AllPass | Mehrere Tresore je Eigentümer möglich. Eine Firma kann mehrere Tresore haben. Ein Team braucht keinen eigenen Tresor. |
+| Persönliche Eintragsfreigabe | 4AllPass | Eine Person darf einen bestimmten Eintrag für festgelegte Operationen und Bedingungen benutzen. |
+| Gemeinsame Budgetgrenze | TollGate | Ein Budget kann viele persönliche Freigaben, Geräte und Agenten umfassen. |
+| Agentenauftrag | Verantwortliche Person innerhalb ihrer 4AllPass-Freigabe | Erlaubt einen begrenzten Auftrag; erzeugt keine höheren Rechte. |
+| Projektstand/Ergebnis | ThreadDesk | Speichert Kontext und überprüfbare Verweise. Ein importierter Eintrag ist keine Ausführungserlaubnis. |
+
+4AllPass bleibt die Schnittstelle für Identität, Geheimnisse und Freigaben.
+TollGate entscheidet über Geld und Sperren. ThreadDesk entscheidet über seine
+Rauminhalte. Kein Programm schreibt unmittelbar in die Datenbank eines anderen.
+Der lokale Hausmeister bleibt im bestehenden Modulrahmen; dieser Plan erweitert
+seine Rechte nicht. Externe Agentenausführung bleibt außerhalb des ThreadDesk-Kerns.
+
+## 4. Allein, eigene Geräte, Team und Sync
+
+| Nutzung | Verbindliches Ziel |
+| --- | --- |
+| Eine Person, ein Gerät | ThreadDesk startet lokal ohne Pflichtkonto, Firma oder Team. Lokale Arbeit und vorhandene lokale KI brauchen keine Firmeninfrastruktur. |
+| Eine Person, mehrere Geräte | Optionaler persönlicher Sync nach bestätigter 4AllPass-Kontozuordnung und gesonderter Zulassung jedes Geräts. Keine künstliche Firma und keine Teameinladungen nötig. |
+| Mehrere Personen | Gesonderte Raumaufnahme, Rollen und nachprüfbare Geräte-/Personenzuordnung. Geheimnisfreigaben erfolgen zusätzlich in 4AllPass. |
+| Bezahlte Firmenaufrufe | Gemeinsame aktuelle Rechte- und Budgetprüfung am firmeneigenen Ausführungsweg. Kein Offline-Kontingent in der ersten kontrollierten Ausgabe. |
+
+Sichtbarkeit ist ausdrücklich `nur lokal`, `eigene Geräte` oder `Raum`.
+Bestehende private Notizen/Einträge bleiben **nur lokal**, bis die Person eine
+gesonderte Freigabe erteilt. Ein Login oder eine Raumaufnahme ändert das nicht.
+Die heute vorhandenen Felder sind damit nicht automatisch migriert.
+
+Persönlicher und Team-Sync übertragen freigegebene Inhalte verschlüsselt zwischen
+zugelassenen Endgeräten. Transportverschlüsselung und E2E-Verschlüsselung sind
+getrennte Anforderungen. Raumschlüssel sind keine Tresorschlüssel. Ein reiner
+Relay-/Speicherbetreiber erhält keine Inhaltsschlüssel. Kein öffentlicher Zugriff
+auf die heutige lokale HTTP-Oberfläche; Internet-Sync benötigt einen eigenen,
+geprüften Transport. Ein Konto bestätigt die Zuordnung, nicht automatisch alle
+Entschlüsselungsrechte.
+
+Whiteboard-Einträge bleiben append-only. Ein stabiler Eintragsschlüssel verhindert
+Doppelungen; gleiche ID mit verschiedenem Inhalt ist ein sichtbarer Konflikt.
+Geräteuhren beweisen keine globale Reihenfolge. Offline-Arbeit bleibt lokal;
+Wiederverbindung prüft aktuelle Mitgliedschaft und Schreibrechte **vor** Übernahme.
+Nicht mehr zulässige Offline-Beiträge bleiben als lokale Entwürfe erhalten.
+
+Entfernte Geräte/Mitglieder erhalten keine neuen Raumschlüssel und keine neuen
+Daten. Bereits gelesene oder kopierte Inhalte können nicht zurückgerufen werden.
+Ein gelöschter Peer oder ein neues Gerät darf seine alten Rechte nicht aus einem
+Backup wiederherstellen. Mitgliedschaftsänderungen benötigen einen aktuellen,
+authentischen Versionsstand; alte Sync-Bündel dürfen sie nicht überschreiben.
+
+Smartphone/Passkey können ein Zugangsmittel sein. Smartphone, Telefonnummer oder
+Personalausweisnummer werden weder zur Pflicht noch zum geheimen Hauptschlüssel.
+Die Zuordnung belegt das zugelassene Konto/Gerät, keine staatlich geprüfte Identität.
+
+## 5. Ein maßgeblicher Firmeneintrag, getrennte Rechte
+
+Ein Anbieterschlüssel hat einen maßgeblichen Eintrag im Firmentresor. Freigaben
+für Anna und Ben oder zwei Teams verweisen auf denselben Eintrag. Verschlüsselte
+Backups und kurzzeitige Verarbeitung sind keine zusätzlichen fachlichen Tresore.
+
+Rechte werden getrennt geprüft: **benutzen**, **Freigaben verwalten**,
+**Schlüssel verwalten/ersetzen** und gegebenenfalls **Geheimnis ansehen/exportieren**.
+Benutzen gewährt keines der anderen Rechte. Eine ThreadDesk-Leitungsrolle gewährt
+keines davon. Verwaltung einer Freigabe setzt ausdrückliche 4AllPass-Berechtigung
+für den betroffenen Firmeneintrag voraus.
+
+Eintragsfreigaben geben keinen gesamten Firmentresorschlüssel heraus. Der
+Ausführungsdienst erhält nur die für seine freigegebenen Einträge erforderliche
+kryptografische Fähigkeit. Ein selektives Schlüsselschema ist vor Umsetzung
+gesondert in 4AllPass zu spezifizieren und zu prüfen. Keine neue Kryptografie im
+ThreadDesk-Kern und keine Umdeutung der bestehenden Ganz-Tresor-Geräte-Envelopes.
+
+Eine Freigabe enthält mindestens Eigentümer/Firma, Person, zugelassene Geräte,
+Eintrag, erlaubte Operationen/Anbieter, Zweck-/Raumbindung soweit erforderlich,
+gemeinsame `budget_id`, Laufzeit, Agentennutzung ja/nein, Status und Revision.
+Die Werte kommen aus der überprüften Freigabe, nicht aus behaupteten Client-Feldern.
+Ein freier Zwecktext bleibt eine Beschreibung; technische Grenzen müssen in
+prüfbare Operationen, Ziele und Parameter übersetzt werden.
+
+Firmenfreigaben hängen immer an aktiver Firmenmitgliedschaft; raumgebundene
+Freigaben zusätzlich an aktiver Raumzugehörigkeit. Freigabe ist eine notwendige
+zusätzliche Bedingung. Die Schnittmenge wird bei jedem Aufruf geprüft.
+
+## 6. Kontrollierter Ausführungsweg
+
+1. Eine Person beauftragt einen Agenten oder fordert selbst einen konkreten
+   Anbieteraufruf an. Der Auftrag referenziert die bestehende Freigabe.
+2. Der 4AllPass-Ausführungsdienst prüft Person, Gerätebesitznachweis, handelnden
+   Agenten, aktuelle Freigabe, Mitgliedschaft, Auftrag und erlaubte Operation.
+3. Er bestimmt aus dem tatsächlich auszuführenden Aufruf eine belastbare
+   Kostenobergrenze. TollGate reserviert sie verbindlich im gemeinsamen Budget.
+4. Vor Versand werden aktuelle Rechte/Sperren erneut geprüft, Auftrag und
+   Reservierung unveränderlich aneinander gebunden und die einmalige
+   Versandfreigabe verbraucht. Ein dauerhafter Versandnachweis entsteht.
+5. Nur dieser Dienst setzt das Geheimnis ein und spricht den freigegebenen
+   Anbieter an. Person/Agent erhalten das geprüfte Ergebnis, keinen Schlüssel.
+6. TollGate verbucht belegte Kosten; die Quelle liefert sekretfreie Ereignisse.
+   ThreadDesk kann diese über den Ereignisvertrag importieren.
+
+Der Dienst läuft für Firmen auf einem Rechner, den Mitarbeiter und ihre Agenten
+nicht administrieren. 4AllPass-Modul und TollGate können für die erste Ausgabe
+auf demselben Firmenhost betrieben werden, mit getrennten Prozessrechten. Kein
+Pflicht-Cloudanbieter. Bei privater Nutzung kann der Besitzer beide lokal
+betreiben; gegen den Besitzer mit Administratorrechten wird keine unüberwindbare
+Budgetgrenze behauptet.
+
+Der Klartext ist im Ausführungsdienst unvermeidbar. Dessen Betreiber, Programmcode
+und Betriebssystem gehören zur Vertrauensbasis. Der Dienst sieht außerdem die
+Inhalte der dort ausgeführten Anbieteraufrufe; private, nicht übergebene Threads
+sieht er nicht. „Zero-Knowledge“ gilt für den verschlüsselten Speicher, nicht für
+diesen ausführenden Prozess. Betriebliches Reporting zeigt keine Geheimnisse;
+berechtigte Schlüsselverwalter werden nicht als technisch schlüsselblind ausgegeben.
+
+**Kein Umgehungsweg:** kontrollierte Firmeneinträge sind von `raw_secret`, Export
+an Mitarbeiter, Umgebungsdateien, altem Pairing und Direktaufrufen ausgeschlossen.
+Bereits verteilte Schlüssel müssen vor Aktivierung dieses Profils beim Anbieter
+ersetzt/widerrufen werden. Sonst bleibt die behauptete Durchsetzung unmöglich.
+Eine Ablehnung von 4AllPass oder TollGate beendet den Versuch; kein stiller
+Fallback auf einen Dateischlüssel, anderen Anbieter oder andere Budget-ID.
+
+Der Executor ist kein allgemeiner HTTP-Proxy: feste freigegebene Anbieterziele,
+Methoden, Modelle und Parameterschemata; keine vom Agenten gewählten Auth-Header,
+Weiterleitungen oder internen Netzadressen. TLS-Prüfung ist zwingend. Antwort-
+und Fehlerformate dürfen keine Schlüssel/Header zurückreichen. Unvertrauenswürdige
+Modellantworten und Raumbeiträge erzeugen keine neuen Rechte.
+
+## 7. Agentenauftrag und Identität
+
+Eine Beauftragung bindet Person, Agent, zugelassenes Gerät, Freigabe/Revision,
+Eintrag, Auftrag/Lauf, erlaubte Aktionen, Frist und Budget zusammen. Sie darf die
+Firmenfreigabe nur einschränken. Weitere Agenten oder Folgeaufträge benötigen eine
+ausdrücklich erlaubte, ebenso begrenzte Delegation; zunächst keine Unterdelegation.
+
+Ein vom gleichen Menschen betriebener zweiter Agent ist keine automatisch
+berechtigte Kopie. Mensch und handelnder Agent bleiben im Nachweis getrennt.
+Die Verbindung von Account, `actor_id` und `instance_id` wird nach bestätigter
+Anmeldung und Geräteaufnahme festgehalten. Geräte/Agenten weisen den Besitz ihrer
+zugelassenen Schlüssel am Aufruf nach. Client-IDs, Bearer-Token plus kopierte
+Gerätekennung und bloße Prozessnamen reichen für das Firmenprofil nicht aus.
+Ein Hardware- oder Integritätsnachweis für ein schadsoftwarefreies Gerät folgt
+daraus ausdrücklich nicht.
+
+Die Aufnahme eines weiteren Firmengeräts benötigt eine bereits vertrauenswürdige
+Bestätigung oder den festgelegten Firmen-Recovery-Weg. Ein gestohlenes
+Kontopasswort darf nicht allein ein neues Firmengerät zulassen. Interne
+Dienstverbindungen sind authentisiert und auf die fest konfigurierte Gegenstelle
+gebunden; ein vom Client benannter anderer Executor oder TollGate ist kein Ersatz.
+Maßgeblich für raumgebundene Firmenrechte ist der bestätigte Mitgliedschaftsstand
+der zuständigen Raumverwaltung, niemals eine lokal editierbare `rooms.json`.
+
+Ein Auftrag wird über eine feste Kennung und seine geprüften Parameter gebunden;
+jeder Ausführungsversuch zusätzlich an einen Digest der konkreten Anfrage.
+Dies verhindert Austausch nach Budget-/Rechteprüfung. Es beweist nicht, dass ein
+erlaubter Prompt inhaltlich dem geschäftlichen Zweck dient. Weitergehende
+fachliche Beschränkungen brauchen eigene prüfbare Regeln.
+
+Ein geteilter Whiteboard-Eintrag oder eine Modellantwort kann einen Vorschlag
+enthalten. Beides darf weder eine persönliche Beauftragung noch einen Allow-
+Entscheid oder eine Budgeterhöhung ersetzen.
+
+## 8. Gemeinsames Budget und Kostenobergrenze
+
+Die Budgetgrenze kommt von einem dazu berechtigten Firmenverwalter. Ihre
+Erstellung/Änderung ist authentisiert und versioniert. ThreadDesk, Agenten und
+ein einfacher Empfänger einer Eintragsfreigabe dürfen sie nicht erhöhen.
+
+Für alle Aufrufe derselben Budgetperiode gilt atomar:
+
+**Verbraucht + offene Reservierungen + neuer Höchstbetrag ≤ genehmigte Grenze.**
+
+100 Dollar für ein Team sind 100 Dollar zusammen. Zusätzliche Personen, Geräte,
+Freigaben, Neustarts und Verlängerungen verdoppeln diese Grenze nicht.
+Übergeordnete Firmen-/Projektgrenzen und untergeordnete Laufgrenzen werden bei
+einer Reservierung gemeinsam berücksichtigt, nicht nacheinander überschritten.
+
+Die erste Ausgabe verwendet genau eine verbindliche TollGate-Budgetstelle pro
+Budget mit dauerhaftem, transaktionalem Journal. Kein verteilter Offline-Zähler,
+kein automatischer Wechsel zu einer leeren Zweitinstanz. Reservierungen aller
+relevanten Grenzen erfolgen in einer Transaktion. Geld wird als ganzzahliger
+Betrag einer festen Untereinheit und Währung geführt; keine Gleitkomma-Bilanz.
+
+Ein Aufruf wird nur zugelassen, wenn der geprüfte Anbieteradapter einen echten
+Höchstbetrag für **alle** abrechenbaren Bestandteile festlegen kann: Eingabe,
+maximale Ausgabe, weitere Tokens/Tools, feste Gebühren und mögliche Versuche.
+Preistabelle und Begrenzungen werden versioniert. Eine grobe Tokenschätzung oder
+ein vom Agenten behaupteter Preis reicht nicht. Nicht begrenzbare Operationen
+werden im harten Firmenprofil abgelehnt. Ein aufgeladener Anbietersaldo erhöht
+die Firmengrenze nie; ein Anbieterlimit zählt nur, soweit es tatsächlich hart ist.
+
+Eine Budgetperiode hat eine feste, vom Verwalter festgelegte Grenze und Zeitbasis.
+Tageswechsel wird aus der Uhr der Budgetstelle berechnet, nicht aus Geräteuhren.
+Alte Reservierungen bleiben ihrer Periode zugeordnet; sie verschwinden nicht beim
+Wechsel. Bei Gesamtausgabenlimits gilt die zusätzliche periodenübergreifende
+Grenze. Wesentliche Unsicherheit über Zeit, Preis oder Abrechnung sperrt neue
+betroffene Aufrufe. Eine Senkung unter bestehende Verpflichtungen erzeugt keine
+Rückbuchung: neue Aufrufe bleiben gesperrt.
+
+Die harte Zusage gilt für zugelassene, technisch begrenzbare Aufrufe über diesen
+Weg und eine korrekte Anbieterabrechnung. Kosten durch andere Schlüssel, einen
+kompromittierten Firmenhost oder abweichende Anbieterabrechnung liegen außerhalb
+dieser Garantie und werden nicht als kontrolliert ausgegeben.
+
+## 9. Abbrüche, Wiederholung, Freeze und Widerruf
+
+Jeder Versuch hat eine eindeutige Aufruf-ID und eine daran gebundene Reservierung.
+Person, Gerät, Agent, Eintrag, Anbieter, Anfrage-Digest, Budget und Richtlinien-
+Revision dürfen während des Versuchs nicht ausgetauscht werden. Eine Wiederholung
+mit derselben ID und anderen Parametern wird abgelehnt.
+
+| Zustand | Verbindliches Verhalten |
+| --- | --- |
+| Vor Versand abgelehnt | Kein Anbieteraufruf. Reservierung nur freigeben, wenn der Nichtversand dauerhaft nachgewiesen ist. |
+| Zum Versand freigegeben/gesendet | Reservierung bleibt bis zur belastbaren Abrechnung gebunden. |
+| Erfolg oder berechneter Fehler | Tatsächliche belegte Kosten genau einmal abrechnen; erst dann unbenötigten Rest freigeben. |
+| Timeout/Crash/Verbindungsabbruch, Ausgang unklar | Kein blindes Wiederholen und keine Freigabe per Ablaufzeit. Höchstbetrag bleibt gebunden oder konservativ verbucht; Status „Ausgang/Kosten unklar“. |
+| Wiederholung | Nur bei belegtem Nichtversand oder nachgewiesener Anbieter-Idempotenz automatisch. Sonst eigener bewusst zugelassener Versuch mit zusätzlicher Reservierung. |
+| Streaming/Tool-Folge | Streaming ist kein Freibrief. Jeder weitere bezahlte Anbieteraufruf durchläuft die ganze Prüfung; ein einzelner Aufruf ist durch seine Parameter vorab begrenzt. |
+
+„Genau einmal“ wird nicht für externe Anbieterwirkung versprochen. Reservierung,
+Versandjournal und Abrechnung müssen gegen Wiederholung idempotent sein; bei
+unklarem externem Ergebnis wird angehalten.
+
+Die erste kontrollierte Ausgabe verwendet **einen aktiven Versandkoordinator
+innerhalb des 4AllPass-Executors**. Er ordnet Versandzulassung, Freigabewiderruf,
+Mitgliedschaftsentzug und Freeze in einem dauerhaften Befehlsjournal. Das ist
+Koordination der vorhandenen Zuständigkeiten, keine Budgetentscheidung in 4AllPass.
+4AllPass prüft Rechte, TollGate die Geld-/Sperrentscheidung. Keiner ersetzt die
+Entscheidung des anderen aus einem Cache.
+
+Unter derselben kurzen Serialisierung pro Ausführungsbereich: aktuellen
+Rechtezustand prüfen, bei TollGate atomar reservieren und aktuell gesperrte
+Budgets ausschließen, den unveränderlichen Versanddatensatz dauerhaft schreiben,
+danach genau diesen Versuch endgültig zum Versand zulassen. Alle internen
+Nachrichten tragen dieselbe Aufruf-ID; wiederholte Nachrichten ändern das Ergebnis
+nicht. Reißt eine Verbindung in dieser Folge ab, wird nicht versandt bzw. ein
+bereits zugelassener Versuch als unklar behandelt. Finanzielle Verpflichtungen
+werden dabei nicht optimistisch zurückgebucht.
+
+Alle Wege für wirksamen Firmen-Widerruf und Freeze, auch automatische Sperren,
+müssen dieselbe Reihenfolge durchlaufen. Quellen dürfen einen Entzug bereits
+vormerken; „wirksam bestätigt“ wird er erst nach dem dauerhaften Sperreintrag des
+aktiven Koordinators. Eine neue Version invalidiert alle noch nicht endgültig
+zugelassenen Versuche. Können Koordinator oder aktuelle Quellstände nicht geprüft
+werden, erfolgt keine neue Zulassung. Es gibt keine vom Koordinator unabhängige
+Weiterverwendung vorbereiteter Versandfreigaben.
+
+Ein Neustart stellt zuerst Sperren, letzte Revisionen und offene Versuche wieder
+her. Unklare endgültig zugelassene Versuche werden nicht automatisch erneut
+gesendet. Kein automatisches Failover und keine zwei aktiven Koordinatoren in
+dieser Ausgabe. Die Zustandsmaschine und der serialisierte Ablauf sind in B0 als
+Protokoll zu konkretisieren und insbesondere durch T08/T12/T13/T15 zu beweisen.
+
+**Ein bestätigter Widerruf verhindert alle danach zugelassenen Anbieteraufrufe.**
+Ein vor ihm endgültig zugelassener Aufruf zählt als in Bearbeitung und kann noch
+Kosten erzeugen; enge Versandfrist, keine später wiederverwendbare Freigabe.
+Widerruf vor endgültiger Versandzulassung stoppt auch bereits vorbereitete
+Aufrufe. Bestätigung eines Widerrufs darf erst erfolgen, wenn diese Reihenfolge
+an der aktiven Ausführungsstelle wirksam ist. Kein Sofortstoppversprechen für einen
+bereits beim Anbieter angenommenen Auftrag.
+
+Bei Unerreichbarkeit von Rechteprüfung, Budgetstelle oder verpflichtendem
+Versandjournal gibt es keine neue Versandzulassung. Lokale ThreadDesk-Arbeit
+bleibt möglich. Die Sperre gilt auch nach Neustart und bei beschädigtem Journal.
+
+## 10. Austritt und Wiederherstellung
+
+Firmenaustritt sperrt Firmenmitgliedschaft, zugehörige Freigaben und neue
+Versandzulassungen. Raum-Austritt sperrt raumgebundene Freigaben und Raumsync.
+Beide Vorgänge sind verschieden. Eine bereits entfernte Person erhält durch
+einen alten Raumstand oder einen erneuten Einladungstext keine Firmenrechte.
+
+Private Wiederherstellung stellt private Daten wieder her. Ein neues oder
+wiederhergestelltes Gerät wird für Firmenzugriff erneut aufgenommen; es übernimmt
+keine Firmenbeauftragung oder alte Sitzung automatisch. Betriebsschlüssel,
+Firmenfreigaben und deren Aktualität werden nicht aus einem privaten ThreadDesk-
+Backup autorisiert. Das verhindert künftige Firmenaufrufe, löscht aber keine
+früher empfangenen Klartexte.
+
+Firmeneigentum erhält einen eigenen Wiederherstellungsweg, unabhängig vom
+privaten Konto einer einzelnen Leitung. Für die erste Firmenausgabe wird eine
+gesonderte Firmen-Recovery mit zwei getrennt verwahrten Anteilen vorgesehen;
+Zusammenführen ausschließlich im vertrauenswürdigen Wiederherstellungsclient.
+Keine Server-Verwahrung des vollständigen Wiederherstellungsschlüssels und kein
+Zugriff auf private Mitarbeitertresore. Das konkrete Verfahren muss den bereits
+vorgesehenen 4AllPass-Recovery-Ansatz nach gesonderter Spezifikation verwenden.
+Zwei Personen als Verwahrer bieten organisatorische Trennung; bei nur einer
+Person mit zwei getrennten Aufbewahrungsorten wird diese Trennung nicht behauptet.
+Der Verlust eines erforderlichen Anteils bleibt ein Verfügbarkeitsrisiko.
+
+Nach Wiederherstellung eines Firmencontrollers bleiben bezahlte Aufrufe zunächst
+gesperrt. Aktueller Mitgliedschafts-/Widerrufsstand, Geräteaufnahme und Kostenjournal
+werden mit unabhängigen aktuellen Kontrollständen und Anbieterbelegen abgeglichen.
+Ungeklärte Aufrufe bleiben finanziell gebunden. Ein Backup ist kein Beweis, dass
+sein Stand noch aktuell ist. Ist der aktuelle Stand nicht belegbar, bleiben die
+betroffenen alten Rechte gesperrt; neue Geräte-/Freigabegeneration erfordert eine
+bewusste Firmenentscheidung. Ein altes Budget darf niemals auf null zurückgesetzt
+und unbemerkt erneut ausgegeben werden.
+
+Beim Ersatz eines verlorenen oder möglicherweise kopierten Executors wird der
+alte Dienstzugang gesperrt und der betroffene Anbieterschlüssel rotiert, bevor
+der neue Executor bezahlte Aufrufe übernimmt. Ein neu benannter Controller allein
+macht einen alten Klartextschlüssel nicht ungültig. Die alte Kopie darf nicht
+parallel mit demselben Budget weiterarbeiten.
+
+## 11. Nachweise ohne Geheimnisse
+
+Ein Freigabeereignis beweist eine Entscheidung, kein ausgeführtes Geschäft.
+Ein Versandnachweis beweist den Versandversuch, keine Anbieterannahme. Erfasst
+werden getrennt: abgelehnt, reserviert, zum Versand zugelassen, angenommen soweit
+belegt, abgeschlossen/fehlgeschlagen und Ausgang/Kosten unklar.
+
+Mindestens verknüpft: Firma, verantwortliche Person, handelnder Agent, Gerät,
+Freigabe/Revision, Eintrag als unkritische Referenz, Auftrag/Lauf, Aufruf-ID,
+Budget/Reservierung, Zeitpunkt, Entscheidung, Anbieter-Nachweis soweit vorhanden
+und Abrechnung. Keine API-Schlüssel, Autorisierungsheader, Passwörter, Prompts
+oder privaten Thread-Inhalte in diesen Ereignissen. Sensible Referenzen bleiben
+auf berechtigte Betrachter begrenzt; keine öffentlichen Personenprofile.
+
+Das vorhandene Authority-Event-v1-Schema hat feste Felder und Ereignistypen.
+Neue Angaben/Zustände brauchen eine ausdrücklich versionierte Erweiterung samt
+Validator, Migration und producer-spezifischer Zuordnung. Sie werden nicht still
+in v1 hineingeschrieben. TollGate schreibt weiterhin nicht in ThreadDesk.
+Die Firma benötigt Zugriff auf das maßgebliche Journal auch dann, wenn ein
+Mitarbeiter seine lokale ThreadDesk-Anzeige löscht.
+
+Die Quelle hält ein dauerhaftes, geordnetes Journal und wiederholbar zustellbare
+Ereignisse. ThreadDesk importiert idempotent. Ein Ausfall der Anzeige muss keine
+bereits dauerhaft protokollierte Ausführung verhindern; ein Ausfall des
+verpflichtenden Quellenjournals verhindert dagegen neue Versandzulassungen.
+Einfache Hashketten beweisen weder Urheber noch Vollständigkeit gegenüber einem
+Administrator, der die ganze Datei ersetzen kann. Herkunftsschutz und getrennte
+Kontrollstände sind im Protokoll festzulegen; keine unbelegte Audit-Garantie.
+
+## 12. Baufolge und Abschlussbedingungen
+
+Die Produktentscheidung ist getroffen. Vor Produktcode fehlen noch konkrete
+Protokollnachweise; diese Tabelle ist der vorbereitete Bauauftrag, keine
+Behauptung, dass die Mechanismen bereits laufen. Keine Phase überspringen.
+
+| Schritt | Zuständig / Auftrag | Abschlussbedingung |
+| --- | --- | --- |
+| B0: Verträge | Bestehende Verträge lesen; versionierte Daten-/Fehlerzustände für Gerätebeweis, Freigabe, Auftrag, Budgetreservierung, Widerruf und Versandjournal spezifizieren. | Ein konkretes Sequenzmodell einschließlich Crash-/Race-Fällen; keine offene Bedeutung von „Widerruf bestätigt“ oder „versandt“. |
+| B1: Lokale Nutzung und Identitätszuordnung | Vorhandene ThreadDesk-IDs erhalten; bestätigte 4AllPass-Person-/Gerätebindung ergänzen. | Lokal ohne Pflichtkonto; kopierter Ordner, vertauschte Person und gestohlene Kennung reichen nicht zur Firmenanmeldung. |
+| B2: Persönlicher/Team-Sync | Vorhandenen Merge wiederverwenden; Sichtbarkeit, authentische Mitgliedschaft, Rechteänderungen und verschlüsselten Transport spezifizieren/umsetzen. | Zwei echte Prozesse/Geräte; Offline, Neustart, Austritt, Read-only und Konflikte funktionieren, private lokale Inhalte verlassen das Gerät nicht. |
+| B3: Firmentresor, Phase 2 | In 4AllPass Organisationseigentum, getrennte Eintragsrechte, selektive Verschlüsselung und Firmen-Recovery nach eigenem Architekturreview umsetzen. | Empfänger kann erlaubten Eintrag benutzen, keine Nachbareinträge/private Tresore öffnen und keine Freigaben weiterreichen. |
+| B4: Gemeinsames Geldjournal | In TollGate atomare Geldreservierung mit Höchstbeträgen, Perioden, Hierarchie, Wiederholungsschutz und Wiederanlauf ergänzen. | Gleichzeitige Geräte können das gemeinsame Limit nicht überschreiten; unbekannte Abrechnung schafft kein neues Budget. |
+| B5: Vermittelte Ausführung | Separates 4AllPass-Executor-Modul an B0/B3/B4 anbinden; zunächst ein synthetischer Anbieter mit festen Kosten. | Ablehnung verhindert nachweislich jeden Anbieteraufruf; kein Schlüssel erreicht Mitarbeiter/Agent/TollGate; kein Legacy-Fallback. |
+| B6: Ein realer Anbieter | Genau eine begrenzbare Operation anbinden; dokumentierte Preis-/Höchstbetragsgrundlage prüfen, Freigaben und Adaptertests vervollständigen. | Kostenobergrenze belegbar, Schlüsselrotation beim Wechsel ins kontrollierte Profil nachgewiesen; keine Freischaltung bei fehlendem Beweis. |
+| B7: Ereignisse und Bedienung | Versionierten Quellenjournal-Export und ThreadDesk-Import anbinden. Oberflächen DE/EN mit konkreten Zuständen. | Person/Agent und geplant/tatsächlich/unklar getrennt; keine Geheimnisse; keine Rechte durch Import. |
+| B8: Gesamtabnahme | Gesamtkette mit synthetischen Nutzern und temporären Arbeitsbereichen adversarial testen. | Alle Fälle aus Abschnitt 13 bestanden, geprüfter Commit und Belege gespeichert; reale Kosten nur bei ausdrücklich dafür freigegebenem Test. |
+
+4AllPass führt Protokoll-/Kryptoänderungen nach seinen Repository-Regeln durch:
+erst Architekturentscheidung, dann kleiner Branch/PR, passende Spezifikation und
+Tests. Diese Datei ist der zentrale produktübergreifende Beschluss; notwendige
+technische Spezifikationen ersetzen sie nicht und dürfen sie nicht still ändern.
+Keine neue Implementierung aus diesem Dokumentations-PR heraus starten.
+
+## 13. Verbindliche Abnahmefälle
+
+Die Fälle sind **zu bauende Prüfungen**, hier nicht als bestanden markiert.
+
+| ID | Versuch | Erwartetes Ergebnis |
+| --- | --- | --- |
+| T01 | ThreadDesk offline neu starten, ohne Konto | Lokale Arbeit möglich; kein Zwang zu Team/Firma/4AllPass-Anmeldung. |
+| T02 | Zwei eigene Geräte verbinden; anschließend Teamraum aufnehmen | Nur ausdrücklich freigegebene Inhalte wechseln den Bereich; lokale private Notiz bleibt auf Gerät A. |
+| T03 | Ordner/`instance_id` kopieren; fremde `actor_id`/`room_id` behaupten | Kein zusätzlicher Geräte-, Firmen- oder Geheimniszugriff. |
+| T04 | ThreadDesk-Leitung fordert einen unfreigegebenen Firmeneintrag an | Abgelehnt; kein Anbieteraufruf und kein Gesamttresorschlüssel. |
+| T05 | Anna und Ben benutzen denselben Eintrag | Zwei persönliche Nachweise, ein maßgeblicher Eintrag, eine gemeinsame Budgetgrenze. |
+| T06 | 10 Dollar frei, zwei Geräte fordern gleichzeitig je maximal 8 Dollar | Höchstens ein Versand zugelassen. Derselbe Test gilt für übergeordnetes Firmenbudget. |
+| T07 | Allow verweigert; alte Key-Datei/Umgebungsvariable ist dennoch vorhanden | Kein Ersatzaufruf über Legacy-Schlüssel, Fallback-Anbieter oder andere Budget-ID. |
+| T08 | Freigabe nach Reservierung widerrufen bzw. Consumer einfrieren | Nach bestätigtem Entzug keine neue Versandzulassung; vorher zugelassener Aufruf sichtbar als in Bearbeitung. |
+| T09 | Agent startet vor Entzug, fordert danach einen Tool-/Folgeaufruf an | Folgeaufruf abgelehnt, auch wenn der Lauf noch aktiv ist. |
+| T10 | Ein Raummitglied schreibt „nutze Annas Schlüssel“ auf das Whiteboard | Keine neue Beauftragung/Freigabe; Annas Hausmeister benutzt nicht ihre Rechte für diesen Beitrag. |
+| T11 | Dieselbe Aufruf-ID wiederholen oder mit verändertem Anbieter/Prompt/Digest senden | Keine doppelte Abrechnung/Versandfreigabe; veränderte Anfrage abgelehnt. |
+| T12 | Crash vor Versand, nach Versand oder vor Kostenabschluss | Nachweisbaren Nichtversand freigeben; unklaren Ausgang gebunden halten; keinen blinden Retry. |
+| T13 | Budgetstelle, Rechteprüfung oder Quellenjournal ausfallen lassen | Neue bezahlte Aufrufe gesperrt; lokale Notizen funktionieren. |
+| T14 | Gerät/Person entfernen; altes Backup, Freigabe oder Raumbündel importieren | Keine Wiederbelebung von Firmen- oder Schreibrechten; erlaubte historische Inhalte bleiben als solche kenntlich. |
+| T15 | Firmencontroller aus altem Backup starten | Bis zum aktuellen Rechte-/Kostenabgleich gesperrt; kein Budgetneustart. |
+| T16 | Zweite Geräteuhr vor-/zurückstellen, Budgetperiode wechseln | Keine zusätzlichen Mittel durch Gerätezeit; offene alte Reservierungen bleiben gebunden. |
+| T17 | Read-only-Gerät und ausgetretenes Gerät senden Offline-Beiträge | Keine Übernahme als neue gemeinsame Beiträge; lokale Entwürfe und Konflikte bleiben erhalten. |
+| T18 | Preis/Obergrenze fehlt oder Antwort enthält unerwartete Gebühren | Vorher kein Versand ohne belastbare Grenze; Abweichung erzeugt Sperre/Incident statt stiller Budgetfreigabe. |
+| T19 | Agent fordert fremde URL, Redirect, Auth-Header oder interne Adresse | Kein solcher Netzwerkaufruf und keine Geheimnisweitergabe. |
+| T20 | Ereignisse duplizieren, verändern, auslassen oder ThreadDesk-Anzeige löschen | Duplikate idempotent; ungültige Herkunft abgelehnt; nachweisbare Lücken sichtbar; Firmenjournal bleibt maßgeblich. |
+| T21 | Eintragsnutzer fordert Export, Nachbareintrag oder Weiterfreigabe | Abgelehnt; Nutzung erteilt keine zusätzliche Verwaltungsmacht. |
+| T22 | Synthetischen Schlüssel in Fehlern, Streams, Logs und Ergebnissen suchen | Kein Schlüssel in Mitarbeiter-/Agentenantwort, TollGate-Zustand oder Ereignissen. |
+
+Das Ergebnis der Planung lautet: **Architekturentscheidungen getroffen; heutige
+Firmen-Sicherheitszusage gesperrt, bis die erforderlichen Mechanismen und Tests
+vorliegen.** Bestehende lokale Funktionen bleiben nutzbar. Eine grüne alte
+Testsuite ist kein Nachweis für die neue Gesamtkette.
+
+## 14. Nachweise und fachliche Grundlage
+
+Codeprüfung am 3. Oktober 2026, auf die in Abschnitt 2 genannten Commits fixiert:
+
+- [ThreadDesk Raum-Sync](https://github.com/landjunge/threaddesk/blob/1de98700bbb6b14f32edde94a2fdabe7e3fa2338/src/threaddesk/services/room_sync.py), [Abschlussplan](https://github.com/landjunge/threaddesk/blob/1de98700bbb6b14f32edde94a2fdabe7e3fa2338/docs/TEAMPLAN.md), [Authority-v1-Schema](https://github.com/landjunge/threaddesk/blob/1de98700bbb6b14f32edde94a2fdabe7e3fa2338/docs/authority/authority-event-v1.schema.json).
+- [4AllPass Sicherheitsgrenze](https://github.com/landjunge/4AllPass/blob/47cc823d36f7731001a83f7fbda87d38ccc8e9b4/docs/security-boundary.md), [Team-Entwurf](https://github.com/landjunge/4AllPass/blob/47cc823d36f7731001a83f7fbda87d38ccc8e9b4/docs/team-mode.md), [Vault-Modell](https://github.com/landjunge/4AllPass/blob/47cc823d36f7731001a83f7fbda87d38ccc8e9b4/backend/app/models/vault.py), [Handoff-Verfügbarkeit](https://github.com/landjunge/4AllPass/blob/47cc823d36f7731001a83f7fbda87d38ccc8e9b4/packages/core/src/access/handoff.ts).
+- [TollGate Schlüsselquellen](https://github.com/landjunge/tollgate/blob/d07c3ffb7513473a3de1c87bd01e9a1c9ea39c85/src/tollgate/secrets.py), [Usage-Ledger](https://github.com/landjunge/tollgate/blob/d07c3ffb7513473a3de1c87bd01e9a1c9ea39c85/src/tollgate/usage_ledger.py), [Kostenschätzung](https://github.com/landjunge/tollgate/blob/d07c3ffb7513473a3de1c87bd01e9a1c9ea39c85/src/tollgate/cost.py), [Event-Emitter](https://github.com/landjunge/tollgate/blob/d07c3ffb7513473a3de1c87bd01e9a1c9ea39c85/src/tollgate/authority_emit.py).
+- Sicherheitsprüfung „Eingefügter Text.txt“, Stand 3. Oktober 2026: acht Prüfbereiche von Identität über Budget bis Recovery/Audit. Die Entscheidungen oben beantworten diese Befunde; sie ersetzen keinen unabhängigen Implementierungsreview.
+
+Externe Primärquellen, am 3. Oktober 2026 geprüft:
+
+- [OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html): minimale Rechte, standardmäßige Ablehnung und Prüfung jeder Anfrage.
+- [OWASP Secrets Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html): Geheimnislebenszyklus, Widerruf, Rotation und geschützter Transport.
+- [RFC 8693, Abschnitt 1.1](https://www.rfc-editor.org/rfc/rfc8693.html#section-1.1): handelnder Akteur und verantwortliches Subjekt sind bei Delegation unterscheidbar. Dieser Plan behauptet weder eine bestehende OAuth-Implementierung noch eine Sicherheitsgarantie allein durch diesen RFC.
+
+Die konkrete Aufteilung in Executor, Budgetjournal und Produktphasen ist eine
+Projektentscheidung aus den Befunden, keine von diesen Quellen zertifizierte
+Architektur.
