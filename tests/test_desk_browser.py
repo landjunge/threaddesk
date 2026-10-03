@@ -147,13 +147,16 @@ def _raise_chrome(before: set[int], shot: str | None = None) -> int | None:
     return pid
 
 
-def _launch(play):
+def _launch(play, extra_args: list[str] | None = None):
+    args = list(extra_args or [])
+    if HEADED:
+        args.append("--start-fullscreen")
     try:
         return play.chromium.launch(
             executable_path=CHROME,
             headless=not HEADED,
             slow_mo=PACE_MS if HEADED else 0,
-            args=["--start-fullscreen"] if HEADED else [],
+            args=args,
         )
     except Exception as exc:  # pragma: no cover - Umgebung ohne Browser
         pytest.skip(f"kein Chromium verfügbar: {exc}")
@@ -286,8 +289,14 @@ def _open_section(page, name: str) -> None:
         section.locator(":scope > summary").click()
 
 def _create(page, title: str) -> None:
-    page.locator("[data-new-thread]").click()
+    page.wait_for_function(
+        "() => { const root = document.querySelector('.new-thread');"
+        " return !!(root && root._x_dataStack); }"
+    )
+    button = page.locator("[data-new-thread]")
     field = page.locator("[data-new-title]")
+    button.click()
+    # Alpine updates asynchronously; a second click can close the form again.
     expect(field).to_be_visible()
     field.fill(title)
     page.locator("#thread-list").get_by_role("button", name="Anlegen", exact=True).click()
@@ -642,6 +651,670 @@ def test_user_switches_plain_and_expert_wording(tmp_path: Path) -> None:
             expect(page.locator(".banner-error:visible")).to_have_count(0)
             _raise_chrome(before, "fenster-sprache.png")
             _shot(page, "09-sprache.png")
+            browser.close()
+    finally:
+        desk.stop()
+    assert page_errors == []
+
+
+def _export(home: Path, fmt: str, target: Path) -> None:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(ROOT / "src")
+    env["THREADDESK_HOME"] = str(home)
+    env.pop("THREADDESK_STORAGE", None)
+    completed = subprocess.run(
+        [
+            sys.executable, "-m", "threaddesk.ui.cli", "graph", "--export",
+            "--format", fmt, "--include-private", "--output", str(target),
+        ],
+        cwd=ROOT,
+        env=env,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+
+def test_user_opens_graph_json_and_exports_private_knowledge(tmp_path: Path) -> None:
+    """TD-EXPORT-01. Graph-JSON im Schreibtisch, dazu die vorhandenen Textformate."""
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    page_errors: list[str] = []
+    title = "Export ÄÖÜ"
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            before = _chrome_pids()
+            browser = _launch(play)
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            page.bring_to_front()
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.goto(url + "/lang/de", wait_until="networkidle")
+            page.wait_for_function("() => window.Alpine !== undefined")
+            _raise_chrome(before)
+            page.get_by_role("link", name="Wissenspool", exact=True).click()
+            form = page.locator('form[action="/knowledge/nodes"]')
+            form.locator('select[name="kind"]').select_option("project")
+            form.locator('input[name="title"]').fill(title)
+            form.locator('textarea[name="details"]').fill("Sichtbarer Export")
+            form.get_by_role("button", name="Knoten speichern", exact=True).click()
+            expect(page.locator(".node-row", has_text=title)).to_be_visible()
+            page.get_by_role("link", name="Graph-JSON", exact=True).click()
+            expect(page.locator("body")).to_contain_text(title)
+            expect(page.locator("body")).to_contain_text("threaddesk.graph.v1")
+            for fmt, name in (("json", "export.json"), ("markdown", "export.md"), ("csv", "export.csv")):
+                target = tmp_path / name
+                _export(home, fmt, target)
+                assert title in target.read_text(encoding="utf-8")
+            _raise_chrome(before, "fenster-export.png")
+            _shot(page, "12-export.png")
+            browser.close()
+    finally:
+        desk.stop()
+    assert page_errors == []
+
+
+def test_user_switches_the_housekeeper_without_a_model(tmp_path: Path) -> None:
+    """TD-HAUS-01. Ein, aus, fehlendes Modell, wartender Auftrag. Kein Modellergebnis."""
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    page_errors: list[str] = []
+    order = "Nur vormerken, nicht ausführen"
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            before = _chrome_pids()
+            browser = _launch(play)
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            page.bring_to_front()
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.goto(url + "/lang/de", wait_until="networkidle")
+            page.wait_for_function("() => window.Alpine !== undefined")
+            _raise_chrome(before)
+            _create(page, "Hausmeister")
+            _open_section(page, "hausmeister")
+            _open_section(page, "hausmeister")
+            section = page.locator("[data-hausmeister]")
+            section.scroll_into_view_if_needed()
+            probe = section.inner_text()
+            assert (
+                "Ollama ist lokal erreichbar" in probe
+                or "Ollama ist nicht erreichbar" in probe
+            )
+            section.get_by_role("button", name="Einschalten", exact=True).click()
+            expect(section.get_by_role("button", name="Ausschalten", exact=True)).to_be_visible()
+            expect(page.locator("[data-hausmeister-order]")).to_be_visible()
+            expect(page.get_by_role("status")).to_have_text("Einschalten")
+            page.locator("[data-hausmeister-run]").click()
+            expect(page.get_by_role("alert")).to_have_text("Auftrag nicht ausgeführt")
+            expect(page.locator("[data-hausmeister-entry]")).to_have_count(0)
+            page.locator("[data-hausmeister-order]").fill(order)
+            page.locator("[data-hausmeister-run]").click()
+            expect(page.get_by_role("alert")).to_have_text("Kein lokales Modell gewählt")
+            expect(page.locator("h1")).to_have_text("Hausmeister")
+            page.locator("[data-hausmeister-order]").fill(order)
+            page.locator("[data-hausmeister-later]").click()
+            expect(page.get_by_role("status")).to_have_text("Auftrag wartet")
+            queued = (home / "hausmeister-queue.json").read_text(encoding="utf-8")
+            assert order in queued
+            page.locator("[data-hausmeister]").get_by_role(
+                "button", name="Ausschalten", exact=True
+            ).click()
+            expect(page.locator("[data-hausmeister-order]")).to_have_count(0)
+            expect(page.locator("[data-hausmeister]").get_by_role(
+                "button", name="Einschalten", exact=True
+            )).to_be_visible()
+            expect(page.get_by_role("status")).to_have_text("Ausschalten")
+            _raise_chrome(before, "fenster-hausmeister.png")
+            _shot(page, "13-hausmeister.png")
+            browser.close()
+    finally:
+        desk.stop()
+    assert page_errors == []
+
+
+def test_user_runs_the_housekeeper_on_an_installed_model(tmp_path: Path) -> None:
+    """TD-HAUS-01. Echter lokaler Auftrag nur mit THREADDESK_HAUSMEISTER_LIVE=1.
+
+    Die normale Suite setzt die Variable nicht und ruft Ollama dafür nicht auf.
+    Ein Lauf beweist keine Antwortqualität.
+    """
+    if os.environ.get("THREADDESK_HAUSMEISTER_LIVE") != "1":
+        pytest.skip("Live-Modelltest benötigt THREADDESK_HAUSMEISTER_LIVE=1")
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    page_errors: list[str] = []
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            before = _chrome_pids()
+            browser = _launch(play)
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            page.bring_to_front()
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.goto(url + "/lang/de", wait_until="networkidle")
+            page.wait_for_function("() => window.Alpine !== undefined")
+            _raise_chrome(before)
+            _create(page, "Hausmeister live")
+            _open_section(page, "hausmeister")
+            _open_section(page, "hausmeister")
+            section = page.locator("[data-hausmeister]")
+            section.scroll_into_view_if_needed()
+            section.get_by_role("button", name="Einschalten", exact=True).click()
+            names = page.locator("[data-hausmeister-model] option").evaluate_all(
+                "els => els.map((el) => el.value).filter(Boolean)"
+            )
+            small = next((name for name in names if str(name).endswith(":1b")), "")
+            assert small, names
+            page.locator("[data-hausmeister-model]").select_option(small)
+            section.get_by_role("button", name="Modell übernehmen", exact=True).click()
+            expect(page.get_by_role("status")).to_have_text("Modell übernehmen")
+            page.locator("[data-hausmeister-order]").fill(
+                "Fasse den Thread in einem Satz zusammen"
+            )
+            page.locator("[data-hausmeister-run]").click()
+            expect(page.get_by_role("status")).to_have_text(
+                "Auftrag angehängt", timeout=120000
+            )
+            expect(page.locator("[data-hausmeister-entry]").first).to_be_visible()
+            _raise_chrome(before, "fenster-hausmeister-lauf.png")
+            _shot(page, "14-hausmeister-lauf.png")
+            browser.close()
+    finally:
+        desk.stop()
+    assert page_errors == []
+
+
+def _sentence(key: str, language: str) -> str:
+    from threaddesk.core import i18n
+
+    return i18n.translate(key, language)
+
+
+def _shows(page, language: str, *keys: str) -> None:
+    for key in keys:
+        expect(page.locator("body")).to_contain_text(_sentence(key, language))
+
+
+def _hides(page, language: str, *keys: str) -> None:
+    for key in keys:
+        expect(page.locator("body")).not_to_contain_text(_sentence(key, language))
+
+
+def _register_name(page, language: str) -> None:
+    """nav.register ist der zugängliche Name der Ebene, kein eigener Satz im Text."""
+    _open_section(page, "preferences")
+    expect(
+        page.get_by_role("navigation", name=_sentence("nav.register", language))
+    ).to_be_visible()
+
+
+def test_user_reads_the_main_pages_in_both_languages(tmp_path: Path) -> None:
+    """TD-I18N-01. Sichtbare Sätze auf Schreibtisch, Hilfe, Wissen, Karte und Sicherung."""
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    page_errors: list[str] = []
+    desk_keys = (
+        "nav.knowledge", "data.nav", "nav.map",
+        "register.plain", "register.expert", "help.open",
+        "list.new", "list.empty", "detail.pick", "detail.or_new",
+        "gate.title", "room.title", "room.create",
+    )
+    help_keys = (
+        "help.title", "help.new_thread", "help.next_prev", "help.pick_thread",
+        "help.snapshot_field", "help.microphone", "help.save_form",
+        "help.this_help", "help.no_agent",
+    )
+    knowledge_keys = (
+        "knowledge.lead", "knowledge.graph_json", "knowledge.save_node",
+        "knowledge.filter", "knowledge.reset",
+    )
+    map_keys = (
+        "map.title", "map.eyebrow", "map.fit", "map.no_selection",
+        "map.legend_circle", "map.legend_rect", "map.legend_risk", "map.legend_ai",
+    )
+    data_keys = (
+        "data.title", "data.intro", "data.download", "data.file",
+        "data.confirm", "data.restore", "data.private",
+    )
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            before = _chrome_pids()
+            browser = _launch(play)
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            page.bring_to_front()
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.goto(url + "/lang/de", wait_until="networkidle")
+            page.wait_for_function("() => window.Alpine !== undefined")
+            _raise_chrome(before)
+            expect(page.locator("html")).to_have_attribute("lang", "de")
+            _open_section(page, "room")
+            _register_name(page, "de")
+            _shows(page, "de", *desk_keys)
+            expect(page.locator("[data-room-name]")).to_have_attribute(
+                "placeholder", _sentence("room.name", "de")
+            )
+            page.locator("[data-help-open]").click()
+            help_box = page.locator("#help")
+            expect(help_box).to_be_visible()
+            for key in help_keys:
+                expect(help_box).to_contain_text(_sentence(key, "de"))
+            page.keyboard.press("Escape")
+            expect(help_box).to_be_hidden()
+
+            page.get_by_role("link", name="Wissenspool", exact=True).click()
+            _shows(page, "de", *knowledge_keys)
+            page.get_by_role("link", name="Karte", exact=True).click()
+            _shows(page, "de", *map_keys)
+            page.get_by_role("link", name="Daten", exact=True).click()
+            _shows(page, "de", *data_keys)
+
+            _open_section(page, "preferences")
+            page.get_by_role("link", name="EN", exact=True).click()
+            expect(page.locator("html")).to_have_attribute("lang", "en")
+            _shows(page, "en", *data_keys)
+            _hides(
+                page, "de",
+                "data.title", "data.intro", "app.tagline", "knowledge.save_node",
+                "map.title", "help.no_agent", "detail.pick",
+            )
+            page.get_by_role("link", name="Map", exact=True).click()
+            _shows(page, "en", *map_keys)
+            page.get_by_role("link", name="Knowledge", exact=True).click()
+            _shows(page, "en", *knowledge_keys)
+            page.get_by_role("link", name="Threads", exact=True).click()
+            _open_section(page, "room")
+            _register_name(page, "en")
+            _shows(page, "en", *desk_keys)
+            expect(page.locator("[data-room-name]")).to_have_attribute(
+                "placeholder", _sentence("room.name", "en")
+            )
+            page.locator("[data-help-open]").click()
+            expect(help_box).to_be_visible()
+            for key in help_keys:
+                expect(help_box).to_contain_text(_sentence(key, "en"))
+            _raise_chrome(before, "fenster-saetze.png")
+            _shot(page, "16-saetze.png")
+            page.keyboard.press("Escape")
+            expect(help_box).to_be_hidden()
+            browser.close()
+    finally:
+        desk.stop()
+    assert page_errors == []
+
+
+def _notice(page, text: str) -> None:
+    banner = page.locator(".toast-stack .banner-ok")
+    expect(banner).to_be_visible()
+    expect(banner).to_have_text(text)
+
+
+def test_user_reads_action_notices_in_english(tmp_path: Path) -> None:
+    """TD-I18N-01. Hinweise nach Anlegen, Beschreibung, Notiz, Verlauf und Pfad."""
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    page_errors: list[str] = []
+    title = "Notice ÄÖÜ"
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            before = _chrome_pids()
+            browser = _launch(play)
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            page.bring_to_front()
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.goto(url + "/lang/en", wait_until="networkidle")
+            page.wait_for_function("() => window.Alpine !== undefined")
+            _raise_chrome(before)
+            expect(page.locator("html")).to_have_attribute("lang", "en")
+
+            page.wait_for_function(
+                "() => { const root = document.querySelector('.new-thread');"
+                " return !!(root && root._x_dataStack); }"
+            )
+            button = page.locator("[data-new-thread]")
+            field = page.locator("[data-new-title]")
+            button.click()
+            expect(field).to_be_visible()
+            field.fill(title)
+            page.locator("#thread-list").get_by_role(
+                "button", name=_sentence("list.create", "en"), exact=True
+            ).click()
+            _notice(page, _sentence("ui.created", "en").format(title=title))
+            expect(page.locator("h1")).to_have_text(title)
+            expect(page.locator("body")).not_to_contain_text(
+                _sentence("ui.created", "de").format(title=title)
+            )
+
+            _open_section(page, "files")
+            expect(page.locator("#files")).to_contain_text(_sentence("files.hint", "en"))
+            expect(page.locator("#files")).to_contain_text(_sentence("files.empty", "en"))
+            _hides(page, "de", "files.hint", "files.empty")
+
+            _open_section(page, "thread-edit")
+            page.locator('.desk-description input[name="text"]').fill("A visible purpose")
+            page.locator(".desk-description").get_by_role(
+                "button", name=_sentence("detail.save", "en"), exact=True
+            ).click()
+            _notice(page, _sentence("ui.description_saved", "en"))
+            _hides(page, "de", "ui.description_saved")
+
+            _open_section(page, "notes")
+            page.locator("#notes textarea[name='text']").fill("A note that stays")
+            page.locator("#notes").get_by_role(
+                "button", name=_sentence("notes.save", "en"), exact=True
+            ).click()
+            _notice(page, _sentence("ui.note_saved", "en"))
+            expect(page.locator("#notes textarea[name='text']")).to_have_value(
+                "A note that stays"
+            )
+            _hides(page, "de", "ui.note_saved")
+
+            form = page.locator("[data-whiteboard]")
+            form.locator("[data-whiteboard-actor]").fill("Checker")
+            form.locator("[data-whiteboard-type]").select_option("decision")
+            form.locator("[data-whiteboard-content]").fill("English entry")
+            form.locator("[data-whiteboard-submit]").click()
+            _notice(page, _sentence("ui.whiteboard_saved", "en"))
+            expect(page.locator(".whiteboard-body")).to_have_text("English entry")
+            _hides(page, "de", "ui.whiteboard_saved")
+
+            page.locator("#files input[name='path']").fill("src/notice.py")
+            page.locator("#files").get_by_role(
+                "button", name=_sentence("files.add", "en"), exact=True
+            ).click()
+            _notice(page, _sentence("ui.file_added", "en").format(path="src/notice.py"))
+            expect(page.locator("#files code")).to_have_text("src/notice.py")
+            expect(page.locator("body")).not_to_contain_text(
+                _sentence("ui.file_added", "de").format(path="src/notice.py")
+            )
+
+            _raise_chrome(before, "fenster-hinweise.png")
+            _shot(page, "17-hinweise.png")
+            browser.close()
+    finally:
+        desk.stop()
+    assert page_errors == []
+
+
+def _alert(page, text: str) -> None:
+    banner = page.locator(".toast-stack .banner-error")
+    expect(banner).to_be_visible()
+    expect(banner).to_have_text(text)
+
+
+def test_user_reads_housekeeper_phases_in_english(tmp_path: Path) -> None:
+    """TD-HAUS-01. Englische Hausmeister-Sätze. Kein Auftrag an Ollama.
+
+    „Waiting for a job“ steht nur, wenn ein bereits gelistetes Modell
+    gespeichert ist und kein Auftrag wartet. „Working“ und „Paused“
+    brauchen einen laufenden Auftrag und bleiben in diesem Lauf weg.
+    """
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    page_errors: list[str] = []
+    title = "Housekeeper"
+    order = "Remember this, do not run it"
+    phase_keys = (
+        "hausmeister.phase.waiting_for_order",
+        "hausmeister.phase.waiting_for_quiet",
+        "hausmeister.phase.working",
+        "hausmeister.phase.paused",
+    )
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            before = _chrome_pids()
+            browser = _launch(play, ["--disable-features=Translate"])
+            page = browser.new_page(
+                viewport={"width": 1440, "height": 900},
+                locale="en-US",
+            )
+            page.bring_to_front()
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.goto(url + "/lang/en", wait_until="networkidle")
+            page.wait_for_function("() => window.Alpine !== undefined")
+            _raise_chrome(before)
+            expect(page.locator("html")).to_have_attribute("lang", "en")
+            page.wait_for_function(
+                "() => { const root = document.querySelector('.new-thread');"
+                " return !!(root && root._x_dataStack); }"
+            )
+            button = page.locator("[data-new-thread]")
+            field = page.locator("[data-new-title]")
+            button.click()
+            expect(field).to_be_visible()
+            field.fill(title)
+            page.locator("#thread-list").get_by_role(
+                "button", name=_sentence("list.create", "en"), exact=True
+            ).click()
+            expect(page.locator("h1")).to_have_text(title)
+
+            _open_section(page, "hausmeister")
+            section = page.locator("[data-hausmeister]")
+            section.scroll_into_view_if_needed()
+            phase = page.locator("[data-hausmeister-phase]")
+            probe = section.inner_text()
+            reachable = _sentence("hausmeister.reachable", "en")
+            unreachable = _sentence("hausmeister.unreachable", "en")
+            assert reachable in probe or unreachable in probe
+            ollama_up = reachable in probe
+            expect(phase).to_have_attribute("data-hausmeister-phase", "off")
+            for key in phase_keys:
+                expect(phase).not_to_contain_text(_sentence(key, "en"))
+            expect(page.locator("[data-hausmeister-model]")).to_have_value("")
+            expect(page.locator("[data-hausmeister-model] option:checked")).to_have_text(
+                _sentence("hausmeister.model_none", "en")
+            )
+            expect(section).to_contain_text(_sentence("hausmeister.title", "en"))
+            expect(section).to_contain_text(_sentence("hausmeister.no_model", "en"))
+            expect(section.get_by_role(
+                "button", name=_sentence("hausmeister.turn_on", "en"), exact=True
+            )).to_be_visible()
+            _hides(
+                page, "de",
+                "hausmeister.title", "hausmeister.reachable", "hausmeister.unreachable",
+                "hausmeister.no_model", "hausmeister.model_none", "hausmeister.turn_on",
+                "hausmeister.turn_off", "hausmeister.use_model", "hausmeister.run",
+                "hausmeister.later", "hausmeister.failed", "hausmeister.queued",
+                "hausmeister.phase.waiting_for_order", "hausmeister.phase.waiting_for_quiet",
+                "hausmeister.phase.working", "hausmeister.phase.paused",
+                "hausmeister.disabled",
+            )
+
+            names = page.locator("[data-hausmeister-model] option").evaluate_all(
+                "els => els.map((el) => el.value).filter(Boolean)"
+            )
+            if ollama_up and names:
+                page.locator("[data-hausmeister-model]").select_option(names[0])
+                section.get_by_role(
+                    "button", name=_sentence("hausmeister.use_model", "en"), exact=True
+                ).click()
+                _notice(page, _sentence("hausmeister.use_model", "en"))
+                expect(phase).to_have_attribute("data-hausmeister-phase", "off")
+                expect(section).not_to_contain_text(_sentence("hausmeister.no_model", "en"))
+                section.get_by_role(
+                    "button", name=_sentence("hausmeister.turn_on", "en"), exact=True
+                ).click()
+                _notice(page, _sentence("hausmeister.turn_on", "en"))
+                expect(phase).to_have_attribute("data-hausmeister-phase", "waiting_for_order")
+                expect(phase).to_contain_text(_sentence("hausmeister.reachable", "en"))
+                expect(phase).to_contain_text(
+                    _sentence("hausmeister.phase.waiting_for_order", "en")
+                )
+                for key in phase_keys[1:]:
+                    expect(phase).not_to_contain_text(_sentence(key, "en"))
+                _raise_chrome(before, "fenster-hausmeister-en.png")
+                _shot(page, "19-hausmeister.png")
+                page.locator("[data-hausmeister-model]").select_option("")
+                section.get_by_role(
+                    "button", name=_sentence("hausmeister.use_model", "en"), exact=True
+                ).click()
+                _notice(page, _sentence("hausmeister.no_model", "en"))
+                expect(phase).to_have_attribute("data-hausmeister-phase", "no_model")
+                expect(phase).not_to_contain_text(
+                    _sentence("hausmeister.phase.waiting_for_order", "en")
+                )
+            else:
+                section.get_by_role(
+                    "button", name=_sentence("hausmeister.turn_on", "en"), exact=True
+                ).click()
+                _notice(page, _sentence("hausmeister.turn_on", "en"))
+                expect(phase).to_have_attribute(
+                    "data-hausmeister-phase",
+                    "no_model" if ollama_up else "ollama_down",
+                )
+                for key in phase_keys:
+                    expect(phase).not_to_contain_text(_sentence(key, "en"))
+                _raise_chrome(before, "fenster-hausmeister-en.png")
+                _shot(page, "19-hausmeister.png")
+
+            expect(page.locator("[data-hausmeister-order]")).to_be_visible()
+            expect(page.locator("[data-hausmeister-order]")).to_have_attribute(
+                "placeholder", _sentence("hausmeister.order_placeholder", "en")
+            )
+            expect(section.get_by_role(
+                "button", name=_sentence("hausmeister.run", "en"), exact=True
+            )).to_be_visible()
+            expect(section.get_by_role(
+                "button", name=_sentence("hausmeister.later", "en"), exact=True
+            )).to_be_visible()
+            page.locator("[data-hausmeister-run]").click()
+            _alert(page, _sentence("hausmeister.failed", "en"))
+            expect(page.locator("[data-hausmeister-entry]")).to_have_count(0)
+            page.locator("[data-hausmeister-order]").fill(order)
+            page.locator("[data-hausmeister-run]").click()
+            _alert(page, _sentence("hausmeister.no_model", "en"))
+            expect(page.locator("h1")).to_have_text(title)
+            expect(page.locator("[data-hausmeister-entry]")).to_have_count(0)
+            page.locator("[data-hausmeister-order]").fill(order)
+            page.locator("[data-hausmeister-later]").click()
+            _notice(page, _sentence("hausmeister.queued", "en"))
+            queued = (home / "hausmeister-queue.json").read_text(encoding="utf-8")
+            assert order in queued
+            expect(phase).to_have_attribute(
+                "data-hausmeister-phase",
+                "no_model" if ollama_up else "ollama_down",
+            )
+            for key in phase_keys:
+                expect(phase).not_to_contain_text(_sentence(key, "en"))
+            section.get_by_role(
+                "button", name=_sentence("hausmeister.turn_off", "en"), exact=True
+            ).click()
+            expect(page.locator("[data-hausmeister-order]")).to_have_count(0)
+            expect(section.get_by_role(
+                "button", name=_sentence("hausmeister.turn_on", "en"), exact=True
+            )).to_be_visible()
+            _notice(page, _sentence("hausmeister.turn_off", "en"))
+            expect(phase).to_have_attribute("data-hausmeister-phase", "off")
+            browser.close()
+    finally:
+        desk.stop()
+    assert page_errors == []
+
+
+def _create_en(page, title: str) -> None:
+    page.wait_for_function(
+        "() => { const root = document.querySelector('.new-thread');"
+        " return !!(root && root._x_dataStack); }"
+    )
+    button = page.locator("[data-new-thread]")
+    field = page.locator("[data-new-title]")
+    button.click()
+    expect(field).to_be_visible()
+    field.fill(title)
+    page.locator("#thread-list").get_by_role(
+        "button", name=_sentence("list.create", "en"), exact=True
+    ).click()
+    expect(page.locator("h1")).to_have_text(title)
+
+
+def test_user_reads_rename_and_archive_in_english(tmp_path: Path) -> None:
+    """TD-I18N-01. Englische Hinweise für Umbenennen und Archiv. Keine Rückholtaste."""
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    page_errors: list[str] = []
+    dialogs: list[str] = []
+    first = "First thread"
+    renamed = "First renamed"
+    second = "Second thread"
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            before = _chrome_pids()
+            browser = _launch(play, ["--disable-features=Translate"])
+            page = browser.new_page(
+                viewport={"width": 1440, "height": 900},
+                locale="en-US",
+            )
+            page.bring_to_front()
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.on(
+                "dialog",
+                lambda dialog: (dialogs.append(dialog.message), dialog.accept()),
+            )
+            page.goto(url + "/lang/en", wait_until="networkidle")
+            page.wait_for_function("() => window.Alpine !== undefined")
+            _raise_chrome(before)
+            expect(page.locator("html")).to_have_attribute("lang", "en")
+            _create_en(page, first)
+            _create_en(page, second)
+            page.locator(".thread-item", has_text=first).click()
+            expect(page.locator("h1")).to_have_text(first)
+            _open_section(page, "thread-edit")
+            page.get_by_role(
+                "button", name=_sentence("detail.rename", "en"), exact=True
+            ).click()
+            rename = page.locator('form[hx-post*="/rename"] input[name="title"]')
+            expect(rename).to_be_visible()
+            rename.fill(renamed)
+            page.locator('form[hx-post*="/rename"]').get_by_role(
+                "button", name=_sentence("detail.ok", "en"), exact=True
+            ).click()
+            expect(page.locator("h1")).to_have_text(renamed)
+            expect(page.locator(".thread-title").filter(has_text=renamed)).to_be_visible()
+            _notice(page, _sentence("ui.renamed", "en").format(title=renamed))
+            expect(page.locator("body")).not_to_contain_text(
+                _sentence("ui.renamed", "de").format(title=renamed)
+            )
+            _hides(page, "de", "detail.rename", "detail.archive")
+            _shot(page, "20-umbenennen.png")
+
+            page.locator(".thread-item", has_text=second).click()
+            expect(page.locator("h1")).to_have_text(second)
+            _open_section(page, "thread-edit")
+            page.get_by_role(
+                "button", name=_sentence("detail.archive", "en"), exact=True
+            ).click()
+            assert dialogs == [_sentence("detail.confirm_archive", "en")]
+            expect(page.locator(".thread-title").filter(has_text=second)).to_have_count(0)
+            expect(page.locator(".thread-title").filter(has_text=renamed)).to_be_visible()
+            expect(page.get_by_text(_sentence("detail.pick", "en"))).to_be_visible()
+            _notice(page, _sentence("ui.archived", "en").format(title=second))
+            expect(page.locator("body")).not_to_contain_text(
+                _sentence("ui.archived", "de").format(title=second)
+            )
+            expect(page.locator("body")).not_to_contain_text(
+                _sentence("detail.confirm_archive", "de")
+            )
+            _hides(page, "de", "detail.pick")
+            stored = "\n".join(
+                item.read_text(encoding="utf-8")
+                for item in home.rglob("*.json")
+                if item.is_file()
+            )
+            assert second in stored
+            _raise_chrome(before, "fenster-archiv-en.png")
+            _shot(page, "21-archiv.png")
             browser.close()
     finally:
         desk.stop()

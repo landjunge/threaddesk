@@ -746,13 +746,13 @@ native Details-Bedienung funktioniert auch ohne dieses Modul.
 | Produkt | Adapter / Aufgabe | Stand |
 |---|---|---|
 | ThreadDesk | `base.html` lädt den Kern; alte Variablen aliasieren `--np-*`; echte Browserabläufe erhalten | Implementiert auf Design-Branch; aktueller Prüfstand in COVERAGE |
-| 4AllPass | `frontend/src/tokens.css` auf dieselben Rollen abbilden; React-Komponenten verwenden dieselben Klassen/Zustände; Freigabeumfang und Sperrstatus sichtbar | Gestaltungsprobe und Zuordnung vorbereitet; Produktcode noch nicht umgestellt |
-| TollGate | eingebetteten Stil in `src/tollgate/dashboard_html.py` auf denselben Kern abbilden; Allow/Deny und Begründung unverändert klar trennen | Gestaltungsprobe und Zuordnung vorbereitet; Produktcode noch nicht umgestellt |
-| Gnom-Hub-V1 | gemeinsame Navigation/Felder/Aktionen übernehmen; Agentenfarben nur als Identifikation; Senden und Ausführen getrennt lassen | R2-Code geprüft; Gestaltungsprobe vorbereitet; Produktcode noch nicht umgestellt |
-| NetzwerkPunkt | Orientierung und Produktzugänge aus derselben Familie; Dachmarke behalten; keine zusätzlichen aktiven Steuerfunktionen erfinden | Familienrahmen vorbereitet; öffentliche Seite noch nicht umgestellt |
+| 4AllPass | `frontend/src/tokens.css` auf dieselben Rollen abbilden; React-Komponenten verwenden dieselben Klassen/Zustände; Freigabeumfang und Sperrstatus sichtbar | Adapter implementiert; Prüfbelege im Produkt-Repo; vollständige Nutzerabnahme offen |
+| TollGate | eingebetteten Stil in `src/tollgate/dashboard_html.py` auf denselben Kern abbilden; Allow/Deny und Begründung unverändert klar trennen | Adapter implementiert; Prüfbelege im Produkt-Repo; vollständige Nutzerabnahme offen |
+| Gnom-Hub-V1 | gemeinsame Navigation/Felder/Aktionen übernehmen; Agentenfarben nur als Identifikation; Senden und Ausführen getrennt lassen | Legacy-Desk und V4 adaptiert; Qualitätslauf und lokale Browserwege geprüft; Pipeline-Abnahme unverändert offen |
+| NetzwerkPunkt | Orientierung und Produktzugänge aus derselben Familie; Dachmarke behalten; keine zusätzlichen aktiven Steuerfunktionen erfinden | Startseiten-Code adaptiert und lokal geprüft; Live-Seite noch nicht veröffentlicht |
 
-Bei Übernahme die beiden lokalen Quelldateien einer festgehaltenen Git-Version
-kopieren, alte Tokens über einen kleinen Adapter abbilden und die
+Bei Übernahme die benötigten lokalen Quelldateien einer festgehaltenen Git-Version
+kopieren (CSS immer, JavaScript nur bei verwendeten Interaktionen), alte Tokens über einen kleinen Adapter abbilden und die
 Standard-/Hover-/Fokus-/Fehler-/Deaktiviert-Zustände prüfen. Keine Laufzeit-CDN
 und keine automatische Aktualisierung fremder Repositories. Markenassets aus
 dem separaten Grok-Auftrag bleiben produktspezifisch. Gemeinsame Änderungen
@@ -798,3 +798,16 @@ dem ersten Entwurf von Abschnitt 19; historische Prüfergebnisse bleiben datiert
   WCAG-Reflow-Konformitätsbehauptung.
 - Die Prüffälle richten sich nach dieser Entscheidung: Desktop-Maße und
   Erreichbarkeit bei kleinerem Ausschnitt, nicht mehr Smartphone-Reflow.
+
+### Ergänzung zur Zusammenarbeit und Übernahme · 03.10.2026
+
+Daniel muss Figma nicht verwenden oder lernen. Ergebnisse werden in den echten
+Werkzeugen und als direkt sichtbare Vorschau beurteilt. Figma darf intern helfen.
+Seine angekündigte Idee zur Umsetzung mit sehr wenigen Werkzeugen bleibt
+geparkt, bis er sie erklärt; keine erfundene Ausarbeitung oder neue Abhängigkeit.
+
+Alle vier neuen Adapter pinnen dieselbe CSS-Datei auf ThreadDesk `b0b6815`.
+Die unveränderte lokale Kopie und kleine Produktspezialfälle vermeiden neue
+Build-Werkzeuge und Laufzeitdienste. Umsetzung ist nicht gleich vollständige
+Nutzerabnahme; der genaue aktuelle Prüfumfang steht in COVERAGE und den
+`docs/usability/design-2026-10-03/checks.json` der Produkt-Repositories.

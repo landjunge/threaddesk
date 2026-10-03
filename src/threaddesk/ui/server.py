@@ -587,9 +587,9 @@ def create_app() -> FastAPI:
             "ollama_model_missing": "hausmeister.no_model",
             "hausmeister_rejected": "hausmeister.failed",
         }.get(code, "hausmeister.failed")
-        page = workspace(request, {"error": i18n.translate(key, _language(request))})
-        page.status_code = 400
-        return page
+        # 200, damit HTMX die Meldung in den Schreibtisch tauscht. Bei 400
+        # bleibt die Seite stehen und der Auftrag sieht aus, als wäre nichts passiert.
+        return workspace(request, {"error": i18n.translate(key, _language(request))})
 
     @app.post("/hausmeister/toggle", response_class=HTMLResponse)
     def hausmeister_toggle(request: Request, enabled: str = Form("0")) -> HTMLResponse:
@@ -610,7 +610,9 @@ def create_app() -> FastAPI:
     def hausmeister_run(
         thread_id: str,
         request: Request,
-        order: str = Form(...),
+        # Leeres order kommt als "" an. Form(...) wertet das als fehlend und
+        # antwortet 422, bevor der Auftrag geprüft wird. HTMX zeigt 422 nicht.
+        order: str = Form(""),
         mode: str = Form("now"),
     ) -> HTMLResponse:
         home = Hausmeister(_svc().store)

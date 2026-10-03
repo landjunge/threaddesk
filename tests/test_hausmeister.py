@@ -368,6 +368,46 @@ def test_activity_route_records_one_surface_ping(tmp_path: Path, monkeypatch: py
     assert saved["kind"] == "scroll"
 
 
+def test_empty_housekeeper_order_stays_visible_on_the_desk(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """order= muss die Meldung tauschen. Ein 422 lässt den Schreibtisch stehen."""
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from threaddesk.ui.server import create_app
+
+    monkeypatch.setenv("THREADDESK_HOME", str(tmp_path))
+    client = TestClient(create_app())
+    created = client.post("/threads", data={"title": "Hausmeister", "description": ""})
+    assert created.status_code == 200
+    turned = client.post("/hausmeister/toggle", data={"enabled": "1"})
+    assert turned.status_code == 200
+    thread = ThreadService(store=JsonStore(tmp_path)).current()
+    assert thread is not None
+    empty = client.post(
+        f"/threads/{thread.id}/hausmeister",
+        data={"order": "", "mode": "now"},
+    )
+    assert empty.status_code == 200
+    assert "Auftrag nicht ausgeführt" in empty.text
+    assert "data-hausmeister-entry" not in empty.text
+    missing = client.post(
+        f"/threads/{thread.id}/hausmeister",
+        data={"order": "Nur vormerken", "mode": "now"},
+    )
+    assert missing.status_code == 200
+    assert "Kein lokales Modell gewählt" in missing.text
+    queued = client.post(
+        f"/threads/{thread.id}/hausmeister",
+        data={"order": "Nur vormerken", "mode": "later"},
+    )
+    assert queued.status_code == 200
+    assert "Auftrag wartet" in queued.text
+    saved = (tmp_path / "hausmeister-queue.json").read_text(encoding="utf-8")
+    assert "Nur vormerken" in saved
+
+
 def test_secrets_from_the_model_are_not_stored(svc: ThreadService) -> None:
     thread = svc.create("Geheim")
     home = Hausmeister(svc.store, _transport(["demo"], {
