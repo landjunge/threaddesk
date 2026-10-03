@@ -157,6 +157,16 @@ document.body.addEventListener("htmx:afterSwap", (event) => {
   }
 });
 
+// Eine HTML-Antwort mit Status 400 ist der Fehlerhinweis. Sonst bleibt die Seite stehen.
+document.body.addEventListener("htmx:beforeSwap", (event) => {
+  const xhr = event.detail && event.detail.xhr;
+  if (!xhr || xhr.status < 400 || xhr.status > 499) return;
+  const type = xhr.getResponseHeader("content-type") || "";
+  if (!type.includes("text/html")) return;
+  event.detail.shouldSwap = true;
+  event.detail.isError = false;
+});
+
 // One ping per quiet gap, plus one trailing ping if more input arrived.
 const ACTIVITY_GAP_MS = 15000;
 const activityState = { lastSent: 0, timer: 0, waitingKind: "" };

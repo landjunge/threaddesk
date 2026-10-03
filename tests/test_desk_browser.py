@@ -1289,3 +1289,79 @@ def test_user_reads_rename_and_archive_in_english(tmp_path: Path) -> None:
     finally:
         desk.stop()
     assert page_errors == []
+
+
+def test_user_reads_error_notices_in_english(tmp_path: Path) -> None:
+    """TD-I18N-01. Sichtbare Fehler: leerer Titel, Raumname, kaputte Sicherung."""
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    page_errors: list[str] = []
+    title = "Keep me"
+    bad = tmp_path / "not-a-backup.zip"
+    bad.write_bytes(b"this is not a zip")
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            before = _chrome_pids()
+            browser = _launch(play, ["--disable-features=Translate"])
+            page = browser.new_page(
+                viewport={"width": 1440, "height": 900},
+                locale="en-US",
+            )
+            page.bring_to_front()
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.goto(url + "/lang/en", wait_until="networkidle")
+            page.wait_for_function("() => window.Alpine !== undefined")
+            _raise_chrome(before)
+            expect(page.locator("html")).to_have_attribute("lang", "en")
+            _create_en(page, title)
+
+            button = page.locator("[data-new-thread]")
+            field = page.locator("[data-new-title]")
+            button.click()
+            if not field.is_visible():
+                button.evaluate("el => el.click()")
+            expect(field).to_be_visible()
+            field.fill("   ")
+            page.locator("#thread-list").get_by_role(
+                "button", name=_sentence("list.create", "en"), exact=True
+            ).click()
+            _alert(page, _sentence("ui.error", "en"))
+            expect(page.locator("h1")).to_have_text(title)
+            expect(page.locator(".thread-title")).to_have_count(1)
+            _hides(page, "de", "ui.error")
+
+            room = page.locator("[data-room]")
+            room.scroll_into_view_if_needed()
+            room.locator("[data-room-name]").fill("   ")
+            room.locator("[data-room-create]").click()
+            _alert(page, _sentence("room.failed", "en"))
+            expect(room).to_contain_text(_sentence("room.none", "en"))
+            _hides(page, "de", "room.failed")
+            _raise_chrome(before, "fenster-fehler.png")
+            _shot(page, "22-fehler.png")
+
+            page.get_by_role("link", name=_sentence("data.nav", "en"), exact=True).click()
+            expect(page.locator("h1")).to_have_text(_sentence("data.title", "en"))
+            page.locator("#backup-file").set_input_files(bad)
+            page.locator('input[name="confirm"]').check()
+            page.get_by_role(
+                "button", name=_sentence("data.restore", "en"), exact=True
+            ).click()
+            expect(page.get_by_role("alert")).to_have_text(
+                _sentence("data.restore_error", "en")
+            )
+            _hides(page, "de", "data.restore_error")
+            expect(page.locator("body")).not_to_contain_text(
+                _sentence("data.backup_error", "en")
+            )
+            _shot(page, "23-sicherung-fehler.png")
+
+            page.get_by_role("link", name=_sentence("nav.threads", "en"), exact=True).click()
+            expect(page.locator("h1")).to_have_text(title)
+            expect(page.locator(".thread-title").filter(has_text=title)).to_be_visible()
+            browser.close()
+    finally:
+        desk.stop()
+    assert page_errors == []
