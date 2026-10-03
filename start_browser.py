@@ -11,9 +11,8 @@ import subprocess
 import time
 import urllib.error
 import urllib.request
-import webbrowser
 
-from start import ROOT, ensure_installed
+from start import ROOT, ensure_installed, open_browser_url
 
 URL = "http://127.0.0.1:8765/"
 
@@ -68,7 +67,8 @@ def main() -> int:
                     ready = response.status == 200
                 if ready and child.poll() is None:
                     print("ThreadDesk ist bereit: " + URL, flush=True)
-                    webbrowser.open(URL + "?lang=de&stand=bce7828")
+                    if not open_browser_url(URL + "?lang=de&stand=bce7828"):
+                        print("Bitte diese Adresse im Browser öffnen: " + URL, flush=True)
                     return child.wait()
             except (OSError, urllib.error.URLError):
                 pass

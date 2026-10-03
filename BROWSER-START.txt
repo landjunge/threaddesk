@@ -6,6 +6,8 @@ THREADDESK – BROWSER-START
 
 Voraussetzung: Python 3.9 oder neuer. Beim ersten Start werden die benötigten
 Python-Pakete aus dem Internet in einen eigenen Unterordner installiert.
+Ein altes pip wird dabei zuerst aktualisiert. Beide .command-Dateien starten
+denselben Browser-Stand. Auf dem Mac erfolgt das Öffnen ohne AppleScript.
 Dies ist die Browser-Ausgabe, kein neuer nativer Mac-Installer.
 
 Der Starter öffnet den Code aus diesem Ordner, nicht die alte App.

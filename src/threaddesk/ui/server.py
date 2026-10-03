@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+from typing import Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
@@ -226,7 +227,7 @@ def create_app() -> FastAPI:
         return html
 
     @app.get("/", response_class=HTMLResponse)
-    def index(request: Request, thread: str | None = None) -> HTMLResponse:
+    def index(request: Request, thread: Optional[str] = None) -> HTMLResponse:
         if thread:
             try:
                 _svc().switch(thread)
@@ -316,7 +317,7 @@ def create_app() -> FastAPI:
         return response
 
     @app.get("/api/graph", response_class=JSONResponse)
-    def graph(kind: str | None = None, status: str | None = None) -> dict:
+    def graph(kind: Optional[str] = None, status: Optional[str] = None) -> dict:
         return _svc().graph(kind=kind, status=status)
 
     @app.get("/api/threads/{thread_id}", response_class=JSONResponse)
@@ -440,7 +441,7 @@ def create_app() -> FastAPI:
 
     @app.get("/knowledge", response_class=HTMLResponse)
     def knowledge(
-        request: Request, kind: str | None = None, status: str | None = None
+        request: Request, kind: Optional[str] = None, status: Optional[str] = None
     ) -> HTMLResponse:
         svc = _svc()
         graph_data = svc.graph(kind=kind, status=status)
