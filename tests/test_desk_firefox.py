@@ -28,6 +28,11 @@ PACE_S = 1.5
 ELEMENT = "element-6066-11e4-a52e-4f735466cecf"
 
 
+def _firefox_version() -> str:
+    out = subprocess.check_output([FIREFOX, "--version"], text=True).strip()
+    return out.rsplit(" ", 1)[-1]
+
+
 def _firefox_pids() -> set[int]:
     out = subprocess.check_output(["ps", "-ax", "-o", "pid=,command="], text=True)
     found: set[int] = set()
@@ -116,6 +121,15 @@ class Gecko:
         element = self.find(css)
         self._call("POST", f"/session/{self.session}/element/{element}/click", {})
 
+    def click_xpath(self, xpath: str) -> None:
+        payload = self._call(
+            "POST",
+            f"/session/{self.session}/element",
+            {"using": "xpath", "value": xpath},
+        )
+        element = payload["value"][ELEMENT]
+        self._call("POST", f"/session/{self.session}/element/{element}/click", {})
+
     def fill(self, css: str, text: str) -> None:
         element = self.find(css)
         self._call("POST", f"/session/{self.session}/element/{element}/clear", {})
@@ -145,6 +159,19 @@ class Gecko:
             {"x": 40, "y": 40, "width": 1440, "height": 900},
         )
 
+    def refresh(self) -> None:
+        self._call("POST", f"/session/{self.session}/refresh", {})
+
+    def wait_script(self, source: str, expected: str, seconds: float = 15) -> str:
+        deadline = time.monotonic() + seconds
+        found = ""
+        while time.monotonic() < deadline:
+            found = str(self.script(source))
+            if found == expected:
+                return found
+            time.sleep(0.2)
+        return found
+
 
 def _driver(port: int) -> subprocess.Popen[bytes]:
     if not Path(GECKO).is_file():
@@ -160,22 +187,21 @@ def _driver(port: int) -> subprocess.Popen[bytes]:
     )
 
 
-def _session(port: int) -> tuple[str, str]:
-    body = {
-        "capabilities": {
-            "alwaysMatch": {
-                "browserName": "firefox",
-                "moz:firefoxOptions": {
-                    "binary": FIREFOX,
-                    "args": ["-no-remote"],
-                    "prefs": {
-                        "browser.shell.checkDefaultBrowser": False,
-                        "datareporting.policy.dataSubmissionEnabled": False,
-                    },
-                },
-            }
-        }
+def _session(port: int, *, accept_prompts: bool = False) -> tuple[str, str]:
+    always: dict = {
+        "browserName": "firefox",
+        "moz:firefoxOptions": {
+            "binary": FIREFOX,
+            "args": ["-no-remote"],
+            "prefs": {
+                "browser.shell.checkDefaultBrowser": False,
+                "datareporting.policy.dataSubmissionEnabled": False,
+            },
+        },
     }
+    if accept_prompts:
+        always["unhandledPromptBehavior"] = "accept"
+    body = {"capabilities": {"alwaysMatch": always}}
     deadline = time.monotonic() + 20
     last = ""
     while time.monotonic() < deadline:
@@ -214,7 +240,7 @@ def test_user_creates_a_thread_in_firefox(tmp_path: Path) -> None:
         before = _firefox_pids()
         driver = _driver(port)
         session, version = _session(port)
-        assert version, "Firefox nennt keine Version"
+        assert version == _firefox_version(), version
         gecko = Gecko(port, session)
         gecko.rect()
         time.sleep(PACE_S)
@@ -275,7 +301,203 @@ def test_user_creates_a_thread_in_firefox(tmp_path: Path) -> None:
             folder.mkdir(parents=True, exist_ok=True)
             payload = gecko._call("GET", f"/session/{gecko.session}/screenshot")
             (folder / "26-firefox.png").write_bytes(base64.b64decode(payload["value"]))
-        assert version.startswith("149"), version
+    finally:
+        if gecko is not None:
+            try:
+                gecko._call("DELETE", f"/session/{gecko.session}")
+            except Exception:
+                pass
+        if driver is not None and driver.poll() is None:
+            os.killpg(driver.pid, 15)
+            try:
+                driver.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                os.killpg(driver.pid, 9)
+                driver.wait(timeout=5)
+        desk.stop()
+
+
+def _ready(gecko: Gecko) -> None:
+    deadline = time.monotonic() + 15
+    while time.monotonic() < deadline:
+        ready = bool(gecko.script(
+            "return !!(document.querySelector('.new-thread')"
+            " && document.querySelector('.new-thread')._x_dataStack)"
+        ))
+        if ready:
+            return
+        time.sleep(0.2)
+    raise AssertionError("Alpine ist nicht bereit")
+
+
+def _open_new(gecko: Gecko) -> None:
+    time.sleep(PACE_S)
+    gecko.click("[data-new-thread]")
+    time.sleep(PACE_S)
+    visible = gecko.script(
+        "const field = document.querySelector('[data-new-title]');"
+        "if (!field) return false;"
+        "const box = field.getBoundingClientRect();"
+        "return box.width > 0 && box.height > 0;"
+    )
+    if not visible:
+        gecko.script("document.querySelector('[data-new-thread]').click()")
+        time.sleep(PACE_S)
+
+
+def _page_shot(gecko: Gecko, name: str) -> None:
+    if not SHOTS:
+        return
+    folder = Path(SHOTS)
+    folder.mkdir(parents=True, exist_ok=True)
+    payload = gecko._call("GET", f"/session/{gecko.session}/screenshot")
+    (folder / name).write_bytes(base64.b64decode(payload["value"]))
+
+
+def test_user_keeps_a_note_and_snapshot_in_firefox(tmp_path: Path) -> None:
+    """TD-NOTE-01, TD-SNAP-01. Notiz und Zwischenstand in installiertem Firefox."""
+    if os.environ.get("THREADDESK_FIREFOX") != "1":
+        return
+    from test_desk_browser import (
+        BOARD, DESCRIPTION, LABEL, LATER, NOTE, TITLE, Desk, _free_port,
+    )
+
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    driver = None
+    gecko: Gecko | None = None
+    try:
+        url = desk.start()
+        port = _free_port()
+        before = _firefox_pids()
+        driver = _driver(port)
+        session, version = _session(port, accept_prompts=True)
+        assert version == _firefox_version(), version
+        gecko = Gecko(port, session)
+        gecko.rect()
+        time.sleep(PACE_S)
+        gecko.url(url + "/lang/de")
+        _ready(gecko)
+        _raise(before)
+        _open_new(gecko)
+        gecko.fill("[data-new-title]", TITLE)
+        gecko.fill('#thread-list input[name="description"]', DESCRIPTION)
+        time.sleep(PACE_S)
+        gecko.click("#thread-list button[type=submit]")
+        assert gecko.wait_script(
+            "return document.body.innerText.includes("
+            + json.dumps(f"Angelegt: {TITLE}")
+            + ") ? 'angelegt' : ''",
+            "angelegt",
+            seconds=8,
+        ) == "angelegt"
+        assert gecko.wait_script(
+            "const node = document.querySelector('h1');"
+            "return node ? node.textContent.trim() : ''",
+            TITLE,
+        ) == TITLE
+        assert gecko.script(
+            "const field = document.querySelector('.desk-description input[name=\"text\"]');"
+            "return field ? field.value : ''"
+        ) == DESCRIPTION
+
+        time.sleep(PACE_S)
+        gecko.fill('#notes textarea[name="text"]', NOTE)
+        time.sleep(PACE_S)
+        gecko.click_xpath("//section[@id='notes']//button[normalize-space()='Notiz speichern']")
+        assert gecko.wait_script(
+            "return document.body.innerText.includes('Notiz gespeichert') ? 'notiz' : ''",
+            "notiz",
+            seconds=5,
+        ) == "notiz"
+        assert gecko.script(
+            "return document.querySelector('#notes textarea[name=\"text\"]').value"
+        ) == NOTE
+
+        time.sleep(PACE_S)
+        gecko.refresh()
+        _ready(gecko)
+        assert gecko.script(
+            "const node = document.querySelector('h1');"
+            "return node ? node.textContent.trim() : ''"
+        ) == TITLE
+        assert gecko.script(
+            "return document.querySelector('#notes textarea[name=\"text\"]').value"
+        ) == NOTE
+
+        time.sleep(PACE_S)
+        gecko.script("document.querySelector('[data-whiteboard-content]').scrollIntoView({block:'center'})")
+        gecko.fill("[data-whiteboard-content]", BOARD)
+        time.sleep(PACE_S)
+        gecko.click("[data-whiteboard-submit]")
+        assert gecko.wait_script(
+            "const node = document.querySelector('.whiteboard-body');"
+            "return node ? node.textContent.trim() : ''",
+            BOARD,
+        ) == BOARD
+
+        time.sleep(PACE_S)
+        gecko.script("document.querySelector('#snapshots').scrollIntoView({block:'center'})")
+        gecko.fill("[data-snapshot-label]", LABEL)
+        time.sleep(PACE_S)
+        gecko.click("#snapshots form.inline-form button[type=submit]")
+        assert gecko.wait_script(
+            "const node = document.querySelector('.snap-label');"
+            "return node ? node.textContent.trim() : ''",
+            LABEL,
+        ) == LABEL
+
+        time.sleep(PACE_S)
+        gecko.fill('#notes textarea[name="text"]', LATER)
+        time.sleep(PACE_S)
+        gecko.click_xpath("//section[@id='notes']//button[normalize-space()='Notiz speichern']")
+        assert gecko.wait_script(
+            "return document.querySelector('#notes textarea[name=\"text\"]').value",
+            LATER,
+        ) == LATER
+
+        time.sleep(PACE_S)
+        gecko.script("document.querySelector('#snapshots').scrollIntoView({block:'center'})")
+        gecko.click("#snapshots .snap-item button[type=submit]")
+        assert gecko.wait_script(
+            "return document.querySelector('#notes textarea[name=\"text\"]').value",
+            NOTE,
+        ) == NOTE
+        assert gecko.script(
+            "return document.querySelector('.whiteboard-body').textContent.trim()"
+        ) == BOARD
+        assert gecko.script(
+            "return document.querySelector('.snap-label').textContent.trim()"
+        ) == LABEL
+        assert LATER not in str(gecko.script("return document.body.textContent"))
+        _raise(before, "fenster-firefox-zwischenstand.png")
+        _page_shot(gecko, "27-firefox-zwischenstand.png")
+
+        gecko._call("DELETE", f"/session/{gecko.session}")
+        gecko = None
+        desk.stop()
+        url = desk.start()
+        before = _firefox_pids()
+        session, version = _session(port, accept_prompts=True)
+        gecko = Gecko(port, session)
+        gecko.rect()
+        time.sleep(PACE_S)
+        gecko.url(url + "/")
+        _ready(gecko)
+        assert gecko.script(
+            "const node = document.querySelector('.thread-title');"
+            "return node ? node.textContent.trim() : ''"
+        ) == TITLE
+        assert gecko.script(
+            "return document.querySelector('#notes textarea[name=\"text\"]').value"
+        ) == NOTE
+        assert gecko.script(
+            "return document.querySelector('.whiteboard-body').textContent.trim()"
+        ) == BOARD
+        assert LATER not in str(gecko.script("return document.body.textContent"))
+        _raise(before, "fenster-firefox-neustart.png")
+        _page_shot(gecko, "28-firefox-neustart.png")
     finally:
         if gecko is not None:
             try:

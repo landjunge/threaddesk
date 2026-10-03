@@ -41,7 +41,7 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 - Erwartet: leeres Absenden legt nichts an. Danach steht der Titel in der Liste und die Beschreibung im Schreibtisch.
 - Fehlerfälle in diesem Lauf: leerer Titel. Offen: Doppelklick, zu langer Titel, Archiv, Umbenennen, Wechsel zweier Threads.
 - Test: derselbe Browserfall.
-- Status: Anlegen mit Umlaut und leerem Absenden nachgewiesen, gleicher Lauf wie TD-START-01. Im Firefox-Lauf, 18,14 Sekunden, legt leeres Absenden nichts an und der Umlaut-Titel steht. Eine Beschreibung wurde dort nicht eingetragen.
+- Status: Anlegen mit Umlaut und leerem Absenden nachgewiesen, gleicher Lauf wie TD-START-01. Im Firefox-Lauf, 18,14 Sekunden, legt leeres Absenden nichts an und der Umlaut-Titel steht. Eine Beschreibung wurde dort nicht eingetragen. Zusätzlich `test_user_keeps_a_note_and_snapshot_in_firefox`, Firefox 157, vorderes Fenster, 46,70 Sekunden, 2026-10-03. Die Beschreibung „Sichtbarer Zweck für den ersten Thread“ steht. „Angelegt: Prüfthread ÄÖÜ“ ist sichtbar.
 - Fehler: keiner bekannt.
 
 ## TD-THREAD-02 bis TD-THREAD-05 Wechsel, Beschreibung, Umbenennen, Archiv
@@ -60,7 +60,7 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 - Erwartet: derselbe Text im Notizfeld. Die spätere Ersatznotiz ist nach dem Zwischenstand weg.
 - Fehlerfälle in diesem Lauf: Neuladen und Prozessneustart. Offen: leere Notiz, sehr langer Text, Anhang-Kontrollkästchen, zwei Tabs.
 - Test: derselbe Browserfall.
-- Status: nachgewiesen, gleicher Lauf wie TD-START-01. Seite neu geladen und danach ein zweiter Serverprozess auf demselben Arbeitsbereich.
+- Status: nachgewiesen, gleicher Lauf wie TD-START-01. Seite neu geladen und danach ein zweiter Serverprozess auf demselben Arbeitsbereich. Zusätzlich `test_user_keeps_a_note_and_snapshot_in_firefox`, Firefox 157, vorderes Fenster, 46,70 Sekunden, 2026-10-03. „Notiz gespeichert“ ist sichtbar. „Notiz übersteht Neuladen und Neustart.“ bleibt nach Neuladen und nach einem zweiten Serverprozess. Die Ersatznotiz ist danach weg.
 - Fehler: keiner bekannt.
 
 ## TD-SNAP-01 Zwischenstand ohne Verlaufsverlust
@@ -72,7 +72,7 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 - Erwartet: Notiz ist wieder der erste Text. Der Verlaufseintrag und das Zwischenstand-Label bleiben. Die Bestätigung nennt den Notizverlust.
 - Fehlerfälle in diesem Lauf: bestätigtes Laden. Offen: Abbrechen im Dialog, zweites Laden, beschädigte Snapshot-Datei.
 - Test: derselbe Browserfall. Die Erwartung entspricht dem bestehenden Speichermodell: ein Zwischenstand kopiert den Kontext, nicht den Verlauf.
-- Status: nachgewiesen, gleicher Lauf wie TD-START-01. Nach dem Neustart waren Notiz, Verlauf und Label noch da. Der ersetzte Notiztext war weg.
+- Status: nachgewiesen, gleicher Lauf wie TD-START-01. Nach dem Neustart waren Notiz, Verlauf und Label noch da. Der ersetzte Notiztext war weg. Zusätzlich derselbe Firefox-Lauf, 46,70 Sekunden. „Dieser Verlauf bleibt beim Zwischenstand.“ und „vor der Änderung“ bleiben nach dem Laden und nach dem Neustart. Im Fenster steht „Geladen:“ mit der Kennung des Zwischenstands. Die Rückfrage wurde angenommen. Ihr Wortlaut ist in diesem Lauf nicht gelesen.
 - Fehler: keiner bekannt. Daneben sichtbar, nicht Teil dieses Ablaufs: der Schreibtisch zeigt bei dieser Fenstergröße eine innere Laufleiste (TD-LAYOUT-01, offen). Die leere Hausmeister-Auswahl bleibt „keins“ (TD-HAUS-01).
 
 ## TD-FILE-01 Dateien
