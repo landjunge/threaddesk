@@ -139,6 +139,14 @@ class Gecko:
             {"text": text},
         )
 
+    def set_file(self, css: str, path: str) -> None:
+        element = self.find(css)
+        self._call(
+            "POST",
+            f"/session/{self.session}/element/{element}/value",
+            {"text": path},
+        )
+
     def text(self, css: str) -> str:
         element = self.find(css)
         payload = self._call("GET", f"/session/{self.session}/element/{element}/text")
@@ -354,6 +362,17 @@ def _page_shot(gecko: Gecko, name: str) -> None:
     (folder / name).write_bytes(base64.b64decode(payload["value"]))
 
 
+def _shown(gecko: Gecko, css: str, expected: str, seconds: float = 3) -> str:
+    source = (
+        "const node = document.querySelector(" + json.dumps(css) + ");"
+        "if (!node) return '';"
+        "const box = node.getBoundingClientRect();"
+        "if (box.width < 1 || box.height < 1) return '';"
+        "return node.textContent.trim();"
+    )
+    return gecko.wait_script(source, expected, seconds=seconds)
+
+
 def test_user_keeps_a_note_and_snapshot_in_firefox(tmp_path: Path) -> None:
     """TD-NOTE-01, TD-SNAP-01. Notiz und Zwischenstand in installiertem Firefox."""
     if os.environ.get("THREADDESK_FIREFOX") != "1":
@@ -498,6 +517,150 @@ def test_user_keeps_a_note_and_snapshot_in_firefox(tmp_path: Path) -> None:
         assert LATER not in str(gecko.script("return document.body.textContent"))
         _raise(before, "fenster-firefox-neustart.png")
         _page_shot(gecko, "28-firefox-neustart.png")
+    finally:
+        if gecko is not None:
+            try:
+                gecko._call("DELETE", f"/session/{gecko.session}")
+            except Exception:
+                pass
+        if driver is not None and driver.poll() is None:
+            os.killpg(driver.pid, 15)
+            try:
+                driver.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                os.killpg(driver.pid, 9)
+                driver.wait(timeout=5)
+        desk.stop()
+
+
+def test_user_reads_error_notices_in_firefox(tmp_path: Path) -> None:
+    """TD-I18N-01. Deutsche Fehlersätze: leerer Titel, Raumname, kaputte Sicherung."""
+    if os.environ.get("THREADDESK_FIREFOX") != "1":
+        return
+    from test_desk_browser import Desk, _free_port
+    from threaddesk.core import i18n
+
+    kept = "Behalten"
+    ui_error = i18n.translate("ui.error", "de")
+    room_failed = i18n.translate("room.failed", "de")
+    room_none = i18n.translate("room.none", "de")
+    restore_error = i18n.translate("data.restore_error", "de")
+    backup_error = i18n.translate("data.backup_error", "de")
+    data_title = i18n.translate("data.title", "de")
+    bad = tmp_path / "unbrauchbar.zip"
+    bad.write_bytes(b"this is not a zip")
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    driver = None
+    gecko: Gecko | None = None
+    try:
+        url = desk.start()
+        port = _free_port()
+        before = _firefox_pids()
+        driver = _driver(port)
+        session, version = _session(port)
+        assert version == _firefox_version(), version
+        gecko = Gecko(port, session)
+        gecko.rect()
+        time.sleep(PACE_S)
+        gecko.url(url + "/lang/de")
+        _ready(gecko)
+        assert gecko.script("return document.documentElement.lang") == "de"
+        _raise(before)
+        _open_new(gecko)
+        gecko.fill("[data-new-title]", kept)
+        time.sleep(PACE_S)
+        gecko.click("#thread-list button[type=submit]")
+        assert gecko.wait_script(
+            "const node = document.querySelector('h1');"
+            "return node ? node.textContent.trim() : ''",
+            kept,
+        ) == kept
+
+        time.sleep(PACE_S)
+        _open_new(gecko)
+        gecko.fill("[data-new-title]", "   ")
+        time.sleep(PACE_S)
+        gecko.click("#thread-list button[type=submit]")
+        assert _shown(gecko, ".toast-stack .banner-error", ui_error) == ui_error
+        assert i18n.translate("ui.error", "en") not in str(
+            gecko.script("return document.body.textContent")
+        )
+        assert gecko.script(
+            "const node = document.querySelector('h1');"
+            "return node ? node.textContent.trim() : ''"
+        ) == kept
+        assert gecko.script(
+            "return document.querySelectorAll('[data-thread-id]').length"
+        ) == 1
+        _raise(before, "fenster-firefox-titel-fehler.png")
+        _page_shot(gecko, "29-firefox-titel-fehler.png")
+
+        time.sleep(PACE_S)
+        gecko.script(
+            "document.querySelector('[data-room]').scrollIntoView({block:'center'})"
+        )
+        gecko.fill("[data-room-name]", "   ")
+        time.sleep(PACE_S)
+        gecko.click("[data-room-create]")
+        assert _shown(gecko, ".toast-stack .banner-error", room_failed) == room_failed
+        assert room_none in str(gecko.script(
+            "const node = document.querySelector('[data-room]');"
+            "return node ? node.textContent : ''"
+        ))
+        assert gecko.script("return document.querySelector('[data-room-current]')") is None
+        assert i18n.translate("room.failed", "en") not in str(
+            gecko.script("return document.body.textContent")
+        )
+        _raise(before, "fenster-firefox-raum-fehler.png")
+        _page_shot(gecko, "30-firefox-raum-fehler.png")
+
+        time.sleep(PACE_S)
+        gecko.click('a[href="/data"]')
+        assert gecko.wait_script(
+            "const node = document.querySelector('h1');"
+            "return node ? node.textContent.trim() : ''",
+            data_title,
+            seconds=15,
+        ) == data_title
+        assert gecko.script("return document.documentElement.lang") == "de"
+        gecko.script("document.querySelector('#backup-file').scrollIntoView({block:'center'})")
+        time.sleep(PACE_S)
+        gecko.set_file("#backup-file", str(bad))
+        chosen = gecko.script(
+            "const input = document.querySelector('#backup-file');"
+            "return input && input.files && input.files.length"
+            " ? input.files[0].name : ''"
+        )
+        assert chosen == bad.name, chosen
+        gecko.click('input[name="confirm"]')
+        assert gecko.script(
+            "return document.querySelector('input[name=\"confirm\"]').checked"
+        ) is True
+        time.sleep(PACE_S)
+        gecko.click_xpath("//form[@action='/data/restore']//button[@type='submit']")
+        assert _shown(gecko, "p[role=alert]", restore_error, seconds=15) == restore_error
+        body = str(gecko.script("return document.body.textContent"))
+        assert i18n.translate("data.restore_error", "en") not in body
+        assert backup_error not in body
+        assert gecko.script(
+            "const node = document.querySelector('h1');"
+            "return node ? node.textContent.trim() : ''"
+        ) == data_title
+        _raise(before, "fenster-firefox-sicherung-fehler.png")
+        _page_shot(gecko, "31-firefox-sicherung-fehler.png")
+
+        time.sleep(PACE_S)
+        gecko.click('a[href="/"]')
+        assert gecko.wait_script(
+            "const node = document.querySelector('h1');"
+            "return node ? node.textContent.trim() : ''",
+            kept,
+        ) == kept
+        assert gecko.script(
+            "return document.querySelectorAll('[data-thread-id]').length"
+        ) == 1
     finally:
         if gecko is not None:
             try:
