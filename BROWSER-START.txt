@@ -1,0 +1,20 @@
+THREADDESK – BROWSER-START
+
+1. Die bisherige ThreadDesk-App bzw. den bisherigen Server vollständig beenden.
+2. Den entpackten Ordner behalten und darin ThreadDesk-Start.command öffnen.
+3. Der Browser öffnet sich nach dem Start automatisch. Das Terminalfenster offen lassen.
+
+Voraussetzung: Python 3.9 oder neuer. Beim ersten Start werden die benötigten
+Python-Pakete aus dem Internet in einen eigenen Unterordner installiert.
+Dies ist die Browser-Ausgabe, kein neuer nativer Mac-Installer.
+
+Der Starter öffnet den Code aus diesem Ordner, nicht die alte App.
+Die bisherige Datenablage (~/.threaddesk oder THREADDESK_HOME) wird weiterverwendet.
+Vor dem Start wird daneben eine vollständige Dateikopie mit Zeitstempel erstellt.
+Diese Dateikopie ist keine Reparatur oder Abnahme der Sicherungsfunktion in der UI.
+
+Falls macOS das direkte Öffnen der .command-Datei blockiert:
+Terminal öffnen, „bash “ eingeben, die Datei ThreadDesk-Start.command in das
+Terminal ziehen und die Eingabetaste drücken.
+
+Zum Beenden im Terminal Strg+C drücken. Zum erneuten Start dieselbe Datei öffnen.
