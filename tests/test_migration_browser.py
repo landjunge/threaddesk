@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import socket
+import subprocess
 import threading
 import time
 from pathlib import Path
@@ -21,7 +22,10 @@ from threaddesk.services.migration import AtomicImportService, DryRunPlanner, va
 from threaddesk.storage.sqlite_store import SQLiteStore  # noqa: E402
 from threaddesk.ui.server import create_app  # noqa: E402
 
-USER_PACE_MS = 180
+CHROME = os.environ.get("THREADDESK_CHROMIUM") or None
+HEADED = os.environ.get("THREADDESK_BROWSER_HEADED") == "1"
+# Sichtbares Fenster: 1,5 Sekunden je Aktion. Kopflos bleibt beim bisherigen Tempo.
+USER_PACE_MS = 1500 if HEADED else 180
 
 
 def _free_port() -> int:
@@ -66,6 +70,57 @@ def live_migration(tmp_path: Path):
             os.environ.pop("THREADDESK_STORAGE", None)
         else:
             os.environ["THREADDESK_STORAGE"] = before_storage
+
+
+def _chrome_pids() -> set[int]:
+    out = subprocess.check_output(["ps", "-ax", "-o", "pid=,command="], text=True)
+    found: set[int] = set()
+    for line in out.splitlines():
+        if "Google Chrome.app/Contents/MacOS/Google Chrome" in line and "Helper" not in line:
+            found.add(int(line.split(None, 1)[0]))
+    return found
+
+
+def _raise_chrome(before: set[int], shot: str | None = None) -> None:
+    helper = Path("/tmp/td-raise")
+    if not HEADED or not helper.exists():
+        return
+    new = sorted(_chrome_pids() - before)
+    if not new:
+        return
+    pid = new[-1]
+    subprocess.run([str(helper), str(pid), "activate"], check=False)
+    front = subprocess.run([str(helper), str(pid), "front"], capture_output=True, text=True)
+    if front.returncode != 0:
+        raise AssertionError(f"Chrome ist nicht das vordere Fenster: {front.stdout.strip()}")
+    shots = os.environ.get("THREADDESK_SHOTS")
+    if not shot or not shots:
+        return
+    listed = subprocess.run([str(helper), str(pid), "windows"], capture_output=True, text=True)
+    window_id = listed.stdout.split("\t", 1)[0].strip()
+    if window_id.isdigit():
+        subprocess.run(
+            ["screencapture", "-l", window_id, "-o", str(Path(shots) / shot)],
+            check=False,
+        )
+
+
+def _open(play):
+    before = _chrome_pids()
+    try:
+        browser = play.chromium.launch(
+            executable_path=CHROME,
+            headless=not HEADED,
+            slow_mo=USER_PACE_MS,
+            args=["--start-fullscreen"] if HEADED else [],
+        )
+    except Exception as exc:  # pragma: no cover - Umgebung ohne Browser
+        pytest.skip(f"kein Chromium verfügbar: {exc}")
+    page = browser.new_page(viewport={"width": 1280, "height": 900})
+    page.bring_to_front()
+    _raise_chrome(before)
+    _open.before = before
+    return browser, page
 
 
 def _choose_bundle(page, bundle: Path) -> None:
@@ -121,8 +176,7 @@ def test_user_reviews_then_explicitly_imports_bundle_and_creates_recovery_copy(
 ):
     base_url, bundle, home = live_migration
     with sync_playwright() as play:
-        browser = play.chromium.launch(slow_mo=USER_PACE_MS)
-        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        browser, page = _open(play)
         page.goto(f"{base_url}/migration", wait_until="networkidle")
         _choose_bundle(page, bundle)
         expect(page.locator('[data-testid="import-confirm"]')).to_be_disabled()
@@ -139,6 +193,11 @@ def test_user_reviews_then_explicitly_imports_bundle_and_creates_recovery_copy(
         expect(page.locator('[data-migration-summary]')).to_contain_text(
             "Wiederherstellungs-Kopie erstellt", timeout=15000,
         )
+        shots = os.environ.get("THREADDESK_SHOTS")
+        if shots:
+            Path(shots).mkdir(parents=True, exist_ok=True)
+            page.screenshot(path=str(Path(shots) / "10-import.png"))
+            _raise_chrome(_open.before, "fenster-import.png")
         assert list((home / "recovery").glob("*"))
         browser.close()
 
@@ -148,8 +207,7 @@ def test_user_reimports_identical_bundle_without_duplicate_nodes_or_backups(
 ):
     base_url, bundle, home = live_migration
     with sync_playwright() as play:
-        browser = play.chromium.launch(slow_mo=USER_PACE_MS)
-        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        browser, page = _open(play)
         page.goto(f"{base_url}/migration", wait_until="networkidle")
 
         _choose_bundle(page, bundle)
@@ -185,8 +243,7 @@ def test_user_keeps_local_conflict_with_keyboard_then_imports(
     _commit_for_conflict(home, first)
 
     with sync_playwright() as play:
-        browser = play.chromium.launch(slow_mo=USER_PACE_MS)
-        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        browser, page = _open(play)
         page.goto(f"{base_url}/migration", wait_until="networkidle")
         _choose_bundle(page, changed)
         _preview(page)
@@ -230,8 +287,7 @@ def test_user_takes_notion_conflict_with_mouse_then_imports(
     _commit_for_conflict(home, first)
 
     with sync_playwright() as play:
-        browser = play.chromium.launch(slow_mo=USER_PACE_MS)
-        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        browser, page = _open(play)
         page.goto(f"{base_url}/migration", wait_until="networkidle")
         _choose_bundle(page, changed)
         _preview(page)
@@ -286,8 +342,7 @@ def test_user_sees_unsafe_bundle_rejected_without_partial_import(
     base_url, source, home = live_migration
     unsafe = builder(source, tmp_path / f"{name}.tdbundle")
     with sync_playwright() as play:
-        browser = play.chromium.launch(slow_mo=USER_PACE_MS)
-        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        browser, page = _open(play)
         page.goto(f"{base_url}/migration", wait_until="networkidle")
         _choose_bundle(page, unsafe)
         _preview(page)
@@ -307,8 +362,7 @@ def test_user_sees_secret_rejected_without_exposing_secret_or_importing(
         tmp_path / "secret.tdbundle", project_title="API_KEY=placeholder",
     )
     with sync_playwright() as play:
-        browser = play.chromium.launch(slow_mo=USER_PACE_MS)
-        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        browser, page = _open(play)
         page.goto(f"{base_url}/migration", wait_until="networkidle")
         _choose_bundle(page, unsafe)
         _preview(page)
@@ -326,8 +380,7 @@ def test_user_sees_secret_rejected_without_exposing_secret_or_importing(
 def test_english_user_can_review_import_and_create_recovery_copy(live_migration):
     base_url, bundle, home = live_migration
     with sync_playwright() as play:
-        browser = play.chromium.launch(slow_mo=USER_PACE_MS)
-        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        browser, page = _open(play)
         page.goto(f"{base_url}/migration?lang=en", wait_until="networkidle")
         expect(page.locator("html")).to_have_attribute("lang", "en")
         _choose_bundle(page, bundle)

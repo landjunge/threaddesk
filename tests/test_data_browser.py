@@ -46,8 +46,15 @@ def test_user_downloads_opens_and_switches_back(tmp_path, monkeypatch, backend, 
             time.sleep(.05)
         assert server.started
         with sync_playwright() as play:
-            browser = play.chromium.launch(executable_path=os.environ.get('THREADDESK_CHROMIUM') or None)
+            headed = os.environ.get('THREADDESK_BROWSER_HEADED') == '1'
+            browser = play.chromium.launch(
+                executable_path=os.environ.get('THREADDESK_CHROMIUM') or None,
+                headless=not headed,
+                slow_mo=1500 if headed else 0,
+                args=['--start-fullscreen'] if headed else [],
+            )
             page = browser.new_page(accept_downloads=True, viewport={'width': 1360, 'height': 900})
+            page.bring_to_front()
             page.goto(url + '/?lang=de')
             page.get_by_role('link', name='Daten', exact=True).click()
             with page.expect_download() as event:

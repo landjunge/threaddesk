@@ -118,12 +118,12 @@ Apps sind nach Abschnitt 16 zuletzt dran.
 ## TD-NOTION-01 Übernahme
 
 - Nutzerziel: Bundle ansehen, Konflikt entscheiden, ausdrücklich importieren, Wiederherstellung verstehen.
-- Status: sieben benannte Fälle in `tests/test_migration_browser.py`, in der Linux-Runde als Teil der 9 Migrationsfälle gezählt. Dieser Mac nicht wiederholt. Keine Umschaltung von Notion auf ThreadDesk als einziges Gedächtnis.
+- Status: neun Fälle in `tests/test_migration_browser.py` auf diesem Mac, System-Chrome, kopflos, 53,79 Sekunden, 2026-10-03. Vorschau, ausdrücklicher Import und Wiederherstellungs-Kopie zusätzlich im vorderen Chrome, 19,24 Sekunden, synthetisches Bundle. Notion bleibt das Arbeitsgedächtnis. Die Nutzerinstallation ist nicht beteiligt.
 
 ## TD-BACK-01 Sicherung
 
 - Nutzerziel: Sicherung erhalten, in einem zweiten Arbeitsbereich öffnen, zum unveränderten Original zurückkehren.
-- Status: vier Chromium-Fälle in `tests/test_data_browser.py` (JSON und SQLite, normaler Pfad und Verzeichnisverknüpfung) am Commit `54f2ac0`, Linux. Die zwei Codekorrekturen sind damit dort belegt. Die konkrete macOS-Nutzerinstallation und der native Speicherdialog sind nicht belegt. Nativer Dialog gehört an das Ende, nach der Browser-Abnahme. Diesen Fall hier nicht noch einmal als erste Lücke bauen.
+- Status: vier Fälle in `tests/test_data_browser.py` auf diesem Mac, System-Chrome, kopflos, 21,21 Sekunden, 2026-10-03. JSON und SQLite, normaler Pfad und Verzeichnisverknüpfung. JSON ohne Verknüpfung zusätzlich im vorderen Chrome, 20,59 Sekunden. Die Datei kommt an, öffnet sich als eigener Arbeitsbereich, und der spätere Stand des Originals ist nach der Rückkehr wieder da. Die installierte App und der native Speicherdialog sind nicht belegt. Der native Dialog gehört an das Ende.
 
 ## TD-EXPORT-01 Export
 
