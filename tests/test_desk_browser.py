@@ -415,11 +415,15 @@ def test_user_renames_switches_archives_and_keeps_file_paths(tmp_path: Path) -> 
 
 def _append(page, actor: str, content: str, kind: str, next_step: str = "") -> None:
     form = page.locator("[data-whiteboard]")
+    previous_form = form.element_handle()
     form.locator("[data-whiteboard-actor]").fill(actor)
     form.locator("[data-whiteboard-type]").select_option(kind)
     form.locator("[data-whiteboard-content]").fill(content)
     form.locator("[data-whiteboard-next]").fill(next_step)
     form.locator("[data-whiteboard-submit]").click()
+    # The notice can already be present from the previous append. Wait for
+    # this submission to replace the form before filling the next entry.
+    previous_form.wait_for_element_state("hidden")
     expect(page.get_by_role("status")).to_have_text("Beitrag angehängt")
 
 
@@ -471,7 +475,11 @@ def test_user_edits_description_status_and_whiteboard_order(tmp_path: Path) -> N
                 expect(page.locator(".detail-head .status")).to_have_text(name)
                 expect(page.locator(".thread-item.is-current .status")).to_have_text(name)
                 expect(page.get_by_role("status")).to_have_text(f"Status: {name}")
+            previous_status = page.locator(".desk-status").element_handle()
             page.locator(".desk-status").get_by_role("button", name="done", exact=True).click()
+            # Re-selecting done leaves all visible assertions unchanged until
+            # HTMX replaces the workspace. Do not type into the outgoing form.
+            previous_status.wait_for_element_state("hidden")
             expect(page.locator(".desk-status button.is-on")).to_have_text("done")
             expect(page.locator(".banner-error:visible")).to_have_count(0)
 

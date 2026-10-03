@@ -38,7 +38,7 @@ jobs:
         run: python -m pytest -q -ra --junitxml=test-results/first.xml
       - name: Complete acceptance, repeat
         run: python -m pytest -q -ra --junitxml=test-results/second.xml
-      - name: No skipped acceptance tests
+      - name: No failures or unexpected skipped acceptance tests
         run: |
           python - <<'PY'
           import xml.etree.ElementTree as ET
@@ -46,8 +46,17 @@ jobs:
               root = ET.parse(f'test-results/{name}.xml').getroot()
               suites = list(root.iter('testsuite'))
               assert suites and sum(int(s.get('tests', 0)) for s in suites) >= 500
-              for attribute in ('skipped', 'failures', 'errors'):
+              for attribute in ('failures', 'errors'):
                   assert sum(int(s.get(attribute, 0)) for s in suites) == 0, attribute
+              # This explicitly opt-in test needs a separately installed local
+              # model. Keep it visible as NOT TESTED; never allow other skips.
+              skipped = [case for case in root.iter('testcase') if case.find('skipped') is not None]
+              for case in skipped:
+                  assert case.get('classname') == 'tests.test_desk_browser'
+                  assert case.get('name') == 'test_user_runs_the_housekeeper_on_an_installed_model'
+                  assert case.find('skipped').get('message') == 'Live-Modelltest benötigt THREADDESK_HAUSMEISTER_LIVE=1'
+              assert len(skipped) <= 1
+              print(f'{name}: {sum(int(s.get("tests", 0)) for s in suites)} tests; {len(skipped)} explicit live-model check not run')
           PY
       - name: Check JavaScript
         run: |
