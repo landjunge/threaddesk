@@ -1,9 +1,17 @@
 from pathlib import Path
+import importlib.util
 import sys
 
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 ROOT = Path.cwd()
+_provenance_path = ROOT / "scripts" / "package_provenance.py"
+_provenance_spec = importlib.util.spec_from_file_location(
+    "thread_desk_package_provenance", _provenance_path
+)
+_provenance = importlib.util.module_from_spec(_provenance_spec)
+_provenance_spec.loader.exec_module(_provenance)
+_bundle = _provenance.bundle_settings(ROOT)
 datas = collect_data_files("threaddesk")
 hiddenimports = collect_submodules("uvicorn") + collect_submodules("webview")
 icons = ROOT / "build" / "icons"
@@ -33,7 +41,8 @@ if sys.platform == "darwin":
     app = BUNDLE(
         app_files, name="ThreadDesk.app", icon=str(icon),
         bundle_identifier="de.netzwerkpunkt.threaddesk",
-        info_plist={"NSHighResolutionCapable": True},
+        version=_bundle["version"],
+        info_plist=_bundle["info_plist"],
     )
 else:
     exe = EXE(
