@@ -29,6 +29,36 @@ def atomic_json(path, data):
     temporary.replace(path)
 
 
+def write_wake_log(path, items, observed_at, thread_id):
+    """Commit an idempotent metadata journal before advancing the read cursor.
+
+    Atomic replacement means monitors must watch the parent directory or reopen
+    the pathname. A saved journal also recovers a crash before status.json saves.
+    """
+    rows = [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines()] if path.exists() else []
+    known = set()
+    for row in rows:
+        if row.get('thread_id') != thread_id or not isinstance(row.get('entry_id'), str):
+            raise ValueError('Invalid wake journal identity')
+        if row['entry_id'] in known:
+            raise ValueError('Duplicate wake journal identity')
+        known.add(row['entry_id'])
+    additions = [dict(thread_id=thread_id, entry_id=item['id'], ordinal=item.get('ordinal'),
+                      actor=item.get('actor'), observed_at=observed_at)
+                 for item in items if item['id'] not in known]
+    if not additions:
+        return 0
+    temporary = path.with_suffix('.tmp')
+    with temporary.open('w', encoding='utf-8') as stream:
+        os.chmod(str(temporary), 0o600)
+        for row in rows + additions:
+            stream.write(json.dumps(row, ensure_ascii=False) + '\n')
+        stream.flush()
+        os.fsync(stream.fileno())
+    temporary.replace(path)
+    return len(additions)
+
+
 def notify():
     # Fixed text: whiteboard content is never interpolated into executable code.
     result = subprocess.run([
@@ -58,6 +88,7 @@ def tick(root, thread_id, state_path, notifications=False):
             if not directory.is_dir():
                 raise ValueError('Whiteboard directory is missing')
             entries = {}
+            metadata = {}
             for path in sorted(directory.glob('*.json')):
                 item = json.loads(path.read_text(encoding='utf-8'))
                 entry_id = item.get('id')
@@ -69,6 +100,7 @@ def tick(root, thread_id, state_path, notifications=False):
                     raise ValueError('Duplicate entry ID: ' + entry_id)
                 digest = hashlib.sha256(json.dumps(item, sort_keys=True, ensure_ascii=False).encode('utf-8')).hexdigest()
                 entries[entry_id] = digest
+                metadata[entry_id] = item
         except (OSError, ValueError) as exc:
             state.update(identity)
             state.update(last_attempt_at=attempted, status='error', error=str(exc))
@@ -76,6 +108,14 @@ def tick(root, thread_id, state_path, notifications=False):
             return state
         old = state.get('seen', {})
         fresh = sorted(set(entries) - set(old))
+        wake_path = state_path.parent / 'wake.log'
+        try:
+            emitted = write_wake_log(wake_path, [metadata[key] for key in fresh], attempted, thread_id)
+        except (OSError, ValueError) as exc:
+            state.update(identity)
+            state.update(last_attempt_at=attempted, status='error', error='wake.log: ' + str(exc))
+            atomic_json(state_path, state)
+            return state
         changed = sorted(key for key in entries if key in old and entries[key] != old[key])
         missing = sorted(set(old) - set(entries))
         # Keep known IDs even if temporarily removed; reappearance is not a new entry.
@@ -90,6 +130,7 @@ def tick(root, thread_id, state_path, notifications=False):
             entry_count=len(entries), new_ids=fresh, changed_ids=changed, missing_ids=missing,
             pending_notice_ids=pending, seen=seen,
             agent_delivery='not_connected', notification='disabled', interval_seconds=300,
+            wake_log=str(wake_path), wake_events_written=emitted,
         )
         if notifications and pending:
             try:

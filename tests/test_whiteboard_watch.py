@@ -91,6 +91,35 @@ class WhiteboardWatchTests(unittest.TestCase):
         self.add('one')
         self.assertEqual(self.read()['new_ids'], [])
 
+    def test_wake_journal_metadata_only_and_no_duplicates(self):
+        self.add('one', content='PRIVATE BODY')
+        self.read()
+        log = self.state.parent / 'wake.log'
+        original = log.read_text()
+        self.read()
+        self.add('one', content='changed')
+        self.read()
+        self.assertEqual(log.read_text(), original)
+        self.assertNotIn('PRIVATE BODY', original)
+        self.assertEqual(set(json.loads(original)),
+                         {'thread_id', 'entry_id', 'ordinal', 'actor', 'observed_at'})
+
+    def test_journal_survives_status_save_failure(self):
+        self.add('one')
+        with patch.object(watch, 'atomic_json', side_effect=OSError('disk failure')):
+            with self.assertRaises(OSError):
+                self.read()
+        self.assertEqual(self.read()['wake_events_written'], 0)
+        self.assertEqual(len((self.state.parent / 'wake.log').read_text().splitlines()), 1)
+
+    def test_wake_write_failure_does_not_consume_entry(self):
+        self.add('one')
+        with patch.object(watch, 'write_wake_log', side_effect=OSError('disk full')):
+            failed = self.read()
+        self.assertEqual(failed['status'], 'error')
+        self.assertNotIn('seen', failed)
+        self.assertEqual(self.read()['wake_events_written'], 1)
+
     def test_reader_does_not_modify_whiteboard(self):
         self.add('one')
         before = {p.name: p.read_bytes() for p in self.board.iterdir()}
