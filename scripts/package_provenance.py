@@ -34,16 +34,26 @@ def source_commit(root: Path | None = None) -> str:
     return commit
 
 
+def macos_release_version(product_version: str) -> str:
+    """Derive Apple's three numeric fields; preserve the full product label separately."""
+    match = re.fullmatch(r"([0-9]+)\.([0-9]+)\.([0-9]+)(?:(?:a|b|rc)[0-9]+)?", product_version)
+    if match is None:
+        raise ValueError("Unsupported product version for macOS bundle")
+    return ".".join(str(int(part)) for part in match.groups())
+
+
 def bundle_settings(root: Path | None = None) -> dict[str, object]:
     """macOS bundle fields for the tree being built. No second version literal."""
     app_version = package_version(root)
     commit = source_commit(root)
     return {
         "version": app_version,
+        "macos_version": macos_release_version(app_version),
         "source_commit": commit,
         "info_plist": {
             "NSHighResolutionCapable": True,
-            "CFBundleVersion": app_version,
+            "CFBundleVersion": macos_release_version(app_version),
+            "ThreadDeskProductVersion": app_version,
             "ThreadDeskSourceCommit": commit,
         },
     }
@@ -56,7 +66,7 @@ def write_macos_info_plist(path: Path, settings: dict[str, object]) -> None:
         "CFBundleName": "ThreadDesk",
         "CFBundleIdentifier": "de.netzwerkpunkt.threaddesk",
         "CFBundlePackageType": "APPL",
-        "CFBundleShortVersionString": settings["version"],
+        "CFBundleShortVersionString": settings["macos_version"],
         "NSHighResolutionCapable": True,
     }
     payload.update(settings["info_plist"])
