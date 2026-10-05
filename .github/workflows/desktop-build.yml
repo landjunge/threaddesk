@@ -77,7 +77,7 @@ jobs:
       - name: Install build and test tools
         run: python -m pip install -e '.[dev,ui,desktop]' pyinstaller
       - name: Test native startup helpers
-        run: python -m pytest tests/test_desktop_entry.py tests/test_desktop_runtime.py -q
+        run: python -m pytest tests/test_desktop_entry.py tests/test_desktop_runtime.py tests/test_bundle_identity.py -q
       - name: Build desktop app
         run: pyinstaller --noconfirm --clean packaging/ThreadDesk.spec
       - name: Test packaged Windows app with bounded exit

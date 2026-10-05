@@ -47,14 +47,13 @@ def test_bundle_names_the_source_commit() -> None:
 
 
 def test_written_info_plist_keeps_version_and_commit(tmp_path: Path) -> None:
-    if sys.platform != "darwin":
-        pytest.skip("macOS Info.plist")
     module = provenance()
     settings = module.bundle_settings(ROOT)
     path = tmp_path / "ThreadDesk.app" / "Contents" / "Info.plist"
     module.write_macos_info_plist(path, settings)
-    lint = subprocess.run(["/usr/bin/plutil", "-lint", str(path)], capture_output=True, text=True)
-    assert lint.returncode == 0, lint.stderr
+    if sys.platform == "darwin":
+        lint = subprocess.run(["/usr/bin/plutil", "-lint", str(path)], capture_output=True, text=True)
+        assert lint.returncode == 0, lint.stderr
     plist = plistlib.loads(path.read_bytes())
     assert plist["CFBundleShortVersionString"] == settings["macos_version"]
     assert plist["CFBundleVersion"] == settings["macos_version"]
