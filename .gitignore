@@ -10,27 +10,4 @@ build/
 .env
 *.env
 data/
-.threaddesk/
 .threaddesk-local/
-backups/
-user-data/
-test-results/
-playwright-report/
-*.sqlite
-*.sqlite3
-*.sqlite3-wal
-*.sqlite3-shm
-*.tdbundle
-# Runtime identity and pairing state are private, never source code.
-actors.json
-rooms.json
-peers.json
-invites.json
-hausmeister.json
-desktop-port.json
-desktop.lock
-# CI deliverables are uploaded explicitly, not committed.
-ThreadDesk-*.exe
-ThreadDesk-*.dmg
-ThreadDesk-*.sha256
-ThreadDesk-*.build.json

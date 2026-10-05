@@ -15,7 +15,6 @@
   <form class="inline-form" hx-post="/hausmeister/model" hx-target="#workspace" hx-swap="innerHTML">
     <label>
       <select name="model" data-hausmeister-model aria-label="{{ t('hausmeister.use_model') }}">
-        <option value="" {% if not hausmeister.model %}selected{% endif %}>{{ t("hausmeister.model_none") }}</option>
         {% for name in hausmeister.models %}
         <option value="{{ name }}" {% if name == hausmeister.model %}selected{% endif %}>{{ name }}</option>
         {% endfor %}

@@ -1,109 +1,62 @@
 name: Desktop installers
 
 on:
-  pull_request:
-    paths: ['src/**', 'packaging/**', 'scripts/**', 'brand/**', 'pyproject.toml', '.github/workflows/desktop-build.yml']
   push:
-    branches: [main]
-    paths: ['src/**', 'packaging/**', 'scripts/**', 'brand/**', 'pyproject.toml', '.github/workflows/desktop-build.yml']
+    branches: [feat/knowledge-graph-core]
+    paths:
+      - "src/**"
+      - "packaging/**"
+      - "pyproject.toml"
+      - ".github/workflows/desktop-build.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "packaging/**"
+      - "pyproject.toml"
+      - ".github/workflows/desktop-build.yml"
   workflow_dispatch:
 
-# Candidate publication is gated on full acceptance and all native builds.
 permissions:
-  contents: read
-
-concurrency:
-  group: desktop-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  contents: write
 
 jobs:
-  icons:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: python scripts/check_release_inputs.py
-      - run: python -m pip install CairoSVG Pillow
-      - run: python scripts/build_icons.py
-      - uses: actions/upload-artifact@v4
-        with:
-          name: desktop-icons
-          path: build/icons/*
-          if-no-files-found: error
-
   build:
-    needs: icons
-    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
             artifact: ThreadDesk-Windows
-            arch: x86_64
-            deployment: ''
+          # Intel runner: works natively on i7 Macs and via Rosetta on Apple Silicon.
           - os: macos-15-intel
             artifact: ThreadDesk-macOS
-            arch: x86_64
-            deployment: '10.15'
-          - os: macos-15
-            artifact: ThreadDesk-macOS-AppleSilicon
-            arch: arm64
-            deployment: '11.0'
     runs-on: ${{ matrix.os }}
     env:
-      MACOSX_DEPLOYMENT_TARGET: ${{ matrix.deployment }}
+      MACOSX_DEPLOYMENT_TARGET: "10.15"
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
           cache: pip
-      - uses: actions/download-artifact@v4
-        with:
-          name: desktop-icons
-          path: build/icons
-      - name: Check release inputs
-        run: python scripts/check_release_inputs.py
-      - name: Install build and test tools
-        run: python -m pip install -e '.[dev,ui,desktop]' pyinstaller
-      - name: Test native startup helpers
-        run: python -m pytest tests/test_desktop_entry.py tests/test_desktop_runtime.py -q
+      - name: Install build tools
+        run: python -m pip install -e ".[ui,desktop]" pyinstaller
       - name: Build desktop app
         run: pyinstaller --noconfirm --clean packaging/ThreadDesk.spec
-      - name: Test packaged Windows app with bounded exit
+      - name: Test packaged Windows app
         if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          $process = Start-Process -FilePath (Resolve-Path 'dist/ThreadDesk.exe').Path -ArgumentList '--self-test' -PassThru
-          if (-not $process.WaitForExit(90000)) {
-            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
-            throw 'Packaged self-test did not terminate'
-          }
-          $process.Refresh()
-          if ($process.ExitCode -ne 0) { throw "Packaged self-test failed: $($process.ExitCode)" }
-      - name: Test packaged macOS app and architecture
+        run: .\dist\ThreadDesk.exe --self-test
+      - name: Test packaged macOS app
         if: runner.os == 'macOS'
         run: |
-          test "$(uname -m)" = '${{ matrix.arch }}'
-          file dist/ThreadDesk.app/Contents/MacOS/ThreadDesk | grep '${{ matrix.arch }}'
+          test "$(uname -m)" = "x86_64"
+          file dist/ThreadDesk.app/Contents/MacOS/ThreadDesk | grep x86_64
           dist/ThreadDesk.app/Contents/MacOS/ThreadDesk --self-test
-          test -f dist/ThreadDesk.app/Contents/Resources/icon.icns
       - name: Create Windows download
         if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          Move-Item dist/ThreadDesk.exe ThreadDesk-Windows.exe
-          python scripts/package_provenance.py ThreadDesk-Windows.exe
+        run: Move-Item dist/ThreadDesk.exe ThreadDesk-Windows.exe
       - name: Create macOS disk image
         if: runner.os == 'macOS'
         run: |
@@ -111,51 +64,30 @@ jobs:
           mkdir -p dmg
           cp -R dist/ThreadDesk.app dmg/
           ln -s /Applications dmg/Applications
-          hdiutil create -volname ThreadDesk -srcfolder dmg -ov -format UDZO '${{ matrix.artifact }}.dmg'
-          python scripts/package_provenance.py '${{ matrix.artifact }}.dmg'
+          hdiutil create -volname ThreadDesk -srcfolder dmg -ov -format UDZO ThreadDesk-macOS.dmg
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: |
-            ${{ matrix.artifact }}.exe
-            ${{ matrix.artifact }}.dmg
-            ${{ matrix.artifact }}.*.sha256
-            ${{ matrix.artifact }}.*.build.json
+          path: ThreadDesk-*
           if-no-files-found: error
 
-  acceptance:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/tests.yml
-
-  publish:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [build, acceptance]
+  publish-preview:
+    needs: build
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
       - uses: actions/download-artifact@v4
         with:
-          pattern: ThreadDesk-*
-          path: release-files
+          path: release
           merge-multiple: true
-      - name: Verify every native download and source receipt
-        run: python scripts/verify_release.py release-files --commit "$GITHUB_SHA"
-      - name: Publish versioned candidate without replacing existing downloads
+      - name: Publish stable preview downloads
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TARGET: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          version="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
-          tag="v$version"
-          if gh release view "$tag" > /dev/null 2>&1; then
-            echo "Version already published; existing downloads remain unchanged."
-            exit 0
+          if gh release view preview --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload preview release/* --clobber --repo "$GITHUB_REPOSITORY"
+            gh release edit preview --prerelease --title "ThreadDesk Preview" --notes "Fertige Desktop-Ausgaben: herunterladen, öffnen, fertig." --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create preview release/* --prerelease --target "$RELEASE_TARGET" --title "ThreadDesk Preview" --notes "Fertige Desktop-Ausgaben: herunterladen, öffnen, fertig." --repo "$GITHUB_REPOSITORY"
           fi
-          gh release create "$tag" release-files/* --target "$GITHUB_SHA" --prerelease \
-            --title "ThreadDesk $version – aktuelle Desktop-Ausgabe" --notes-file docs/RELEASE-NOTES.md

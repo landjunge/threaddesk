@@ -1,6 +1,6 @@
 <p align="center"><img src="brand/mark.svg" width="180" alt="ThreadDesk Bildmarke"></p>
 <p align="center"><img src="brand/wordmark.svg" width="520" alt="ThreadDesk"></p>
-<p align="center"><a href="https://github.com/landjunge/threaddesk/releases/tag/preview"><img src="brand/download-button.svg" width="320" alt="ThreadDesk herunterladen"></a></p>
+<p align="center"><a href="https://github.com/landjunge/threaddesk/releases/tag/v0.1.1rc1"><img src="brand/download-button.svg" width="320" alt="ThreadDesk herunterladen"></a></p>
 
 <p align="center"><strong>Ein Arbeitsplatz, der den Stand deiner KI-Projekte behält.</strong></p>
 
@@ -38,20 +38,77 @@ ThreadDesk merkt sich diesen Stand. Jeder Arbeitsbereich wird zu einem eigenen T
 
 ### Heutiger Stand – ehrlich
 
+**Aktuelle Desktop-Ausgabe: [0.1.1rc1](https://github.com/landjunge/threaddesk/releases/tag/v0.1.1rc1)**,
+veröffentlicht am 2. Oktober 2026. Der Download oben führt zu dieser geprüften
+Ausgabe für Intel-Mac, Apple Silicon und Windows. [PR #63](https://github.com/landjunge/threaddesk/pull/63)
+ist nach `main` übernommen. Die vollständige Testsuite hat 554 Prüfungen zweimal
+ohne Fehler oder übersprungene Tests bestanden. Alle drei nativen Pakete haben
+ihren Selbsttest bestanden; Quell-Commit und Prüfsummen wurden vor der
+Veröffentlichung abgeglichen.
+
+Die Ausgabe bleibt ein Release-Kandidat: Der erste Start auf deinem konkreten
+Mac und die Qualität deines ausgewählten lokalen LLM müssen am jeweiligen Gerät
+geprüft werden. macOS-Pakete sind ad-hoc signiert, nicht Apple-notarisiert.
+
 | Bereich | Aktueller Stand |
 |---|---|
-| Threads | Anlegen, wechseln, archivieren, löschen und verwalten |
+| Threads | Anlegen, wechseln, archivieren und löschen |
 | Kontext | Notizen, Dateien, History und Snapshots |
-| Daten | JSON unter ~/.threaddesk; lokal |
-| Oberfläche | CLI, lokale Tafel und optionale Weboberfläche |
+| Daten | Lokal: JSON, optional SQLite; getrennt vom Programmcode |
+| Oberfläche | CLI, lokale Weboberfläche und Desktop-Pakete; UI-Bibliotheken werden lokal mitgeliefert |
 | Übergaben | Vorbereitete Pakete für Grok und Gnom-Hub-V1 |
 | Grenze | Keine versteckte externe Ausführung; lokale KI nur innerhalb dokumentierter Grenzen |
+
+### Gemeinsam arbeiten – ausdrücklich freigeben
+
+Im Bereich **Raum** einen Namen eingeben und **Raum anlegen** wählen. Die Leitung
+kann eine Einladung als **Mitglied** oder **Nur lesen** erzeugen. Auf der zweiten
+Installation den Einladungscode und die lokale Adresse der ersten Installation
+eintragen und **Koppeln** wählen. Die eingeblendeten Mitglieder zeigen die Kopplung.
+
+Ein Whiteboard-Eintrag bleibt standardmäßig privat. Nur mit dem Freigabehäkchen
+werden **der Eintrag einschließlich seiner Zuordnungen und der Thread-Titel**
+für den ausgewählten Raum geteilt. Die separate private Thread-Notiz wird dadurch
+nicht freigegeben. **Synchronisieren** stößt den Austausch bewusst an; es gibt
+keine heimliche Komplettübertragung des Arbeitsbereichs.
+
+**Nur lesen** darf empfangen, aber keine Raum-Einträge veröffentlichen. Eigene
+neue Notizen bleiben privat. Ein Offline-Fehler bedeutet nicht, dass deine Daten
+weg sind: Nach Rückkehr der Gegenstelle erneut synchronisieren. Bei einem
+Inhaltskonflikt bleiben beide Fassungen erhalten. Wiederholter Sync darf keine
+zusätzlichen Kopien erzeugen. Die Desktop-Adresse bleibt nach Neustarts gleich;
+ist ihr Port belegt, erscheint ein Fehler statt einer Verbindung zu einer fremden App.
+
+**Aktuelle Grenzen:** Die Abnahme prüft zwei getrennte lokale Serverprozesse, nicht
+die Zusammenarbeit über einen Internet-Server. Die Oberfläche ist keine öffentlich
+abgesicherte Server-Anwendung und darf nicht unverändert ins Internet gestellt werden.
+Der lokale Austausch verwendet HTTP; er ist keine Ende-zu-Ende-Verschlüsselung.
+Ein Sync-Paket ist auf 1.000.000 Bytes begrenzt. Zu große oder fehlerhafte Pakete
+werden abgewiesen, nicht als erfolgreich abgeschnitten. Externer Server-Sync bleibt
+ein eigener, noch abzunehmender Ausbau.
+
+### Deine Daten sichern
+
+Oben **Daten** öffnen und **Sicherung herunterladen** wählen. Die ZIP-Datei enthält
+Threads, Notizen, Zwischenstände, Wissenskarte, Whiteboards und lokal gespeicherte
+Übergaben für JSON oder SQLite. Verlinkte Dateien außerhalb von ThreadDesk bleiben
+an ihrem ursprünglichen Ort und sind nicht Teil dieser Sicherung.
+
+Zum Wiederherstellen die Sicherung auswählen, das Öffnen bestätigen und
+**Sicherung öffnen** wählen. ThreadDesk prüft die Dateien und öffnet einen eigenen
+Arbeitsbereich. Der bisherige Bereich bleibt erhalten. Unter **Daten** kannst du
+zwischen dem Original und den wiederhergestellten Bereichen wechseln. Die Auswahl
+und spätere Änderungen bleiben über Neustarts erhalten; CLI und MCP verwenden
+dieselbe Auswahl. Die lokale KI bleibt nach dem Wiederherstellen aus.
+
+Die ZIP-Datei enthält auch private Inhalte und Raum-Zugangsdaten. Bewahre sie an
+einem sicheren Ort auf. Beschädigte oder zu große Sicherungen werden abgewiesen.
 
 ### Lokale KI / Local AI assistant
 
 #### Deutsch
 
-ThreadDesk kann eine lokale KI über Ollama verwenden. Diese **lokale KI** arbeitet als eigener Akteur mit der Kennung `local-assistant`. Seine Inhalte bleiben von den Originalinhalten des Benutzers unterscheidbar und nachvollziehbar.
+ThreadDesk kann eine lokale KI über Ollama verwenden. Diese **lokale KI** arbeitet als eigener Akteur mit der Kennung `local-assistant`. Ihre Inhalte bleiben von den Originalinhalten des Benutzers unterscheidbar und nachvollziehbar.
 
 Die lokale KI darf innerhalb von ThreadDesk selbstständig arbeiten, zum Beispiel Threads und freigegebene Inhalte lesen, Zusammenfassungen erstellen, Informationen ordnen, Zusammenhänge erkennen sowie eigene Notizen und Whiteboard-Einträge anlegen oder weiterbearbeiten.
 
@@ -73,7 +130,7 @@ Within ThreadDesk, the local AI assistant may work independently: it can read th
 
 **The user chooses the local model.** ThreadDesk does not prescribe a specific LLM. Which models work well depends on the computer, available memory, operating system, desired speed, and the model itself. Any named models are starting points only — not a guarantee for every hardware configuration. Missing models are not downloaded automatically.
 
-Without explicit permission, the caretaker may not delete or overwrite the user's original content, modify files outside its designated ThreadDesk workspace, use external services or paid AI calls, or access secrets or credentials.
+Without explicit permission, the local AI assistant may not delete or overwrite the user's original content, modify files outside its designated ThreadDesk workspace, use external services or paid AI calls, or access secrets or credentials.
 
 **Core principle:** independent inside its own local workspace, restrained with computer resources, and no unilateral action outside ThreadDesk.
 
@@ -86,14 +143,14 @@ Without explicit permission, the caretaker may not delete or overwrite the user'
 ### macOS
 
 1. Oben auf **ThreadDesk herunterladen** klicken.
-2. **ThreadDesk-macOS.dmg** laden und ThreadDesk nach „Programme“ ziehen — fertig. Die Ausgabe unterstützt Intel-Macs (i7) nativ.
+2. **ThreadDesk-macOS.dmg** für Intel laden und ThreadDesk nach „Programme“ ziehen. Ein Apple-Silicon-Paket ist separat gekennzeichnet. Ein erfolgreicher CI-Build ersetzt nicht den Starttest auf deinem konkreten Mac und seiner macOS-Version.
 
 Falls macOS den Doppelklick blockiert: Rechtsklick auf die Datei → **Öffnen**.
 
 ### Windows
 
 1. Oben auf **ThreadDesk herunterladen** klicken.
-2. **ThreadDesk-Windows.exe** laden und doppelklicken — fertig.
+2. **ThreadDesk-Windows.exe** laden und doppelklicken. Die native Oberfläche benötigt eine funktionierende WebView2-Laufzeit; deren Einrichtung ist nicht durch einen bestandenen Paket-Build bewiesen.
 
 ### Ein Terminal-Befehl
 
@@ -111,7 +168,7 @@ Klicke auf „Neuer Thread“, gib deiner Idee einen Namen und speichere den ers
 
 ## Für Entwickler
 
-ThreadDesk ist eine lokale Control-Layer vor Gnom-Hub-V1. Die Grenze ist Teil des Produkts: Übergaben werden vorbereitet, aber nicht automatisch extern gesendet oder ausgeführt. Der optionale lokale Hausmeister ist davon getrennt und darf nur innerhalb der dokumentierten lokalen Grenzen arbeiten.
+ThreadDesk ist eine lokale Control-Layer vor Gnom-Hub-V1. Die Grenze ist Teil des Produkts: Übergaben werden vorbereitet, aber nicht automatisch extern gesendet oder ausgeführt. Die optionale lokale KI ist davon getrennt und darf nur innerhalb der dokumentierten lokalen Grenzen arbeiten.
 
 ### Wichtige Befehle
 
@@ -186,47 +243,27 @@ Für die manuelle Entwicklerinstallation: `python3 -m pip install -e ".[dev,ui]"
 
 ### Die gemeinsamen Regeln der NetzwerkPunkt-Werkzeuge
 
-ThreadDesk, Gnom-Hub-V1, 4AllPass und TollGate teilen sich das Desk-Design R2.
-Wer ein neues Werkzeug baut, übernimmt dieselben Grundflächen, Kanten, Maße
-und Sprachregeln. Die Produktidentität bleibt eine eigene, begrenzte Schicht:
-Bei ThreadDesk ist „Thread“ violett, während die Bedienoberfläche neutral bleibt.
+NetzwerkPunkt, Gnom-Hub-V1, ThreadDesk, TollGate und 4AllPass sollen dieselbe
+Bedienbasis verwenden. Die bisherige R2-Referenz ist historisch; die begründete
+Überarbeitung und der Übernahmeplan stehen in [GOLDENRULES, Abschnitt 19](docs/usability/GOLDENRULES.MD#19-gemeinsame-bedienbasis-für-die-fünf-produkte).
 
-**Farben** (gleich in allen Werkzeugen)
+Die portable Quelle ist [networkpunkt.css](src/threaddesk/ui/static/networkpunkt.css),
+ergänzt um optionale [Bereichsbedienung](src/threaddesk/ui/static/networkpunkt.js).
+Die [interaktive Gestaltungsprobe](src/threaddesk/ui/static/design-reference.html)
+zeigt alle fünf Produkte mit exakt derselben Datei und synthetischen Inhalten.
+Im laufenden Browser unter `/static/design-reference.html` öffnen.
 
-| Token | Wert | Wofür |
-|---|---|---|
-| `--bg` | `#121316` | Grundfläche |
-| `--bg-panel` | `#1a1b1f` | Fläche |
-| `--bg-card` | `#1e1f24` | Karte |
-| `--bg-raised` | `#24262d` | Angehobene Karte |
-| `--bg-strip` | `#15171b` | Reiterleiste |
-| `--fg` | `#e2e4e9` | Text |
-| `--fg-muted` | `#8b909a` | Nebentext |
-| `--border` | `#2e3138` | Trennlinie zwischen Flächen (Deko) |
-| `--border-strong` | `#5c616a` | **Kante von Bedienelementen** |
-| `--border-hover` | `#6b7280` | Kante bei Hover |
-| `--accent` | `#8f98a8` | Akzent |
-| `--brand` | `#b99cff` | Nur „Thread“ in Wortmarke/Titel; später Logo-Rahmen |
-| `--ok` / `--warn` / `--err` | `#3d9b6a` / `#c9a227` / `#c45c5c` | Zustände |
-
-**Form und Größe**
-
-- `border-radius: 0` — überall. Rund nur, wo die Form etwas *bedeutet*
-  (Kartensymbole, Fortschrittsring, Statuspunkt), mit Begründung im Code.
-- Genau vier Schriftgrößen: **10 / 12 / 14 / 16 px**.
-- Abstände: 4 / 8 / 12 / 16 px.
-- Knöpfe sind **28px**, Reiter und kompakte Navigation **32px** hoch.
-- Unter `@media (pointer: coarse)` werden alle Ziele **44px**
-  (`--control-touch`). Das ist keine dritte Größe, sondern dieselben
-  Elemente unter einem anderen Eingabegerät — die Zahl kommt von Apple und
-  Material. Der Zeiger ist das richtige Signal, **nicht** die Fensterbreite:
-  ein schmales Desktop-Fenster ist kein Finger. WCAG 2.2 (2.5.8) verlangt
-  als Minimum 24px; alle drei Werte liegen darüber.
-- Kontrast: **4.5:1** für Text, **3:1** für alles andere, was etwas bedeutet
-  (WCAG 2.2, 1.4.3 und 1.4.11).
-- Auswahlmenüs setzen `appearance: none` und zeichnen ihren Pfeil selbst —
-  sonst malt das Betriebssystem das Menü, unter Windows mit 3D-Effekt.
-- Schrift: die des Betriebssystems, nichts nachladen.
+- Systemschrift, vier Rollen: **12 / 14 / 16 / 24 px**.
+- Einheitliche Bedienhöhe **40 px**; Abstände
+  **4 / 8 / 12 / 16 / 24 / 32 px**; eckige Bedienelemente.
+- Neutrale Flächen und Aktionen. Produktfarbe bleibt an Markenpositionen.
+- Eine hervorgehobene Hauptaktion je Arbeitsbereich. Seltene Werkzeuge öffnen
+  sich bei Bedarf; kritische Zustände und der nächste Schritt bleiben sichtbar.
+- Fester Desktop-Aufbau ab 1180 × 760, kein automatischer Mobilumbau.
+  Kleinere Fenster scrollen. Native Tastaturbedienung und sichtbarer Fokus bleiben.
+- **Umsetzung:** ThreadDesk verwendet den Kern auf diesem Branch. Die übrigen
+  Produkte sind in der gemeinsamen Gestaltungsprobe vertreten, noch nicht in
+  ihren produktiven Repositories umgestellt. Keine Aussage über einen Live-Rollout.
 
 **Sprache**
 
@@ -257,6 +294,7 @@ Produktvision, gewünschtes Verhalten und Grenzen kommen von mir. KI unterstütz
 
 ### Dokumentation
 
+- [GOLDENRULES.MD: Sicherheitsplan und Baufolge](docs/usability/GOLDENRULES.MD) — vor Änderungen an Identität, Sync oder Firmenzugriff lesen; neue Mechanismen noch nicht implementiert.
 - [Benutzeroberfläche](docs/UI.md)
 - [MCP](docs/MCP.md)
 - [Grok-Handoff](docs/GROK.md)

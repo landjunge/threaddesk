@@ -11,10 +11,9 @@
 > Phasennummer liest, meint die der laufenden Planung, nicht diese. Sie stehen
 > hier nur, damit die Commit-Geschichte lesbar bleibt.
 >
-> Für die lokale Ausgabe gilt der [Abschlussplan](docs/TEAMPLAN.md). Die
-> produktübergreifenden Sicherheitsentscheidungen und die vorbereitete nächste
-> Baufolge stehen in [GOLDENRULES.MD](docs/usability/GOLDENRULES.MD).
-> Deren neue Sicherheitsmechanismen sind noch nicht implementiert.
+> Was heute gilt und was als Nächstes ansteht, steht nicht im Repo, sondern im
+> Arbeitsstand, den der Eigentümer pflegt. Wer hier nachschlägt, um zu wissen,
+> was zu tun ist, schlägt an der falschen Stelle nach.
 
 ## Ziel
 

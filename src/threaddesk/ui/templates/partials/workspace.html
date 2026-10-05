@@ -15,13 +15,10 @@
   {% endif %}
 </div>
 {% endif %}
-<aside class="sidebar" tabindex="0" aria-label="{{ t('list.title') }}">
+<aside class="sidebar">
   {% include "partials/thread_list.html" %}
   {% include "partials/gate.html" %}
-  <details class="np-disclosure room-disclosure" data-disclosure="room">
-    <summary>{{ t('room.title') }} <span class="np-meta">{{ t('room.state.' ~ room.state) }}</span></summary>
-    {% include "partials/room.html" %}
-  </details>
+  {% include "partials/room.html" %}
 </aside>
 <main id="main" class="main">
   {% include "partials/thread_detail.html" %}

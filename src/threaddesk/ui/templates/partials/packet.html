@@ -36,7 +36,7 @@
     <button type="button" class="btn btn-ghost btn-compact" data-copy="#packet-cmd">{{ t("packet.copy_command") }}</button>
     {% endif %}
     {% if packet.prompt %}
-    <pre class="cmd prompt-preview" tabindex="0" id="packet-prompt">{{ packet.prompt }}</pre>
+    <pre class="cmd prompt-preview" id="packet-prompt">{{ packet.prompt }}</pre>
     <button type="button" class="btn btn-ghost btn-compact" data-copy="#packet-prompt">{{ t("packet.copy_prompt") }}</button>
     {% endif %}
   </div>

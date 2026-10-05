@@ -6,6 +6,7 @@ Bildmarke und Produktname sind bewusst getrennt. Beide Dateien können unabhäng
 
 - `mark.svg` – drei Arbeitsfäden, die geordnet in einer Schreibtischfläche zusammenlaufen
 - `wordmark.svg` – der einheitliche Schriftzug **ThreadDesk**
+- `ThreadDesk.icns` / `ThreadDesk.ico` – Dock- und Fenster-Icon, erzeugt aus `mark.svg` mit `packaging/build_icons.py`
 
 ## Bedeutung
 

@@ -107,8 +107,7 @@ def test_at_most_four_font_sizes() -> None:
     Einheiten durcheinander. Das sah aus wie hundert Größen.
     """
     allowed = {"var(--text-sm)", "var(--text-base)", "var(--text-lg)",
-               "var(--text-xl)", "var(--np-meta)", "var(--np-body)",
-               "var(--np-heading)", "var(--np-title)"}
+               "var(--text-xl)"}
     offenders = [f"{sheet}:{line}: {value}  ({selector})"
                  for sheet, line, value, selector in _declarations(FONT_SIZE)
                  if value not in allowed]
@@ -123,15 +122,24 @@ def test_at_most_four_font_tokens_are_defined() -> None:
     assert len(defined) <= 4, defined
 
 
-def test_tokens_match_the_current_design_decision() -> None:
-    """Abschnitt 18 ersetzt die vom Nutzer verworfenen R2-Maße."""
+def test_r2_tokens_match_the_shared_desk_reference() -> None:
+    """Die bestätigten R2-Zahlen dürfen nicht wieder zum alten Satz driften."""
     text = (STYLESHEETS[0].parent / "style.css").read_text(encoding="utf-8")
-    core = (STYLESHEETS[0].parent / "networkpunkt.css").read_text(encoding="utf-8")
-    expected = {"meta":"12px", "body":"14px", "heading":"16px", "title":"24px", "control":"40px", "control-touch":"44px"}
-    for name, value in expected.items():
-        assert re.search(rf"--np-{name}:\s*{re.escape(value)}\s*;", core)
-    for name, role in {"text-sm":"meta", "text-base":"body", "text-lg":"heading", "text-xl":"title", "control":"control", "accent":"action"}.items():
-        assert f"--{name}: var(--np-{role});" in text
+    expected = {
+        "--border-strong": "#5c616a",
+        "--border-hover": "#6b7280",
+        "--risk": "#c45c5c",
+        "--control": "28px",
+        "--control-sm": "32px",
+        "--text-sm": "10px",
+        "--text-base": "12px",
+        "--text-lg": "14px",
+        "--text-xl": "16px",
+    }
+    for token, value in expected.items():
+        assert re.search(rf"{re.escape(token)}:\s*{re.escape(value)}\s*;", text), (
+            f"{token} muss laut Desk-Design R2 {value} sein"
+        )
 
 
 def test_controls_are_square_and_surfaces_share_one_radius() -> None:
@@ -141,7 +149,7 @@ def test_controls_are_square_and_surfaces_share_one_radius() -> None:
     """
     offenders = [f"{sheet}:{line}: {selector} → {value}"
                  for sheet, line, value, selector in _declarations(RADIUS)
-                 if value not in {"0", "var(--np-radius)"}
+                 if value != "0"
                  and selector not in SHAPE_EXCEPTIONS]
     assert not offenders, (
         "Keine Rundungen. Eine andere Form braucht einen Eintrag in "
@@ -157,8 +165,6 @@ def test_every_shape_exception_carries_a_reason() -> None:
 def test_no_radius_token_exists() -> None:
     """Keine Rundungen — also auch kein Token dafür."""
     text = (STYLESHEETS[0].parent / "style.css").read_text(encoding="utf-8")
-    core = (STYLESHEETS[0].parent / "networkpunkt.css").read_text(encoding="utf-8")
-    assert "--np-radius: 0;" in core
     assert not re.findall(r"--radius-[\w-]+(?=:)", text)
 
 

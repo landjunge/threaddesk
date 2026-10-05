@@ -1,63 +1,7 @@
 <div class="whiteboard" data-whiteboard>
-  <h3 id="capture-title">{{ t("ui.capture") }}</h3>
-  <p class="muted">{{ t("ui.capture_hint") }}</p>
-  <form
-    class="whiteboard-form"
-    hx-post="/threads/{{ current.id }}/whiteboard"
-    hx-target="#workspace"
-    hx-swap="innerHTML"
-  >
-    <input type="hidden" name="actor_type" value="human" />
-    <textarea
-      name="content"
-      rows="2"
-      required
-      maxlength="8000"
-      placeholder="{{ t('whiteboard.placeholder') }}"
-      aria-labelledby="capture-title"
-      data-whiteboard-content
-    ></textarea>
-    <div class="inline-form">
-      <input
-        type="text"
-        name="actor"
-        required
-        maxlength="80"
-        value="{{ t('whiteboard.actor.human') }}"
-        aria-label="{{ t('whiteboard.actor') }}"
-        data-whiteboard-actor
-      />
-      <label class="whiteboard-kind">
-        <span>{{ t("whiteboard.entry_label") }}</span>
-        <select name="entry_type" data-whiteboard-type>
-          {% for kind in whiteboard_types %}
-          <option value="{{ kind }}">{{ t('whiteboard.entry.' ~ kind) }}</option>
-          {% endfor %}
-        </select>
-      </label>
-    </div>
-
-    {% if room.current %}
-    <label class="inline-form">
-      <input type="checkbox" name="in_room" value="1" data-room-share {% if room.role == "read_only" %}disabled{% endif %} />
-      <span>{{ t("room.local_only") if room.role == "read_only" else t("room.share_entry") }}</span>
-    </label>
-    {% endif %}
-    <div class="inline-form">
-      <input
-        type="text"
-        name="next_step"
-        maxlength="240"
-        placeholder="{{ t('whiteboard.next_placeholder') }}"
-        aria-label="{{ t('whiteboard.next') }}"
-        data-whiteboard-next
-      />
-      <button type="submit" class="btn btn-primary" data-whiteboard-submit>{{ t("whiteboard.append") }}</button>
-    </div>
-  </form>
-  <div class="activity-heading">{{ t("ui.activity") }}</div>
+  <h3>{{ t("whiteboard.title") }}</h3>
   {% if whiteboard %}
-  <ol class="whiteboard-log" tabindex="0" aria-label="{{ t('whiteboard.title') }}" data-whiteboard-log>
+  <ol class="whiteboard-log" data-whiteboard-log>
     {% for entry in whiteboard %}
     {% set mark = actor_marks.get(entry.actor_id) if entry.actor_id else none %}
     <li
@@ -80,4 +24,56 @@
   {% else %}
   <p data-whiteboard-empty>{{ t("whiteboard.empty") }}</p>
   {% endif %}
+  <form
+    class="whiteboard-form"
+    hx-post="/threads/{{ current.id }}/whiteboard"
+    hx-target="#workspace"
+    hx-swap="innerHTML"
+  >
+    <input type="hidden" name="actor_type" value="human" />
+    <div class="inline-form">
+      <input
+        type="text"
+        name="actor"
+        required
+        maxlength="80"
+        value="{{ t('whiteboard.actor.human') }}"
+        aria-label="{{ t('whiteboard.actor') }}"
+        data-whiteboard-actor
+      />
+      <label class="whiteboard-kind">
+        <span>{{ t("whiteboard.entry_label") }}</span>
+        <select name="entry_type" data-whiteboard-type>
+          {% for kind in whiteboard_types %}
+          <option value="{{ kind }}">{{ t('whiteboard.entry.' ~ kind) }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+    <textarea
+      name="content"
+      rows="2"
+      required
+      maxlength="8000"
+      placeholder="{{ t('whiteboard.placeholder') }}"
+      data-whiteboard-content
+    ></textarea>
+    {% if room.current %}
+    <label class="inline-form">
+      <input type="checkbox" name="in_room" value="1" data-room-share />
+      <span>{{ t("room.share_entry") }}</span>
+    </label>
+    {% endif %}
+    <div class="inline-form">
+      <input
+        type="text"
+        name="next_step"
+        maxlength="240"
+        placeholder="{{ t('whiteboard.next_placeholder') }}"
+        aria-label="{{ t('whiteboard.next') }}"
+        data-whiteboard-next
+      />
+      <button type="submit" class="btn btn-primary" data-whiteboard-submit>{{ t("whiteboard.append") }}</button>
+    </div>
+  </form>
 </div>

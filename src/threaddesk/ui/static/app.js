@@ -22,22 +22,13 @@ function helpPanel() {
   return document.getElementById("help");
 }
 
-let helpReturnFocus = null;
-
 function toggleHelp(force) {
   const el = helpPanel();
   if (!el) return;
-  const open = typeof force === "boolean" ? force : el.hidden;
-  if (open === !el.hidden) return;
-  el.hidden = !open;
-  const shell = document.querySelector(".shell");
-  if (shell) shell.inert = open;
-  if (open) {
-    helpReturnFocus = document.activeElement;
-    el.querySelector("[data-help-close]")?.focus();
+  if (typeof force === "boolean") {
+    el.hidden = !force;
   } else {
-    if (helpReturnFocus?.isConnected) helpReturnFocus.focus();
-    helpReturnFocus = null;
+    el.hidden = !el.hidden;
   }
 }
 
@@ -60,19 +51,6 @@ function switchByOffset(delta) {
 
 document.addEventListener("keydown", (event) => {
   if (event.defaultPrevented) return;
-
-  const help = helpPanel();
-  if (help && !help.hidden) {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      toggleHelp(false);
-    } else if (event.key === "Tab") {
-      // The dialog currently has a single interactive control.
-      event.preventDefault();
-      help.querySelector("[data-help-close]")?.focus();
-    }
-    return;
-  }
 
   if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
     const form = event.target instanceof Element ? event.target.closest("form") : null;
@@ -123,17 +101,13 @@ document.addEventListener("keydown", (event) => {
 
   if (event.key === "s") {
     event.preventDefault();
-    const field = document.querySelector("[data-snapshot-label]");
-    window.npReveal?.(field);
-    field?.focus();
+    document.querySelector("[data-snapshot-label]")?.focus();
     return;
   }
 
   if (event.key === "m") {
     event.preventDefault();
-    const mic = document.querySelector("[data-mic]");
-    window.npReveal?.(mic);
-    mic?.click();
+    document.querySelector("[data-mic]")?.click();
     return;
   }
 

@@ -482,8 +482,8 @@
         group.classList.toggle("is-selected");
         showDetail(node);
         highlight();
-        // Selection must not move the other click targets out of the viewport.
-        // Explicit deep-link navigation below still focuses its destination.
+        const at = placed.get(node.id);
+        if (at && group.classList.contains("is-selected")) focusOn(at);
       };
       group.addEventListener("click", (event) => {
         if (nodeDrag && nodeDrag.moved) return;

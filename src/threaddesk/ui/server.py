@@ -6,7 +6,6 @@ import json
 import os
 from pathlib import Path
 import tempfile
-from typing import Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
@@ -29,9 +28,15 @@ from threaddesk.core.models import (
     STATUSES,
     Thread,
 )
-from threaddesk.storage.portable_backup import base_root, selected_profile, download_backup, restore_backup, LIMIT, profiles, activate_profile
-from threaddesk.storage.workspace_backup import BackupError
 from threaddesk.storage.json_store import JsonStore
+from threaddesk.storage.portable_backup import (
+    BackupError,
+    base_root,
+    download_backup,
+    profiles,
+    restore_backup,
+    selected_profile,
+)
 from threaddesk.storage.sqlite_store import SQLiteStore
 from threaddesk.services.migration import (
     AtomicImportError,
@@ -61,8 +66,14 @@ _BOARD_FIELDS = {
 
 
 def _svc() -> ThreadService:
-    root, backend = selected_profile(base_root())
-    if (backend or os.environ.get("THREADDESK_STORAGE")) == "sqlite":
+    home = os.environ.get("THREADDESK_HOME")
+    if home:
+        root = Path(home)
+        if os.environ.get("THREADDESK_STORAGE") == "sqlite":
+            return ThreadService(store=SQLiteStore(root))
+        return ThreadService(store=JsonStore(root))
+    root, backend = selected_profile()
+    if backend == "sqlite":
         return ThreadService(store=SQLiteStore(root))
     return ThreadService(store=JsonStore(root))
 
@@ -227,72 +238,13 @@ def create_app() -> FastAPI:
         return html
 
     @app.get("/", response_class=HTMLResponse)
-    def index(request: Request, thread: Optional[str] = None) -> HTMLResponse:
+    def index(request: Request, thread: str | None = None) -> HTMLResponse:
         if thread:
             try:
                 _svc().switch(thread)
             except ThreadDeskError:
                 pass
         return templates.TemplateResponse(request, "index.html", _ctx(request))
-
-    def data_page(request: Request, **extra) -> HTMLResponse:
-        active, _ = selected_profile(base_root())
-        return templates.TemplateResponse(request, "data.html", _ctx(request, {
-            "restored_profile": active != base_root(), "profiles": profiles(base_root()),
-            "active_profile": active.name, **extra,
-        }))
-
-    @app.get("/data", response_class=HTMLResponse)
-    def data_view(request: Request) -> HTMLResponse:
-        return data_page(request)
-
-    @app.post("/data/download")
-    def data_download(request: Request) -> Response:
-        store = _svc().store
-        try:
-            body = download_backup(store)
-            return Response(body, media_type="application/zip", headers={
-                "Content-Disposition": 'attachment;filename="ThreadDesk-backup.zip"',
-                "Cache-Control": "no-store",
-            })
-        except BackupError:
-            response = data_page(request, error=i18n.translate("data.backup_error", _language(request)))
-            response.status_code = 400
-            return response
-        finally:
-            if isinstance(store, SQLiteStore):
-                store.connection.close()
-
-    @app.post("/data/restore", response_class=HTMLResponse)
-    async def data_restore(request: Request, backup: UploadFile = File(...),
-                           confirm: str = Form("")) -> Response:
-        try:
-            if confirm != "yes":
-                raise BackupError("backup_confirmation")
-            body = await backup.read(LIMIT + 1)
-            restore_backup(body, base_root())
-            return RedirectResponse("/?restored=1", status_code=303)
-        except BackupError:
-            response = data_page(request, error=i18n.translate("data.restore_error", _language(request)))
-            response.status_code = 400
-            return response
-        finally:
-            await backup.close()
-
-    @app.post("/data/profile")
-    def data_profile(request: Request, name: str = Form(...)) -> Response:
-        try:
-            activate_profile(base_root(), name)
-            return RedirectResponse("/", status_code=303)
-        except BackupError:
-            response = data_page(request, error=i18n.translate("data.restore_error", _language(request)))
-            response.status_code = 400
-            return response
-
-    @app.post("/data/original")
-    def data_original() -> Response:
-        (base_root() / "active-profile.json").unlink(missing_ok=True)
-        return RedirectResponse("/", status_code=303)
 
     @app.get("/lang/{code}", response_class=RedirectResponse)
     def switch_language(code: str, request: Request) -> RedirectResponse:
@@ -317,7 +269,7 @@ def create_app() -> FastAPI:
         return response
 
     @app.get("/api/graph", response_class=JSONResponse)
-    def graph(kind: Optional[str] = None, status: Optional[str] = None) -> dict:
+    def graph(kind: str | None = None, status: str | None = None) -> dict:
         return _svc().graph(kind=kind, status=status)
 
     @app.get("/api/threads/{thread_id}", response_class=JSONResponse)
@@ -441,7 +393,7 @@ def create_app() -> FastAPI:
 
     @app.get("/knowledge", response_class=HTMLResponse)
     def knowledge(
-        request: Request, kind: Optional[str] = None, status: Optional[str] = None
+        request: Request, kind: str | None = None, status: str | None = None
     ) -> HTMLResponse:
         svc = _svc()
         graph_data = svc.graph(kind=kind, status=status)
@@ -568,13 +520,9 @@ def create_app() -> FastAPI:
             "metadata": metadata,
         }
         if in_room == "1":
-            room_view = RoomBook(_svc().store).view()
-            current_room = room_view.get("current")
-            if not current_room or room_view.get("role") not in {"owner", "member"}:
-                page = _room_error(request)
-                page.status_code = 403
-                return page
-            fields["room_id"] = current_room["id"]
+            current_room = RoomBook(_svc().store).view().get("current")
+            if current_room:
+                fields["room_id"] = current_room["id"]
         _svc().append_whiteboard(thread_id, **fields)
         return workspace(
             request,
@@ -588,9 +536,9 @@ def create_app() -> FastAPI:
             "ollama_model_missing": "hausmeister.no_model",
             "hausmeister_rejected": "hausmeister.failed",
         }.get(code, "hausmeister.failed")
-        # 200, damit HTMX die Meldung in den Schreibtisch tauscht. Bei 400
-        # bleibt die Seite stehen und der Auftrag sieht aus, als wäre nichts passiert.
-        return workspace(request, {"error": i18n.translate(key, _language(request))})
+        page = workspace(request, {"error": i18n.translate(key, _language(request))})
+        page.status_code = 400
+        return page
 
     @app.post("/hausmeister/toggle", response_class=HTMLResponse)
     def hausmeister_toggle(request: Request, enabled: str = Form("0")) -> HTMLResponse:
@@ -601,19 +549,16 @@ def create_app() -> FastAPI:
     @app.post("/hausmeister/model", response_class=HTMLResponse)
     def hausmeister_model(request: Request, model: str = Form("")) -> HTMLResponse:
         try:
-            chosen = Hausmeister(_svc().store).set_model(model)
+            Hausmeister(_svc().store).set_model(model)
         except OllamaError as exc:
             return _hausmeister_notice(request, str(exc))
-        key = "hausmeister.no_model" if not chosen["model"] else "hausmeister.use_model"
-        return workspace(request, {"notice": i18n.translate(key, _language(request))})
+        return workspace(request, {"notice": i18n.translate("hausmeister.use_model", _language(request))})
 
     @app.post("/threads/{thread_id}/hausmeister", response_class=HTMLResponse)
     def hausmeister_run(
         thread_id: str,
         request: Request,
-        # Leeres order kommt als "" an. Form(...) wertet das als fehlend und
-        # antwortet 422, bevor der Auftrag geprüft wird. HTMX zeigt 422 nicht.
-        order: str = Form(""),
+        order: str = Form(...),
         mode: str = Form("now"),
     ) -> HTMLResponse:
         home = Hausmeister(_svc().store)
@@ -852,6 +797,95 @@ def create_app() -> FastAPI:
     def restore_snapshot(snap_id: str, request: Request) -> HTMLResponse:
         thread = _svc().restore(snap_id)
         return workspace(request, {"notice": i18n.translate("ui.snapshot_loaded", _language(request), id=thread.current_snapshot_id)})
+
+    def _data_context(request: Request, error: str = "") -> dict:
+        root = base_root()
+        profile, _backend = selected_profile()
+        return _ctx(request, {
+            "error": error,
+            "restored_profile": profile != root,
+            "profiles": profiles(root),
+            "active_profile": profile.name if profile != root else "",
+        })
+
+    @app.get("/data", response_class=HTMLResponse)
+    def data_page(request: Request) -> HTMLResponse:
+        return templates.TemplateResponse(request, "data.html", _data_context(request))
+
+    @app.post("/data/download")
+    def data_download(request: Request):
+        store = _svc().store
+        try:
+            body = download_backup(store)
+        except BackupError:
+            page = templates.TemplateResponse(
+                request,
+                "data.html",
+                _data_context(request, i18n.translate("data.backup_error", _language(request))),
+            )
+            page.status_code = 400
+            return page
+        finally:
+            if isinstance(store, SQLiteStore):
+                store.connection.close()
+        return Response(
+            body,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": 'attachment;filename="ThreadDesk-backup.zip"',
+                "Cache-Control": "no-store",
+            },
+        )
+
+    @app.post("/data/restore")
+    async def data_restore(
+        request: Request,
+        backup: UploadFile = File(...),
+        confirm: str = Form(""),
+    ):
+        if confirm != "yes":
+            page = templates.TemplateResponse(
+                request,
+                "data.html",
+                _data_context(request, i18n.translate("data.restore_error", _language(request))),
+            )
+            page.status_code = 400
+            return page
+        try:
+            restore_backup(await backup.read(), base_root())
+        except BackupError:
+            page = templates.TemplateResponse(
+                request,
+                "data.html",
+                _data_context(request, i18n.translate("data.restore_error", _language(request))),
+            )
+            page.status_code = 400
+            return page
+        return RedirectResponse("/?restored=1", status_code=303)
+
+    @app.post("/data/profile")
+    def data_profile(request: Request, name: str = Form(...)) -> Response:
+        root = base_root()
+        known = {item["name"]: item for item in profiles(root)}
+        item = known.get(name)
+        if item is None:
+            page = templates.TemplateResponse(
+                request,
+                "data.html",
+                _data_context(request, i18n.translate("data.restore_error", _language(request))),
+            )
+            page.status_code = 400
+            return page
+        (root / "active-profile.json").write_text(
+            json.dumps({"name": item["name"], "backend": item["backend"]}, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        return RedirectResponse("/", status_code=303)
+
+    @app.post("/data/original")
+    def data_original() -> RedirectResponse:
+        (base_root() / "active-profile.json").unlink(missing_ok=True)
+        return RedirectResponse("/", status_code=303)
 
     @app.post("/gate/freeze", response_class=HTMLResponse)
     def freeze_gate(request: Request, frozen: str = Form(...)) -> HTMLResponse:

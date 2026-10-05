@@ -33,7 +33,7 @@
     <button type="submit" class="btn btn-primary">{{ t("prompt.preview") }}</button>
   </form>
   {% if prompt_preview %}
-  <pre class="cmd prompt-preview" tabindex="0" id="prompt-text">{{ prompt_preview }}</pre>
+  <pre class="cmd prompt-preview" id="prompt-text">{{ prompt_preview }}</pre>
   <button type="button" class="btn btn-ghost btn-compact" data-copy="#prompt-text">{{ t("prompt.copy") }}</button>
   {% endif %}
   {% if current.context.prompts %}

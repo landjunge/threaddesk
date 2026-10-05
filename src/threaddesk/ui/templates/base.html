@@ -4,18 +4,18 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ThreadDesk</title>
-    <link rel="stylesheet" href="/static/networkpunkt.css" />
+    <link rel="icon" href="/static/mark.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/static/style.css" />
     <link rel="stylesheet" href="/static/polish.css" />
-    <script src="/static/networkpunkt.js" defer></script>
     <script src="/static/app.js" defer></script>
-    <script src="/static/htmx.min.js" defer></script>
-    <script src="/static/alpine.min.js" defer></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+    <script src="https://unpkg.com/alpinejs@3.14.8/dist/cdn.min.js" defer></script>
   </head>
-  <body class="np-ui" data-language="{{ lang }}" data-ui-strings="{{ browser_strings|default('{}')|e }}">
-    <div class="shell np-desktop">
+  <body data-language="{{ lang }}" data-ui-strings="{{ browser_strings|default('{}')|e }}">
+    <div class="shell">
       <header class="topbar">
         <div class="brand">
+          <img class="brand-mark" src="/static/mark.svg" width="32" height="32" alt="" />
           <div>
             <p class="brand-name"><span class="brand-thread">Thread</span>Desk</p>
             <p class="brand-tag">{{ t("app.tagline") }}</p>
@@ -23,14 +23,12 @@
         </div>
         <div class="topbar-actions">
           <nav class="view-nav" aria-label="{{ t('nav.label') }}">
-            <a href="/" class="btn btn-ghost btn-compact"{% if request.url.path == '/' %} aria-current="page"{% endif %}>{{ t("nav.threads") }}</a>
-            <a href="/knowledge" class="btn btn-ghost btn-compact"{% if request.url.path == '/knowledge' %} aria-current="page"{% endif %}>{{ t("nav.knowledge") }}</a>
-            <a href="/data" class="btn btn-ghost btn-compact"{% if request.url.path == '/data' %} aria-current="page"{% endif %}>{{ t("data.nav") }}</a>
-            <a href="/map" class="btn btn-ghost btn-compact"{% if request.url.path == '/map' %} aria-current="page"{% endif %}>{{ t("nav.map") }}</a>
+            <a href="/" class="btn btn-ghost btn-compact">{{ t("nav.threads") }}</a>
+            <a href="/knowledge" class="btn btn-ghost btn-compact">{{ t("nav.knowledge") }}</a>
+            <a href="/map" class="btn btn-ghost btn-compact">{{ t("nav.map") }}</a>
+            <a href="/data" class="btn btn-ghost btn-compact">{{ t("data.nav") }}</a>
           </nav>
-          <details class="np-disclosure preferences" data-disclosure="preferences">
-            <summary>{{ lang|upper }} · {{ t('register.' ~ register) }}</summary>
-            <div class="preferences-menu">
+          <p class="topbar-note">{{ t("app.local_note") }}</p>
           <nav class="lang-switch" aria-label="{{ t('nav.language') }}">
             {% for code in languages %}
             <a href="/lang/{{ code }}" class="btn btn-ghost btn-compact{{ ' is-active' if code == lang else '' }}"
@@ -46,8 +44,6 @@
                aria-current="{{ 'true' if value == register else 'false' }}">{{ t('register.' ~ value) }}</a>
             {% endfor %}
           </nav>
-            </div>
-          </details>
           <button type="button" class="btn btn-ghost btn-compact" data-help-open>
             {{ t("help.open") }} <kbd>?</kbd>
           </button>
@@ -56,7 +52,7 @@
       {% block body %}{% endblock %}
     </div>
     <div id="help" class="help" hidden>
-      <div class="help-card" role="dialog" aria-modal="true" tabindex="-1" aria-labelledby="help-title">
+      <div class="help-card" role="dialog" aria-labelledby="help-title">
         <header class="panel-head">
           <h2 id="help-title">{{ t("help.title") }}</h2>
           <button type="button" class="btn btn-ghost btn-compact" data-help-close>{{ t("help.close") }}</button>

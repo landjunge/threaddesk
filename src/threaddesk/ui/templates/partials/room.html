@@ -4,7 +4,6 @@
     <span class="status" data-room-state="{{ room.state }}">{{ t("room.state." ~ room.state) }}</span>
   </header>
   <p data-room-instance>{{ t("room.instance") }} {{ room.instance_id }}</p>
-  <p><code data-room-address>{{ request.base_url }}</code></p>
   <form method="post" action="/rooms" hx-post="/rooms" hx-target="#workspace" hx-swap="innerHTML">
     <input type="text" name="name" maxlength="80" required placeholder="{{ t('room.name') }}" aria-label="{{ t('room.name') }}" data-room-name />
     <button type="submit" class="btn" data-room-create>{{ t("room.create") }}</button>
