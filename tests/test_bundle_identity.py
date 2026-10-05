@@ -79,3 +79,14 @@ def test_macos_numeric_version_and_full_product_label(label, expected):
 def test_invalid_macos_product_versions_fail_closed(label):
     with pytest.raises(ValueError):
         provenance().macos_release_version(label)
+
+
+def test_release_workflow_resolves_dynamic_product_version():
+    import re
+    import shlex
+    workflow = (ROOT / ".github" / "workflows" / "desktop-build.yml").read_text()
+    command = re.search(r'version="\$\((.*?)\)"', workflow).group(1)
+    args = shlex.split(command)
+    args[0] = sys.executable
+    actual = subprocess.check_output(args, cwd=ROOT, text=True).strip()
+    assert actual == provenance().package_version(ROOT)

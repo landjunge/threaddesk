@@ -151,7 +151,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          version="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          version="$(python -c 'from scripts.package_provenance import package_version; print(package_version())')"
           tag="v$version"
           if gh release view "$tag" > /dev/null 2>&1; then
             echo "Version already published; existing downloads remain unchanged."
