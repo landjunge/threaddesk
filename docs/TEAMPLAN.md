@@ -8,8 +8,8 @@ nicht implementiert. Die folgende Abnahme betrifft die vorhandene lokale Ausgabe
 ## Ziel und Geltungsbereich
 
 Ein verständlicher lokaler Arbeitsplatz, der Kontext und Arbeitsstand zwischen
-Mensch und KI erhält. Kein zweiter externer Orchestrator. Der lokale Hausmeister
-bleibt ein gesonderter, optionaler Akteur innerhalb seiner dokumentierten Grenzen.
+Mensch und KI erhält. Kein zweiter externer Orchestrator. Die lokale KI
+bleibt ein gesonderter, optionaler Akteur innerhalb ihrer dokumentierten Grenzen.
 
 Dieser Plan ersetzt den überholten Vier-Funktionen-MVP-Plan vom 14. August.
 Code und aktuelle Abnahme: **PR #62**, Branch `feat/desktop-brand-icons`.

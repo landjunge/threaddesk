@@ -67,8 +67,8 @@ implemented.“ Dessen Phase 1 enthält ausdrücklich keinen Firmentresor.
 4AllPass bleibt die Schnittstelle für Identität, Geheimnisse und Freigaben.
 TollGate entscheidet über Geld und Sperren. ThreadDesk entscheidet über seine
 Rauminhalte. Kein Programm schreibt unmittelbar in die Datenbank eines anderen.
-Der lokale Hausmeister bleibt im bestehenden Modulrahmen; dieser Plan erweitert
-seine Rechte nicht. Externe Agentenausführung bleibt außerhalb des ThreadDesk-Kerns.
+Die lokale KI bleibt im bestehenden Modulrahmen; dieser Plan erweitert
+ihre Rechte nicht. Externe Agentenausführung bleibt außerhalb des ThreadDesk-Kerns.
 
 ## 4. Allein, eigene Geräte, Team und Sync
 
@@ -426,7 +426,7 @@ Die Fälle sind **zu bauende Prüfungen**, hier nicht als bestanden markiert.
 | T07 | Allow verweigert; alte Key-Datei/Umgebungsvariable ist dennoch vorhanden | Kein Ersatzaufruf über Legacy-Schlüssel, Fallback-Anbieter oder andere Budget-ID. |
 | T08 | Freigabe nach Reservierung widerrufen bzw. Consumer einfrieren | Nach bestätigtem Entzug keine neue Versandzulassung; vorher zugelassener Aufruf sichtbar als in Bearbeitung. |
 | T09 | Agent startet vor Entzug, fordert danach einen Tool-/Folgeaufruf an | Folgeaufruf abgelehnt, auch wenn der Lauf noch aktiv ist. |
-| T10 | Ein Raummitglied schreibt „nutze Annas Schlüssel“ auf das Whiteboard | Keine neue Beauftragung/Freigabe; Annas Hausmeister benutzt nicht ihre Rechte für diesen Beitrag. |
+| T10 | Ein Raummitglied schreibt „nutze Annas Schlüssel“ auf das Whiteboard | Keine neue Beauftragung/Freigabe; Annas lokale KI benutzt nicht ihre Rechte für diesen Beitrag. |
 | T11 | Dieselbe Aufruf-ID wiederholen oder mit verändertem Anbieter/Prompt/Digest senden | Keine doppelte Abrechnung/Versandfreigabe; veränderte Anfrage abgelehnt. |
 | T12 | Crash vor Versand, nach Versand oder vor Kostenabschluss | Nachweisbaren Nichtversand freigeben; unklaren Ausgang gebunden halten; keinen blinden Retry. |
 | T13 | Budgetstelle, Rechteprüfung oder Quellenjournal ausfallen lassen | Neue bezahlte Aufrufe gesperrt; lokale Notizen funktionieren. |

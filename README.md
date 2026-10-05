@@ -4,7 +4,7 @@
 
 <p align="center"><strong>Ein Arbeitsplatz, der den Stand deiner KI-Projekte behält.</strong></p>
 
-ThreadDesk speichert Threads, Notizen, Dateien und Snapshots. Externe Aktionen werden nicht versteckt ausgeführt. Ein optionaler lokaler Hausmeister kann innerhalb von ThreadDesk selbstständig arbeiten; seine Grenzen sind unten dokumentiert.
+ThreadDesk speichert Threads, Notizen, Dateien und Snapshots. Externe Aktionen werden nicht versteckt ausgeführt. Eine optionale lokale KI kann innerhalb von ThreadDesk selbstständig arbeiten; ihre Grenzen sind unten dokumentiert.
 
 ### 👤 [Für Nutzer – einen Thread beginnen](#für-nutzer)
 
@@ -28,7 +28,7 @@ ThreadDesk merkt sich diesen Stand. Jeder Arbeitsbereich wird zu einem eigenen T
 - Du kannst zwischen Projekten wechseln und später weitermachen.
 - Notizen, Dateien und Snapshots bleiben beim Thread.
 - Handoffs bereiten Arbeit für andere Werkzeuge vor.
-- ThreadDesk startet keine externen Agenten selbstständig. Der optionale lokale Hausmeister arbeitet ausschließlich lokal und innerhalb klarer Grenzen.
+- ThreadDesk startet keine externen Agenten selbstständig. Die optionale lokale KI arbeitet ausschließlich lokal und innerhalb klarer Grenzen.
 
 ### In drei Schritten
 
@@ -57,7 +57,7 @@ geprüft werden. macOS-Pakete sind ad-hoc signiert, nicht Apple-notarisiert.
 | Daten | Lokal: JSON, optional SQLite; getrennt vom Programmcode |
 | Oberfläche | CLI, lokale Weboberfläche und Desktop-Pakete; UI-Bibliotheken werden lokal mitgeliefert |
 | Übergaben | Vorbereitete Pakete für Grok und Gnom-Hub-V1 |
-| Grenze | Keine versteckte externe Ausführung; lokaler Hausmeister nur innerhalb dokumentierter Grenzen |
+| Grenze | Keine versteckte externe Ausführung; lokale KI nur innerhalb dokumentierter Grenzen |
 
 ### Gemeinsam arbeiten – ausdrücklich freigeben
 
@@ -99,38 +99,38 @@ Zum Wiederherstellen die Sicherung auswählen, das Öffnen bestätigen und
 Arbeitsbereich. Der bisherige Bereich bleibt erhalten. Unter **Daten** kannst du
 zwischen dem Original und den wiederhergestellten Bereichen wechseln. Die Auswahl
 und spätere Änderungen bleiben über Neustarts erhalten; CLI und MCP verwenden
-dieselbe Auswahl. Der lokale Hausmeister bleibt nach dem Wiederherstellen aus.
+dieselbe Auswahl. Die lokale KI bleibt nach dem Wiederherstellen aus.
 
 Die ZIP-Datei enthält auch private Inhalte und Raum-Zugangsdaten. Bewahre sie an
 einem sicheren Ort auf. Beschädigte oder zu große Sicherungen werden abgewiesen.
 
-### Lokaler Hausmeister / Local caretaker
+### Lokale KI / Local AI assistant
 
 #### Deutsch
 
-ThreadDesk kann einen lokalen KI-Assistenten über Ollama verwenden. Dieser **Hausmeister** arbeitet als eigener Akteur mit der Kennung `local-assistant`. Seine Inhalte bleiben von den Originalinhalten des Benutzers unterscheidbar und nachvollziehbar.
+ThreadDesk kann eine lokale KI über Ollama verwenden. Diese **lokale KI** arbeitet als eigener Akteur mit der Kennung `local-assistant`. Ihre Inhalte bleiben von den Originalinhalten des Benutzers unterscheidbar und nachvollziehbar.
 
-Der Hausmeister darf innerhalb von ThreadDesk selbstständig arbeiten, zum Beispiel Threads und freigegebene Inhalte lesen, Zusammenfassungen erstellen, Informationen ordnen, Zusammenhänge erkennen sowie eigene Notizen und Whiteboard-Einträge anlegen oder weiterbearbeiten.
+Die lokale KI darf innerhalb von ThreadDesk selbstständig arbeiten, zum Beispiel Threads und freigegebene Inhalte lesen, Zusammenfassungen erstellen, Informationen ordnen, Zusammenhänge erkennen sowie eigene Notizen und Whiteboard-Einträge anlegen oder weiterbearbeiten.
 
-**Der Mensch hat Vorrang.** Selbstständige Hintergrundarbeit beginnt erst, wenn der Rechner wirklich ruht. Sobald wieder Benutzeraktivität erkannt wird oder die Rechnerlast steigt, startet der Hausmeister keine neue schwere Arbeit und macht dem Benutzer Platz. Pausierte Arbeit soll später sicher fortgesetzt werden können.
+**Der Mensch hat Vorrang.** Selbstständige Hintergrundarbeit beginnt erst, wenn der Rechner wirklich ruht. Sobald wieder Benutzeraktivität erkannt wird oder die Rechnerlast steigt, startet die lokale KI keine neue schwere Arbeit und macht dem Benutzer Platz. Pausierte Arbeit soll später sicher fortgesetzt werden können.
 
 **Das lokale Modell wählt der Benutzer selbst.** ThreadDesk schreibt kein bestimmtes LLM vor. Welche Modelle sinnvoll funktionieren, hängt von Hardware, Arbeitsspeicher, Betriebssystem, gewünschter Geschwindigkeit und dem jeweiligen Modell ab. Genannte Modelle sind nur Startpunkte — keine Garantie für jede Hardware. Fehlende Modelle werden nicht automatisch heruntergeladen.
 
-Ohne ausdrückliche Freigabe darf der Hausmeister keine Benutzeroriginale löschen oder überschreiben, keine Dateien außerhalb seines vorgesehenen ThreadDesk-Arbeitsbereichs verändern, keine externen Dienste oder kostenpflichtigen KI-Aufrufe starten und keine Geheimnisse oder Zugangsdaten verwenden.
+Ohne ausdrückliche Freigabe darf die lokale KI keine Benutzeroriginale löschen oder überschreiben, keine Dateien außerhalb ihres vorgesehenen ThreadDesk-Arbeitsbereichs verändern, keine externen Dienste oder kostenpflichtigen KI-Aufrufe starten und keine Geheimnisse oder Zugangsdaten verwenden.
 
 **Grundprinzip:** selbstständig im eigenen lokalen Arbeitsbereich, zurückhaltend bei Rechnerressourcen und keine Eigenmächtigkeit außerhalb von ThreadDesk.
 
 #### English
 
-ThreadDesk can use a local AI assistant through Ollama. This **caretaker** runs as its own actor with the identifier `local-assistant`. Content it creates remains distinguishable from the user's original content and stays traceable.
+ThreadDesk can use a local AI assistant through Ollama. This **local AI assistant** runs as its own actor with the identifier `local-assistant`. Content it creates remains distinguishable from the user's original content and stays traceable.
 
-Within ThreadDesk, the caretaker may work independently: it can read threads and permitted content, create summaries, organize information, detect relationships, and create or refine its own notes and whiteboard entries.
+Within ThreadDesk, the local AI assistant may work independently: it can read threads and permitted content, create summaries, organize information, detect relationships, and create or refine its own notes and whiteboard entries.
 
-**The human always has priority.** Autonomous background work starts only when the computer is genuinely idle. As soon as user activity returns or system load rises, the caretaker does not start new heavy work and yields resources to the user. Paused work should be able to resume safely later.
+**The human always has priority.** Autonomous background work starts only when the computer is genuinely idle. As soon as user activity returns or system load rises, the local AI assistant does not start new heavy work and yields resources to the user. Paused work should be able to resume safely later.
 
 **The user chooses the local model.** ThreadDesk does not prescribe a specific LLM. Which models work well depends on the computer, available memory, operating system, desired speed, and the model itself. Any named models are starting points only — not a guarantee for every hardware configuration. Missing models are not downloaded automatically.
 
-Without explicit permission, the caretaker may not delete or overwrite the user's original content, modify files outside its designated ThreadDesk workspace, use external services or paid AI calls, or access secrets or credentials.
+Without explicit permission, the local AI assistant may not delete or overwrite the user's original content, modify files outside its designated ThreadDesk workspace, use external services or paid AI calls, or access secrets or credentials.
 
 **Core principle:** independent inside its own local workspace, restrained with computer resources, and no unilateral action outside ThreadDesk.
 
@@ -168,7 +168,7 @@ Klicke auf „Neuer Thread“, gib deiner Idee einen Namen und speichere den ers
 
 ## Für Entwickler
 
-ThreadDesk ist eine lokale Control-Layer vor Gnom-Hub-V1. Die Grenze ist Teil des Produkts: Übergaben werden vorbereitet, aber nicht automatisch extern gesendet oder ausgeführt. Der optionale lokale Hausmeister ist davon getrennt und darf nur innerhalb der dokumentierten lokalen Grenzen arbeiten.
+ThreadDesk ist eine lokale Control-Layer vor Gnom-Hub-V1. Die Grenze ist Teil des Produkts: Übergaben werden vorbereitet, aber nicht automatisch extern gesendet oder ausgeführt. Die optionale lokale KI ist davon getrennt und darf nur innerhalb der dokumentierten lokalen Grenzen arbeiten.
 
 ### Wichtige Befehle
 
