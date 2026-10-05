@@ -56,6 +56,16 @@ def svc(request, tmp_path: Path) -> ThreadService:
     return ThreadService(store=request.param(tmp_path))
 
 
+def test_order_placeholder_asks_for_summary_or_next_steps() -> None:
+    german = i18n.translate("hausmeister.order_placeholder", "de")
+    english = i18n.translate("hausmeister.order_placeholder", "en")
+    assert german == "Zusammenfassung oder nächste Schritte?"
+    assert english == "Summary or next steps?"
+    assert "aufgeräumt" not in german
+    assert "tidied" not in english
+    assert "hausmeister.order_placeholder" in i18n.CATALOG
+
+
 def test_catalog_uses_direct_names_and_keeps_the_keys() -> None:
     assert i18n.translate("hausmeister.title", "de") == "lokale KI"
     assert i18n.translate("hausmeister.title", "en") == "local AI assistant"
@@ -108,6 +118,17 @@ def test_pages_show_both_languages(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     assert english.status_code == 200
     assert 'data-disclosure="hausmeister"' in german.text
     assert "/hausmeister/toggle" in german.text
+    enabled = Hausmeister(
+        JsonStore(tmp_path),
+        _transport(["demo"], {"summary": "Stand", "suggestions": []}),
+    )
+    enabled.set_enabled(True)
+    german_order = client.get("/?lang=de")
+    english_order = client.get("/?lang=en")
+    assert 'placeholder="Zusammenfassung oder nächste Schritte?"' in german_order.text
+    assert 'placeholder="Summary or next steps?"' in english_order.text
+    assert "Was soll aufgeräumt werden?" not in german_order.text
+    assert "What should be tidied?" not in english_order.text
     assert "lokale KI" in german.text
     assert "local AI assistant" not in german.text
     assert "local AI assistant" in english.text

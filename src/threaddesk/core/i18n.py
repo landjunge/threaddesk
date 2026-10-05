@@ -200,8 +200,8 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "hausmeister.model_none": {"de": "keins", "en": "none"},
     "hausmeister.order_placeholder": {
-        "de": "Was soll aufgeräumt werden?",
-        "en": "What should be tidied?",
+        "de": "Zusammenfassung oder nächste Schritte?",
+        "en": "Summary or next steps?",
     },
     "hausmeister.run": {"de": "Jetzt ausführen", "en": "Run now"},
     "hausmeister.later": {"de": "Später erledigen", "en": "Do later"},
