@@ -52,7 +52,7 @@ CATALOG: dict[str, dict[str, str]] = {
     "data.restore": {"de": "Sicherung öffnen", "en": "Open backup"},
     "data.active": {"de": "Du arbeitest in einer wiederhergestellten Sicherung. Änderungen bleiben in diesem Arbeitsbereich gespeichert, auch nach einem Neustart.", "en": "You are working in a restored backup. Changes stay in this workspace, including after restarting."},
     "data.original": {"de": "Zum bisherigen Arbeitsbereich", "en": "Return to original workspace"},
-    "data.private": {"de": "Die Sicherung enthält auch private Inhalte und Raum-Zugangsdaten. Bewahre sie an einem sicheren Ort auf. Der lokale Hausmeister bleibt nach dem Wiederherstellen ausgeschaltet.", "en": "The backup includes private content and room credentials. Keep it in a safe place. The local caretaker stays disabled after restoring."},
+    "data.private": {"de": "Die Sicherung enthält auch private Inhalte und Raum-Zugangsdaten. Bewahre sie an einem sicheren Ort auf. Die lokale KI bleibt nach dem Wiederherstellen ausgeschaltet.", "en": "The backup includes private content and room credentials. Keep it in a safe place. The local AI assistant stays disabled after restoring."},
     "data.backup_error": {"de": "Die Sicherung konnte nicht erstellt werden. Beende laufende Änderungen und versuche es erneut. Prüfe außerdem den freien Speicherplatz.", "en": "The backup could not be created. Finish pending changes and try again. Also check available disk space."},
     "data.restore_error": {"de": "Die Sicherung konnte nicht geöffnet werden. Wähle eine vollständige ThreadDesk-Sicherung und bestätige das Öffnen. Deine bisherigen Daten bleiben erhalten.", "en": "The backup could not be opened. Choose a complete ThreadDesk backup and confirm opening it. Your existing data is preserved."},
     # --- Grundgeruest ---
@@ -182,7 +182,7 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "No nodes linked to this thread.",
     },
     "desk.open_map": {"de": "In der Karte zeigen", "en": "Show on the map"},
-    "hausmeister.title": {"de": "Hausmeister", "en": "Housekeeper"},
+    "hausmeister.title": {"de": "lokale KI", "en": "local AI assistant"},
     "hausmeister.reachable": {
         "de": "Ollama ist lokal erreichbar",
         "en": "Ollama is reachable on this machine",
@@ -230,7 +230,7 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "hausmeister.phase.off": {"de": "Aus", "en": "Off"},
     "hausmeister.phase.error": {"de": "Fehler", "en": "Error"},
-    "hausmeister.disabled": {"de": "Hausmeister ist aus", "en": "Housekeeper is off"},
+    "hausmeister.disabled": {"de": "lokale KI ist aus", "en": "local AI assistant is off"},
     "hausmeister.failed": {
         "de": "Auftrag nicht ausgeführt",
         "en": "Job was not run",

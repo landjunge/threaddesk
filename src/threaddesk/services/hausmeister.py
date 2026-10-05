@@ -17,7 +17,7 @@ from threaddesk.services.ollama_local import OllamaError, complete, list_models
 
 MANIFEST = ModuleManifest(
     id="local-assistant",
-    name="Hausmeister",
+    name="lokale KI",
     version="1.0.0",
     read_scopes=("thread:read", "whiteboard:read"),
     write_actions=("whiteboard:append",),
@@ -29,7 +29,7 @@ SETTINGS = "hausmeister.json"
 QUEUE = "hausmeister-queue.json"
 ACTIVITY = "hausmeister-activity.json"
 AGENT_TYPE = "local-assistant"
-ACTOR_NAME = "Hausmeister"
+ACTOR_NAME = "lokale KI"
 IDLE_AFTER_SECONDS = 600
 LOAD_LIMIT = 1.5
 ACTIVITY_GAP_SECONDS = 15
