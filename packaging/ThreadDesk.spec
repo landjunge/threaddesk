@@ -41,7 +41,7 @@ if sys.platform == "darwin":
     app = BUNDLE(
         app_files, name="ThreadDesk.app", icon=str(icon),
         bundle_identifier="de.netzwerkpunkt.threaddesk",
-        version=_bundle["version"],
+        version=_bundle["macos_version"],
         info_plist=_bundle["info_plist"],
     )
 else:
