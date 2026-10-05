@@ -17,6 +17,7 @@ def verify(root: Path, commit: str) -> None:
         arch = 'arm64' if 'AppleSilicon' in name else ('AMD64' if name.endswith('.exe') else 'x86_64')
         system = 'Windows' if name.endswith('.exe') else 'Darwin'
         if (receipt['source_commit'] != commit or receipt['file'] != name
+                or not isinstance(receipt.get('version'), str) or not receipt['version'].strip()
                 or receipt['sha256'] != digest or receipt['bytes'] != path.stat().st_size
                 or receipt['architecture'] != arch or receipt['system'] != system
                 or checksum != f'{digest}  {name}'):
