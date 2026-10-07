@@ -1,21 +1,33 @@
-MIT License
+Copyright (c) 2026 Daniel Filipek / landjunge
+All rights reserved.
 
-Copyright (c) 2026 landjunge
+SOURCE-AVAILABLE NOTICE
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This repository is publicly visible for review, research discussion, and
+security evaluation. Public visibility does not grant permission to use,
+copy, modify, merge, publish, distribute, sublicense, sell, deploy, or create
+derivative works from material first published under this notice.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Any permission beyond viewing and referencing the repository requires prior
+written permission from the copyright holder.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+Research publications may cite this repository and describe its documented
+methods and results. This does not grant permission to copy or redistribute
+the software or substantial portions of its documentation.
+
+No trademark rights are granted for the names, logos, or branding associated
+with ThreadDesk or landjunge.
+
+HISTORICAL LICENSE BOUNDARY
+
+Repository revisions published before the commit that introduced this notice
+were released under the MIT License then present in the repository. Rights
+already granted for those historical revisions are not revoked. Material first
+published in the license-change commit or later is governed by this notice
+unless a later revision explicitly states otherwise.
+
+THE MATERIAL IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING
+FROM, OUT OF, OR IN CONNECTION WITH THE MATERIAL OR ITS USE.
