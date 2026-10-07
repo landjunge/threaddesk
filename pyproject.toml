@@ -9,7 +9,7 @@ description = "Local-first control layer: persistent threads for AI work. Stores
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [{ name = "landjunge" }]
-license = { text = "MIT" }
+license = { text = "Proprietary" }
 
 [project.scripts]
 threaddesk = "threaddesk.ui.cli:main"
