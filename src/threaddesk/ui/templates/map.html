@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block body %}
-<main class="map-page" data-graph-endpoint="/api/graph" data-strings='{{ map_strings|safe }}' data-actor-marks="{{ actor_marks_json }}">
+<main class="map-page" tabindex="0" aria-label="{{ t('map.title') }}" data-graph-endpoint="/api/graph" data-strings='{{ map_strings|safe }}' data-actor-marks="{{ actor_marks_json }}">
   <header class="map-toolbar">
     <div>
       <p class="eyebrow">{{ t("map.eyebrow") }}</p>
@@ -34,7 +34,7 @@
     <li><span class="key key-tone tone-risk"></span>{{ t("map.legend_risk") }}</li>
     <li><span class="key key-circle key-ai"></span>{{ t("map.legend_ai") }}</li>
   </ul>
-  <section class="panel map-detail" data-map-detail aria-live="polite">
+  <section class="panel map-detail" tabindex="0" data-map-detail aria-live="polite">
     <p class="eyebrow">{{ t("map.selection") }}</p>
     <h2 data-map-detail-title>{{ t("map.no_selection") }}</h2>
     <p class="muted" data-map-detail-text>{{ t("map.pick_hint") }}</p>
