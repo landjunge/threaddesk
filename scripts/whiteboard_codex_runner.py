@@ -117,6 +117,27 @@ def _load_state(path: Path, identity: dict[str, Any]) -> dict[str, Any]:
     return state
 
 
+def _standalone_git_dir(repo: Path) -> Path:
+    """Return the bound repo's own Git directory without following worktree links."""
+    repo = repo.expanduser().resolve()
+    git_dir = repo / ".git"
+    if git_dir.is_file():
+        raise ValueError(
+            f"Bound repository uses an unsupported Git worktree .git file: {git_dir}"
+        )
+    if not git_dir.is_dir():
+        raise ValueError(
+            f"Bound repository must contain a standalone .git directory: {git_dir}"
+        )
+    try:
+        git_dir.resolve().relative_to(repo)
+    except ValueError as exc:
+        raise ValueError(
+            f"Bound repository .git directory resolves outside the repository: {git_dir}"
+        ) from exc
+    return git_dir
+
+
 def _baseline_existing_tasks(
     store: JsonStore,
     thread_id: str,
@@ -159,6 +180,7 @@ def _validate(root: Path, thread_id: str, repo: Path) -> tuple[JsonStore, Path, 
     store.get_thread(thread_id)
     if not repo.is_dir():
         raise ValueError(f"Bound repository does not exist: {repo}")
+    _standalone_git_dir(repo)
     result = subprocess.run(
         ["git", "-C", str(repo), "rev-parse", "--show-toplevel"],
         capture_output=True,
@@ -206,6 +228,7 @@ def build_command(
 ) -> list[str]:
     """Return a fixed argv; no Whiteboard content is ever included."""
     _validate_codex_settings(model, reasoning_effort)
+    git_dir = _standalone_git_dir(repo)
     return [
         codex_bin,
         "-a",
@@ -224,6 +247,8 @@ def build_command(
         str(repo),
         "--add-dir",
         str(root),
+        "--add-dir",
+        str(git_dir),
         "exec",
         "--color",
         "never",

@@ -54,15 +54,27 @@ codex -a never --sandbox workspace-write \
   -c 'model_reasoning_effort="high"' \
   -c sandbox_workspace_write.network_access=true \
   -c features.multi_agent=false \
-  -C GEBUNDENES_REPO --add-dir WHITEBOARD_ROOT exec --color never -
+  -C GEBUNDENES_REPO \
+  --add-dir WHITEBOARD_ROOT \
+  --add-dir GEBUNDENES_REPO/.git \
+  exec --color never -
 ```
 
 Codex bekommt damit Schreibzugriff auf das gebundene Repo und den Whiteboard-Root
-sowie aus dem `workspace-write`-Sandboxmodus heraus Netzwerkzugriff für den
-verlangten Git-Push. `danger-full-access` wird nicht verwendet. Modell und
-Reasoning-Effort sind pro Runner-Bindung explizit konfigurierbar; die Vorgaben
-dieser Installation sind `gpt-5.6-sol` und `high`. Der Runner setzt sie nur per
-Prozessargument und verändert niemals `~/.codex/config`.
+sowie eine ausdrückliche Zusatzfreigabe für dessen eigenes `.git`-Verzeichnis,
+damit Git den Index im `workspace-write`-Sandboxmodus aktualisieren kann. Beide
+Pfade stammen aus der festen Runner-Bindung und können nicht durch Tasktext
+umgeschaltet werden. Netzwerkzugriff bleibt für den verlangten Git-Push
+aktiviert; `danger-full-access` wird nicht verwendet. Modell und Reasoning-Effort
+sind pro Runner-Bindung explizit konfigurierbar; die Vorgaben dieser Installation
+sind `gpt-5.6-sol` und `high`. Der Runner setzt sie nur per Prozessargument und
+verändert niemals `~/.codex/config`.
+
+Die Zusatzfreigabe gilt nur für ein eigenständiges Repository: `.git` muss ein
+Verzeichnis sein und innerhalb des gebundenen Repo-Pfads aufgelöst werden.
+Worktrees mit einer `.git`-Datei werden verständlich und fail-closed abgelehnt;
+der dort referenzierte Git-Administrationspfad eines anderen Haupt-Repositories
+wird weder gelesen noch als `--add-dir` freigegeben.
 Der Bootstrap verbietet Repo- und Branchwechsel, Merge, Force-Push, Secrets und
 weitere Agenten.
 
@@ -183,6 +195,9 @@ behauptet keine aktive Zustellung an Chat oder Mobilgerät.
   diesen Root schreiben. Die Service-only-/append-only-Regel wird durch den
   Bootstrap und die Abschlussprüfung verlangt, aber in diesem MVP nicht durch
   eine separate Dateisystem-Proxygrenze erzwungen.
+- Der Runner unterstützt nur eigenständige Git-Repositories mit lokalem
+  `.git`-Verzeichnis. Verknüpfte Git-Worktrees mit `.git`-Datei werden nicht auf
+  das Administrationsverzeichnis ihres Haupt-Repositories ausgeweitet.
 - Der Runner prüft einen strukturierten Push-Beleg, führt aber keine Signatur-
   oder Remote-Identitätsprüfung durch. Codex muss den Push selbst verifizieren.
 - launchd-Installation ist macOS-spezifisch. `once` und `status` setzen ein

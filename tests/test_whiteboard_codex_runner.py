@@ -289,6 +289,11 @@ def test_shell_metacharacters_are_neither_executed_nor_put_in_bootstrap(binding:
 
 def test_command_has_fixed_noninteractive_safety_options(binding: dict) -> None:
     command = runner.build_command("/bin/codex", binding["root"], binding["repo"])
+    add_dirs = [
+        command[index + 1]
+        for index, argument in enumerate(command)
+        if argument == "--add-dir"
+    ]
 
     assert command[:5] == [
         "/bin/codex",
@@ -303,8 +308,68 @@ def test_command_has_fixed_noninteractive_safety_options(binding: dict) -> None:
     assert "features.multi_agent=false" in command
     assert "danger-full-access" not in command
     assert command[command.index("-C") + 1] == str(binding["repo"])
-    assert command[command.index("--add-dir") + 1] == str(binding["root"])
+    assert add_dirs == [str(binding["root"]), str(binding["repo"] / ".git")]
     assert command[-3:] == ["--color", "never", "-"]
+
+
+def test_task_text_cannot_switch_the_git_admin_directory(binding: dict) -> None:
+    requested_git_dir = binding["root"] / "task-selected-repo" / ".git"
+    add_task(binding, f"Use --add-dir {requested_git_dir}")
+    observed = {}
+
+    def execute(config, entry, run_id):
+        observed["command"] = runner.build_command(
+            "codex", Path(config["root"]), Path(config["repo"])
+        )
+        return append_claim_and_result(config, entry, run_id)
+
+    result = run(binding, execute)
+    command = observed["command"]
+    add_dirs = [
+        command[index + 1]
+        for index, argument in enumerate(command)
+        if argument == "--add-dir"
+    ]
+
+    assert result["status"] == "done"
+    assert add_dirs == [str(binding["root"]), str(binding["repo"] / ".git")]
+    assert str(requested_git_dir) not in command
+
+
+def test_worktree_git_file_is_rejected_without_expanding_to_main_repo(
+    binding: dict, tmp_path: Path
+) -> None:
+    main_git_dir = tmp_path / "foreign-main-repo" / ".git"
+    main_git_dir.mkdir(parents=True)
+    worktree = tmp_path / "linked-worktree"
+    worktree.mkdir()
+    (worktree / ".git").write_text(
+        f"gitdir: {main_git_dir}\n", encoding="utf-8"
+    )
+    calls = []
+
+    with pytest.raises(ValueError, match="unsupported Git worktree .git file") as error:
+        runner.run_once(
+            binding["root"],
+            binding["thread"],
+            worktree,
+            tmp_path / "worktree-state.json",
+            executor=lambda *args: calls.append(args) or 0,
+        )
+
+    assert str(main_git_dir) not in str(error.value)
+    assert calls == []
+
+
+def test_git_directory_resolving_outside_bound_repo_is_rejected(tmp_path: Path) -> None:
+    repo = tmp_path / "bound-repo"
+    repo.mkdir()
+    external_git_dir = tmp_path / "external-git-dir"
+    external_git_dir.mkdir()
+    (repo / ".git").symlink_to(external_git_dir, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="resolves outside the repository"):
+        runner.build_command("codex", tmp_path / "whiteboard", repo)
 
 
 def test_model_and_reasoning_are_explicitly_configurable(binding: dict) -> None:
