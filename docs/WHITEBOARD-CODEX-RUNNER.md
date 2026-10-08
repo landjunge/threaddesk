@@ -57,7 +57,7 @@ codex -a never --sandbox workspace-write \
   -C GEBUNDENES_REPO \
   --add-dir WHITEBOARD_ROOT \
   --add-dir GEBUNDENES_REPO/.git \
-  exec --color never -
+  exec --color never --json -
 ```
 
 Codex bekommt damit Schreibzugriff auf das gebundene Repo und den Whiteboard-Root
@@ -174,13 +174,22 @@ Fehlt einer dieser Belege, schreibt der Runner einen append-only
 `problem`-Eintrag und setzt den Task auf `blocked`. Laufprotokolle enthalten die
 Codex-Standardausgabe und liegen mit Dateimodus `0600` neben dem Status.
 
-## 60-Sekunden-Regel
+## 45-Sekunden-Nachfrage und harte 60-Sekunden-Regel
 
 Der laufende Runner prüft `claimed`, `progress`, `problem` und `result` derselben
-Task-/Run-ID. Jeder neue Codex-Eintrag setzt die Frist zurück. Bleibt ein Ping 60
-Sekunden aus, schreibt der Runner `problem`, beendet den Codex-Prozess fail-closed
-und markiert den Task `blocked`. Ein Terminaleintrag erhält 30 Sekunden zum
-geordneten Prozessende.
+Task-/Run-ID. Jeder neue echte Codex-Eintrag setzt die Frist zurück. Fehlt danach
+45 Sekunden lang eine Rückmeldung, hängt der Runner genau eine `question` für
+diesen stillen Abschnitt an das Whiteboard. Die JSONL-Ausgabe von `codex exec`
+liefert die tatsächlich gestartete Session-ID; nur wenn diese eindeutige
+`thread.started`-Kennung vorliegt, versucht der Runner die feste Nachfrage
+zusätzlich mit `codex queue --thread SESSION_ID` an genau diese Session zu senden.
+Versagen oder Fehlen dieser best-effort Queue-Zustellung verlängert den Lauf nicht.
+
+Bleibt ein echter Ping insgesamt 60 Sekunden aus, schreibt der Runner `problem`,
+beendet den Codex-Prozess fail-closed und markiert den Task `blocked`. Die feste
+Obergrenze bleibt damit 60 Sekunden ab Prozessstart beziehungsweise ab der letzten
+echten Codex-Rückmeldung; die 45-Sekunden-Nachfrage setzt sie ausdrücklich nicht
+zurück. Ein Terminaleintrag erhält 30 Sekunden zum geordneten Prozessende.
 
 Dieser Timer überwacht nur den lokalen Lauf. Er weckt keine Voice-Sitzung und
 behauptet keine aktive Zustellung an Chat oder Mobilgerät.

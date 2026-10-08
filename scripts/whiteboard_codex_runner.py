@@ -39,7 +39,9 @@ DEFAULT_MODEL = "gpt-5.6-sol"
 DEFAULT_REASONING_EFFORT = "high"
 REASONING_EFFORTS = {"low", "medium", "high", "xhigh", "max", "ultra"}
 FEEDBACK_SECONDS = 60
+FEEDBACK_NUDGE_SECONDS = 45
 TERMINAL_GRACE_SECONDS = 30
+QUEUE_TIMEOUT_SECONDS = 5
 TERMINAL_TYPES = {"result", "problem"}
 Executor = Callable[[dict[str, Any], Any, str], int]
 
@@ -252,6 +254,7 @@ def build_command(
         "exec",
         "--color",
         "never",
+        "--json",
         "-",
     ]
 
@@ -308,6 +311,103 @@ def _append_runner_problem(
             "reason": reason,
         },
         external_key=f"{RUNNER_MARKER}:{entry.id}:{run_id}:problem:{reason}",
+    )
+    return created
+
+
+def _logged_session_id(log_path: Path) -> str | None:
+    """Return only the explicit session id from a Codex JSONL start event."""
+    try:
+        lines = log_path.read_text(encoding="utf-8").splitlines()
+    except (FileNotFoundError, OSError, UnicodeError):
+        return None
+    for line in lines:
+        try:
+            event = json.loads(line)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if not isinstance(event, dict) or event.get("type") != "thread.started":
+            continue
+        session_id = event.get("thread_id")
+        if isinstance(session_id, str) and re.fullmatch(
+            r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+            session_id,
+        ):
+            return session_id
+    return None
+
+
+def _queue_feedback_question(
+    codex_bin: str, repo: Path, session_id: str | None
+) -> tuple[bool, bool, str]:
+    """Best-effort delivery to the exact session reported by Codex itself."""
+    if session_id is None:
+        return False, False, "session_not_logged"
+    message = (
+        "Der gebundene Whiteboard-Watchdog hat seit 45 Sekunden keinen neuen "
+        "claimed/progress/result/problem-Eintrag gesehen. Bitte schreibe jetzt einen "
+        "ehrlichen auftragsbezogenen progress- oder problem-Eintrag; keine synthetische "
+        "Erfolgsmeldung. Die harte 60-Sekunden-Grenze bleibt bestehen."
+    )
+    try:
+        result = subprocess.run(
+            [
+                codex_bin,
+                "queue",
+                "--thread",
+                session_id,
+                "--message",
+                message,
+            ],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            timeout=QUEUE_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return True, False, "timeout"
+    except OSError:
+        return True, False, "unavailable"
+    if result.returncode == 0:
+        return True, True, "submitted"
+    return True, False, f"exit_{result.returncode}"
+
+
+def _append_feedback_question(
+    store: JsonStore,
+    entry: Any,
+    run_id: str,
+    source_ping_id: str | None,
+    session_id: str | None,
+) -> Any:
+    created, _ = append(
+        store,
+        entry.thread_id,
+        actor="Whiteboard-Codex-Runner",
+        actor_type="system",
+        entry_type="question",
+        content=(
+            f"{now()} Auftrag {entry.task_id or entry.id}: Seit "
+            f"{FEEDBACK_NUDGE_SECONDS} Sekunden fehlt eine neue echte Codex-Rückmeldung. "
+            "Bitte jetzt progress oder problem melden; die harte 60-Sekunden-Grenze "
+            "wird durch diese Nachfrage nicht verlängert."
+        ),
+        task_id=entry.task_id,
+        run_id=run_id,
+        metadata={
+            "runner": RUNNER_MARKER,
+            "source_entry_id": entry.id,
+            "source_ping_id": source_ping_id,
+            "reason": "feedback_due",
+            "quiet_seconds": FEEDBACK_NUDGE_SECONDS,
+            "feedback_deadline_seconds": FEEDBACK_SECONDS,
+            "codex_session_id": session_id,
+            "queue_target_available": session_id is not None,
+        },
+        external_key=(
+            f"{RUNNER_MARKER}:{entry.id}:{run_id}:question:feedback_due:"
+            f"{source_ping_id or 'start'}"
+        ),
     )
     return created
 
@@ -404,34 +504,69 @@ def _run_codex(config: dict[str, Any], entry: Any, run_id: str) -> int:
         process.stdin.close()
         seen_ids: set[str] = set()
         last_ping = time.monotonic()
+        last_ping_entry_id: str | None = None
+        nudge_sent = False
+        session_id: str | None = None
         terminal_since: float | None = None
         while process.poll() is None:
             related = _matching_entries(store, entry, run_id)
-            current_ids = {
-                item.id
+            codex_updates = [
+                item
                 for item in related
                 if item.actor_type == "codex"
                 and item.entry_type in {"claimed", "progress", "problem", "result"}
-            }
+            ]
+            current_ids = {item.id for item in codex_updates}
             if current_ids - seen_ids:
                 seen_ids = current_ids
                 last_ping = time.monotonic()
+                last_ping_entry_id = codex_updates[-1].id
+                nudge_sent = False
+            if session_id is None:
+                session_id = _logged_session_id(log_path)
+                if session_id is not None:
+                    config["on_session"](session_id)
             terminal_status, _ = _terminal_status(store, entry, run_id)
             if terminal_status is not None:
                 terminal_since = terminal_since or time.monotonic()
                 if time.monotonic() - terminal_since >= TERMINAL_GRACE_SECONDS:
                     _terminate(process)
                     return 125
-            elif time.monotonic() - last_ping >= FEEDBACK_SECONDS:
-                _append_runner_problem(
-                    store,
-                    entry,
-                    run_id,
-                    "Kein auftragsbezogener Codex-Ping innerhalb von 60 Sekunden; Lauf fail-closed beendet. Der Timer weckt keine Voice-Sitzung.",
-                    "feedback_timeout",
-                )
-                _terminate(process)
-                return 124
+            else:
+                quiet_seconds = time.monotonic() - last_ping
+                if not nudge_sent and quiet_seconds >= FEEDBACK_NUDGE_SECONDS:
+                    question = _append_feedback_question(
+                        store,
+                        entry,
+                        run_id,
+                        last_ping_entry_id,
+                        session_id,
+                    )
+                    attempted, delivered, queue_status = _queue_feedback_question(
+                        config["codex_bin"], Path(config["repo"]), session_id
+                    )
+                    config["on_nudge"](
+                        {
+                            "question_entry_id": question.id,
+                            "created_at": question.created_at,
+                            "codex_session_id": session_id,
+                            "queue_attempted": attempted,
+                            "queue_delivered": delivered,
+                            "queue_status": queue_status,
+                        }
+                    )
+                    nudge_sent = True
+                    quiet_seconds = time.monotonic() - last_ping
+                if quiet_seconds >= FEEDBACK_SECONDS:
+                    _append_runner_problem(
+                        store,
+                        entry,
+                        run_id,
+                        "Kein auftragsbezogener Codex-Ping innerhalb von 60 Sekunden; Lauf fail-closed beendet. Die Vorab-Nachfrage verlängert die Grenze nicht und der Timer weckt keine Voice-Sitzung.",
+                        "feedback_timeout",
+                    )
+                    _terminate(process)
+                    return 124
             time.sleep(1)
         return int(process.returncode or 0)
 
@@ -610,6 +745,16 @@ def run_once(
             state["tasks"][entry.id].update(pid=pid, log_path=log_path)
             atomic_json(state_path, state)
 
+        def on_session(session_id: str) -> None:
+            state["active"].update(codex_session_id=session_id)
+            state["tasks"][entry.id].update(codex_session_id=session_id)
+            atomic_json(state_path, state)
+
+        def on_nudge(nudge: dict[str, Any]) -> None:
+            state["active"].update(last_feedback_nudge=nudge)
+            state["tasks"][entry.id].update(last_feedback_nudge=nudge)
+            atomic_json(state_path, state)
+
         config = {
             **identity,
             "branch": bound_branch,
@@ -618,6 +763,8 @@ def run_once(
             "model": model,
             "reasoning_effort": reasoning_effort,
             "on_pid": on_pid,
+            "on_session": on_session,
+            "on_nudge": on_nudge,
         }
         chosen_executor = executor or _run_codex
         try:
@@ -804,6 +951,7 @@ def install(
         "model": model,
         "reasoning_effort": reasoning_effort,
         "interval_seconds": 15,
+        "feedback_nudge_seconds": FEEDBACK_NUDGE_SECONDS,
         "feedback_seconds": FEEDBACK_SECONDS,
         "ignored_count": _public_state(baseline)["ignored_count"],
     }

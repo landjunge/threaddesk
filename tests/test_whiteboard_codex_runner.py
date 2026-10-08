@@ -309,7 +309,147 @@ def test_command_has_fixed_noninteractive_safety_options(binding: dict) -> None:
     assert "danger-full-access" not in command
     assert command[command.index("-C") + 1] == str(binding["repo"])
     assert add_dirs == [str(binding["root"]), str(binding["repo"] / ".git")]
-    assert command[-3:] == ["--color", "never", "-"]
+    assert command[-4:] == ["--color", "never", "--json", "-"]
+
+
+def test_logged_session_id_requires_explicit_jsonl_start_event(tmp_path: Path) -> None:
+    log = tmp_path / "codex.jsonl"
+    wanted = "018f3f1c-7c4e-7a11-a2d2-5d4e9e29bc31"
+    log.write_text(
+        "not json\n"
+        + json.dumps({"type": "item.completed", "thread_id": wanted})
+        + "\n"
+        + json.dumps({"type": "thread.started", "thread_id": "not-a-session"})
+        + "\n"
+        + json.dumps({"type": "thread.started", "thread_id": wanted})
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert runner._logged_session_id(log) == wanted
+
+
+def test_live_run_questions_and_queues_before_hard_feedback_timeout(
+    binding: dict, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    task = add_task(binding)
+    entry = next(
+        item
+        for item in binding["service"].whiteboard(binding["thread"])
+        if item.id == task["id"]
+    )
+    run_id = "codex-test-watchdog"
+    session_id = "018f3f1c-7c4e-7a11-a2d2-5d4e9e29bc31"
+    clock = {"value": 0.0}
+    queued_commands = []
+    question_seen_before_queue = []
+    observed_sessions = []
+    observed_nudges = []
+    claimed_entry_id = {"value": None}
+
+    class FakeStdin:
+        def write(self, value):
+            return len(value)
+
+        def close(self):
+            return None
+
+    class FakeProcess:
+        pid = 4321
+
+        def __init__(self):
+            self.stdin = FakeStdin()
+            self.returncode = None
+
+        def poll(self):
+            return self.returncode
+
+        def terminate(self):
+            self.returncode = -15
+
+        def wait(self, timeout):
+            return self.returncode
+
+        def kill(self):
+            self.returncode = -9
+
+    def fake_popen(command, **kwargs):
+        kwargs["stdout"].write(
+            json.dumps({"type": "thread.started", "thread_id": session_id}) + "\n"
+        )
+        kwargs["stdout"].flush()
+        return FakeProcess()
+
+    def fake_run(command, **kwargs):
+        question_seen_before_queue.append(
+            any(
+                item.run_id == run_id and item.entry_type == "question"
+                for item in binding["service"].whiteboard(binding["thread"])
+            )
+        )
+        queued_commands.append((command, kwargs))
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    def fake_sleep(_seconds):
+        clock["value"] += 15
+        if clock["value"] == 30:
+            claimed, _ = append(
+                JsonStore(binding["root"]),
+                binding["thread"],
+                actor="Terminal-Codex",
+                actor_type="codex",
+                entry_type="claimed",
+                content="Real Codex feedback.",
+                task_id=entry.task_id,
+                run_id=run_id,
+            )
+            claimed_entry_id["value"] = claimed.id
+
+    monkeypatch.setattr(runner.subprocess, "Popen", fake_popen)
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+    monkeypatch.setattr(runner.time, "monotonic", lambda: clock["value"])
+    monkeypatch.setattr(runner.time, "sleep", fake_sleep)
+    config = {
+        "root": str(binding["root"]),
+        "thread_id": binding["thread"],
+        "repo": str(binding["repo"]),
+        "state_path": str(binding["state"]),
+        "codex_bin": "/usr/local/bin/codex",
+        "model": runner.DEFAULT_MODEL,
+        "reasoning_effort": runner.DEFAULT_REASONING_EFFORT,
+        "on_pid": lambda *_args: None,
+        "on_session": observed_sessions.append,
+        "on_nudge": observed_nudges.append,
+    }
+
+    exit_code = runner._run_codex(config, entry, run_id)
+
+    assert exit_code == 124
+    assert clock["value"] == 90
+    assert observed_sessions == [session_id]
+    assert len(observed_nudges) == 1
+    assert observed_nudges[0]["queue_delivered"] is True
+    assert observed_nudges[0]["codex_session_id"] == session_id
+    assert question_seen_before_queue == [True]
+    assert len(queued_commands) == 1
+    queue_command, queue_options = queued_commands[0]
+    assert queue_command[:2] == ["/usr/local/bin/codex", "queue"]
+    assert queue_command[queue_command.index("--thread") + 1] == session_id
+    assert queue_options["timeout"] == runner.QUEUE_TIMEOUT_SECONDS
+    related = [
+        item
+        for item in binding["service"].whiteboard(binding["thread"])
+        if item.run_id == run_id
+    ]
+    questions = [item for item in related if item.entry_type == "question"]
+    assert len(questions) == 1
+    assert questions[0].metadata["source_ping_id"] == claimed_entry_id["value"]
+    assert questions[0].metadata["queue_target_available"] is True
+    assert questions[0].metadata["feedback_deadline_seconds"] == 60
+    assert any(
+        item.entry_type == "problem" and item.metadata.get("reason") == "feedback_timeout"
+        for item in related
+    )
 
 
 def test_task_text_cannot_switch_the_git_admin_directory(binding: dict) -> None:
@@ -545,7 +685,7 @@ def test_branch_change_is_detected_and_cannot_finish_done(binding: dict) -> None
 
     def execute(config, entry, run_id):
         completed = subprocess.run(
-            ["git", "-C", str(binding["repo"]), "switch", "-c", "task-controlled"],
+            ["git", "-C", str(binding["repo"]), "checkout", "-b", "task-controlled"],
             capture_output=True,
             text=True,
         )
