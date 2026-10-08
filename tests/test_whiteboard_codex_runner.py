@@ -86,6 +86,35 @@ def run(binding: dict, executor) -> dict:
     )
 
 
+def install_binding(
+    binding: dict,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    launchctl_exit: int = 0,
+) -> tuple[dict, Path, Path]:
+    folder = tmp_path / "installed"
+    plist = tmp_path / "LaunchAgents" / "runner.plist"
+    monkeypatch.setattr(runner.sys, "platform", "darwin")
+    monkeypatch.setattr(runner, "paths", lambda *args: (folder, "test.runner", plist))
+    monkeypatch.setattr(runner, "_resolved_python", lambda: Path("/usr/local/bin/python3"))
+    monkeypatch.setattr(runner.shutil, "which", lambda value: "/usr/local/bin/codex")
+    real_run = subprocess.run
+
+    def fake_run(command, *args, **kwargs):
+        if command[0] == "/bin/launchctl":
+            return subprocess.CompletedProcess(
+                command, launchctl_exit, "", "bootstrap failed" if launchctl_exit else ""
+            )
+        return real_run(command, *args, **kwargs)
+
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+    result = runner.install(
+        binding["root"], binding["thread"], binding["repo"], "codex"
+    )
+    return result, folder / "status.json", plist
+
+
 def test_unmarked_task_does_not_start(binding: dict) -> None:
     add_task(binding, metadata={})
     calls = []
@@ -105,6 +134,100 @@ def test_wrong_actor_does_not_start(binding: dict) -> None:
 
     assert result["status"] == "idle"
     assert calls == []
+
+
+def test_install_baselines_only_existing_eligible_tasks(
+    binding: dict, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    eligible = add_task(binding, task_id="old-eligible")
+    add_task(binding, task_id="old-unmarked", metadata={})
+    add_task(binding, task_id="old-wrong-actor", actor="Person", actor_type="human")
+
+    installed, state_path, _ = install_binding(binding, tmp_path, monkeypatch)
+    calls = []
+    visible = runner.status(
+        binding["root"], binding["thread"], binding["repo"], state_path
+    )
+    result = runner.run_once(
+        binding["root"],
+        binding["thread"],
+        binding["repo"],
+        state_path,
+        executor=lambda *args: calls.append(args) or 0,
+    )
+
+    state = json.loads(state_path.read_text())
+    assert calls == []
+    assert installed["ignored_count"] == 1
+    assert visible["ignored_count"] == 1
+    assert visible["baseline"]["ignored_count"] == 1
+    assert result["ignored_count"] == 1
+    assert result["task_statuses"] == {eligible["id"]: "baselined"}
+    assert state["baseline"]["newly_ignored_count"] == 1
+
+
+def test_task_added_after_install_starts_exactly_once(
+    binding: dict, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    install_binding(binding, tmp_path, monkeypatch)
+    state_path = tmp_path / "installed" / "status.json"
+    task = add_task(binding, task_id="new-after-install")
+    calls = []
+
+    def execute(config, entry, run_id):
+        calls.append(entry.id)
+        return append_claim_and_result(config, entry, run_id)
+
+    first = runner.run_once(
+        binding["root"], binding["thread"], binding["repo"], state_path, executor=execute
+    )
+    second = runner.run_once(
+        binding["root"], binding["thread"], binding["repo"], state_path, executor=execute
+    )
+
+    assert calls == [task["id"]]
+    assert first["task_statuses"] == {task["id"]: "done"}
+    assert second["task_statuses"] == {task["id"]: "done"}
+
+
+def test_restart_keeps_old_task_baselined_and_new_task_done(
+    binding: dict, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    old = add_task(binding, task_id="old")
+    _, state_path, _ = install_binding(binding, tmp_path, monkeypatch)
+    new = add_task(binding, task_id="new")
+    calls = []
+
+    def execute(config, entry, run_id):
+        calls.append(entry.id)
+        return append_claim_and_result(config, entry, run_id)
+
+    runner.run_once(
+        binding["root"], binding["thread"], binding["repo"], state_path, executor=execute
+    )
+    restarted = runner.run_once(
+        binding["root"], binding["thread"], binding["repo"], state_path, executor=execute
+    )
+
+    assert calls == [new["id"]]
+    assert restarted["ignored_count"] == 1
+    assert restarted["task_statuses"] == {
+        old["id"]: "baselined",
+        new["id"]: "done",
+    }
+
+
+def test_failed_launchd_bootstrap_rolls_back_new_install_state(
+    binding: dict, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    add_task(binding, task_id="old")
+
+    with pytest.raises(RuntimeError, match="launchd registration failed"):
+        install_binding(binding, tmp_path, monkeypatch, launchctl_exit=5)
+
+    assert not (tmp_path / "installed" / "status.json").exists()
+    assert not (tmp_path / "installed" / "whiteboard_codex_runner.py").exists()
+    assert not (tmp_path / "LaunchAgents" / "runner.plist").exists()
 
 
 def test_marked_task_starts_exactly_once_and_restart_does_not_repeat(binding: dict) -> None:

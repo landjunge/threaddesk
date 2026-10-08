@@ -117,6 +117,39 @@ def _load_state(path: Path, identity: dict[str, Any]) -> dict[str, Any]:
     return state
 
 
+def _baseline_existing_tasks(
+    store: JsonStore,
+    thread_id: str,
+    state_path: Path,
+    identity: dict[str, Any],
+) -> dict[str, Any]:
+    """Persist the install-time eligible set before launchd can run."""
+    state = _load_state(state_path, identity)
+    baseline_at = now()
+    newly_ignored = 0
+    for entry in list_entries(store, thread_id):
+        if not _eligible(entry) or entry.id in state["tasks"]:
+            continue
+        state["tasks"][entry.id] = {
+            "status": "baselined",
+            "task_id": entry.task_id,
+            "baselined_at": baseline_at,
+        }
+        newly_ignored += 1
+    ignored_count = sum(
+        record.get("status") == "baselined" for record in state["tasks"].values()
+    )
+    state["baseline"] = {
+        "created_at": baseline_at,
+        "ignored_count": ignored_count,
+        "newly_ignored_count": newly_ignored,
+    }
+    state.setdefault("status", "idle")
+    state.setdefault("active", None)
+    atomic_json(state_path, state)
+    return state
+
+
 def _validate(root: Path, thread_id: str, repo: Path) -> tuple[JsonStore, Path, Path]:
     root = root.expanduser().resolve()
     repo = repo.expanduser().resolve()
@@ -420,6 +453,10 @@ def _finish_task(
 def _public_state(state: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in state.items() if key != "tasks"} | {
         "task_count": len(state.get("tasks", {})),
+        "ignored_count": sum(
+            value.get("status") == "baselined"
+            for value in state.get("tasks", {}).values()
+        ),
         "task_statuses": {
             key: value.get("status") for key, value in state.get("tasks", {}).items()
         },
@@ -596,7 +633,14 @@ def status(
     _validate_codex_settings(model, reasoning_effort)
     identity = _identity(root, thread_id, repo, model, reasoning_effort)
     if not state_path.exists():
-        return {**identity, "status": "not_started", "active": None, "task_count": 0, "task_statuses": {}}
+        return {
+            **identity,
+            "status": "not_started",
+            "active": None,
+            "task_count": 0,
+            "ignored_count": 0,
+            "task_statuses": {},
+        }
     return _public_state(_load_state(state_path, identity))
 
 
@@ -615,6 +659,29 @@ def _resolved_python() -> Path:
     return executable
 
 
+def _rollback_install_files(
+    folder: Path,
+    folder_existed: bool,
+    plist: Path,
+    plist_created: bool,
+    snapshots: dict[Path, tuple[bytes, int] | None],
+) -> None:
+    if plist_created:
+        plist.unlink(missing_ok=True)
+    for path, snapshot in snapshots.items():
+        if snapshot is None:
+            path.unlink(missing_ok=True)
+        else:
+            data, mode = snapshot
+            path.write_bytes(data)
+            os.chmod(path, mode)
+    if not folder_existed:
+        try:
+            folder.rmdir()
+        except OSError:
+            pass
+
+
 def install(
     root: Path,
     thread_id: str,
@@ -627,7 +694,7 @@ def install(
         raise ValueError("Installation requires macOS launchd")
     python_executable = _resolved_python()
     _validate_codex_settings(model, reasoning_effort)
-    _, root, repo = _validate(root, thread_id, repo)
+    store, root, repo = _validate(root, thread_id, repo)
     _current_branch(repo)
     executable = shutil.which(codex_bin)
     if executable is None:
@@ -635,56 +702,72 @@ def install(
     folder, label, plist = paths(thread_id, repo)
     if plist.exists():
         raise ValueError("Runner already installed; inspect status or uninstall first")
+    folder_existed = folder.exists()
     folder.mkdir(parents=True, exist_ok=True)
     os.chmod(folder, 0o700)
     script = folder / "whiteboard_codex_runner.py"
-    shutil.copy2(Path(__file__).resolve(), script)
     state_path = folder / "status.json"
-    program = [
-        str(python_executable),
-        str(script),
-        "once",
-        "--root",
-        str(root),
-        "--thread",
-        thread_id,
-        "--repo",
-        str(repo),
-        "--state",
-        str(state_path),
-        "--codex",
-        executable,
-        "--model",
-        model,
-        "--reasoning-effort",
-        reasoning_effort,
-    ]
-    config = {
-        "Label": label,
-        "ProgramArguments": program,
-        "EnvironmentVariables": {
-            "PYTHONPATH": str(SOURCE_ROOT),
-            "THREADDESK_SOURCE_ROOT": str(SOURCE_ROOT),
-        },
-        "StartInterval": 15,
-        "RunAtLoad": True,
-        "ProcessType": "Background",
-        "Umask": 63,
-        "StandardOutPath": str(folder / "launchd.stdout.log"),
-        "StandardErrorPath": str(folder / "launchd.stderr.log"),
+    snapshots = {
+        path: (path.read_bytes(), path.stat().st_mode & 0o777) if path.exists() else None
+        for path in (script, state_path)
     }
-    plist.parent.mkdir(parents=True, exist_ok=True)
-    with plist.open("xb") as stream:
-        plistlib.dump(config, stream)
-    os.chmod(plist, 0o600)
-    result = subprocess.run(
-        ["/bin/launchctl", "bootstrap", f"gui/{os.getuid()}", str(plist)],
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode:
-        plist.unlink()
-        raise RuntimeError("launchd registration failed: " + result.stderr.strip())
+    identity = _identity(root, thread_id, repo, model, reasoning_effort)
+    plist_created = False
+    try:
+        shutil.copy2(Path(__file__).resolve(), script)
+        baseline = _baseline_existing_tasks(
+            store, thread_id, state_path, identity
+        )
+        program = [
+            str(python_executable),
+            str(script),
+            "once",
+            "--root",
+            str(root),
+            "--thread",
+            thread_id,
+            "--repo",
+            str(repo),
+            "--state",
+            str(state_path),
+            "--codex",
+            executable,
+            "--model",
+            model,
+            "--reasoning-effort",
+            reasoning_effort,
+        ]
+        config = {
+            "Label": label,
+            "ProgramArguments": program,
+            "EnvironmentVariables": {
+                "PYTHONPATH": str(SOURCE_ROOT),
+                "THREADDESK_SOURCE_ROOT": str(SOURCE_ROOT),
+            },
+            "StartInterval": 15,
+            "RunAtLoad": True,
+            "ProcessType": "Background",
+            "Umask": 63,
+            "StandardOutPath": str(folder / "launchd.stdout.log"),
+            "StandardErrorPath": str(folder / "launchd.stderr.log"),
+        }
+        plist.parent.mkdir(parents=True, exist_ok=True)
+        with plist.open("xb") as stream:
+            plist_created = True
+            plistlib.dump(config, stream)
+        os.chmod(plist, 0o600)
+        result = subprocess.run(
+            ["/bin/launchctl", "bootstrap", f"gui/{os.getuid()}", str(plist)],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode:
+            raise RuntimeError("launchd registration failed: " + result.stderr.strip())
+    except Exception:
+        _rollback_install_files(
+            folder, folder_existed, plist, plist_created, snapshots
+        )
+        raise
     return {
         "installed": True,
         "label": label,
@@ -697,6 +780,7 @@ def install(
         "reasoning_effort": reasoning_effort,
         "interval_seconds": 15,
         "feedback_seconds": FEEDBACK_SECONDS,
+        "ignored_count": _public_state(baseline)["ignored_count"],
     }
 
 

@@ -83,11 +83,25 @@ einen benutzergebundenen launchd-Job. Der Job prüft alle 15 Sekunden. Ein
 laufender `once`-Prozess hält einen exklusiven Lock, sodass ein weiterer Tick
 keinen zweiten Agenten starten kann.
 
+Die Installation beginnt ausdrücklich „ab jetzt“: Noch vor dem
+launchd-Bootstrap schreibt sie den bindungsspezifischen Status und markiert alle
+zu diesem Zeitpunkt bereits vorhandenen, startberechtigten Task-Entry-IDs als
+`baselined`. Historische Tasks werden dadurch weder beim ersten Start noch nach
+einem Neustart rückwirkend ausgeführt. Nicht markierte Tasks und Tasks anderer
+Actor-Typen werden nicht in diesen Status aufgenommen. Erst ein nach dieser
+Baseline neu angehängter startberechtigter Task kann starten.
+
 Der launchd-Job bindet den vollständig aufgelösten `sys.executable` und den
 `src`-Pfad des Checkouts, aus dem `install` ausgeführt wurde; er verlässt sich
 nicht auf ein unbestimmtes `python3` aus launchds `PATH`. Der Installer lehnt
 Python älter als 3.9 mit einer klaren Fehlermeldung ab. Interpreter und Checkout
 müssen deshalb verfügbar bleiben.
+
+Schlägt die Installation vor oder während des launchd-Bootstraps fehl, werden
+die in diesem Versuch neu geschriebenen Script-, Status- und Plist-Dateien
+entfernt beziehungsweise auf ihren vorherigen Inhalt zurückgesetzt. Ein neuer
+Installationsversuch erstellt damit eine neue Baseline zum tatsächlichen
+Installationszeitpunkt.
 
 Deinstallation erhält Status und Laufprotokolle:
 
@@ -110,21 +124,24 @@ PYTHONPATH=src python3 scripts/whiteboard_codex_runner.py status \
 
 Der Status liegt standardmäßig bindungsspezifisch unter
 `~/Library/Application Support/ThreadDesk/whiteboard-codex-runner/`. Er enthält
-für jede verarbeitete Entry-ID die Run-ID und einen terminalen oder laufenden
-Zustand. Gültige Zustände sind:
+für jeden gestarteten Entry die Run-ID und einen terminalen oder laufenden
+Zustand. `ignored_count` zeigt die Zahl der bei der Installation ignorierten
+historischen Tasks; `baseline` enthält Zeitpunkt sowie Gesamt- und Neuzahl der
+zuletzt geschriebenen Baseline. Gültige Zustände sind:
 
 - `idle`: kein startbarer Task gefunden;
 - `running`: genau ein Codex-Prozess ist zugeordnet;
 - `done`: gültiges `result` mit allen Erfolgsbelegen;
 - `blocked`: `problem`, Prozessfehler oder unzureichender Abschlussbeleg;
 - `stopped`: eigenständige `STOP`-Zeile wurde beachtet;
+- `baselined`: bei Installation bereits vorhanden und dauerhaft ignoriert;
 - `busy`: ein anderer Runner-Prozess hält den Lock.
 
-Ein als `running`, `done`, `blocked` oder `stopped` registrierter Entry wird nach
-einem Neustart nicht erneut gestartet. Bleibt nach einem Runner-Abbruch ein
-zugeordneter Codex-Prozess nachweislich aktiv, startet der nächste Tick ebenfalls
-keinen zweiten. Ein verwaister Lauf ohne Prozess und ohne Terminaleintrag wird
-append-only als `problem` beendet.
+Ein als `baselined`, `running`, `done`, `blocked` oder `stopped` registrierter
+Entry wird nach einem Neustart nicht erneut gestartet. Bleibt nach einem
+Runner-Abbruch ein zugeordneter Codex-Prozess nachweislich aktiv, startet der
+nächste Tick ebenfalls keinen zweiten. Ein verwaister Lauf ohne Prozess und ohne
+Terminaleintrag wird append-only als `problem` beendet.
 
 ## Whiteboard-Rückkanal und Abschluss
 
