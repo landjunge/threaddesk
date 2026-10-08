@@ -14,7 +14,12 @@ eine Empfehlung.
 - Modell: `gpt-5.6-sol`, Reasoning Effort `medium`.
 - Codex: Sandbox `read-only`, Approval `never`, Multi-Agent aus, Websuche aus,
   keine zusätzlichen Schreibverzeichnisse. Die Sitzung ist ephemeral und lädt
-  keine persönliche Codex-Konfiguration.
+  keine persönliche Codex-Konfiguration. Ein lokaler Profiltest blockierte für
+  diesen Sandbox-Prozess einen `curl`-Aufruf bereits bei der DNS-Auflösung,
+  während derselbe Host außerhalb der Sandbox erreichbar war. Das belegt die
+  Netzwerkgrenze dieses getesteten Profils, aber keine absolute Sperre aller
+  denkbaren Prozess- oder Trafficwege; der Runner setzt deshalb kein nicht
+  belegtes `sandbox_read_only.network_access`-Feld.
 - Höchstens ein Reviewer-Prozess gleichzeitig, höchstens 300 Sekunden
   einschließlich Unterprozessen und höchstens drei neu gestartete Reviews pro
   Europe/Berlin-Kalendertag. Das ist ein Nutzungslimit, kein Geld-Hardcap.

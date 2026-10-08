@@ -349,6 +349,8 @@ def validate_review(raw: str) -> dict[str, Any]:
             for value in values
         ):
             raise ValueError("invalid_review_" + key)
+    if review["status"] == "reviewed" and not review["evidence"]:
+        raise ValueError("invalid_review_evidence")
     if len(_note_content(review)) > 7_500:
         raise ValueError("review_note_too_long")
     return review

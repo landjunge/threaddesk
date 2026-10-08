@@ -254,6 +254,18 @@ def test_invalid_output_fails_without_false_review(binding: dict, raw: str) -> N
     assert notes(binding) == []
 
 
+def test_reviewed_without_evidence_is_rejected() -> None:
+    with pytest.raises(ValueError, match="invalid_review_evidence"):
+        reviewer.validate_review(answer(evidence=[]))
+
+
+def test_inconclusive_without_evidence_is_valid() -> None:
+    review = reviewer.validate_review(answer(status="inconclusive", evidence=[]))
+
+    assert review["status"] == "inconclusive"
+    assert review["evidence"] == []
+
+
 def test_timeout_is_failed_and_never_retried(binding: dict) -> None:
     add_task(binding)
     add_terminal(binding)
