@@ -315,7 +315,6 @@ Produktvision, gewünschtes Verhalten und Grenzen kommen von mir. KI unterstütz
 ### Dokumentation
 
 - [Benutzeroberfläche](docs/UI.md)
-- [Agent Authority Preview: lesender Beobachterbericht](docs/AGENT-AUTHORITY-PREVIEW.md)
 - [MCP](docs/MCP.md)
 - [Grok-Handoff](docs/GROK.md)
 - [TollGate-Grenze](docs/TOLLGATE.md)

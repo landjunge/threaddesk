@@ -181,8 +181,6 @@ function sendActivity(kind) {
 }
 
 function reportActivity(event) {
-  // Opening the read-only observer must not send an activity write.
-  if (event.target instanceof Element && event.target.closest("[data-observer-link]")) return;
   const kind = activityKind(event);
   if (!kind) return;
   const now = Date.now();

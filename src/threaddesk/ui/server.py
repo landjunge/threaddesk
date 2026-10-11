@@ -16,7 +16,6 @@ from jinja2 import pass_context
 from threaddesk.api.service import ThreadService
 from threaddesk.core.errors import InvalidState, NotFound, ThreadDeskError
 from threaddesk.services.actors import ActorRegistry
-from threaddesk.services.authority_preview import PreviewUnavailable, render_preview
 from threaddesk.services.hausmeister import SURFACE_KINDS, Hausmeister, live_snapshot, note_activity
 from threaddesk.services.room_sync import RoomBook
 from threaddesk.services.ollama_local import OllamaError
@@ -234,25 +233,6 @@ def create_app() -> FastAPI:
             except ThreadDeskError:
                 pass
         return templates.TemplateResponse(request, "index.html", _ctx(request))
-
-    @app.get("/threads/{thread_id}/authority", response_class=HTMLResponse)
-    def authority_view(request: Request, thread_id: str) -> Response:
-        headers = {
-            "Cache-Control": "no-store",
-            "X-Content-Type-Options": "nosniff",
-            "Referrer-Policy": "no-referrer",
-            "X-Frame-Options": "DENY",
-        }
-        try:
-            return HTMLResponse(render_preview(thread_id), headers=headers)
-        except PreviewUnavailable as exc:
-            key = str(exc)
-            return Response(
-                i18n.translate(key, _language(request), register=_register(request)),
-                status_code=404 if key == "authority.invalid_thread" else 503,
-                media_type="text/plain",
-                headers=headers,
-            )
 
     def data_page(request: Request, **extra) -> HTMLResponse:
         active, _ = selected_profile(base_root())
