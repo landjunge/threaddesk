@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 from pathlib import Path
 
 import pytest
 
 from threaddesk.api.service import ThreadService
 from threaddesk.core.errors import InvalidState, NotFound, SecretRejected
-from threaddesk.core.models import ACTOR_TYPES, new_thread
+from threaddesk.core.models import ACTOR_TYPES, WhiteboardEntry, new_id, new_thread, now_iso
 from threaddesk.storage.json_store import JsonStore
 from threaddesk.storage.schema import ARTIFACTS_SQL, SOURCE_RECORDS_SQL, V1_SCHEMA_SQL
 from threaddesk.storage.sqlite_store import SQLiteStore
@@ -30,6 +31,45 @@ def _add(svc: ThreadService, thread_id: str, content: str, **extra) -> dict:
     }
     fields.update(extra)
     return svc.append_whiteboard(thread_id, **fields)
+
+
+@pytest.mark.parametrize("store_type", [JsonStore, SQLiteStore], ids=["json", "sqlite"])
+def test_parallel_appends_keep_distinct_ordinals(tmp_path: Path, store_type) -> None:
+    store = store_type(tmp_path)
+    thread = new_thread("Ordnungszahl")
+    store.save_thread(thread)
+    workers = 8
+    barrier = threading.Barrier(workers)
+    errors: list[BaseException] = []
+
+    def add_one(number: int) -> None:
+        own = store_type(tmp_path)
+        barrier.wait()
+        try:
+            own.append_whiteboard_entry(
+                WhiteboardEntry(
+                    id=new_id(),
+                    thread_id=thread.id,
+                    actor="Mensch",
+                    actor_type="human",
+                    created_at=now_iso(),
+                    entry_type="note",
+                    content=f"Beitrag {number}",
+                )
+            )
+        except BaseException as exc:
+            errors.append(exc)
+
+    running = [threading.Thread(target=add_one, args=(number,)) for number in range(workers)]
+    for thread_worker in running:
+        thread_worker.start()
+    for thread_worker in running:
+        thread_worker.join()
+
+    entries = store.list_whiteboard(thread.id)
+    assert errors == []
+    assert len(entries) == workers
+    assert sorted(entry.ordinal for entry in entries) == list(range(1, workers + 1))
 
 
 def test_append_keeps_order_actors_and_old_entries(svc: ThreadService) -> None:

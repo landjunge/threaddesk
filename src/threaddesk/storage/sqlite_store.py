@@ -190,10 +190,14 @@ class SQLiteStore:
     def append_whiteboard_entry(self, entry: WhiteboardEntry) -> tuple[WhiteboardEntry, bool]:
         """Insert one row. An existing contribution is never updated."""
         self.get_thread(entry.thread_id)
-        stored, duplicate = plan_whiteboard_append(self.list_whiteboard(entry.thread_id), entry)
-        if duplicate:
-            return stored, True
+        self.connection.execute("BEGIN IMMEDIATE")
         try:
+            stored, duplicate = plan_whiteboard_append(
+                self.list_whiteboard(entry.thread_id), entry
+            )
+            if duplicate:
+                self.connection.rollback()
+                return stored, True
             self.connection.execute(
                 """INSERT INTO whiteboard_entries(
                        id, thread_id, created_at, ordinal, external_key, payload
@@ -207,14 +211,18 @@ class SQLiteStore:
                     self._dump(stored.to_dict()),
                 ),
             )
+            self.connection.commit()
+            return stored, False
         except sqlite3.IntegrityError as exc:
+            self.connection.rollback()
             existing = self.list_whiteboard(entry.thread_id)
             kept, again = plan_whiteboard_append(existing, entry)
             if again and kept.same_body(entry):
                 return kept, True
             raise InvalidState("whiteboard_conflict") from exc
-        self._commit()
-        return stored, False
+        except Exception:
+            self.connection.rollback()
+            raise
 
     def save_node(self, node: KnowledgeNode) -> None:
         self.connection.execute(

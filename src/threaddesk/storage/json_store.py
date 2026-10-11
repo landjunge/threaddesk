@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import json
 import hashlib
+import json
+import os
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, IO, Mapping
 
 from threaddesk.core.errors import InvalidState, NotFound
 from threaddesk.core.models import (
@@ -18,6 +19,34 @@ from threaddesk.core.models import (
 from threaddesk.core.provenance import SourceRecord
 
 DEFAULT_ROOT = Path.home() / ".threaddesk"
+
+
+def _lock_exclusive(lock: IO[bytes]) -> None:
+    """Hold the next ordinal until this append has stored its file."""
+    if lock.seek(0, os.SEEK_END) == 0:
+        lock.write(b" ")
+        lock.flush()
+    lock.seek(0)
+    if os.name == "nt":
+        import msvcrt
+
+        msvcrt.locking(lock.fileno(), msvcrt.LK_LOCK, 1)
+    else:
+        import fcntl
+
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+
+
+def _unlock(lock: IO[bytes]) -> None:
+    lock.seek(0)
+    if os.name == "nt":
+        import msvcrt
+
+        msvcrt.locking(lock.fileno(), msvcrt.LK_UNLCK, 1)
+    else:
+        import fcntl
+
+        fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
 
 
 class JsonStore:
@@ -155,18 +184,27 @@ class JsonStore:
             or entry.id != Path(entry.id).name
         ):
             raise InvalidState("whiteboard_id")
-        stored, duplicate = plan_whiteboard_append(self.list_whiteboard(entry.thread_id), entry)
-        if duplicate:
-            return stored, True
         folder = self._whiteboard_dir(entry.thread_id)
-        path = folder / f"{entry.id}.json"
-        if path.exists():
-            current = WhiteboardEntry.from_dict(self._read_json(path))
-            if current.same_body(entry):
-                return current, True
-            raise InvalidState("whiteboard_conflict")
-        self._write_json(path, stored.to_dict())
-        return stored, False
+        folder.mkdir(parents=True, exist_ok=True)
+        lock_path = folder / ".append.lock"
+        with lock_path.open("a+b") as lock:
+            _lock_exclusive(lock)
+            try:
+                stored, duplicate = plan_whiteboard_append(
+                    self.list_whiteboard(entry.thread_id), entry
+                )
+                if duplicate:
+                    return stored, True
+                path = folder / f"{entry.id}.json"
+                if path.exists():
+                    current = WhiteboardEntry.from_dict(self._read_json(path))
+                    if current.same_body(entry):
+                        return current, True
+                    raise InvalidState("whiteboard_conflict")
+                self._write_json(path, stored.to_dict())
+                return stored, False
+            finally:
+                _unlock(lock)
 
     def list_snapshots(self, thread_id: str) -> list[Snapshot]:
         folder = self.snaps_dir / thread_id
