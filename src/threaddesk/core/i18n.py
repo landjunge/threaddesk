@@ -34,6 +34,26 @@ DEFAULT_REGISTER = PLAIN
 EXPERT_SUFFIX = "#expert"
 
 CATALOG: dict[str, dict[str, str]] = {
+    "authority.open": {
+        "de": "Beobachterbericht öffnen",
+        "en": "Open observer report (German preview)",
+    },
+    "authority.unavailable": {
+        "de": "Der Beobachterbericht ist hier noch nicht eingerichtet. Kehre mit der Zurück-Taste zu ThreadDesk zurück. Die Einrichtung beschreibt die Dokumentation „Agent Authority Preview“.",
+        "en": "The observer report is not set up here yet. Use Back to return to ThreadDesk. See the “Agent Authority Preview” documentation for setup.",
+    },
+    "authority.invalid_thread": {
+        "de": "Dieser Bericht kann nicht geöffnet werden. Kehre zu ThreadDesk zurück und öffne den Bericht über den gewünschten Thread.",
+        "en": "This report cannot be opened. Return to ThreadDesk and open the report from the thread you want to inspect.",
+    },
+    "authority.profile_unavailable": {
+        "de": "Der gewählte Arbeitsbereich kann nicht gelesen werden. Kehre zu ThreadDesk zurück und wähle einen verfügbaren Arbeitsbereich.",
+        "en": "The selected workspace cannot be read. Return to ThreadDesk and choose an available workspace.",
+    },
+    "authority.backend_unavailable": {
+        "de": "Die Beobachterpreview liest bisher nur JSON-Arbeitsbereiche. Für diesen Arbeitsbereich ist noch kein Bericht verfügbar. Kehre mit der Zurück-Taste zu ThreadDesk zurück.",
+        "en": "The observer preview currently reads JSON workspaces only. A report is not yet available for this workspace. Use Back to return to ThreadDesk.",
+    },
     "data.profiles": {"de": "Wiederhergestellte Arbeitsbereiche", "en": "Restored workspaces"},
     "data.open_profile": {"de": "Arbeitsbereich öffnen", "en": "Open workspace"},
     "data.nav": {"de": "Daten", "en": "Data"},
