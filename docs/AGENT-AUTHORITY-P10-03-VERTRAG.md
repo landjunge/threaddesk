@@ -70,3 +70,13 @@ und schmutziger ursprünglicher Checkout werden nicht verändert.
    kein Admin/Force; Squash/Tree/Parent/main und Push-Checks nachweisen.
 
 Ein lesender Produktadapter, keine vollständige Paket-/Betriebsabnahme.
+
+## Ergänzung vor Anpassung des Aktivitätslisteners
+
+Der tatsächliche Browserlauf zeigte: Die normale Linkaktivierung meldet in der
+vorherigen ThreadDesk-Seite einen allgemeinen Aktivitäts-POST. Deshalb wird
+zusätzlich ui/static/app.js zugelassen: ausschließlich beim neuen markierten
+Beobachterlink dessen Eingabeereignisse von reportActivity ausnehmen. Kein
+globales Abschalten von Aktivität, kein Berichtsskript. Die Browserprüfung
+fordert weiterhin genau den Berichts-GET und einen bytegleichen Datenbaum.
+Diese Vertragsergänzung wird vor dieser zusätzlichen Codeänderung veröffentlicht.
