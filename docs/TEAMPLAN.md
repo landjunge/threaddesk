@@ -1,5 +1,10 @@
 # ThreadDesk – Abschlussplan, 2. Oktober 2026
 
+Für die anschließende Verbindung von Identität, Sync und Firmenzugriff gilt
+[GOLDENRULES.MD](usability/GOLDENRULES.MD) vom 3. Oktober 2026. Das ist ein
+Sicherheitsplan mit vorbereiteter Baufolge; seine neuen Mechanismen sind noch
+nicht implementiert. Die folgende Abnahme betrifft die vorhandene lokale Ausgabe.
+
 ## Ziel und Geltungsbereich
 
 Ein verständlicher lokaler Arbeitsplatz, der Kontext und Arbeitsstand zwischen

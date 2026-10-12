@@ -21,6 +21,10 @@ from threaddesk.storage.json_store import JsonStore
 from threaddesk.storage.sqlite_store import SQLiteStore
 
 ROOT = Path(__file__).resolve().parents[1]
+HEADED = os.environ.get("THREADDESK_BROWSER_HEADED") == "1"
+SHOTS = os.environ.get("THREADDESK_SHOTS")
+# Sichtbares Fenster: jede Aktion wartet 1,5 Sekunden. Kopflos bleibt schnell.
+PACE_MS = 1500
 
 
 class Desk:
@@ -37,7 +41,8 @@ class Desk:
     def start(self):
         env = os.environ.copy()
         env.update(THREADDESK_HOME=str(self.home), THREADDESK_STORAGE=self.storage,
-                   THREADDESK_LANG="de", NO_PROXY="127.0.0.1,localhost")
+                   THREADDESK_LANG="de", NO_PROXY="127.0.0.1,localhost",
+                   PYTHONPATH=str(ROOT / "src"))
         with self.log.open("a", encoding="utf-8") as output:
             self.proc = subprocess.Popen(
                 [sys.executable, "-m", "threaddesk.ui.cli", "serve", "--host", "127.0.0.1",
@@ -80,6 +85,39 @@ def running(desk):
         desk.stop()
 
 
+def _chrome_pids() -> set[int]:
+    out = subprocess.check_output(["ps", "-ax", "-o", "pid=,command="], text=True)
+    found: set[int] = set()
+    for line in out.splitlines():
+        if "Google Chrome.app/Contents/MacOS/Google Chrome" in line and "Helper" not in line:
+            found.add(int(line.split(None, 1)[0]))
+    return found
+
+
+def _raise_chrome(before: set[int], shot: str | None = None) -> None:
+    helper = Path("/tmp/td-raise")
+    if not HEADED or not helper.exists():
+        return
+    new = sorted(_chrome_pids() - before)
+    if not new:
+        return
+    pid = new[-1]
+    subprocess.run([str(helper), str(pid), "activate"], check=False)
+    front = subprocess.run([str(helper), str(pid), "front"], capture_output=True, text=True)
+    if front.returncode != 0:
+        raise AssertionError(f"Chrome ist nicht das vordere Fenster: {front.stdout.strip()}")
+    if SHOTS and shot:
+        listed = subprocess.run(
+            [str(helper), str(pid), "windows"], capture_output=True, text=True
+        )
+        window_id = listed.stdout.split("\t", 1)[0].strip()
+        if window_id.isdigit():
+            subprocess.run(
+                ["screencapture", "-l", window_id, "-o", str(Path(SHOTS) / shot)],
+                check=False,
+            )
+
+
 def click_post(page, selector, path):
     with page.expect_response(lambda response: response.request.method == "POST"
                               and response.url.split("?", 1)[0].endswith(path)) as result:
@@ -118,6 +156,10 @@ def synchronize(page):
 
 
 def pair_via_ui(a, b, a_url, name, role):
+    for page in (a, b):
+        section = page.locator('details[data-disclosure="room"]')
+        if not section.evaluate("el => el.open"):
+            section.locator(":scope > summary").click()
     a.locator("[data-room-name]").fill(name)
     click_post(a, "[data-room-create]", "/rooms")
     expect(a.locator("[data-room-current]")).to_have_text(name)
@@ -140,7 +182,13 @@ def test_team_room_real_browser(tmp_path, storage):
         stack.enter_context(running(left))
         stack.enter_context(running(right))
         with ExitStack() as browser_stack:
-            browser = play.chromium.launch(executable_path=os.environ.get("THREADDESK_CHROMIUM") or None)
+            before = _chrome_pids()
+            browser = play.chromium.launch(
+                executable_path=os.environ.get("THREADDESK_CHROMIUM") or None,
+                headless=not HEADED,
+                slow_mo=PACE_MS if HEADED else 0,
+                args=["--start-fullscreen"] if HEADED else [],
+            )
             browser_stack.callback(browser.close)
             context_a = browser.new_context(locale="de-DE", viewport={"width": 1440, "height": 1000})
             context_b = browser.new_context(locale="de-DE", viewport={"width": 1440, "height": 1000})
@@ -157,6 +205,10 @@ def test_team_room_real_browser(tmp_path, storage):
             a, b = context_a.new_page(), context_b.new_page()
             a.goto(left.url)
             b.goto(right.url)
+            for page in (a, b):
+                page.locator('details[data-disclosure="room"] > summary').click()
+            a.bring_to_front()
+            _raise_chrome(before)
             instance_a = a.locator("[data-room-instance]").inner_text().split()[-1]
             instance_b = b.locator("[data-room-instance]").inner_text().split()[-1]
             assert instance_a != instance_b
@@ -165,6 +217,7 @@ def test_team_room_real_browser(tmp_path, storage):
             expect(a.locator("[data-room-members] li")).to_have_count(2)
             thread_a = create_thread(a, "Browser A")
             thread_b = create_thread(b, "Browser B")
+            a.locator('details[data-disclosure="notes"] > summary').click()
             note_form = a.locator(f'form[hx-post="/threads/{thread_a}/note"]')
             note_form.locator('textarea[name="text"]').fill("PRIVAT-NOTIZ-NICHT-TEILEN")
             click_post(a, f'form[hx-post="/threads/{thread_a}/note"] button[type="submit"]',
@@ -256,3 +309,176 @@ def test_team_room_real_browser(tmp_path, storage):
             assert left.store().get_thread(thread_a).context.notes == "PRIVAT-NOTIZ-NICHT-TEILEN"
             assert right.store().get_thread(thread_a).context.notes == ""
             assert "PRIVAT-WHITEBOARD-NICHT-TEILEN" not in [entry.content for entry in right.store().list_whiteboard(thread_a)]
+
+
+def _sentence(key: str, language: str, **values: object) -> str:
+    from threaddesk.core import i18n
+
+    return i18n.translate(key, language, **values)
+
+
+def _state(page, name: str) -> None:
+    chip = page.locator("[data-room-state]")
+    expect(chip).to_have_attribute("data-room-state", name)
+    expect(chip).to_have_text(_sentence(f"room.state.{name}", "en"))
+
+
+def _toast(page, text: str) -> None:
+    banner = page.locator(".toast-stack .banner-ok")
+    expect(banner).to_be_visible()
+    expect(banner).to_have_text(text)
+
+
+def _english(page, url: str) -> None:
+    page.goto(url + "/lang/en", wait_until="networkidle")
+    page.wait_for_function("() => window.Alpine !== undefined")
+    expect(page.locator("html")).to_have_attribute("lang", "en")
+    page.locator('[data-disclosure="room"] > summary').click()
+
+
+def test_user_reads_room_states_in_english(tmp_path) -> None:
+    """TD-I18N-01. Die sechs Raumzustände und die Rollenworte auf Englisch."""
+    left, right = Desk(tmp_path / "left", "json"), Desk(tmp_path / "right", "json")
+    page_errors: list[str] = []
+    with sync_playwright() as play, ExitStack() as stack:
+        stack.enter_context(running(left))
+        stack.enter_context(running(right))
+        with ExitStack() as browser_stack:
+            before = _chrome_pids()
+            browser = play.chromium.launch(
+                executable_path=os.environ.get("THREADDESK_CHROMIUM") or None,
+                headless=not HEADED,
+                slow_mo=PACE_MS if HEADED else 0,
+                args=["--disable-features=Translate", *(["--start-fullscreen"] if HEADED else [])],
+            )
+            browser_stack.callback(browser.close)
+            context_a = browser.new_context(locale="en-US", viewport={"width": 1440, "height": 1000})
+            context_b = browser.new_context(locale="en-US", viewport={"width": 1440, "height": 1000})
+            external = []
+
+            def local_only(route):
+                from urllib.parse import urlparse
+                if urlparse(route.request.url).hostname != "127.0.0.1":
+                    external.append(route.request.url)
+                    route.abort()
+                else:
+                    route.continue_()
+
+            context_a.route("**/*", local_only)
+            context_b.route("**/*", local_only)
+            a, b = context_a.new_page(), context_b.new_page()
+            for page in (a, b):
+                page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            _english(a, left.url)
+            _english(b, right.url)
+            a.bring_to_front()
+            _raise_chrome(before)
+            instance_a = a.locator("[data-room-instance]").inner_text().split()[-1]
+            instance_b = b.locator("[data-room-instance]").inner_text().split()[-1]
+            assert instance_a != instance_b
+            for page in (a, b):
+                _state(page, "not_connected")
+                expect(page.locator("[data-room]")).to_contain_text(_sentence("room.none", "en"))
+                expect(page.locator("body")).not_to_contain_text(
+                    _sentence("room.state.not_connected", "de")
+                )
+                expect(page.locator("body")).not_to_contain_text(_sentence("room.none", "de"))
+
+            a.locator("[data-room-name]").fill("English room")
+            click_post(a, "[data-room-create]", "/rooms")
+            _toast(a, _sentence("room.created", "en"))
+            expect(a.locator("[data-room-current]")).to_have_text("English room")
+            expect(a.locator("[data-room-members]")).to_contain_text(
+                _sentence("room.role.owner", "en")
+            )
+            expect(a.locator("[data-room]")).to_contain_text(_sentence("room.never", "en"))
+            expect(a.locator("body")).not_to_contain_text(_sentence("room.created", "de"))
+            expect(a.locator("body")).not_to_contain_text(_sentence("room.role.owner", "de"))
+            _state(a, "not_connected")
+            room = a.locator("[data-room-select]").input_value()
+
+            a.locator("[data-room-invite-role]").select_option("member")
+            click_post(a, "[data-room-invite]", "/rooms/invite")
+            code = a.locator("[data-room-code]").inner_text().split()[-1]
+            _toast(a, _sentence("room.invited", "en", code=code))
+            expect(a.locator("body")).not_to_contain_text("Einladungscode:")
+
+            b.locator("[data-room-join-code]").fill(code)
+            b.locator("[data-room-peer]").fill(left.url)
+            click_post(b, "[data-room-join]", "/rooms/join")
+            _toast(b, _sentence("room.paired", "en"))
+            _state(b, "connected")
+            expect(b.locator("[data-room-members]")).to_contain_text(
+                _sentence("room.role.member", "en")
+            )
+            expect(b.locator("body")).not_to_contain_text(_sentence("room.paired", "de"))
+            expect(b.locator("body")).not_to_contain_text(_sentence("room.state.connected", "de"))
+
+            a.reload(wait_until="networkidle")
+            _state(a, "connected")
+            expect(a.locator("[data-room-members]")).to_contain_text(
+                _sentence("room.role.member", "en")
+            )
+
+            thread_a = create_thread(a, "English thread")
+            add_entry(a, thread_a, "Shared line", True)
+            synchronize(a)
+            _toast(a, _sentence("room.state.synced", "en"))
+            _state(a, "synced")
+            expect(a.locator("body")).not_to_contain_text(_sentence("room.state.synced", "de"))
+
+            add_entry(a, thread_a, "A later shared line", True)
+            _state(a, "changes")
+            expect(a.locator("body")).not_to_contain_text(_sentence("room.state.changes", "de"))
+
+            right.stop()
+            synchronize(a)
+            _toast(a, _sentence("room.state.peer_down", "en"))
+            _state(a, "peer_down")
+            expect(a.locator("body")).not_to_contain_text(
+                _sentence("room.state.peer_down", "de")
+            )
+            if SHOTS:
+                Path(SHOTS).mkdir(parents=True, exist_ok=True)
+                a.screenshot(path=str(Path(SHOTS) / "18-raum.png"), full_page=True)
+            _raise_chrome(before, "fenster-raum.png")
+
+            left.stop()
+            for desk, instance, text in (
+                (left, instance_a, "English copy A"),
+                (right, instance_b, "English copy B"),
+            ):
+                desk.store().append_whiteboard_entry(WhiteboardEntry(
+                    id="english-room-conflict", thread_id=thread_a, actor="Synthetic tester",
+                    actor_type="human", created_at="2026-10-03T00:00:00+00:00", entry_type="note",
+                    content=text, room_id=room, instance_id=instance,
+                ))
+            left.start()
+            right.start()
+            a.reload(wait_until="networkidle")
+            b.reload(wait_until="networkidle")
+            synchronize(a)
+            _toast(a, _sentence("room.state.conflict_kept", "en"))
+            _state(a, "conflict_kept")
+            expect(a.locator("body")).not_to_contain_text(
+                _sentence("room.state.conflict_kept", "de")
+            )
+            synchronize(b)
+            select_thread(a, thread_a)
+            select_thread(b, thread_a)
+            for page in (a, b):
+                expect(page.locator("[data-whiteboard-log]")).to_contain_text("English copy A")
+                expect(page.locator("[data-whiteboard-log]")).to_contain_text("English copy B")
+
+            pair_via_ui(a, b, left.url, "English reading room", "read_only")
+            expect(b.locator("[data-room-members]")).to_contain_text(
+                _sentence("room.role.read_only", "en")
+            )
+            expect(b.locator("body")).not_to_contain_text(_sentence("room.role.read_only", "de"))
+            select_thread(b, thread_a)
+            expect(b.locator("[data-room-share]")).to_be_disabled()
+            expect(b.locator("[data-whiteboard]")).to_contain_text(
+                _sentence("room.local_only", "en")
+            )
+            assert external == [], "The local UI must not request a CDN or another external host"
+    assert page_errors == []

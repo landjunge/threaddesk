@@ -65,6 +65,9 @@ def download_backup(store) -> bytes:
             backup = WorkspaceBackup(Path(temp)).create(store)
             source = Path(temp) / 'profile'
             WorkspaceBackup(Path(temp)).restore_verified(backup, source)
+        # System directory aliases (for example macOS /var) are not links in
+        # the workspace. Canonicalize the root before checking its contents.
+        source = source.resolve()
         files = {}
         bodies = {}
         for path in sorted(source.rglob('*')):

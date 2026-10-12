@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+from typing import Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
@@ -226,7 +227,7 @@ def create_app() -> FastAPI:
         return html
 
     @app.get("/", response_class=HTMLResponse)
-    def index(request: Request, thread: str | None = None) -> HTMLResponse:
+    def index(request: Request, thread: Optional[str] = None) -> HTMLResponse:
         if thread:
             try:
                 _svc().switch(thread)
@@ -316,7 +317,7 @@ def create_app() -> FastAPI:
         return response
 
     @app.get("/api/graph", response_class=JSONResponse)
-    def graph(kind: str | None = None, status: str | None = None) -> dict:
+    def graph(kind: Optional[str] = None, status: Optional[str] = None) -> dict:
         return _svc().graph(kind=kind, status=status)
 
     @app.get("/api/threads/{thread_id}", response_class=JSONResponse)
@@ -440,7 +441,7 @@ def create_app() -> FastAPI:
 
     @app.get("/knowledge", response_class=HTMLResponse)
     def knowledge(
-        request: Request, kind: str | None = None, status: str | None = None
+        request: Request, kind: Optional[str] = None, status: Optional[str] = None
     ) -> HTMLResponse:
         svc = _svc()
         graph_data = svc.graph(kind=kind, status=status)
@@ -587,9 +588,9 @@ def create_app() -> FastAPI:
             "ollama_model_missing": "hausmeister.no_model",
             "hausmeister_rejected": "hausmeister.failed",
         }.get(code, "hausmeister.failed")
-        page = workspace(request, {"error": i18n.translate(key, _language(request))})
-        page.status_code = 400
-        return page
+        # 200, damit HTMX die Meldung in den Schreibtisch tauscht. Bei 400
+        # bleibt die Seite stehen und der Auftrag sieht aus, als wäre nichts passiert.
+        return workspace(request, {"error": i18n.translate(key, _language(request))})
 
     @app.post("/hausmeister/toggle", response_class=HTMLResponse)
     def hausmeister_toggle(request: Request, enabled: str = Form("0")) -> HTMLResponse:
@@ -600,16 +601,19 @@ def create_app() -> FastAPI:
     @app.post("/hausmeister/model", response_class=HTMLResponse)
     def hausmeister_model(request: Request, model: str = Form("")) -> HTMLResponse:
         try:
-            Hausmeister(_svc().store).set_model(model)
+            chosen = Hausmeister(_svc().store).set_model(model)
         except OllamaError as exc:
             return _hausmeister_notice(request, str(exc))
-        return workspace(request, {"notice": i18n.translate("hausmeister.use_model", _language(request))})
+        key = "hausmeister.no_model" if not chosen["model"] else "hausmeister.use_model"
+        return workspace(request, {"notice": i18n.translate(key, _language(request))})
 
     @app.post("/threads/{thread_id}/hausmeister", response_class=HTMLResponse)
     def hausmeister_run(
         thread_id: str,
         request: Request,
-        order: str = Form(...),
+        # Leeres order kommt als "" an. Form(...) wertet das als fehlend und
+        # antwortet 422, bevor der Auftrag geprüft wird. HTMX zeigt 422 nicht.
+        order: str = Form(""),
         mode: str = Form("now"),
     ) -> HTMLResponse:
         home = Hausmeister(_svc().store)

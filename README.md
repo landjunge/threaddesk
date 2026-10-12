@@ -243,47 +243,27 @@ Für die manuelle Entwicklerinstallation: `python3 -m pip install -e ".[dev,ui]"
 
 ### Die gemeinsamen Regeln der NetzwerkPunkt-Werkzeuge
 
-ThreadDesk, Gnom-Hub-V1, 4AllPass und TollGate teilen sich das Desk-Design R2.
-Wer ein neues Werkzeug baut, übernimmt dieselben Grundflächen, Kanten, Maße
-und Sprachregeln. Die Produktidentität bleibt eine eigene, begrenzte Schicht:
-Bei ThreadDesk ist „Thread“ violett, während die Bedienoberfläche neutral bleibt.
+NetzwerkPunkt, Gnom-Hub-V1, ThreadDesk, TollGate und 4AllPass sollen dieselbe
+Bedienbasis verwenden. Die bisherige R2-Referenz ist historisch; die begründete
+Überarbeitung und der Übernahmeplan stehen in [GOLDENRULES, Abschnitt 19](docs/usability/GOLDENRULES.MD#19-gemeinsame-bedienbasis-für-die-fünf-produkte).
 
-**Farben** (gleich in allen Werkzeugen)
+Die portable Quelle ist [networkpunkt.css](src/threaddesk/ui/static/networkpunkt.css),
+ergänzt um optionale [Bereichsbedienung](src/threaddesk/ui/static/networkpunkt.js).
+Die [interaktive Gestaltungsprobe](src/threaddesk/ui/static/design-reference.html)
+zeigt alle fünf Produkte mit exakt derselben Datei und synthetischen Inhalten.
+Im laufenden Browser unter `/static/design-reference.html` öffnen.
 
-| Token | Wert | Wofür |
-|---|---|---|
-| `--bg` | `#121316` | Grundfläche |
-| `--bg-panel` | `#1a1b1f` | Fläche |
-| `--bg-card` | `#1e1f24` | Karte |
-| `--bg-raised` | `#24262d` | Angehobene Karte |
-| `--bg-strip` | `#15171b` | Reiterleiste |
-| `--fg` | `#e2e4e9` | Text |
-| `--fg-muted` | `#8b909a` | Nebentext |
-| `--border` | `#2e3138` | Trennlinie zwischen Flächen (Deko) |
-| `--border-strong` | `#5c616a` | **Kante von Bedienelementen** |
-| `--border-hover` | `#6b7280` | Kante bei Hover |
-| `--accent` | `#8f98a8` | Akzent |
-| `--brand` | `#b99cff` | Nur „Thread“ in Wortmarke/Titel; später Logo-Rahmen |
-| `--ok` / `--warn` / `--err` | `#3d9b6a` / `#c9a227` / `#c45c5c` | Zustände |
-
-**Form und Größe**
-
-- `border-radius: 0` — überall. Rund nur, wo die Form etwas *bedeutet*
-  (Kartensymbole, Fortschrittsring, Statuspunkt), mit Begründung im Code.
-- Genau vier Schriftgrößen: **10 / 12 / 14 / 16 px**.
-- Abstände: 4 / 8 / 12 / 16 px.
-- Knöpfe sind **28px**, Reiter und kompakte Navigation **32px** hoch.
-- Unter `@media (pointer: coarse)` werden alle Ziele **44px**
-  (`--control-touch`). Das ist keine dritte Größe, sondern dieselben
-  Elemente unter einem anderen Eingabegerät — die Zahl kommt von Apple und
-  Material. Der Zeiger ist das richtige Signal, **nicht** die Fensterbreite:
-  ein schmales Desktop-Fenster ist kein Finger. WCAG 2.2 (2.5.8) verlangt
-  als Minimum 24px; alle drei Werte liegen darüber.
-- Kontrast: **4.5:1** für Text, **3:1** für alles andere, was etwas bedeutet
-  (WCAG 2.2, 1.4.3 und 1.4.11).
-- Auswahlmenüs setzen `appearance: none` und zeichnen ihren Pfeil selbst —
-  sonst malt das Betriebssystem das Menü, unter Windows mit 3D-Effekt.
-- Schrift: die des Betriebssystems, nichts nachladen.
+- Systemschrift, vier Rollen: **12 / 14 / 16 / 24 px**.
+- Einheitliche Bedienhöhe **40 px**; Abstände
+  **4 / 8 / 12 / 16 / 24 / 32 px**; eckige Bedienelemente.
+- Neutrale Flächen und Aktionen. Produktfarbe bleibt an Markenpositionen.
+- Eine hervorgehobene Hauptaktion je Arbeitsbereich. Seltene Werkzeuge öffnen
+  sich bei Bedarf; kritische Zustände und der nächste Schritt bleiben sichtbar.
+- Fester Desktop-Aufbau ab 1180 × 760, kein automatischer Mobilumbau.
+  Kleinere Fenster scrollen. Native Tastaturbedienung und sichtbarer Fokus bleiben.
+- **Umsetzung:** ThreadDesk verwendet den Kern auf diesem Branch. Die übrigen
+  Produkte sind in der gemeinsamen Gestaltungsprobe vertreten, noch nicht in
+  ihren produktiven Repositories umgestellt. Keine Aussage über einen Live-Rollout.
 
 **Sprache**
 
@@ -314,6 +294,7 @@ Produktvision, gewünschtes Verhalten und Grenzen kommen von mir. KI unterstütz
 
 ### Dokumentation
 
+- [GOLDENRULES.MD: Sicherheitsplan und Baufolge](docs/usability/GOLDENRULES.MD) — vor Änderungen an Identität, Sync oder Firmenzugriff lesen; neue Mechanismen noch nicht implementiert.
 - [Benutzeroberfläche](docs/UI.md)
 - [MCP](docs/MCP.md)
 - [Grok-Handoff](docs/GROK.md)

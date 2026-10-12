@@ -34,6 +34,13 @@ DEFAULT_REGISTER = PLAIN
 EXPERT_SUFFIX = "#expert"
 
 CATALOG: dict[str, dict[str, str]] = {
+    "ui.edit_thread": {"de": "Thread bearbeiten", "en": "Edit thread"},
+    "ui.tools_hint": {"de": "Dateien, Sicherungen und Übergaben bei Bedarf öffnen.", "en": "Open files, snapshots and handoffs when needed."},
+    "ui.capture": {"de": "Fortschritt festhalten", "en": "Record progress"},
+    "ui.capture_hint": {"de": "Was hat sich geändert, was kommt als Nächstes?", "en": "What changed, and what comes next?"},
+    "ui.next_empty": {"de": "Noch offen. Halte unten deinen nächsten Schritt fest.", "en": "Still open. Record your next step below."},
+    "ui.activity": {"de": "Bisheriger Verlauf", "en": "Previous activity"},
+    "ui.tools": {"de": "Werkzeuge zum Thread", "en": "Thread tools"},
     "data.profiles": {"de": "Wiederhergestellte Arbeitsbereiche", "en": "Restored workspaces"},
     "data.open_profile": {"de": "Arbeitsbereich öffnen", "en": "Open workspace"},
     "data.nav": {"de": "Daten", "en": "Data"},
@@ -191,6 +198,7 @@ CATALOG: dict[str, dict[str, str]] = {
         "de": "Kein lokales Modell gewählt",
         "en": "No local model selected",
     },
+    "hausmeister.model_none": {"de": "keins", "en": "none"},
     "hausmeister.order_placeholder": {
         "de": "Was soll aufgeräumt werden?",
         "en": "What should be tidied?",

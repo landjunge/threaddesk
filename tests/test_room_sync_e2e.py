@@ -53,6 +53,7 @@ def _serve(home: Path, port: int, log_path: Path) -> subprocess.Popen:
     log = log_path.open("w", encoding="utf-8")
     env = os.environ.copy()
     env["THREADDESK_HOME"] = str(home)
+    env["PYTHONPATH"] = str(ROOT / "src")
     env.pop("THREADDESK_STORAGE", None)
     return subprocess.Popen(
         [

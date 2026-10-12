@@ -71,12 +71,18 @@ def self_test() -> int:
         # Resolve the store only after replacing the real data-directory setting.
         from threaddesk.ui.server import _svc
         with desktop_listener(JsonStore(base_root())) as listener, running_server(listener) as url:
+            with urlopen(url + "/?lang=de", timeout=3) as response:
+                workspace = response.read().decode("utf-8")
+                assert response.status == 200
+            assert 'np-desktop' in workspace
+            assert '/static/networkpunkt.css' in workspace
             with urlopen(url + "/migration?lang=en", timeout=3) as response:
                 page = response.read().decode("utf-8")
                 assert response.status == 200
             assert 'data-testid="migration-center"' in page
             assert 'lang="en"' in page
-            for asset in ("app.js", "map.js", "style.css", "htmx.min.js", "alpine.min.js"):
+            for asset in ("app.js", "map.js", "style.css", "networkpunkt.css",
+                          "networkpunkt.js", "htmx.min.js", "alpine.min.js"):
                 with urlopen(url + "/static/" + asset, timeout=3) as response:
                     assert response.status == 200 and response.read(), asset
     print("ThreadDesk desktop package and migration page: OK; isolated workspace and bundled assets checked")
@@ -89,11 +95,15 @@ def main() -> int:
     import webview
     from threaddesk.ui.server import _svc
 
+    # The data page returns an attachment; native webviews disable downloads
+    # by default even when the same workflow succeeds in a regular browser.
+    webview.settings["ALLOW_DOWNLOADS"] = True
+
     try:
         with desktop_listener(JsonStore(base_root())) as listener, running_server(listener) as url:
             webview.create_window(
-                "ThreadDesk", url + "/", width=1360, height=900,
-                min_size=(940, 640), background_color="#0d0e13",
+                "ThreadDesk", url + "/", width=1440, height=900,
+                min_size=(1180, 760), background_color="#0d0e13",
             )
             webview.start()
         return 0
