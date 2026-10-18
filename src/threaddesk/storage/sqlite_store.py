@@ -144,6 +144,17 @@ class SQLiteStore:
             (thread.id, thread.status, thread.updated_at, payload),
         )
 
+    def list_issued_handoffs(self):
+        return [self._load(row) for row in self.connection.execute("SELECT payload FROM issued_handoffs ORDER BY id")]
+
+    def get_issued_handoff(self, handoff_id):
+        row = self.connection.execute("SELECT payload FROM issued_handoffs WHERE id=?", (handoff_id,)).fetchone()
+        return self._load(row) if row else None
+
+    def save_issued_handoff(self, handoff_id, data):
+        self.connection.execute("INSERT INTO issued_handoffs(id,payload) VALUES (?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload", (handoff_id, self._dump(data)))
+        self._commit()
+
     def list_management_operations(self):
         return [self._load(row) for row in self.connection.execute("SELECT payload FROM management_operations ORDER BY id")]
 
@@ -201,41 +212,18 @@ class SQLiteStore:
         return items
 
     def append_whiteboard_entry(self, entry: WhiteboardEntry) -> tuple[WhiteboardEntry, bool]:
-        """Insert one row. An existing contribution is never updated."""
+        if not self._transaction_depth:
+            with self.transaction():
+                return self.append_whiteboard_entry(entry)
         self.get_thread(entry.thread_id)
-        self.connection.execute("BEGIN IMMEDIATE")
-        try:
-            stored, duplicate = plan_whiteboard_append(
-                self.list_whiteboard(entry.thread_id), entry
-            )
-            if duplicate:
-                self.connection.rollback()
-                return stored, True
-            self.connection.execute(
-                """INSERT INTO whiteboard_entries(
-                       id, thread_id, created_at, ordinal, external_key, payload
-                   ) VALUES (?,?,?,?,?,?)""",
-                (
-                    stored.id,
-                    stored.thread_id,
-                    stored.created_at,
-                    stored.ordinal,
-                    stored.external_key,
-                    self._dump(stored.to_dict()),
-                ),
-            )
-            self.connection.commit()
-            return stored, False
-        except sqlite3.IntegrityError as exc:
-            self.connection.rollback()
-            existing = self.list_whiteboard(entry.thread_id)
-            kept, again = plan_whiteboard_append(existing, entry)
-            if again and kept.same_body(entry):
-                return kept, True
-            raise InvalidState("whiteboard_conflict") from exc
-        except Exception:
-            self.connection.rollback()
-            raise
+        stored, duplicate = plan_whiteboard_append(self.list_whiteboard(entry.thread_id), entry)
+        if duplicate:
+            return stored, True
+        self.connection.execute(
+            "INSERT INTO whiteboard_entries(id,thread_id,created_at,ordinal,external_key,payload) VALUES (?,?,?,?,?,?)",
+            (stored.id, stored.thread_id, stored.created_at, stored.ordinal, stored.external_key, self._dump(stored.to_dict())),
+        )
+        return stored, False
 
     def save_node(self, node: KnowledgeNode) -> None:
         self.connection.execute(

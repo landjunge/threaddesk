@@ -132,6 +132,16 @@ class JsonStore:
             finally:
                 self._pending = None
 
+    def list_issued_handoffs(self):
+        return [self._read_json(path) for path in sorted((self.root / "issued-handoffs").glob("*.json"))]
+
+    def get_issued_handoff(self, handoff_id):
+        path = self.root / "issued-handoffs" / f"{handoff_id}.json"
+        return self._read_json(path) if self._staged_exists(path) else None
+
+    def save_issued_handoff(self, handoff_id, data):
+        self._write_json(self.root / "issued-handoffs" / f"{handoff_id}.json", data)
+
     def list_management_operations(self):
         folder = self.root / "management-operations"
         return [self._read_json(path) for path in sorted(folder.glob("*.json"))]
