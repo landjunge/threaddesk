@@ -209,31 +209,67 @@ class JsonStore:
     def _list_threads(self, include_archived: bool = False) -> list[Thread]:
         items: list[Thread] = []
         for path in sorted(self.threads_dir.glob("*.json")):
-            thread = Thread.from_dict(self._read_json(path))
+            thread = self.get_thread(path.stem)
             if include_archived or thread.status != "archived":
                 items.append(thread)
         items.sort(key=lambda t: (t.updated_at, t.id), reverse=True)
         return items
 
+    @staticmethod
+    def _thread_digest(thread):
+        payload = thread.to_dict()
+        payload.pop("revision", None)
+        return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+
+    def _staged_exists(self, path):
+        relative = str(path.relative_to(self.root))
+        if self._pending is not None and relative in self._pending:
+            return self._pending[relative] is not None
+        return path.exists()
+
+    def _anchor_thread(self, thread):
+        path = self.root / "thread-revisions" / f"{thread.id}.json"
+        self._write_json(path, {"revision": thread.revision, "content_hash": self._thread_digest(thread)})
+
     def get_thread(self, thread_id: str) -> Thread:
-        path = self._thread_path(thread_id)
         with self._locked():
-            relative = str(path.relative_to(self.root))
-            staged = self._pending.get(relative) if self._pending is not None else None
-            if not path.exists() and staged is None:
+            if self._pending is None:
+                with self.transaction():
+                    return self.get_thread(thread_id)
+            path = self._thread_path(thread_id)
+            if not self._staged_exists(path):
                 raise NotFound(f"Thread nicht gefunden: {thread_id}")
-            return Thread.from_dict(self._read_json(path))
+            thread = Thread.from_dict(self._read_json(path))
+            anchor_path = self.root / "thread-revisions" / f"{thread_id}.json"
+            digest = self._thread_digest(thread)
+            if self._staged_exists(anchor_path):
+                anchor = self._read_json(anchor_path)
+                changed = digest != anchor["content_hash"]
+                if changed or thread.revision != anchor["revision"]:
+                    # Older JSON writers discard unknown fields. The content
+                    # anchor detects their changes even if revision stays zero.
+                    thread.revision = max(thread.revision, anchor["revision"] + int(changed))
+                    self._write_json(path, thread.to_dict())
+                    self._anchor_thread(thread)
+            else:
+                # Observe legacy revision 0 without rewriting the source file.
+                self._anchor_thread(thread)
+            return thread
 
     def save_thread(self, thread: Thread) -> None:
         with self._locked():
+            if self._pending is None:
+                with self.transaction():
+                    self.save_thread(thread)
+                return
             path = self._thread_path(thread.id)
-            relative = str(path.relative_to(self.root))
-            exists = path.exists() or (self._pending is not None and self._pending.get(relative) is not None)
-            actual = int(self._read_json(path).get("revision") or 0) if exists else 0
+            exists = self._staged_exists(path)
+            actual = self.get_thread(thread.id).revision if exists else 0
             if exists and thread.revision != actual:
                 raise ManagementError("revision_conflict", "Thread wurde zwischenzeitlich geändert.", expected_revision=thread.revision, actual_revision=actual)
             thread.revision = actual + 1 if exists else max(1, thread.revision)
             self._write_json(path, thread.to_dict())
+            self._anchor_thread(thread)
 
     def delete_thread(self, thread_id: str) -> None:
         path = self._thread_path(thread_id)

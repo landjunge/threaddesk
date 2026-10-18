@@ -146,3 +146,66 @@ def test_json_to_sqlite_preserves_receipt_and_revision(tmp_path):
     repeated = mutation(McpBridge(ThreadService(target)), "before-migration", "create", data={"title": "Preserve"})
     assert repeated["duplicate"] and repeated["revision"] == original["revision"]
     assert len(target.list_threads()) == 1
+
+
+def test_old_json_writer_changes_are_detected_at_legacy_revision_zero(tmp_path):
+    path = tmp_path / "threads" / "legacy.json"
+    path.parent.mkdir()
+    path.write_text(json.dumps({"id": "legacy", "title": "Old", "context": {"notes": "before"}}))
+    bridge = McpBridge(ThreadService(JsonStore(tmp_path)))
+    first = bridge.call("get_thread", {"id": "legacy"})["result"]
+    assert first["revision"] == 0
+    assert "revision" not in json.loads(path.read_text())  # Read preserves legacy source.
+    # Simulate desktop0.1.1 writer dropping every unknown field.
+    old = json.loads(path.read_text())
+    old["context"]["notes"] = "Written by old app"
+    old.pop("revision", None)
+    path.write_text(json.dumps(old))
+    stale = bridge.call("thread_manage", {"operation_id": "legacy-stale", "action": "set_note", "id": "legacy", "expected_revision": 0, "data": {"text": "Must not overwrite"}})
+    assert stale["code"] == "revision_conflict"
+    assert stale["details"]["actual_revision"] == 1
+    assert bridge.call("get_thread", {"id": "legacy"})["result"]["revision"] == 1
+    assert bridge.svc.get("legacy").context.notes == "Written by old app"
+
+
+def test_read_receipt_after_lost_response_without_reexecution(bridge):
+    missing = bridge.call("thread_operation_status", {"operation_id": "known-operation"})["result"]
+    assert missing == {"operation_id": "known-operation", "found": False, "result": None}
+    made = mutation(bridge, "known-operation", "create", data={"title": "Once"})
+    receipt = bridge.call("thread_operation_status", {"operation_id": "known-operation"})["result"]
+    assert receipt["found"] and receipt["result"] == made
+    assert "<untrusted" in receipt["result"]["thread"]["notes"]
+    assert len(bridge.svc.list()) == 1
+    assert bridge.call("thread_operation_status", {"operation_id": "../unsafe"})["code"] == "validation_error"
+
+
+def test_portable_json_backup_keeps_operation_receipt(tmp_path):
+    from threaddesk.storage.portable_backup import download_backup, restore_backup
+    source = JsonStore(tmp_path / "source")
+    expected = mutation(McpBridge(ThreadService(source)), "backup-create", "create", data={"title": "Backup"})
+    restored_root = restore_backup(download_backup(source), tmp_path / "restored-home")
+    restored = McpBridge(ThreadService(JsonStore(restored_root)))
+    actual = mutation(restored, "backup-create", "create", data={"title": "Backup"})
+    assert actual["duplicate"] and actual["thread_id"] == expected["thread_id"]
+
+
+def test_real_stdio_peer_uses_fixed_home_and_operation_receipts(tmp_path):
+    import os
+    import subprocess
+    import sys
+    source = Path(__file__).parents[1] / "src"
+    calls = [
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "thread_manage", "arguments": {"operation_id": "stdio-create", "action": "create", "expected_revision": 0, "data": {"title": "Synthetic stdio only"}}}},
+        {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "thread_operation_status", "arguments": {"operation_id": "stdio-create"}}},
+    ]
+    env = {**os.environ, "PYTHONPATH": str(source), "THREADDESK_HOME": str(tmp_path), "THREADDESK_STORAGE": "json"}
+    result = subprocess.run([sys.executable, "-m", "threaddesk.ui.mcp_stdio"], input="\n".join(json.dumps(item) for item in calls) + "\n", text=True, capture_output=True, env=env, timeout=10, check=True)
+    messages = [json.loads(line) for line in result.stdout.splitlines()]
+    assert len(messages) == 3  # initialized notification must not pollute MCP stdout.
+    assert messages[0]["result"]["serverInfo"]["version"] != "0.1.0"
+    created = json.loads(messages[1]["result"]["content"][0]["text"])
+    receipt = json.loads(messages[2]["result"]["content"][0]["text"])
+    assert receipt["result"] == created and receipt["found"]
+    assert len(JsonStore(tmp_path).list_threads()) == 1

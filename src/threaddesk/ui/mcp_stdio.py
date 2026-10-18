@@ -3,11 +3,19 @@
 from __future__ import annotations
 
 import json
+from importlib.metadata import PackageNotFoundError, version
 import sys
 from typing import Any
 
 from threaddesk.api.service import ThreadService
 from threaddesk.services.mcp import McpBridge
+
+
+def _package_version():
+    try:
+        return version("threaddesk")
+    except PackageNotFoundError:
+        return "unknown-source"
 
 
 def _msg(id_: Any, result: Any) -> dict[str, Any]:
@@ -28,7 +36,7 @@ def handle(bridge: McpBridge, req: dict[str, Any]) -> dict[str, Any] | None:
             {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {"tools": {}},
-                "serverInfo": {"name": "threaddesk", "version": "0.1.0"},
+                "serverInfo": {"name": "threaddesk", "version": _package_version()},
             },
         )
     if method == "notifications/initialized":

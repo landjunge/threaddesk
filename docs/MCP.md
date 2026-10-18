@@ -20,7 +20,7 @@ Beispiel für einen MCP-Client:
 }
 ```
 
-Tools: `list_threads`, `get_thread`, `current_thread`, `switch_thread`, `add_note`, `save_snapshot`, `list_snapshots`, `restore_snapshot`, `generate_prompt`, `export_handoff`, `export_grok`, `export_gnom`, `check_gate`, `dashboard`.
+Tools: `thread_manage`, `thread_operation_status`, `list_threads`, `get_thread`, `current_thread`, `switch_thread`, `add_note`, `save_snapshot`, `list_snapshots`, `restore_snapshot`, `generate_prompt`, `export_handoff`, `export_grok`, `export_gnom`, `check_gate`, `dashboard`.
 
 Archivieren und explizites Löschen sind über `thread_manage` möglich; es gibt
 kein allgemeines Datei- oder Agenten-Ausführungstool. Der ältere Werkzeugkatalog
@@ -136,3 +136,46 @@ stdio service is not an Internet-authenticated server.
 from a configured KiraBridge connection. Creating/organizing/importing context
 never authorizes agent execution. A delivered return remains unverified until
 an explicit user decision; M2 binding is documented separately when implemented.
+
+
+### Read-only operation lookup / Operationsbeleg lesen
+
+`thread_operation_status` accepts exactly `{"operation_id":"m1-create-001"}`.
+It returns `{"operation_id":"m1-create-001","found":true,"result":{...}}`
+with the original public administration receipt, or `found:false,result:null`.
+This lookup does not re-execute the mutation, including a create whose object ID
+was lost with its first response. It does not invent completion for unknown IDs.
+
+### Fixed local peer / Fester lokaler Prozess
+
+Use a configured absolute Python executable and `-m threaddesk.ui.mcp_stdio`,
+with operator-selected `THREADDESK_HOME=/absolute/workspace` and
+`THREADDESK_STORAGE=json` (or `sqlite`). The variable is **THREADDESK_HOME**, not
+THREADDESK_ROOT. An existing `active-profile.json` inside that home selects its
+verified profile; do not ignore it when mapping the effective workspace. User
+requests must not choose executable, process arguments, environment or workspace.
+The initialize `serverInfo.version` reports installed package metadata, or
+`unknown-source`; it is not a source-commit attestation. Record the selected
+executable/source pin separately. The released desktop 0.1.1rc1 does not contain
+these new MCP tools; SQLite schema5 requires a current writer, not the old app.
+
+Older JSON writers may drop revision fields. A local `thread-revisions` anchor
+keeps the observed canonical content hash and revision. When a later read/CAS
+finds such an old-writer change, it increases the revision before permitting a
+new mutation. Merely reading a legacy file adds the anchor, leaving that file's
+original bytes intact. This detects observed content changes, not an unobserved
+change-and-restore between reads. Writers on network filesystems without reliable
+local locks, arbitrary direct tampering with both data and anchors, and old
+programs writing concurrently without locks remain outside this local contract;
+upgrade active writers before sharing a mutable workspace. Portable JSON backups
+and JSON→SQLite migration preserve receipts; tombstones are not a new task queue.
+
+| Existing MCP capability | Tools | Executes agents? |
+|---|---|---|
+| Context reads / Lesen | `list_threads`, `get_thread`, `current_thread` | No |
+| Safe administration / Verwaltung | `thread_manage`, read-only `thread_operation_status` | No |
+| Legacy context writes / Bestandsweg | `switch_thread`, `add_note`, `save_snapshot`, `restore_snapshot`, `list_snapshots` | No; legacy mutations lack operation receipts |
+| Local prompt / packet preparation | `generate_prompt`, `export_handoff`, `export_grok`, `export_gnom` | No |
+| Return inbox / Nutzerentscheidung | `import_return`, `list_returns`, `review_return` | No |
+| Existing Gnom binding / callback | `bind_gnom_job`, `receive_gnom_callback`, `list_gnom_jobs` | No |
+| Local gate / board | `check_gate`, `dashboard` | No; ThreadDesk LocalGate is not the TollGate product |

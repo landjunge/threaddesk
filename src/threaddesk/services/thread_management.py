@@ -143,3 +143,14 @@ def manage(svc, arguments: dict[str, Any]) -> dict[str, Any]:
         raise ManagementError("not_found", "Thread oder Zuordnungsziel wurde nicht gefunden.") from exc
     except InvalidState as exc:
         raise ManagementError("invalid_state", str(exc)) from exc
+
+
+def operation_status(svc, arguments):
+    if not isinstance(arguments, dict) or set(arguments) != {"operation_id"}:
+        _invalid("Nur operation_id ist erlaubt.")
+    identity = arguments["operation_id"]
+    if not isinstance(identity, str) or not ID.fullmatch(identity):
+        _invalid("Ungültige Operationskennung.")
+    with svc.store.transaction():
+        saved = svc.store.get_management_operation(identity)
+    return {"operation_id": identity, "found": saved is not None, "result": saved["result"] if saved else None}
