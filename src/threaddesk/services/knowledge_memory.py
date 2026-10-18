@@ -417,3 +417,129 @@ def reentry(svc, arguments):
             return result
     except NotFound as exc:
         raise ManagementError("not_found", "Thread wurde nicht gefunden.") from exc
+
+
+HANDOFF_MAX_ITEMS = 32
+HANDOFF_MAX_BYTES = 32768
+HANDOFF_TEXT_CHARS = 2000
+
+
+def _thread_nodes(svc, identity):
+    values = [
+        node for node in svc.list_nodes() if node.metadata.get("thread_id") == identity
+    ]
+    values.sort(key=lambda node: (node.updated_at, node.id), reverse=True)
+    return values
+
+
+def _fingerprint(nodes):
+    """Local content binding, including entries omitted from the transport budget."""
+    raw = [node.to_dict() for node in nodes]
+    return hashlib.sha256(
+        json.dumps(
+            raw, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode()
+    ).hexdigest()
+
+
+def knowledge_fingerprint(svc, identity):
+    return _fingerprint(_thread_nodes(svc, identity))
+
+
+def capture_handoff_knowledge(svc, identity):
+    """Projection and local hash come from the same read snapshot."""
+    nodes = _thread_nodes(svc, identity)
+    fingerprint = _fingerprint(nodes)
+    return _handoff_projection(identity, nodes), fingerprint
+
+
+def handoff_context(svc, identity):
+    return capture_handoff_knowledge(svc, identity)[0]
+
+
+def _handoff_projection(identity, nodes):
+    """A bounded, data-only projection for newly issued packets; no source IO."""
+
+    # Current decisions/questions precede historical or secondary graph content.
+    def weight(node):
+        if node.kind == "decision" and node.status == "confirmed":
+            return 0
+        if (
+            node.metadata.get("knowledge_type") == "question"
+            and node.status == "waiting"
+        ):
+            return 1
+        if node.kind == "task" and node.status not in {"accepted", "done", "archived"}:
+            return 2
+        return 3
+
+    nodes.sort(key=weight)  # Stable: retain latest-first order inside each group.
+    result = {
+        "format": "threaddesk.knowledge-context.v1",
+        "provenance": "source_local",
+        "thread_id": identity,
+        "items": [],
+        "total": len(nodes),
+        "included": 0,
+        "truncated": False,
+        "limits": {
+            "items": HANDOFF_MAX_ITEMS,
+            "bytes": HANDOFF_MAX_BYTES,
+            "text_characters": HANDOFF_TEXT_CHARS,
+        },
+        "instruction": INSTRUCTION,
+    }
+    for node in nodes[:HANDOFF_MAX_ITEMS]:
+        item = {
+            "id": node.id,
+            "revision": node.revision,
+            "kind": node.kind,
+            "knowledge_type": node.metadata.get("knowledge_type", node.kind),
+            "status": node.status,
+            "title": node.title[:HANDOFF_TEXT_CHARS],
+            "details": node.details[:HANDOFF_TEXT_CHARS],
+            "source_ref": node.source[:HANDOFF_TEXT_CHARS],
+            "source_revision": str(node.metadata.get("source_revision") or "")[:256]
+            or None,
+            "source_verification": "referenced_unverified"
+            if node.metadata.get("source_revision")
+            else "unknown",
+            "content_truncated": any(
+                len(text) > HANDOFF_TEXT_CHARS
+                for text in (node.title, node.details, node.source)
+            ),
+        }
+        resolution = node.metadata.get("resolution")
+        if isinstance(resolution, dict):
+            item["resolution"] = {
+                key: str(resolution.get(key) or "")[:HANDOFF_TEXT_CHARS]
+                for key in ("text", "source_ref", "source_revision")
+            }
+            item["resolution"]["source_verification"] = "referenced_unverified"
+            item["content_truncated"] |= any(
+                len(str(resolution.get(key) or "")) > HANDOFF_TEXT_CHARS
+                for key in ("text", "source_ref", "source_revision")
+            )
+        supersedes = node.metadata.get("supersedes")
+        if isinstance(supersedes, dict):
+            item["supersedes"] = {
+                key: supersedes.get(key) for key in ("node_id", "revision")
+            }
+        candidate = {
+            **result,
+            "items": [*result["items"], item],
+            "included": len(result["items"]) + 1,
+            "truncated": False,  # Longer JSON literal: reserve its worst-case byte size.
+        }
+        if (
+            len(json.dumps(candidate, ensure_ascii=False, sort_keys=True).encode())
+            > HANDOFF_MAX_BYTES
+        ):
+            break
+        result["items"].append(item)
+    result["included"] = len(result["items"])
+    result["truncated"] = result["included"] < result["total"] or any(
+        item["content_truncated"] for item in result["items"]
+    )
+    reject_secrets(json.dumps(result, ensure_ascii=False))
+    return result

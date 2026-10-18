@@ -366,3 +366,34 @@ und ersetzte Beschlüsse bleiben unterscheidbar; Angaben zu Quellen sind referen
 nicht technisch oder extern verifiziert. Der lokale Operator-/Workspace-Vertrag
 bleibt bestehen; dieses Tool erfindet keine zusätzliche Personenidentität und
 erteilt keine Rechte für andere Werkzeuge.
+
+
+### New handoffs: bounded knowledge context / neue ausgestellte Übergaben
+
+Only **newly registered** issued packets gain `context.knowledge` with format
+`threaddesk.knowledge-context.v1`. Existing issued payloads, operation receipts
+and their hashes remain unchanged on read/replay. An old packet without this
+field does not establish that knowledge was included.
+
+The projection contains at most **32 thread-associated graph entries**, **32768
+UTF-8 bytes** in this knowledge object and **2000 characters per text field**.
+It prioritizes current confirmed decisions, open questions and pending tasks;
+status preserves proposed, rejected, superseded and answered distinctions.
+`total`, `included`, `truncated` and per-item `content_truncated` disclose omissions.
+Each item carries stable ID, node revision, kind, knowledge type, status, title,
+bounded details and source reference/revision. Replacement and separately stored
+answer references remain data. The full local graph/history remains the source;
+this projection is neither a new knowledge store nor a claim of complete context.
+
+`provenance=source_local` and `source.knowledge_provenance=source_local` mean a
+snapshot of the local stored graph only. Source references remain
+`referenced_unverified` or `unknown`; they are not opened or externally verified.
+No rights, actor identity, execution approval, completion or acceptance follows.
+
+New issued records bind a `source.knowledge_hash` over the full associated local
+graph snapshot, including entries omitted from the transport projection. Changes
+by older graph writers are therefore stale even when they did not raise the
+Thread revision. New binding, questions and first returns compare this local hash;
+old records without one retain the old contract and gain no retroactive proof.
+The existing full packet `content_hash` also covers its actual bounded context.
+No automatic work, external source request or permissions change occurs.

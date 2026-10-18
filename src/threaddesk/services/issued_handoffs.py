@@ -13,6 +13,10 @@ from threaddesk.core.errors import ManagementError
 from threaddesk.core.models import Snapshot, ThreadContext, new_id, now_iso
 from threaddesk.core.secrets import reject_secrets
 from threaddesk.services.handoff_contract import build
+from threaddesk.services.knowledge_memory import (
+    capture_handoff_knowledge,
+    knowledge_fingerprint,
+)
 from threaddesk.services.thread_management import ID
 
 MAX_FILES = 32
@@ -180,6 +184,15 @@ class IssuedHandoffs:
         self.roots = source_roots()
 
     def register(self, payload, thread, *, operation_id=None, request_hash=None):
+        # New issued payloads only; durable older receipts are never rewritten.
+        knowledge, knowledge_hash = capture_handoff_knowledge(self.svc, thread.id)
+        payload = {
+            **payload,
+            "context": {
+                **payload["context"],
+                "knowledge": knowledge,
+            },
+        }
         snapshot = Snapshot(
             new_id(),
             thread.id,
@@ -189,6 +202,8 @@ class IssuedHandoffs:
         )
         self.store.save_snapshot(snapshot)
         source = {
+            "knowledge_hash": knowledge_hash,
+            "knowledge_provenance": "source_local",
             "thread_revision": thread.revision,
             "snapshot_id": snapshot.id,
             "content_hash": digest(thread.to_dict()),
@@ -206,6 +221,10 @@ class IssuedHandoffs:
         }
         self.store.save_issued_handoff(payload["handoff_id"], record)
         return record
+
+    def _knowledge_matches(self, record, thread):
+        saved = record["source"].get("knowledge_hash")
+        return saved is None or saved == knowledge_fingerprint(self.svc, thread.id)
 
     def get(self, *, handoff_id=None, operation_id=None):
         if (handoff_id is None) == (operation_id is None):
@@ -345,7 +364,9 @@ class IssuedHandoffs:
                     )
                 return {"binding": record["binding"], "duplicate": True}
             current = self.store.get_thread(handoff["thread_id"])
-            if current.revision != record["source"]["thread_revision"]:
+            if current.revision != record["source"][
+                "thread_revision"
+            ] or not self._knowledge_matches(record, current):
                 raise ManagementError(
                     "revision_conflict",
                     "Auftragsgrundlage hat sich vor Laufbindung geändert.",
@@ -403,6 +424,7 @@ class IssuedHandoffs:
         if (
             current.revision != record["source"]["thread_revision"]
             or digest(current.to_dict()) != record["source"]["content_hash"]
+            or not self._knowledge_matches(record, current)
         ):
             raise ManagementError(
                 "return_stale", "Auftragsgrundlage wurde seit der Übergabe geändert."
@@ -500,7 +522,9 @@ class IssuedHandoffs:
                     "delivery_status": "recorded_for_run",
                 }
             current = self.store.get_thread(record["handoff"]["thread_id"])
-            if current.revision != record["source"]["thread_revision"]:
+            if current.revision != record["source"][
+                "thread_revision"
+            ] or not self._knowledge_matches(record, current):
                 raise ManagementError(
                     "return_stale",
                     "Auftragsgrundlage wurde seit der Übergabe geändert.",

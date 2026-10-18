@@ -59,3 +59,21 @@ At this core pin, old export construction reads legacy extra.decisions, not the
 new graph knowledge. A bounded additive context.knowledge attachment for **newly
 issued** handoffs is the next approved follow-up. Historical issued payloads,
 hashes and receipts must remain byte-for-byte unchanged.
+
+
+## Folgeanschluss: bounded context.knowledge
+
+Nach dem separaten Kernpin `88d6bae` additiv für neu ausgestellte Übergaben ergänzt:
+32 Items/32768 UTF-8-Bytes/2000 Zeichen je Textfeld, sichtbare Anzahl/Trunkierung,
+IDs/Revisionen/Status und referenzierte Quellen; aktuelle Entscheidungen zuerst.
+source_local bezeichnet nur den gespeicherten lokalen Stand. Alter issued-Inhalt
+wird weder nachträglich erweitert noch neu gehasht. Ein lokaler Graphhash erkennt
+auch alte Graphschreiber, die keine Threadrevision erhöhten; Identität und externe
+Verifikation folgen daraus nicht.
+
+Gezielt `tests/test_handoff_knowledge_context.py` plus bestehende betroffene
+`tests/test_issued_handoffs.py`: **27 bestanden**. Nach ergänzten Gegenfällen für
+Bindung/Rückfrage und getrennte Frageantwort nur die neue Kontextdatei erneut:
+**16 bestanden**. JSON/SQLite, echter Read-after-Restart, begrenztes Paket,
+keine fremden Threadinhalte, veraltete Rückgabe/Bindung/Frage und unverändertes
+historisches issued-Payload/Hash/Quittung. Kein Agent und keine Quelle geöffnet.
