@@ -154,6 +154,15 @@ TOOLS = [
         "inputSchema": {"type": "object", "properties": {"payload": {"type": "object"}, "strict_binding": {"type": "boolean"}}, "required": ["payload"]},
     },
     {
+        "name": "get_return",
+        "description": "Read one exact local return inbox item. No decision, execution or cross-principal authorization is implied.",
+        "inputSchema": {
+            "type": "object", "additionalProperties": False,
+            "required": ["return_id"],
+            "properties": {"return_id": {"type": "string", "minLength": 1, "maxLength": 256}},
+        },
+    },
+    {
         "name": "list_returns",
         "description": "List the local return review inbox.",
         "inputSchema": {"type": "object", "properties": {}},
@@ -333,6 +342,10 @@ class McpBridge:
             if set(args) - {"payload", "strict_binding"} or type(args.get("strict_binding", False)) is not bool:
                 raise ManagementError("validation_error", "Ungültige Rückgabeoptionen.")
             return self.svc.receive_return(dict(args.get("payload") or {}), strict_binding=args.get("strict_binding", False))
+        if name == "get_return":
+            if not isinstance(args, dict) or set(args) != {"return_id"}:
+                raise ManagementError("validation_error", "Nur die exakte Rückgabekennung ist erlaubt.")
+            return self.svc.get_return(args["return_id"])
         if name == "list_returns":
             return self.svc.returns()
         if name == "review_return":

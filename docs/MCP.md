@@ -176,7 +176,7 @@ and JSON→SQLite migration preserve receipts; tombstones are not a new task que
 | Safe administration / Verwaltung | `thread_manage`, read-only `thread_operation_status` | No |
 | Legacy context writes / Bestandsweg | `switch_thread`, `add_note`, `save_snapshot`, `restore_snapshot`, `list_snapshots` | No; legacy mutations lack operation receipts |
 | Local prompt / packet preparation | `generate_prompt`, `export_handoff`, `export_grok`, `export_gnom` | No |
-| Return inbox / Nutzerentscheidung | `import_return`, `list_returns`, `review_return` | No |
+| Return inbox / Nutzerentscheidung | `import_return`, `list_returns`, `get_return`, `review_return` | No |
 | Existing Gnom binding / callback | `bind_gnom_job`, `receive_gnom_callback`, `list_gnom_jobs` | No |
 | Local gate / board | `check_gate`, `dashboard` | No; ThreadDesk LocalGate is not the TollGate product |
 
@@ -276,3 +276,29 @@ SQLite schema6 adds only issued-handoff records; snapshot/issuance and question/
 whiteboard changes share existing transactions. JSON uses the existing resulting-
 state recovery commit. Inbox writes/decisions serialize under the same store
 transaction; a separate user decision still does not become agent execution.
+
+
+### Exact return read / exakter Rückgabeabruf
+
+`get_return` accepts exactly `{"return_id":"opaque-return-id"}` (nonempty string,
+1–256 characters, no additional fields). Its existing MCP result envelope contains
+`{"found":true,"item":<existing inbox item>}` or
+`{"found":false,"item":null}`. The ID is compared exactly, without title lookup,
+prefix matching, case folding or path interpretation. It never changes a decision,
+imports content or starts work. `list_returns` keeps its existing result shape.
+
+Only the selected item crosses MCP; unrelated inbox returns are not included.
+Obvious secret material in the lookup ID or selected stored item is rejected
+without echoing its content. Source/binding status and separate user decision are
+returned as stored; reading does not verify or accept an untrusted return.
+
+This is a **local operator workspace** tool, with the existing MCP trust boundary.
+It does not introduce per-principal inbox permissions. An upstream Bridge must
+check its own durable binding/allowed return ID **before** calling it; caller fields
+cannot choose a store, file path, principal or scope. JSON and SQLite continue to
+use the existing artifact. No new store, queue, schema migration or runtime switch.
+
+Deutsch: Der rein lesende Abruf liefert ausschließlich das unter der exakten
+Kennung vorhandene Inbox-Objekt oder `found=false`; der alte Listenweg bleibt
+kompatibel. Er setzt keine Freigabe, keine Identitätsprüfung und keinen Auftrag.
+Offensichtliche Geheimnisse werden nicht über diesen neuen Leseweg ausgegeben.

@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
-from threaddesk.core.errors import InvalidState, NotFound
+from threaddesk.core.errors import InvalidState, ManagementError, NotFound
 from threaddesk.core.models import now_iso
 from threaddesk.core.secrets import reject_secrets
 from threaddesk.services.return_contract import validate
@@ -30,6 +30,19 @@ class ReturnInbox:
 
     def list(self) -> list[dict[str, Any]]:
         return list(self._read()["items"])
+
+    def get(self, return_id: str) -> dict[str, Any] | None:
+        """Read one exact opaque ID, without transporting unrelated inbox items."""
+        if not isinstance(return_id, str) or not 1 <= len(return_id) <= 256 or not return_id.strip():
+            raise ManagementError("validation_error", "Eine exakte Rückgabekennung mit 1–256 Zeichen ist erforderlich.")
+        reject_secrets(return_id)
+        with self.store.transaction():
+            for item in self._read()["items"]:
+                if item["return"]["return_id"] == return_id:
+                    # Current receive rejects secrets; fail closed for older/manual artifacts too.
+                    reject_secrets(json.dumps(item, ensure_ascii=False))
+                    return item
+        return None
 
     def receive(self, value: Mapping[str, Any], *, strict_binding: bool = False) -> dict[str, Any]:
         with self.store.transaction():
