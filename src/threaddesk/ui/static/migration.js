@@ -46,6 +46,8 @@
       const row = document.createElement('div');
       const term = document.createElement('dt');
       const description = document.createElement('dd');
+      description.tabIndex = 0;
+      description.setAttribute('aria-label', `${label}: ${fieldLabel}`);
       term.textContent = fieldLabel;
       description.textContent = value || '—';
       row.append(term, description);

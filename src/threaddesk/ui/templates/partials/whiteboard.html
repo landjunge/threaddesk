@@ -1,29 +1,6 @@
 <div class="whiteboard" data-whiteboard>
-  <h3>{{ t("whiteboard.title") }}</h3>
-  {% if whiteboard %}
-  <ol class="whiteboard-log" data-whiteboard-log>
-    {% for entry in whiteboard %}
-    {% set mark = actor_marks.get(entry.actor_id) if entry.actor_id else none %}
-    <li
-      class="whiteboard-entry{% if mark %} tone-{{ mark.color_token }}{% endif %}{% if mark and mark.ai %} is-ai{% endif %}"
-      data-whiteboard-entry
-      data-entry-id="{{ entry.id }}"
-      {% if entry.actor_type == "local-assistant" %}data-hausmeister-entry="1"{% endif %}
-      {% if mark %}data-actor-kind="{{ mark.kind }}" data-color-token="{{ mark.color_token }}" data-ai="{{ '1' if mark.ai else '0' }}"{% endif %}
-    >
-      <p class="whiteboard-meta">
-        <time datetime="{{ entry.created_at }}">{{ entry.created_at[:16].replace('T', ' ') }}</time>
-        {{ entry.actor }}
-        {% if mark and mark.ai %}<span class="ai-mark">{{ t("whiteboard.ai_mark") }}</span>{% endif %}
-        <span>{{ t('whiteboard.entry.' ~ entry.entry_type) }}</span>
-      </p>
-      <p class="whiteboard-body">{{ entry.content }}</p>
-    </li>
-    {% endfor %}
-  </ol>
-  {% else %}
-  <p data-whiteboard-empty>{{ t("whiteboard.empty") }}</p>
-  {% endif %}
+  <h3 id="capture-title">{{ t("ui.capture") }}</h3>
+  <p class="muted">{{ t("ui.capture_hint") }}</p>
   <form
     class="whiteboard-form"
     hx-post="/threads/{{ current.id }}/whiteboard"
@@ -31,6 +8,15 @@
     hx-swap="innerHTML"
   >
     <input type="hidden" name="actor_type" value="human" />
+    <textarea
+      name="content"
+      rows="2"
+      required
+      maxlength="8000"
+      placeholder="{{ t('whiteboard.placeholder') }}"
+      aria-labelledby="capture-title"
+      data-whiteboard-content
+    ></textarea>
     <div class="inline-form">
       <input
         type="text"
@@ -50,14 +36,7 @@
         </select>
       </label>
     </div>
-    <textarea
-      name="content"
-      rows="2"
-      required
-      maxlength="8000"
-      placeholder="{{ t('whiteboard.placeholder') }}"
-      data-whiteboard-content
-    ></textarea>
+
     {% if room.current %}
     <label class="inline-form">
       <input type="checkbox" name="in_room" value="1" data-room-share {% if room.role == "read_only" %}disabled{% endif %} />
@@ -76,4 +55,36 @@
       <button type="submit" class="btn btn-primary" data-whiteboard-submit>{{ t("whiteboard.append") }}</button>
     </div>
   </form>
+  <div class="activity-heading">{{ t("ui.activity") }}</div>
+  {% if whiteboard %}
+  <ol class="whiteboard-log" tabindex="0" aria-label="{{ t('whiteboard.title') }}" data-whiteboard-log>
+    {% for entry in whiteboard %}
+    {% set mark = actor_marks.get(entry.actor_id) if entry.actor_id else none %}
+    <li
+      class="whiteboard-entry{% if mark %} tone-{{ mark.color_token }}{% endif %}{% if mark and mark.ai %} is-ai{% endif %}"
+      data-whiteboard-entry
+      data-entry-id="{{ entry.id }}"
+      {% if entry.actor_type == "local-assistant" %}data-hausmeister-entry="1"{% endif %}
+      {% if mark %}data-actor-kind="{{ mark.kind }}" data-color-token="{{ mark.color_token }}" data-ai="{{ '1' if mark.ai else '0' }}"{% endif %}
+    >
+      <p class="whiteboard-meta">
+        <time datetime="{{ entry.created_at }}">{{ entry.created_at[:16].replace('T', ' ') }}</time>
+        {{ entry.actor }}
+        {% if mark and mark.ai %}<span class="ai-mark">{{ t("whiteboard.ai_mark") }}</span>{% endif %}
+        <span>{{ t('whiteboard.entry.' ~ entry.entry_type) }}</span>
+      </p>
+      {% if entry.metadata.get('return_id') %}
+      {% set review = return_review_states.get(entry.metadata.return_id, 'unknown') %}
+      <p class="return-review" data-return-review="{{ review }}">{{ t('return.review.' ~ review) }}</p>
+      <p class="muted">{{ t('return.scope') }}</p>
+      {% elif entry.metadata.get('status') == 'unknown' %}
+      <p class="return-review" data-return-review="unknown">{{ t('return.outcome_unknown') }}</p>
+      {% endif %}
+      <p class="whiteboard-body">{{ entry.content }}</p>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <p data-whiteboard-empty>{{ t("whiteboard.empty") }}</p>
+  {% endif %}
 </div>

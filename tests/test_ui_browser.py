@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import os
 import socket
+import subprocess
 import threading
 import time
+from pathlib import Path
 
 import pytest
 
@@ -89,14 +91,41 @@ def page(live_map):
         # THREADDESK_CHROMIUM erlaubt einen vorhandenen Browser, wenn die
         # Umgebung keinen passenden Build herunterladen kann.
         executable = os.environ.get("THREADDESK_CHROMIUM") or None
+        headed = os.environ.get("THREADDESK_BROWSER_HEADED") == "1"
+
+        def _chrome_pids() -> set[int]:
+            listed = subprocess.check_output(["ps", "-ax", "-o", "pid=,command="], text=True)
+            return {
+                int(line.split(None, 1)[0])
+                for line in listed.splitlines()
+                if "Google Chrome.app/Contents/MacOS/Google Chrome" in line and "Helper" not in line
+            }
+
+        before = _chrome_pids() if headed else set()
         try:
-            browser = play.chromium.launch(executable_path=executable)
+            browser = play.chromium.launch(
+                executable_path=executable,
+                headless=not headed,
+                slow_mo=1500 if headed else 0,
+                args=["--start-fullscreen"] if headed else [],
+            )
         except Exception as exc:  # pragma: no cover - Umgebung ohne Browser
             pytest.skip(f"kein Chromium verfügbar: {exc}")
         tab = browser.new_page(viewport={"width": 1280, "height": 900})
+        tab.bring_to_front()
+        if headed:
+            helper = Path("/tmp/td-raise")
+            new = sorted(_chrome_pids() - before)
+            if helper.exists() and new:
+                subprocess.run([str(helper), str(new[-1]), "activate"], check=False)
         tab.goto(f"{base_url}/map", wait_until="networkidle")
         tab.wait_for_selector(".map-node", timeout=15000)
         yield tab
+        shots = os.environ.get("THREADDESK_SHOTS")
+        if shots:
+            folder = Path(shots)
+            folder.mkdir(parents=True, exist_ok=True)
+            tab.screenshot(path=str(folder / "15-karte.png"), full_page=True)
         browser.close()
 
 
@@ -301,9 +330,9 @@ def test_directed_relations_carry_an_arrow(page):
 
 
 def test_chrome_uses_shared_tokens_and_map_has_its_own_tones(page):
-    """Arbeitsteilung: Grundgerüst gedämpft, Karte leuchtend.
+    """Arbeitsteilung: Grundgerüst lesbar, Karte mit eigenen Zustandstönen.
 
-    Buttons und Rahmen folgen dem gemeinsamen Netzwerkpunkt-Design. Die
+    Buttons und Rahmen folgen GOLDENRULES Abschnitt 18. Die
     Landkarte ist der Schauplatz und bringt eigene, leuchtende Zustandstöne
     mit — sonst verschwinden Zustände auf dunklem Grund.
     """
@@ -320,8 +349,8 @@ def test_chrome_uses_shared_tokens_and_map_has_its_own_tones(page):
             };
         }"""
     )
-    # Grundgeruest folgt dem gemeinsamen Akzent aller Werkzeuge.
-    assert values["accent"].lower() == "#8f98a8"
+    # Aktuelle Designentscheidung; die Karte behält ihre semantischen Töne.
+    assert values["accent"].lower() == "#edf0f4"
     # Die Karte übernimmt ihn gerade nicht.
     assert values["toneGood"] != values["mutedOk"]
     assert values["toneGood"] and values["toneRisk"]

@@ -176,6 +176,8 @@ and JSON→SQLite migration preserve receipts; tombstones are not a new task que
 | Safe administration / Verwaltung | `thread_manage`, read-only `thread_operation_status` | No |
 | Legacy context writes / Bestandsweg | `switch_thread`, `add_note`, `save_snapshot`, `restore_snapshot`, `list_snapshots` | No; legacy mutations lack operation receipts |
 | Local prompt / packet preparation | `generate_prompt`, `export_handoff`, `export_grok`, `export_gnom` | No |
+| Issued source / ausgestellter Stand | `issue_handoff`, `get_issued_handoff`, `bind_handoff_run` | No |
+| Bound questions / Rückfragen | `record_handoff_question`, `answer_handoff_question` | No; recorded answer is not agent resume |
 | Knowledge / Wiedereinstieg | `knowledge_manage`, `get_reentry` | No |
 | Return inbox / Nutzerentscheidung | `import_return`, `list_returns`, `get_return`, `review_return` | No |
 | Existing Gnom binding / callback | `bind_gnom_job`, `receive_gnom_callback`, `list_gnom_jobs` | No |
