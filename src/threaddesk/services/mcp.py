@@ -8,6 +8,7 @@ from threaddesk.api.service import ThreadService
 from threaddesk.core.errors import ManagementError, ThreadDeskError
 from threaddesk.core.models import Thread
 from threaddesk.services.thread_management import FIELDS, manage, operation_status, organization
+from threaddesk.services import knowledge_memory
 
 def _management_schema() -> dict[str, Any]:
     text = {"type": "string", "maxLength": 10000}
@@ -48,6 +49,8 @@ def _management_schema() -> dict[str, Any]:
 
 
 TOOLS = [
+    {"name": "knowledge_manage", "description": "Explicit revision-bound local knowledge. Referenced sources are unverified; no agent dispatch.", "inputSchema": knowledge_memory.schema()},
+    {"name": "get_reentry", "description": "Read saved re-entry and up to 200 thread-bound knowledge entries; never starts work.", "inputSchema": {"type": "object", "additionalProperties": False, "required": ["id"], "properties": {"id": {"type": "string", "pattern": knowledge_memory.ID.pattern}}}},
     *[{"name": name, "description": "Record a bound waiting question or its explicit answer; no automatic agent resume.", "inputSchema": {"type": "object", "additionalProperties": False, "required": ["handoff_id", "handoff_revision", "run_id", "question_id", "text"] + (["answer_id"] if name == "answer_handoff_question" else []), "properties": {**{key: {"type": "string"} for key in ("handoff_id", "run_id", "question_id", "text")}, **({"answer_id": {"type": "string"}} if name == "answer_handoff_question" else {}), "handoff_revision": {"type": "integer", "minimum": 1}}}} for name in ("record_handoff_question", "answer_handoff_question")],
     {"name": "issue_handoff", "description": "Issue one revision-bound local handoff with a durable operation ID. No execution.", "inputSchema": {"type": "object", "additionalProperties": False, "required": ["operation_id", "id", "expected_revision"], "properties": {"operation_id": {"type": "string"}, "id": {"type": "string"}, "expected_revision": {"type": "integer", "minimum": 0}, "target": {"type": "string", "enum": ["generic", "grok", "codex", "claude", "gnom-hub-v1"]}}}},
     {"name": "get_issued_handoff", "description": "Read an actual issued handoff by exact handoff_id OR operation_id.", "inputSchema": {"type": "object", "additionalProperties": False, "properties": {"handoff_id": {"type": "string"}, "operation_id": {"type": "string"}}, "oneOf": [{"required": ["handoff_id"]}, {"required": ["operation_id"]}]}},
@@ -280,6 +283,11 @@ class McpBridge:
         return {"ok": True, "isError": False, "result": result}
 
     def _dispatch(self, name: str, args: dict[str, Any]) -> Any:
+        if name == "knowledge_manage":
+            result = knowledge_memory.manage(self.svc, args)
+            return {**result, "thread": _public(Thread.from_dict(result["thread"]))}
+        if name == "get_reentry":
+            return knowledge_memory.reentry(self.svc, args)
         if name in {"record_handoff_question", "answer_handoff_question"}:
             from threaddesk.services.issued_handoffs import IssuedHandoffs
             return IssuedHandoffs(self.svc).question(args, answering=name == "answer_handoff_question")
