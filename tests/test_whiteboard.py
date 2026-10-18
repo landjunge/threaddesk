@@ -313,7 +313,8 @@ def test_sqlite_v3_threads_survive_and_can_take_entries(tmp_path: Path) -> None:
 
     store = SQLiteStore(tmp_path)
     version = store.connection.execute("SELECT version FROM schema_info").fetchone()[0]
-    assert version == 4
+    from threaddesk.storage.schema import SCHEMA_VERSION
+    assert version == SCHEMA_VERSION
     assert store.get_thread(thread.id).context.notes == "alte notiz"
     assert store.list_whiteboard(thread.id) == []
 
