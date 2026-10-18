@@ -54,7 +54,8 @@ def test_backup_manifest_and_verified_restore_match_exactly(tmp_path: Path) -> N
     assert manifest["kind"] == "threaddesk.workspace-backup"
     from threaddesk import __version__
     assert manifest["app_version"] == __version__
-    assert manifest["schema_version"] == 4
+    from threaddesk.storage.schema import SCHEMA_VERSION
+    assert manifest["schema_version"] == SCHEMA_VERSION
     assert manifest["design_reference"] == "desk-r2"
     assert set(manifest["files"]) == {
         "threaddesk.sqlite3",
