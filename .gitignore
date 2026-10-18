@@ -34,3 +34,6 @@ ThreadDesk-*.exe
 ThreadDesk-*.dmg
 ThreadDesk-*.sha256
 ThreadDesk-*.build.json
+
+# Isolated acceptance workspaces and feedback timers are not release inputs.
+.runtime/
