@@ -42,7 +42,7 @@ paid-provider calls, new CLI agent or live ChatGPT session.
   **21 passed** (M2 + inbox + old-v3 upgrade case).
 - Source-count/oversize/FIFO/no-root non-opening and final file-change/question
   probes were run separately after the bounded-source guard adjustment; result
-  **5 passed** in0.30s (including both backends for file/question cases).
+  **5 passed** in 0.30s (including both backends for file/question cases).
 - Ruff format/check on new issued_handoffs implementation and its tests.
 
 A real source-file change with unchanged thread revision is rejected as
