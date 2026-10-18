@@ -19,7 +19,7 @@ from threaddesk.storage.workspace_backup import BackupError, WorkspaceBackup
 LIMIT = 128 * 1024 * 1024
 DATA_DIRS = {'threads', 'snapshots', 'nodes', 'relations', 'graph-events',
              'source-records', 'whiteboard', 'artifacts', 'imports',
-             'management-operations', 'thread-revisions'}
+             'management-operations', 'thread-revisions', 'issued-handoffs'}
 RUNTIME_FILES = {'desktop-port.json', 'desktop.lock', 'active-profile.json'}
 
 

@@ -570,16 +570,33 @@ class ThreadService:
             target_system=target_system,
             whiteboard=whiteboard_log.history_for_handoff(self.whiteboard(thread.id)),
         )
+        from threaddesk.services.issued_handoffs import IssuedHandoffs
+        with self.store.transaction():
+            payload = IssuedHandoffs(self).register(payload, thread)["handoff"]
         path = self.store.write_json_artifact("handoff.json", payload)
         self._record("handoff", thread.id)
         self.bus.emit("handoff.written", {"thread_id": thread.id, "path": str(path)})
         payload["path"] = str(path)
         return payload
 
-    def receive_return(self, payload: dict) -> dict:
+    def issue_handoff(self, arguments: dict) -> dict:
+        from threaddesk.services.issued_handoffs import IssuedHandoffs
+        return IssuedHandoffs(self).issue(arguments)
+
+    def get_issued_handoff(self, **arguments) -> dict:
+        from threaddesk.services.issued_handoffs import IssuedHandoffs
+        with self.store.transaction():
+            value = IssuedHandoffs(self).get(**arguments)
+        return {"found": value is not None, "issued": value}
+
+    def bind_handoff_run(self, arguments: dict) -> dict:
+        from threaddesk.services.issued_handoffs import IssuedHandoffs
+        return IssuedHandoffs(self).bind(arguments)
+
+    def receive_return(self, payload: dict, *, strict_binding: bool = False) -> dict:
         from threaddesk.services.return_inbox import ReturnInbox
 
-        item = ReturnInbox(self.store).receive(payload)
+        item = ReturnInbox(self.store, service=self).receive(payload, strict_binding=strict_binding)
         board = whiteboard_log.append_from_return(self.store, item["return"])
         if board is not None:
             item = {**item, "whiteboard": board}

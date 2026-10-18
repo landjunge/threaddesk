@@ -28,6 +28,7 @@ def _read(source: JsonStore) -> dict:
             for entry in source.list_whiteboard(thread.id)
         ],
         "management_operations": source.list_management_operations(),
+        "issued_handoffs": source.list_issued_handoffs(),
         "current_id": source.get_current_id(),
     }
 
@@ -67,6 +68,7 @@ def migrate_json_store(
             "source_records",
             "whiteboard",
             "management_operations",
+            "issued_handoffs",
         )
     ):
         raise MigrationError("SQLite-Ziel enthält bereits einen anderen Bestand.")
@@ -93,6 +95,8 @@ def migrate_json_store(
                 target.save_source_record(record)
             for receipt in incoming["management_operations"]:
                 target.save_management_operation(receipt["result"]["operation_id"], receipt)
+            for issued in incoming["issued_handoffs"]:
+                target.save_issued_handoff(issued["handoff"]["handoff_id"], issued)
             target.set_current_id(incoming["current_id"])
             if fault:
                 fault("before_commit")

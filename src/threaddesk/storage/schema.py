@@ -1,6 +1,6 @@
 """Versioned SQLite schema for ThreadDesk's local workspace."""
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 TABLES = (
     "threads",
@@ -14,6 +14,7 @@ TABLES = (
     "node_artifacts",
     "whiteboard_entries",
     "management_operations",
+    "issued_handoffs",
 )
 
 V1_SCHEMA_SQL = """
@@ -140,11 +141,20 @@ CREATE TABLE IF NOT EXISTS management_operations (
 
 SCHEMA_SQL += MANAGEMENT_SQL
 
+ISSUED_HANDOFFS_SQL = """
+CREATE TABLE IF NOT EXISTS issued_handoffs (
+    id TEXT PRIMARY KEY,
+    payload TEXT NOT NULL
+);
+"""
+SCHEMA_SQL += ISSUED_HANDOFFS_SQL
+
 MIGRATIONS = {
     2: SOURCE_RECORDS_SQL,
     3: ARTIFACTS_SQL,
     4: WHITEBOARD_SQL,
     5: MANAGEMENT_SQL,
+    6: ISSUED_HANDOFFS_SQL,
 }
 
 FTS_SQL = """

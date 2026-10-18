@@ -361,3 +361,18 @@ are metadata, not filesystem moves. Context management never starts agents.
 This source capability is separate from the published desktop 0.1.1rc1 download,
 the open design PR #66, and an actually configured KiraBridge integration.
 Internet team operation remains a separate server/identity deployment decision.
+
+### Zugeordnete Übergabe / Bound handoff (M2 source)
+
+`issue_handoff` stellt einen konkreten Threadstand idempotent aus; gespeicherter
+Snapshot, Threadrevision und Inhaltshash bleiben von Handoff-/Bridge-/Laufkennungen
+getrennt. Neue Bridge-Rückgaben verwenden die strikte ausgestellte Laufbindung:
+auch die erste veraltete Rückgabe wird abgewiesen. Rückfragen/Antworten bleiben
+am Lauf und im bestehenden Whiteboard zugeordnet; „Antwort gespeichert“ behauptet
+keine bereits fortgesetzte KI. Lieferungen bleiben ungeprüft bis Nutzerentscheidung.
+
+Issued handoffs and accepted run references are durable; reconnect reads them
+instead of creating another job. Source file hashing is bounded and enabled only
+for fixed operator roots; missing/unverifiable file evidence remains unknown.
+No raw secrets, automatic execution, general Git attestation or new Internet
+server are added. [Exact tools, limits and state semantics](docs/MCP.md).

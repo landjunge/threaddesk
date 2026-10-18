@@ -179,3 +179,100 @@ and JSON→SQLite migration preserve receipts; tombstones are not a new task que
 | Return inbox / Nutzerentscheidung | `import_return`, `list_returns`, `review_return` | No |
 | Existing Gnom binding / callback | `bind_gnom_job`, `receive_gnom_callback`, `list_gnom_jobs` | No |
 | Local gate / board | `check_gate`, `dashboard` | No; ThreadDesk LocalGate is not the TollGate product |
+
+## Issued handoff and bound return / Ausgestellte Übergabe und Rückgabe (M2)
+
+These capabilities are source-only until a configured Bridge consumer is checked;
+no automatic dispatch is introduced. `export_handoff` remains compatible but
+registers the actual emitted handoff. New consumers use the idempotent tool:
+
+```json
+{"operation_id":"issue-001","id":"<exact-thread-id>",
+ "expected_revision":7,"target":"codex"}
+```
+
+`issue_handoff` accepts exactly those fields (target optional, default generic).
+It returns the existing `threaddesk.handoff.v1` payload plus `duplicate` and
+`content_hash`. Same operation/content returns the same handoff; a changed request
+conflicts. `get_issued_handoff` accepts exactly `{"handoff_id":"..."}` **or**
+`{"operation_id":"issue-001"}` and returns `{found,issued}`. Missing is
+`found:false,issued:null`; lookup never sends a task.
+
+An issued record contains the actual handoff, its canonical SHA256 content hash,
+source record, operation/requesthash, optional binding, and issuance time.
+`source={thread_revision,snapshot_id,content_hash,source_refs}` freezes a separate
+snapshot without changing the source thread revision. Handoff revision remains
+its own value (currently1), not the thread revision. The original `task_id`
+(including possible colon) is retained; Bridge must map it durably.
+
+`bind_handoff_run` requires exactly:
+
+```json
+{"handoff_id":"<issued-id>","handoff_revision":1,
+ "task_id":"<original-thread-id>:task","bridge_task_id":"kb-task-1",
+ "run_id":"accepted-run-1","worker":"codex","expected_thread_revision":7,
+ "principal_ref":"configured-chatgpt","operator_scope":"configured-workspace",
+ "request_hash":"<64-lowercase-hex-sha256>"}
+```
+
+Optional strings: `parent_task_id`, `subtask_id`, `session_id`, `actor_claim`.
+Strings are nonempty and bounded to512 characters; revisions are integers.
+`request_hash` fingerprints the Bridge execution request, not external identity.
+The run ID first records the observed accepted task/run; a session or actor claim
+is separate and is **not** an authenticated external-model identity. Same binding
+returns `duplicate:true`; a different run/scope/principal/hash conflicts. The
+local peer is already trusted by its configured OS/Bridge boundary; caller-supplied
+`principal_ref` is an audit reference, not independent multi-tenant authorization.
+The new protocol does not grant permissions claimed in an imported handoff.
+
+`import_return` keeps its existing payload shape, with optional boolean
+`strict_binding`. New Bridge consumers **must use true**. Strict import requires
+an issued handoff and bound run, exact thread/task/handoff-revision/worker/run,
+and an unchanged thread revision plus canonical source-state hash. The first stale
+return is rejected even if no newer return has ever arrived. A previously recorded
+identical return remains its original receipt; a legacy-unbound receipt cannot
+be promoted to strict by repeating its return ID. New deliveries remain
+`delivered/unverified` with separate explicit review. Legacy imports remain
+`legacy_unbound` (or `issued_unbound`) and unknown verification, preserving old
+records without presenting them as accepted current work.
+
+### Bounded source evidence / Begrenzte Quellenbelege
+
+A fixed **operator** environment `THREADDESK_SOURCE_ROOTS` may contain a JSON array
+of up to16 existing absolute directories. It is not a request argument. Without
+these roots source references are `unsupported/source_roots_not_configured`;
+no file is opened. Hash capture supports regular local files only, no-follow
+for each path component, max32 files, 1MiB/file and4MiB total. Symlinks, ambiguous
+relative paths, out-of-scope paths, changing/oversized/unreadable files and
+platforms without no-follow are explicitly unverified/unsupported. Raw source
+contents are never returned. A byte hash verifies that bound file's observed
+content only, not tool functionality, provenance rights, whole repository or Git
+commit. Git commit attestation is not implemented by this file-only adapter.
+
+A formerly verified file changing or becoming uncheckable before return causes
+`return_stale_source`. Unsupported references stay unknown; a strict run binding
+with partial file evidence is labelled `source_verification:partial_unverified`.
+`source_verification:verified` means all supplied references were hash-checked;
+it is not project acceptance or a legal/security guarantee. Empty file list has
+no external file claim. Thread source always has a snapshot/revision/hash.
+
+### Waiting question and answer / Wartende Rückfrage und Antwort
+
+`record_handoff_question` accepts exactly
+`{handoff_id,handoff_revision,run_id,question_id,text}`.
+`answer_handoff_question` additionally requires `answer_id`. IDs for question/
+answer use the same stable1–128 character syntax, text max10,000 characters.
+Both require an existing bound run and unchanged issued basis; a reply requires
+a matching `awaiting_answer` question. Identical question/answer repeats once;
+changed content under the same identity conflicts. Questions are bounded to100
+per handoff, stored with the issued record and appended to the existing whiteboard
+with run/handoff/task/external-key references. Answers change the stored state to
+`answer_recorded` and report **recorded_for_run**, never automatic adapter resume.
+The Bridge must separately prove an actually waiting adapter received the answer.
+`get_issued_handoff` returns the current question states after reconnection.
+No extra chat queue or secret channel is added.
+
+SQLite schema6 adds only issued-handoff records; snapshot/issuance and question/
+whiteboard changes share existing transactions. JSON uses the existing resulting-
+state recovery commit. Inbox writes/decisions serialize under the same store
+transaction; a separate user decision still does not become agent execution.

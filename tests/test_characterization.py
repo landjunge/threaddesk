@@ -103,6 +103,8 @@ def test_cli_and_mcp_publish_the_current_command_and_tool_contracts(tmp_path: Pa
 
     bridge = McpBridge(ThreadService(JsonStore(tmp_path)))
     assert [tool["name"] for tool in bridge.list_tools()] == [
+        "record_handoff_question", "answer_handoff_question",
+        "issue_handoff", "get_issued_handoff", "bind_handoff_run",
         "thread_operation_status", "thread_manage", "list_threads", "get_thread", "current_thread", "switch_thread", "add_note",
         "save_snapshot", "list_snapshots", "restore_snapshot", "generate_prompt",
         "export_handoff", "import_return", "list_returns", "review_return",

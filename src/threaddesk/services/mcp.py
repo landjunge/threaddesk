@@ -48,6 +48,10 @@ def _management_schema() -> dict[str, Any]:
 
 
 TOOLS = [
+    *[{"name": name, "description": "Record a bound waiting question or its explicit answer; no automatic agent resume.", "inputSchema": {"type": "object", "additionalProperties": False, "required": ["handoff_id", "handoff_revision", "run_id", "question_id", "text"] + (["answer_id"] if name == "answer_handoff_question" else []), "properties": {**{key: {"type": "string"} for key in ("handoff_id", "run_id", "question_id", "text")}, **({"answer_id": {"type": "string"}} if name == "answer_handoff_question" else {}), "handoff_revision": {"type": "integer", "minimum": 1}}}} for name in ("record_handoff_question", "answer_handoff_question")],
+    {"name": "issue_handoff", "description": "Issue one revision-bound local handoff with a durable operation ID. No execution.", "inputSchema": {"type": "object", "additionalProperties": False, "required": ["operation_id", "id", "expected_revision"], "properties": {"operation_id": {"type": "string"}, "id": {"type": "string"}, "expected_revision": {"type": "integer", "minimum": 0}, "target": {"type": "string", "enum": ["generic", "grok", "codex", "claude", "gnom-hub-v1"]}}}},
+    {"name": "get_issued_handoff", "description": "Read an actual issued handoff by exact handoff_id OR operation_id.", "inputSchema": {"type": "object", "additionalProperties": False, "properties": {"handoff_id": {"type": "string"}, "operation_id": {"type": "string"}}, "oneOf": [{"required": ["handoff_id"]}, {"required": ["operation_id"]}]}},
+    {"name": "bind_handoff_run", "description": "Bind an accepted run to an issued handoff. Does not start it or authenticate model identity.", "inputSchema": {"type": "object", "additionalProperties": False, "required": ["handoff_id", "handoff_revision", "task_id", "bridge_task_id", "run_id", "worker", "expected_thread_revision", "principal_ref", "operator_scope", "request_hash"], "properties": {**{key: {"type": "string"} for key in ("handoff_id", "task_id", "bridge_task_id", "run_id", "worker", "principal_ref", "operator_scope", "request_hash", "parent_task_id", "subtask_id", "session_id", "actor_claim")}, "handoff_revision": {"type": "integer", "minimum": 1}, "expected_thread_revision": {"type": "integer", "minimum": 0}}}},
     {
         "name": "thread_operation_status",
         "description": "Read an existing administration receipt after uncertain delivery. Does not repeat the operation.",
@@ -147,7 +151,7 @@ TOOLS = [
     {
         "name": "import_return",
         "description": "Store one untrusted return in the local review inbox. Never accepts it automatically.",
-        "inputSchema": {"type": "object", "properties": {"payload": {"type": "object"}}, "required": ["payload"]},
+        "inputSchema": {"type": "object", "properties": {"payload": {"type": "object"}, "strict_binding": {"type": "boolean"}}, "required": ["payload"]},
     },
     {
         "name": "list_returns",
@@ -267,6 +271,17 @@ class McpBridge:
         return {"ok": True, "isError": False, "result": result}
 
     def _dispatch(self, name: str, args: dict[str, Any]) -> Any:
+        if name in {"record_handoff_question", "answer_handoff_question"}:
+            from threaddesk.services.issued_handoffs import IssuedHandoffs
+            return IssuedHandoffs(self.svc).question(args, answering=name == "answer_handoff_question")
+        if name == "issue_handoff":
+            return self.svc.issue_handoff(args)
+        if name == "get_issued_handoff":
+            if set(args) - {"handoff_id", "operation_id"}:
+                raise ManagementError("validation_error", "Unbekanntes Übergabefeld.")
+            return self.svc.get_issued_handoff(**args)
+        if name == "bind_handoff_run":
+            return self.svc.bind_handoff_run(args)
         if name == "thread_operation_status":
             state = operation_status(self.svc, args)
             if state["found"] and state["result"]["thread"] is not None:
@@ -315,7 +330,9 @@ class McpBridge:
         if name == "export_handoff":
             return self.svc.handoff(args.get("id"), str(args.get("target") or "generic"))
         if name == "import_return":
-            return self.svc.receive_return(dict(args.get("payload") or {}))
+            if set(args) - {"payload", "strict_binding"} or type(args.get("strict_binding", False)) is not bool:
+                raise ManagementError("validation_error", "Ungültige Rückgabeoptionen.")
+            return self.svc.receive_return(dict(args.get("payload") or {}), strict_binding=args.get("strict_binding", False))
         if name == "list_returns":
             return self.svc.returns()
         if name == "review_return":
