@@ -335,7 +335,8 @@ def test_sqlite_v1_workspace_is_migrated_to_source_records_schema(tmp_path: Path
 
     store = SQLiteStore(tmp_path)
 
-    assert store.connection.execute("SELECT version FROM schema_info").fetchone()[0] == 4
+    from threaddesk.storage.schema import SCHEMA_VERSION
+    assert store.connection.execute("SELECT version FROM schema_info").fetchone()[0] == SCHEMA_VERSION
     assert store.connection.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='source_records'"
     ).fetchone()[0] == "source_records"

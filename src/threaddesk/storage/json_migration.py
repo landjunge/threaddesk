@@ -27,13 +27,14 @@ def _read(source: JsonStore) -> dict:
             for thread in threads
             for entry in source.list_whiteboard(thread.id)
         ],
+        "management_operations": source.list_management_operations(),
         "current_id": source.get_current_id(),
     }
 
 
 def _canonical(data: dict) -> str:
     serializable = {
-        key: [item.to_dict() for item in value] if isinstance(value, list) else value
+        key: [item.to_dict() if hasattr(item, "to_dict") else item for item in value] if isinstance(value, list) else value
         for key, value in data.items()
     }
     return json.dumps(serializable, ensure_ascii=False, sort_keys=True)
@@ -65,6 +66,7 @@ def migrate_json_store(
             "events",
             "source_records",
             "whiteboard",
+            "management_operations",
         )
     ):
         raise MigrationError("SQLite-Ziel enthält bereits einen anderen Bestand.")
@@ -89,6 +91,8 @@ def migrate_json_store(
                 target.append_graph_event(event)
             for record in incoming["source_records"]:
                 target.save_source_record(record)
+            for receipt in incoming["management_operations"]:
+                target.save_management_operation(receipt["result"]["operation_id"], receipt)
             target.set_current_id(incoming["current_id"])
             if fault:
                 fault("before_commit")

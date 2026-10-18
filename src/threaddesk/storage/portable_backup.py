@@ -18,7 +18,8 @@ from threaddesk.storage.workspace_backup import BackupError, WorkspaceBackup
 
 LIMIT = 128 * 1024 * 1024
 DATA_DIRS = {'threads', 'snapshots', 'nodes', 'relations', 'graph-events',
-             'source-records', 'whiteboard', 'artifacts', 'imports'}
+             'source-records', 'whiteboard', 'artifacts', 'imports',
+             'management-operations', 'thread-revisions'}
 RUNTIME_FILES = {'desktop-port.json', 'desktop.lock', 'active-profile.json'}
 
 
@@ -58,6 +59,14 @@ def _allowed(name: str, backend: str) -> bool:
 
 
 def download_backup(store) -> bytes:
+    if isinstance(store, JsonStore):
+        # Recover committed state and hold the same writer lock for the snapshot.
+        with store.transaction():
+            return _download_backup(store)
+    return _download_backup(store)
+
+
+def _download_backup(store) -> bytes:
     backend = 'sqlite' if isinstance(store, SQLiteStore) else 'json'
     with tempfile.TemporaryDirectory(prefix='threaddesk-backup-') as temp:
         source = store.root
@@ -71,7 +80,7 @@ def download_backup(store) -> bytes:
             name = path.relative_to(source).as_posix()
             if not _allowed(name, backend):
                 continue
-            if path.is_symlink() or any(p.is_symlink() for p in path.parents if p != source.parent):
+            if path.is_symlink() or any(p.is_symlink() for p in path.parents if p == source or source in p.parents):
                 raise BackupError('Symbolic links cannot be backed up.')
             if not path.is_file():
                 continue

@@ -170,6 +170,7 @@ class Thread:
     updated_at: str = ""
     context: ThreadContext = field(default_factory=ThreadContext)
     current_snapshot_id: str | None = None
+    revision: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -181,6 +182,7 @@ class Thread:
             "updated_at": self.updated_at,
             "context": self.context.to_dict(),
             "current_snapshot_id": self.current_snapshot_id,
+            "revision": self.revision,
         }
 
     @classmethod
@@ -194,6 +196,7 @@ class Thread:
             updated_at=data.get("updated_at") or "",
             context=ThreadContext.from_dict(data.get("context")),
             current_snapshot_id=data.get("current_snapshot_id"),
+            revision=int(data.get("revision") or 0),
         )
 
 

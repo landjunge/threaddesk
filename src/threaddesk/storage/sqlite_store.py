@@ -8,7 +8,7 @@ from pathlib import Path
 import sqlite3
 from typing import Any, Iterator, Mapping
 
-from threaddesk.core.errors import InvalidState, NotFound
+from threaddesk.core.errors import InvalidState, ManagementError, NotFound
 from threaddesk.core.models import (
     GraphEvent,
     KnowledgeNode,
@@ -71,7 +71,7 @@ class SQLiteStore:
         if self._transaction_depth:
             raise RuntimeError("Verschachtelte Transaktionen werden nicht unterstützt.")
         self._transaction_depth = 1
-        self.connection.execute("BEGIN")
+        self.connection.execute("BEGIN IMMEDIATE")
         try:
             yield
         except BaseException:
@@ -128,18 +128,31 @@ class SQLiteStore:
         return Thread.from_dict(self._load(row))
 
     def save_thread(self, thread: Thread) -> None:
-        # UPDATE keeps child rows. INSERT OR REPLACE would delete them through
-        # ON DELETE CASCADE, including snapshots and whiteboard entries.
+        if not self._transaction_depth:
+            with self.transaction():
+                self.save_thread(thread)
+            return
+        row = self.connection.execute("SELECT payload FROM threads WHERE id=?", (thread.id,)).fetchone()
+        actual = int(self._load(row).get("revision") or 0) if row else 0
+        if row is not None and thread.revision != actual:
+            raise ManagementError("revision_conflict", "Thread wurde zwischenzeitlich geändert.", expected_revision=thread.revision, actual_revision=actual)
+        thread.revision = actual + 1 if row is not None else max(1, thread.revision)
         payload = self._dump(thread.to_dict())
-        updated = self.connection.execute(
-            "UPDATE threads SET status=?, updated_at=?, payload=? WHERE id=?",
-            (thread.status, thread.updated_at, payload, thread.id),
+        self.connection.execute(
+            "INSERT INTO threads(id,status,updated_at,payload) VALUES (?,?,?,?) "
+            "ON CONFLICT(id) DO UPDATE SET status=excluded.status, updated_at=excluded.updated_at, payload=excluded.payload",
+            (thread.id, thread.status, thread.updated_at, payload),
         )
-        if not updated.rowcount:
-            self.connection.execute(
-                "INSERT INTO threads(id,status,updated_at,payload) VALUES (?,?,?,?)",
-                (thread.id, thread.status, thread.updated_at, payload),
-            )
+
+    def list_management_operations(self):
+        return [self._load(row) for row in self.connection.execute("SELECT payload FROM management_operations ORDER BY id")]
+
+    def get_management_operation(self, operation_id):
+        row = self.connection.execute("SELECT payload FROM management_operations WHERE id=?", (operation_id,)).fetchone()
+        return self._load(row) if row else None
+
+    def save_management_operation(self, operation_id, data):
+        self.connection.execute("INSERT INTO management_operations(id,payload) VALUES (?,?)", (operation_id, self._dump(data)))
         self._commit()
 
     def delete_thread(self, thread_id: str) -> None:
