@@ -1,0 +1,19 @@
+{
+  "status": "passed",
+  "browser": "155.0.8059.85",
+  "scope": "real isolated local browser; synthetic existing graph/return/whiteboard records; no agent/real users/model calls",
+  "screens": "DE/EN desk and knowledge; 1024x700 viewport with explicit CSS zoom1.25 and focused reachable tool",
+  "limits": "CSS zoom is a bounded emulation, not native desktop or every browser zoom mode; no live ChatGPT acceptance",
+  "page_errors": [],
+  "assets": {
+    "src/threaddesk/ui/static/networkpunkt.js": "b35b5910234da6b61a0f358d2be85bceb3d2a5f58da68aa7125dc8a21e100bd7",
+    "src/threaddesk/ui/static/alpine.min.js": "b600e363d99d95444db54acbfb2deffec9ae792aa99a09229bcda078e5b55643",
+    "src/threaddesk/ui/static/htmx.min.js": "e209dda5c8235479f3166defc7750e1dbcd5a5c1808b7792fc2e6733768fb447",
+    "src/threaddesk/ui/static/migration.js": "52feae421268c8c8d9e0bd070b894feaa0d8294782725b993459d1f9d1398c4c",
+    "src/threaddesk/ui/static/style.css": "4e37bc1b5e0817b5506af406ab87d4766497957b1306ec5135da8fac959f9180",
+    "src/threaddesk/ui/static/networkpunkt.css": "98371bd9edc96fb940a0e0de34933740fed1062b510aa516498fcb53e112591e",
+    "src/threaddesk/ui/static/map.js": "53a8c2415d2f51b0b15a9c0f366a04011f22ce0e33ab3f5920d2d3cafbd3314b",
+    "src/threaddesk/ui/static/app.js": "c0444aa2ae1e049a1b00ca50aab3947f68319e10e41a59908ace932f75e4bbfb",
+    "src/threaddesk/ui/static/polish.css": "d2d9162df1540a2a219a4043ff6876d0a6b709e3706c952f25af394bafcb5320"
+  }
+}
