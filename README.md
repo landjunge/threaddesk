@@ -79,6 +79,24 @@ geprüft werden. macOS-Pakete sind ad-hoc signiert, nicht Apple-notarisiert.
 | Übergaben | Vorbereitete Pakete für Grok und Gnom-Hub-V1 |
 | Grenze | Keine versteckte externe Ausführung; lokaler Hausmeister nur innerhalb dokumentierter Grenzen |
 
+### Quellstand und installierter Download / Source versus download
+
+| Stand | Nachweis und Grenze |
+| --- | --- |
+| Desktop 0.1.1rc1, 02.10.2026 | Historischer veröffentlichter Download und seine damaligen Paket-/Testbelege; unverändert, keine rückwirkende Lizenz- oder Designumschreibung. |
+| main-Basis `bba99b0`, 18.10.2026 | TD-C01/02 übernommen: revisionsgebundene Verwaltung und ausgestellte Handoff-/Laufbindung. |
+| Diese Quelländerung TD-C03/D01/R01 | Wissensführung/Wiedereinstieg, exakter Rückgabeabruf, begrenzter neuer Wissenskontext und selektiv abgeglichene Design-PR-Teile. Gezielt isoliert geprüft, kein neuer Desktoprelease und keine Nutzerinstallation umgestellt. |
+
+[PR #66](https://github.com/landjunge/threaddesk/pull/66) war beim Abgleich weiter
+offen. Aus `43dd13a` werden vorhandene UI- und passende Testteile übernommen;
+ältere Speicher-, Versions-, Lizenz- und Paketierungsstände werden nicht pauschal
+zurückgemischt. Die vollständige alte PR-Kette gilt dadurch nicht als übernommen.
+
+Published desktop 0.1.1rc1, current source and the actually configured Bridge peer
+are different states. Use a matching source installation and operator-configured
+MCP/Bridge permissions for the new tools. No claim of Internet team deployment,
+external source verification or a newly published native package is made.
+
 ### Gemeinsam arbeiten – ausdrücklich freigeben
 
 Im Bereich **Raum** einen Namen eingeben und **Raum anlegen** wählen. Die Leitung
@@ -261,70 +279,38 @@ Klartext gilt für alle, bis jemand etwas anderes sagt.
 
 Für die manuelle Entwicklerinstallation: `python3 -m pip install -e ".[dev,ui]"`. Daten liegen unter `~/.threaddesk/`.
 
-### Die gemeinsamen Regeln der NetzwerkPunkt-Werkzeuge
+### Gemeinsame Bedienbasis / Shared interface
 
-ThreadDesk, Gnom-Hub-V1, 4AllPass und TollGate teilen sich das Desk-Design R2.
-Wer ein neues Werkzeug baut, übernimmt dieselben Grundflächen, Kanten, Maße
-und Sprachregeln. Die Produktidentität bleibt eine eigene, begrenzte Schicht:
-Bei ThreadDesk ist „Thread“ violett, während die Bedienoberfläche neutral bleibt.
+Die vorhandene NetzwerkPunkt-Bedienbasis 0.1 aus dem Designstand wird selektiv
+übernommen: `networkpunkt.css` (Blob `673f4e265c8c46618ba86d9e98f8da09fd0bf107`),
+kleiner ThreadDesk-Adapter, Systemschrift und lokale Assets. Die aktuelle
+Entscheidung ersetzt die alten R2-Zahlen; historische Belege bleiben datiert in
+[GOLDENRULES §18/19](docs/usability/GOLDENRULES.MD) und [COVERAGE](docs/usability/COVERAGE.md).
 
-**Farben** (gleich in allen Werkzeugen)
+| Rolle | Aktueller Wert |
+| --- | --- |
+| Metadaten / Lesetext / Abschnitt / Titel | 12 / 14 / 16 / 24 px |
+| Einzeilige Felder und Aktionen | 40 px |
+| Abstände | 4 / 8 / 12 / 16 / 24 / 32 px |
+| Grundfläche / Arbeitsfläche / Hover | `#121316` / `#1a1c20` / `#25282e` |
+| Text / Nebentext / Eingaberahmen | `#edf0f4` / `#afb6c1` / `#808996` |
 
-| Token | Wert | Wofür |
-|---|---|---|
-| `--bg` | `#121316` | Grundfläche |
-| `--bg-panel` | `#1a1b1f` | Fläche |
-| `--bg-card` | `#1e1f24` | Karte |
-| `--bg-raised` | `#24262d` | Angehobene Karte |
-| `--bg-strip` | `#15171b` | Reiterleiste |
-| `--fg` | `#e2e4e9` | Text |
-| `--fg-muted` | `#8b909a` | Nebentext |
-| `--border` | `#2e3138` | Trennlinie zwischen Flächen (Deko) |
-| `--border-strong` | `#5c616a` | **Kante von Bedienelementen** |
-| `--border-hover` | `#6b7280` | Kante bei Hover |
-| `--accent` | `#8f98a8` | Akzent |
-| `--brand` | `#b99cff` | Nur „Thread“ in Wortmarke/Titel; später Logo-Rahmen |
-| `--ok` / `--warn` / `--err` | `#3d9b6a` / `#c9a227` / `#c45c5c` | Zustände |
+Der Arbeitsinhalt dominiert; Threadpflege, Verlauf und Zusatzwerkzeuge sind
+benannt aufklappbar. Der Desktop bleibt ab 1180×760 CSS-Pixeln dreigeteilt;
+kleinere Ausschnitte und Zoom sind scrollbar, kein automatischer Mobilumbau.
+Verborgene Laufleisten erhalten Tastaturzugriff und sichtbaren Fokus. Zustände
+haben Klartext, nicht nur Farbe; keine pauschale Barrierefreiheitszertifizierung.
 
-**Form und Größe**
+Deutsch und Englisch bleiben im vorhandenen Katalog; Klartext ist Standard,
+Fachsprache optional. Rückgabe, ausdrückliche Ergebnisentscheidung und
+Gesamtauftragsabnahme bleiben getrennt. Ungespeicherter Text oder eine fehlende
+Speicherbestätigung werden sichtbar; Verbindungsfehler versenden nichts erneut.
 
-- `border-radius: 0` — überall. Rund nur, wo die Form etwas *bedeutet*
-  (Kartensymbole, Fortschrittsring, Statuspunkt), mit Begründung im Code.
-- Genau vier Schriftgrößen: **10 / 12 / 14 / 16 px**.
-- Abstände: 4 / 8 / 12 / 16 px.
-- Knöpfe sind **28px**, Reiter und kompakte Navigation **32px** hoch.
-- Unter `@media (pointer: coarse)` werden alle Ziele **44px**
-  (`--control-touch`). Das ist keine dritte Größe, sondern dieselben
-  Elemente unter einem anderen Eingabegerät — die Zahl kommt von Apple und
-  Material. Der Zeiger ist das richtige Signal, **nicht** die Fensterbreite:
-  ein schmales Desktop-Fenster ist kein Finger. WCAG 2.2 (2.5.8) verlangt
-  als Minimum 24px; alle drei Werte liegen darüber.
-- Kontrast: **4.5:1** für Text, **3:1** für alles andere, was etwas bedeutet
-  (WCAG 2.2, 1.4.3 und 1.4.11).
-- Auswahlmenüs setzen `appearance: none` und zeichnen ihren Pfeil selbst —
-  sonst malt das Betriebssystem das Menü, unter Windows mit 3D-Effekt.
-- Schrift: die des Betriebssystems, nichts nachladen.
-
-**Sprache**
-
-- Jedes Werkzeug ist von Anfang an **deutsch und englisch**. Nachrüsten ist
-  teuer. Sichtbarer Text gehört in einen Katalog, nie direkt ins Template.
-- Immer **eine** Sprache zur Zeit, nie beide nebeneinander. Umschalter im Kopf.
-- Auflösung: `?lang=` → Cookie → `Accept-Language` → Standard.
-- Dazu die zwei Sprachebenen: **Klartext ist der Normalfall, Fachsprache ist
-  zuschaltbar.** Eine Fachfassung hängt als eigener Katalogeintrag am selben
-  Schlüssel, getrennt durch `#expert` (kein Punkt — sonst wäre
-  `register.expert` die Fachfassung von `register`). Fehlt die Fachfassung,
-  bleibt der Klartext stehen.
-- Jede Beschriftung sagt, was passiert. Jedes Feld sagt, wofür es da ist.
-  Keine Abkürzung ohne Auflösung. Fehlermeldungen nennen den nächsten Schritt.
-- Eigennamen werden nicht übersetzt: ThreadDesk, TollGate, 4AllPass,
-  Gnom-Hub-V1, Grok, Codex, Thread, MCP.
-
-**Fallstrick**, der zweimal zugeschlagen hat: `argparse` baut die Hilfetexte
-beim *Anlegen* des Parsers, nicht beim Parsen. `--lang` und `--mode` müssen
-deshalb vorher von Hand aus `argv` gelesen werden, sonst ist
-`td --mode expert --help` wieder Klartext.
+The source reuses the existing shared design rather than introducing another UI.
+The desktop composition, progressive disclosure, keyboard access and DE/EN copy
+are checked in isolated real-browser flows. These source changes do not update an
+installed desktop download. Result delivery, explicit review and overall project
+acceptance remain separate; an uncertain write response is never retried automatically.
 
 ### Wie dieses Projekt entsteht
 
@@ -359,7 +345,7 @@ The current source provides revision-bound local administration through
 `thread_manage`, while preserving the existing MCP tools. Organizational links
 are metadata, not filesystem moves. Context management never starts agents.
 This source capability is separate from the published desktop 0.1.1rc1 download,
-the open design PR #66, and an actually configured KiraBridge integration.
+the full historical design PR #66, and an actually configured KiraBridge peer.
 Internet team operation remains a separate server/identity deployment decision.
 
 ### Zugeordnete Übergabe / Bound handoff (M2 source)
@@ -376,3 +362,36 @@ instead of creating another job. Source file hashing is bounded and enabled only
 for fixed operator roots; missing/unverifiable file evidence remains unknown.
 No raw secrets, automatic execution, general Git attestation or new Internet
 server are added. [Exact tools, limits and state semantics](docs/MCP.md).
+
+
+### Wissen und Wiedereinstieg / Knowledge and re-entry (TD-C03 source)
+
+`knowledge_manage` speichert referenzierte Entscheidungen, offene Fragen,
+verworfene Vorschläge und Aufgaben über denselben MCP-Zugang. Erwartete Thread-
+und Knotenrevision, persistente Operationskennung und die bestehende Quittung
+schützen vor stiller Überschreibung und Doppelung. Eine Korrektur erhält den alten
+Beschluss als superseded und verknüpft den neuen. `get_reentry` findet gespeicherten
+Wiedereinstieg, letzte Entscheidungen, Fragen/Aufgaben und Quellen nach Neustart.
+Unbekannte Herkunft bleibt unknown; confirmed ist eine fachliche Entscheidung,
+kein Funktions- oder Berechtigungsnachweis.
+
+Neue ausgestellte Handoffs enthalten nur einen begrenzten lokalen Wissenskontext
+(32 Items / 32 KiB, mit Anzahl und Trunkierung), getrennt nach Status und Herkunft.
+Alte issued-Pakete und Hashes werden nicht nachträglich erweitert. `get_return`
+liest genau eine bereits zugeordnete Rückgabe, ohne fremde Inbox-Inhalte über MCP
+zu übertragen. Die Nutzerentscheidung bleibt ein eigener `review_return`-Schritt.
+
+The existing graph and Thread.extra store knowledge; no second queue or database.
+Source references remain unverified and do not grant execution rights. Every
+knowledge mutation raises the Thread revision. New handoffs bind local graph
+content; old stored handoffs keep their exact payload and receipt. Reconnecting
+reads receipts/state instead of replaying an uncertain write. See the actual
+[MCP capability catalog and examples](docs/MCP.md), [TD-C03 evidence](docs/evidence/seven-tools-20261018/TD-C03.md)
+and [dated interface coverage](docs/usability/COVERAGE.md).
+
+Existing setup: install the source as described above, run `td mcp` (or
+`python3 -m threaddesk.ui.mcp_stdio`) with explicit `THREADDESK_HOME` and optional
+`THREADDESK_STORAGE=json|sqlite`. KiraBridge uses a fixed operator-configured peer;
+requests cannot choose an executable, store or wider rights. Older desktop writers
+are not a schema-6 SQLite compatibility guarantee. Keep a backup and the correct
+writer/source pin; these changes do not migrate the real user workspace for a test.

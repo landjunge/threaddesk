@@ -22,13 +22,22 @@ function helpPanel() {
   return document.getElementById("help");
 }
 
+let helpReturnFocus = null;
+
 function toggleHelp(force) {
   const el = helpPanel();
   if (!el) return;
-  if (typeof force === "boolean") {
-    el.hidden = !force;
+  const open = typeof force === "boolean" ? force : el.hidden;
+  if (open === !el.hidden) return;
+  el.hidden = !open;
+  const shell = document.querySelector(".shell");
+  if (shell) shell.inert = open;
+  if (open) {
+    helpReturnFocus = document.activeElement;
+    el.querySelector("[data-help-close]")?.focus();
   } else {
-    el.hidden = !el.hidden;
+    if (helpReturnFocus?.isConnected) helpReturnFocus.focus();
+    helpReturnFocus = null;
   }
 }
 
@@ -51,6 +60,19 @@ function switchByOffset(delta) {
 
 document.addEventListener("keydown", (event) => {
   if (event.defaultPrevented) return;
+
+  const help = helpPanel();
+  if (help && !help.hidden) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      toggleHelp(false);
+    } else if (event.key === "Tab") {
+      // The dialog currently has a single interactive control.
+      event.preventDefault();
+      help.querySelector("[data-help-close]")?.focus();
+    }
+    return;
+  }
 
   if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
     const form = event.target instanceof Element ? event.target.closest("form") : null;
@@ -101,13 +123,17 @@ document.addEventListener("keydown", (event) => {
 
   if (event.key === "s") {
     event.preventDefault();
-    document.querySelector("[data-snapshot-label]")?.focus();
+    const field = document.querySelector("[data-snapshot-label]");
+    window.npReveal?.(field);
+    field?.focus();
     return;
   }
 
   if (event.key === "m") {
     event.preventDefault();
-    document.querySelector("[data-mic]")?.click();
+    const mic = document.querySelector("[data-mic]");
+    window.npReveal?.(mic);
+    mic?.click();
     return;
   }
 
@@ -206,8 +232,41 @@ function reportActivity(event) {
   document.addEventListener(name, reportActivity, { passive: true });
 });
 
-document.body.addEventListener("htmx:sendError", () => {
-  console.warn(`ThreadDesk UI: ${uiText("browser.request_failed")}`);
+function requestState(key, error = false) {
+  const node = document.getElementById("request-state");
+  if (!node) return;
+  node.textContent = uiText(key);
+  if (error) node.setAttribute("role", "alert");
+  else node.removeAttribute("role");
+  node.setAttribute("aria-live", error ? "assertive" : "polite");
+  node.dataset.state = error ? "unknown" : "pending";
+  node.hidden = false;
+}
+
+document.addEventListener("input", event => {
+  const form = event.target instanceof Element ? event.target.closest("form") : null;
+  if (form && (form.hasAttribute("hx-post") || form.method === "post")) {
+    document.querySelectorAll("#workspace [role=status], #workspace [role=alert]").forEach(node => { node.hidden = true; });
+    requestState("browser.unsaved");
+  }
+});
+document.body.addEventListener("htmx:beforeRequest", event => {
+  if (event.detail?.requestConfig?.verb?.toLowerCase() === "get") return;
+  document.querySelectorAll("#workspace [role=status], #workspace [role=alert]").forEach(node => { node.hidden = true; });
+  requestState("browser.saving");
+});
+function requestFailure(event) {
+  if (event.detail?.requestConfig?.verb?.toLowerCase() === "get") requestState("browser.request_failed", true);
+  else requestState("browser.save_uncertain", true);
+}
+document.body.addEventListener("htmx:afterRequest", event => {
+  if (event.detail?.successful) {
+    const node = document.getElementById("request-state");
+    if (node) { node.hidden = true; node.removeAttribute("role"); } // Server notice confirms storage.
+  } else requestFailure(event);
+});
+["htmx:sendError", "htmx:timeout", "htmx:responseError"].forEach(name => {
+  document.body.addEventListener(name, requestFailure);
 });
 
 function notesMic() {

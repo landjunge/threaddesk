@@ -128,14 +128,14 @@ def test_no_hardcoded_text_in_templates(template: Path) -> None:
 # test_every_dropdown_value_has_a_label prueft dafuer jeden moeglichen Wert.
 DYNAMIC_PREFIXES = {"kind.", "status.", "relation.", "prompt.target.",
                     "prompt.variant.", "register.", "whiteboard.entry.",
-                    "hausmeister.phase.", "room.state.", "room.role."}
+                    "hausmeister.phase.", "room.state.", "room.role.", "return.review."}
 
 
 @pytest.mark.parametrize("template", TEMPLATE_FILES,
                          ids=lambda p: str(p.relative_to(TEMPLATES)))
 def test_template_keys_exist(template: Path) -> None:
     """Jeder t(...)-Aufruf muss einen Katalogeintrag treffen."""
-    used = re.findall(r"""t\(\s*['"]([\w.]+)['"]""",
+    used = re.findall(r"""(?<![\w.])t\(\s*['"]([\w.]+)['"]""",
                       template.read_text(encoding="utf-8"))
     unknown = sorted({key for key in used
                       if key not in i18n.CATALOG and key not in DYNAMIC_PREFIXES})
@@ -330,7 +330,7 @@ def test_browser_keys_exist_and_are_used() -> None:
     used = {
         key
         for source in sources
-        for key in re.findall(r'uiText\(["\']([\w.]+)["\']', source.read_text(encoding="utf-8"))
+        for key in re.findall(r'(?:uiText|requestState)\(["\']([\w.]+)["\']', source.read_text(encoding="utf-8"))
     }
     declared = {key for key in i18n.CATALOG if key.startswith("browser.")}
     assert used == declared

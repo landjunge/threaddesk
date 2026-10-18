@@ -1,0 +1,42 @@
+{
+  "td-design-targeted": {
+    "tests": 21,
+    "failures": 5,
+    "errors": 0,
+    "skipped": 0,
+    "time_seconds": 75.699,
+    "record": "original local JUnit retained; no raw host paths or contents copied"
+  },
+  "td-design-corrected": {
+    "tests": 5,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "time_seconds": 26.064,
+    "record": "original local JUnit retained; no raw host paths or contents copied"
+  },
+  "td-design-userflows": {
+    "tests": 39,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "time_seconds": 190.934,
+    "record": "original local JUnit retained; no raw host paths or contents copied"
+  },
+  "td-i18n-corrected": {
+    "tests": 98,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "time_seconds": 3.328,
+    "record": "original local JUnit retained; no raw host paths or contents copied"
+  },
+  "td-save-final": {
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "time_seconds": 19.108,
+    "record": "original local JUnit retained; no raw host paths or contents copied"
+  }
+}

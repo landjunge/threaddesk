@@ -55,7 +55,7 @@ def _unlock(lock: IO[bytes]) -> None:
 
 class JsonStore:
     def __init__(self, root: Path | None = None) -> None:
-        self.root = Path(root or DEFAULT_ROOT)
+        self.root = Path(root or DEFAULT_ROOT).resolve()
         self.threads_dir = self.root / "threads"
         self.snaps_dir = self.root / "snapshots"
         self.nodes_dir = self.root / "nodes"
@@ -389,7 +389,7 @@ class JsonStore:
 
     def get_node(self, node_id: str) -> KnowledgeNode:
         path = self.nodes_dir / f"{node_id}.json"
-        if not path.exists():
+        if not self._staged_exists(path):
             raise NotFound(f"Knoten nicht gefunden: {node_id}")
         return KnowledgeNode.from_dict(self._read_json(path))
 

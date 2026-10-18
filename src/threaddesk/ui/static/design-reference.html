@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="de" class="np-scroll">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NetzwerkPunkt · Gemeinsame Bedienbasis</title>
+<link rel="stylesheet" href="networkpunkt.css">
+<script src="networkpunkt.js" defer></script>
+<style>
+  body { margin: 0; }
+  .reference { max-width: 1280px; margin: auto; padding: var(--np-space-6); }
+  h1,h2,h3,p { margin: 0; }
+  .intro { display: grid; gap: var(--np-space-3); margin-bottom: var(--np-space-6); }
+  .family { display: flex; flex-wrap: wrap; gap: var(--np-space-2); margin-bottom: var(--np-space-5); }
+  .family [aria-pressed="true"] { background: var(--np-hover); border-color: var(--np-text); }
+  .stage { border: 1px solid var(--np-divider); }
+  .stage-head { display: flex; gap: var(--np-space-5); align-items: center; padding: var(--np-space-4) var(--np-space-5); border-bottom: 1px solid var(--np-divider); }
+  .stage-head .np-meta { margin-left: auto; }
+  .composition { display: grid; grid-template-columns: 192px minmax(0,1fr) 224px; min-height: 408px; }
+  .rail { padding: var(--np-space-5) var(--np-space-4); border-right: 1px solid var(--np-divider); }
+  .rail a { display: block; color: var(--np-muted); text-decoration: none; padding: var(--np-space-3); }
+  .rail [aria-current="page"] { border-left: 2px solid var(--np-text); background: var(--np-hover); color: var(--np-text); }
+  .work { padding: var(--np-space-5); display: grid; align-content: start; gap: var(--np-space-5); }
+  .context { padding: var(--np-space-5); border-left: 1px solid var(--np-divider); }
+  .task { display: grid; gap: var(--np-space-3); }
+  .work .np-actions { justify-content: flex-end; }
+  .context > p { margin-bottom: var(--np-space-4); }
+  .np-disclosure p { color: var(--np-muted); }
+  .specimens { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--np-space-6); margin-top: var(--np-space-6); }
+  .specimens section { display: grid; align-content: start; gap: var(--np-space-4); }
+  .label { color: var(--np-muted); font-size: var(--np-meta); }
+  .states { display: flex; flex-wrap: wrap; gap: var(--np-space-4); }
+  .footnote { margin-top: var(--np-space-6); }
+  a { color: var(--np-text); }
+  #feedback { min-height: 24px; }
+  
+  
+</style>
+<body class="np-ui">
+<main class="reference np-desktop">
+  <header class="intro">
+    <p class="np-meta">NETZWERKPUNKT / BEDIENBASIS 0.1</p>
+    <h1>Fünf Werkzeuge. Eine klare Ordnung.</h1>
+    <p>Wähle ein Produkt und prüfe denselben Aufbau: Orientierung, Arbeitsbereich, ergänzende Details.</p>
+    <p class="np-meta">Gestaltungsprobe mit Beispieldaten. Diese Seite führt keine Produktaktionen aus.</p>
+  </header>
+  <nav class="family" aria-label="Produktbeispiele">
+    <button class="np-button" data-product="netzwerkpunkt" aria-pressed="false">NetzwerkPunkt</button>
+    <button class="np-button" data-product="gnom" aria-pressed="false">Gnom-Hub-V1</button>
+    <button class="np-button" data-product="threaddesk" aria-pressed="true">ThreadDesk</button>
+    <button class="np-button" data-product="tollgate" aria-pressed="false">TollGate</button>
+    <button class="np-button" data-product="4allpass" aria-pressed="false">4AllPass</button>
+  </nav>
+  <section class="stage" aria-label="Gemeinsamer Aufbau">
+    <header class="stage-head"><h2 data-name>ThreadDesk</h2><span class="np-meta" data-purpose>Kontext behalten</span><span class="np-meta">DE · Klartext</span></header>
+    <div class="composition">
+      <nav class="rail" aria-label="Beispielnavigation">
+        <a href="#work" aria-current="page" data-section>Threads</a>
+        <a href="#components">Bausteine</a>
+        <a href="#rules">Gestaltungsregeln</a>
+      </nav>
+      <section id="work" class="work">
+        <div class="task"><p class="label" data-context>Aktiver Thread</p><h2 data-title>Workshop vorbereiten</h2><p data-description>Den letzten Stand aufnehmen und den nächsten Schritt festhalten.</p></div>
+        <label class="np-field"><span data-field>Was hat sich geändert?</span><textarea rows="3" placeholder="Hier steht dein Inhalt. Keine technischen Details im Weg."></textarea></label>
+        <div class="np-actions"><button class="np-button" data-variant="quiet" data-reset>Zurücksetzen</button><button class="np-button" data-variant="primary" data-action>Beitrag festhalten</button></div>
+        <p id="feedback" class="np-meta" role="status" aria-live="polite"></p>
+      </section>
+      <aside class="context"><p class="label">Ergänzend zur Aufgabe</p>
+        <details class="np-disclosure"><summary>Aktueller Stand</summary><p data-state>Ein Entwurf ist vorbereitet. Du entscheidest, was du behalten möchtest.</p></details>
+        <details class="np-disclosure"><summary>Verlauf</summary><p>Änderungen werden mit Zeitpunkt und Urheber verständlich dargestellt.</p></details>
+        <details class="np-disclosure"><summary>Weitere Optionen</summary><p>Seltene Einstellungen erscheinen hier. Kritische Zustände bleiben direkt im Arbeitsbereich sichtbar.</p></details>
+      </aside>
+    </div>
+  </section>
+  <div class="specimens" id="components">
+    <section><h2>Aktionen haben ein Gewicht</h2><p class="np-meta">Hauptaktion · Nebenaktion · seltene Aktion · Gefahr</p>
+      <div class="np-actions"><button class="np-button" data-variant="primary" type="button">Speichern</button><button class="np-button" type="button">Vorschau</button><button class="np-button" data-variant="quiet" type="button">Details</button><button class="np-button" data-variant="danger" type="button">Entfernen</button></div>
+      <div class="np-actions"><button class="np-button" disabled>Wird gespeichert …</button><span class="np-meta">Deaktiviert: Beschriftung erklärt den Zustand.</span></div>
+      <div class="states"><span class="np-status" data-state="success">✓ Gespeichert</span><span class="np-status" data-state="warning">! Prüfung nötig</span><span class="np-status" data-state="danger">× Nicht gespeichert</span></div>
+    </section>
+    <section><h2>Ein Fehler gibt einen nächsten Schritt</h2>
+      <label class="np-field"><span>Titel</span><input value="" aria-invalid="true" aria-describedby="title-error"><span id="title-error" role="alert">Gib einen Titel ein, damit du den Eintrag wiederfindest.</span></label>
+      <label class="np-field"><span>Ansicht</span><select><option>Klartext</option><option>Fachsprache</option></select></label>
+    </section>
+  </div>
+  <section class="intro footnote" id="rules"><h2>Die gemeinsamen Regeln</h2><p>Eine Systemschrift · vier Schriftrollen · 40 px Bedienhöhe · eckige Formen · sichtbarer Tastaturfokus.</p><p class="np-meta">Stabiler Desktop-Aufbau ab 1180 × 760, kein automatischer Mobilumbau. Die fünf Produkte verwenden exakt dieselbe CSS-Datei. Produktmarken bleiben eigenständig. Native Apps und aktive Voice-Hilfe folgen nach der Browserabnahme.</p></section>
+</main>
+<script>
+const products = {
+  netzwerkpunkt: ['NetzwerkPunkt','Überblick gewinnen','Werkzeuge','Dein Arbeitsbereich','Das passende Werkzeug finden','Aufgaben und Werkzeuge bleiben verständlich miteinander verbunden.','Wobei brauchst du Unterstützung?','Werkzeug finden'],
+  gnom: ['Gnom-Hub-V1','Arbeit steuern','Aufträge','Auftrag vorbereiten','Den nächsten Arbeitsschritt klären','Ziel, Zuständigkeit und Ergebnis stehen vor der Ausführung fest.','Was soll erledigt werden?','Auftrag vorbereiten'],
+  threaddesk: ['ThreadDesk','Kontext behalten','Threads','Aktiver Thread','Workshop vorbereiten','Den letzten Stand aufnehmen und den nächsten Schritt festhalten.','Was hat sich geändert?','Beitrag festhalten'],
+  tollgate: ['TollGate','Handlungen prüfen','Entscheidungen','Handlung prüfen','Eine Entscheidung nachvollziehen','Anfrage, Grenze und Begründung bleiben zusammen sichtbar.','Welche Grenze möchtest du prüfen?','Prüfung vorbereiten'],
+  '4allpass': ['4AllPass','Zugriff verwalten','Zugriffe','Zugriff vorbereiten','Eine Berechtigung verstehen','Empfänger, Zweck und Gültigkeit sind vor der Freigabe klar.','Wofür wird der Zugriff gebraucht?','Zugriff prüfen']
+};
+document.querySelectorAll('[data-product]').forEach(button => button.addEventListener('click', () => {
+  const data = products[button.dataset.product];
+  ['name','purpose','section','context','title','description','field','action'].forEach((key,i)=>document.querySelector('[data-'+key+']').textContent=data[i]);
+  document.querySelectorAll('[data-product]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
+  document.querySelector('#feedback').textContent='';
+}));
+document.querySelector('[data-action]').addEventListener('click',()=>document.querySelector('#feedback').textContent='Gestaltungsprobe: Rückmeldung am Ort der Aktion. Es wurde nichts ausgeführt.');
+document.querySelector('[data-reset]').addEventListener('click',()=>{document.querySelector('#work textarea').value='';document.querySelector('#feedback').textContent='Beispiel zurückgesetzt.';});
+</script>
+</body></html>

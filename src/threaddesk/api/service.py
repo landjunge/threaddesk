@@ -608,6 +608,12 @@ class ThreadService:
 
         return ReturnInbox(self.store).list()
 
+    def get_return(self, return_id: str) -> dict:
+        from threaddesk.services.return_inbox import ReturnInbox
+
+        item = ReturnInbox(self.store).get(return_id)
+        return {"found": item is not None, "item": item}
+
     def decide_return(self, return_id: str, choice: str, note: str = "") -> dict:
         from threaddesk.services.return_inbox import ReturnInbox
 

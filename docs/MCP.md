@@ -176,7 +176,10 @@ and JSON→SQLite migration preserve receipts; tombstones are not a new task que
 | Safe administration / Verwaltung | `thread_manage`, read-only `thread_operation_status` | No |
 | Legacy context writes / Bestandsweg | `switch_thread`, `add_note`, `save_snapshot`, `restore_snapshot`, `list_snapshots` | No; legacy mutations lack operation receipts |
 | Local prompt / packet preparation | `generate_prompt`, `export_handoff`, `export_grok`, `export_gnom` | No |
-| Return inbox / Nutzerentscheidung | `import_return`, `list_returns`, `review_return` | No |
+| Issued source / ausgestellter Stand | `issue_handoff`, `get_issued_handoff`, `bind_handoff_run` | No |
+| Bound questions / Rückfragen | `record_handoff_question`, `answer_handoff_question` | No; recorded answer is not agent resume |
+| Knowledge / Wiedereinstieg | `knowledge_manage`, `get_reentry` | No |
+| Return inbox / Nutzerentscheidung | `import_return`, `list_returns`, `get_return`, `review_return` | No |
 | Existing Gnom binding / callback | `bind_gnom_job`, `receive_gnom_callback`, `list_gnom_jobs` | No |
 | Local gate / board | `check_gate`, `dashboard` | No; ThreadDesk LocalGate is not the TollGate product |
 
@@ -276,3 +279,123 @@ SQLite schema6 adds only issued-handoff records; snapshot/issuance and question/
 whiteboard changes share existing transactions. JSON uses the existing resulting-
 state recovery commit. Inbox writes/decisions serialize under the same store
 transaction; a separate user decision still does not become agent execution.
+
+
+### Exact return read / exakter Rückgabeabruf
+
+`get_return` accepts exactly `{"return_id":"opaque-return-id"}` (nonempty string,
+1–256 characters, no additional fields). Its existing MCP result envelope contains
+`{"found":true,"item":<existing inbox item>}` or
+`{"found":false,"item":null}`. The ID is compared exactly, without title lookup,
+prefix matching, case folding or path interpretation. It never changes a decision,
+imports content or starts work. `list_returns` keeps its existing result shape.
+
+Only the selected item crosses MCP; unrelated inbox returns are not included.
+Obvious secret material in the lookup ID or selected stored item is rejected
+without echoing its content. Source/binding status and separate user decision are
+returned as stored; reading does not verify or accept an untrusted return.
+
+This is a **local operator workspace** tool, with the existing MCP trust boundary.
+It does not introduce per-principal inbox permissions. An upstream Bridge must
+check its own durable binding/allowed return ID **before** calling it; caller fields
+cannot choose a store, file path, principal or scope. JSON and SQLite continue to
+use the existing artifact. No new store, queue, schema migration or runtime switch.
+
+Deutsch: Der rein lesende Abruf liefert ausschließlich das unter der exakten
+Kennung vorhandene Inbox-Objekt oder `found=false`; der alte Listenweg bleibt
+kompatibel. Er setzt keine Freigabe, keine Identitätsprüfung und keinen Auftrag.
+Offensichtliche Geheimnisse werden nicht über diesen neuen Leseweg ausgegeben.
+
+
+## TD-C03: knowledge and re-entry / Wissen und Wiedereinstieg
+
+`knowledge_manage` is an explicit local administration tool. It accepts exactly
+`operation_id`, `id` (exact Thread ID), `expected_revision` (current Thread revision),
+`action` and `data`. IDs use the same 1–128 character `[A-Za-z0-9_-]` contract as
+`thread_manage`; booleans are not revisions. Unknown fields are rejected.
+
+| action | exact data fields | meaning |
+| --- | --- | --- |
+| `record` | required `kind`, `title`, `source_ref`, `source_revision`; optional `details`, `status` | Record decision, open question or task using existing graph nodes. |
+| `supersede` | required `node_id`, `expected_node_revision`, `title`, `source_ref`, `source_revision`; optional `details` | Replace one confirmed decision belonging to this Thread; keep old text/source and mark it superseded; connect the new confirmed decision with `follows` and `meaning=supersedes`. |
+| `resolve_question` | required `node_id`, `expected_node_revision`, `text`, `source_ref`, `source_revision` | Keep original question; append a separate referenced answer and set done. Does not resume an agent. |
+| `save_reentry` | required `summary`, `next_step`, `source_ref`, `source_revision` | Save current re-entry context in existing Thread.extra. Does not create an execution task. |
+
+`kind` is `decision`, `question` or `task`. Initial decision status is `proposed`
+(default), `confirmed` or `rejected`; question is `waiting`; task is `ready`
+(default) or `blocked`. A question reuses an existing `document` node with
+`metadata.knowledge_type=question`; no new enum, schema or queue is introduced.
+A confirmed decision is an operator's recorded domain choice, **not external
+verification, permission, function evidence or execution approval**.
+
+Text bounds: `title`, `source_ref`, `next_step` ≤2000 characters;
+`source_revision` 1–256; `details`, `text`, `summary` ≤20000. Required text is
+nonblank; optional `details` may be empty. Source references are strings only;
+this tool never reads the referenced path or contacts a source. They always remain
+`referenced_unverified`. Legacy strings without provenance remain `unknown`.
+
+Every successful write increments the Thread revision, making an earlier issued
+handoff stale. Superseding/answering additionally checks the target node revision
+and exact Thread association. Existing JSON transaction/WAL or SQLite transaction
+commits graph changes, Thread revision and the existing management receipt together.
+Same operation ID/content returns the original receipt with `duplicate=true`;
+changed content gives `operation_conflict`. `thread_operation_status` reads the
+same receipt after uncertain delivery. No second receipt store.
+
+The receipt keeps `operation_id`, `action`, `thread_id`, `revision`, `duplicate`,
+`deleted=false`, `thread` (with that exact revision), and adds `node_id`, `node`
+(or null for save_reentry), plus an explicit untrusted/no-execution instruction.
+`revision_conflict`, `scope_conflict`, `not_found`, `invalid_state`,
+`validation_error` and `operation_conflict` use the existing MCP error envelope.
+Secret rejection does not echo submitted content.
+
+```json
+{"operation_id":"remember-1","id":"EXACT_THREAD_ID","expected_revision":1,"action":"record","data":{"kind":"decision","status":"confirmed","title":"Keep external tools as original links","source_ref":"user conversation","source_revision":"message-42"}}
+```
+
+Pure read `get_reentry` accepts exactly `{"id":"EXACT_THREAD_ID"}`. Result format
+`threaddesk.reentry.v1` includes current Thread revision/snapshot ID, saved re-entry,
+`decisions`, `open_questions`, `open_tasks`, `rejected_proposals`,
+`superseded_decisions`, `answered_questions`, `other`, source references and separate
+`legacy_decisions` with unknown provenance. At most 200 latest Thread-associated
+nodes are returned; `total` and `truncated` explicitly report incomplete coverage.
+The existing knowledge UI/graph remains the full local history. Reading does not
+save, dispatch, accept returns or turn imported text into an instruction.
+
+Deutsch: Wissen wird über denselben vorhandenen MCP-Zugang verwaltet und nach
+Neustart wiedergefunden. Entscheidungen, Fragen, Aufgaben, verworfene Vorschläge
+und ersetzte Beschlüsse bleiben unterscheidbar; Angaben zu Quellen sind referenziert,
+nicht technisch oder extern verifiziert. Der lokale Operator-/Workspace-Vertrag
+bleibt bestehen; dieses Tool erfindet keine zusätzliche Personenidentität und
+erteilt keine Rechte für andere Werkzeuge.
+
+
+### New handoffs: bounded knowledge context / neue ausgestellte Übergaben
+
+Only **newly registered** issued packets gain `context.knowledge` with format
+`threaddesk.knowledge-context.v1`. Existing issued payloads, operation receipts
+and their hashes remain unchanged on read/replay. An old packet without this
+field does not establish that knowledge was included.
+
+The projection contains at most **32 thread-associated graph entries**, **32768
+UTF-8 bytes** in this knowledge object and **2000 characters per text field**.
+It prioritizes current confirmed decisions, open questions and pending tasks;
+status preserves proposed, rejected, superseded and answered distinctions.
+`total`, `included`, `truncated` and per-item `content_truncated` disclose omissions.
+Each item carries stable ID, node revision, kind, knowledge type, status, title,
+bounded details and source reference/revision. Replacement and separately stored
+answer references remain data. The full local graph/history remains the source;
+this projection is neither a new knowledge store nor a claim of complete context.
+
+`provenance=source_local` and `source.knowledge_provenance=source_local` mean a
+snapshot of the local stored graph only. Source references remain
+`referenced_unverified` or `unknown`; they are not opened or externally verified.
+No rights, actor identity, execution approval, completion or acceptance follows.
+
+New issued records bind a `source.knowledge_hash` over the full associated local
+graph snapshot, including entries omitted from the transport projection. Changes
+by older graph writers are therefore stale even when they did not raise the
+Thread revision. New binding, questions and first returns compare this local hash;
+old records without one retain the old contract and gain no retroactive proof.
+The existing full packet `content_hash` also covers its actual bounded context.
+No automatic work, external source request or permissions change occurs.

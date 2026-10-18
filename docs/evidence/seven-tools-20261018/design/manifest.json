@@ -1,0 +1,16 @@
+{
+  "source_commit": "1dc50894b5a252a0a9530201d7fbefd168957138",
+  "design_origin_commit": "43dd13afa448975af20a7da4100b24960a3986b5",
+  "base_commit": "bba99b03456ddf72a32c10d5d262f42cbcc30891",
+  "files": {
+    "checks.json": "0159dbd60d1fbca79c88a0e68090cc8eb6b8af9bc682e02fecb3d85513f6e268",
+    "desk-de.png": "8ec9daf089b2bb46b5def274d9c62c2902cf7382a978034930bda7aba8e38ac1",
+    "desk-en.png": "46bfadadb2ecaa9f5c15da47c36fc4ebfbe49b059c121082abc023a02c4c8aa9",
+    "knowledge-de.png": "71d1f21c82c9075f5420f2ec45d3c0ebb0090c4e74d765d4f55c1565f78aaae0",
+    "knowledge-en.png": "b83c9d0d9b32c154fdc07d604df4e7a7a43bb4cf506868f09deaf490c0ec94f3",
+    "review-de.png": "853dcf4b30e4d02cd833a256b575934f1c482716bf956249fdc5d084f6f9438a",
+    "review-en.png": "424b459e3ab87498810c476871c9c7fce6b31be8e120a1b9264a114b4ae2c33c",
+    "small-css-zoom125-en.png": "f2e77aa2e201738b831ea14e46c77bbe93ebd953cd6b8909140ad8a694596a05",
+    "targeted-test-summary.json": "e8a7711aa51c96bc5557b983040015b04193f3319afc5a0fda7b1b1ad17d9d68"
+  }
+}

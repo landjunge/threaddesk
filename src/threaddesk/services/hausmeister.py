@@ -140,6 +140,11 @@ class Hausmeister:
 
     def set_model(self, model: str) -> dict[str, Any]:
         self.install()
+        if not isinstance(model, str):
+            raise InvalidState("ollama_model_missing")
+        if not model.strip():
+            self.store.write_json_artifact(SETTINGS, {"version": 1, "model": ""})
+            return self.status()
         model = _model_name(model)
         try:
             available = list_models(self.transport, timeout=0.4)
