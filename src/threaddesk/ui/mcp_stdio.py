@@ -44,7 +44,7 @@ def handle(bridge: McpBridge, req: dict[str, Any]) -> dict[str, Any] | None:
         return _msg(
             rid,
             {
-                "content": [{"type": "text", "text": str(raw.get("error"))}],
+                "content": [{"type": "text", "text": json.dumps({"error": raw.get("error"), "code": raw.get("code", "tool_error"), "details": raw.get("details", {})}, ensure_ascii=False)}],
                 "isError": True,
             },
         )

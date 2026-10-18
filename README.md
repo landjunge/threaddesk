@@ -344,3 +344,20 @@ Produktvision, gewünschtes Verhalten und Grenzen kommen von mir. KI unterstütz
 
 **ThreadDesk beantwortet eine Frage: Was ist der Stand?**
 Teil von [NetzwerkPunkt](https://netzwerkpunkt.de/) – eigenständig, local-first und ohne versteckte Ausführung.
+
+
+### Gesprächsverwaltung / Conversation administration (M1 source)
+
+Der aktuelle Quellstand ergänzt `thread_manage` für Anlegen, Bearbeiten,
+Notizen/Dateiverweise, Projekt-/Eltern-/Threadzuordnung, Archivieren,
+Wiederherstellen und explizites Löschen archivierter Threads. Exakte IDs,
+erwartete Revision und persistente Operationskennung verhindern stille
+veraltete Änderungen und doppelte Wiederholungen. Threadverwaltung startet
+keine Agenten. [Vertrag und vollständige MCP-Fähigkeitstabelle](docs/MCP.md).
+
+The current source provides revision-bound local administration through
+`thread_manage`, while preserving the existing MCP tools. Organizational links
+are metadata, not filesystem moves. Context management never starts agents.
+This source capability is separate from the published desktop 0.1.1rc1 download,
+the open design PR #66, and an actually configured KiraBridge integration.
+Internet team operation remains a separate server/identity deployment decision.

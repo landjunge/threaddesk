@@ -1,6 +1,6 @@
 """Versioned SQLite schema for ThreadDesk's local workspace."""
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 TABLES = (
     "threads",
@@ -13,6 +13,7 @@ TABLES = (
     "artifacts",
     "node_artifacts",
     "whiteboard_entries",
+    "management_operations",
 )
 
 V1_SCHEMA_SQL = """
@@ -130,10 +131,20 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_whiteboard_external
 
 SCHEMA_SQL += WHITEBOARD_SQL
 
+MANAGEMENT_SQL = """
+CREATE TABLE IF NOT EXISTS management_operations (
+    id TEXT PRIMARY KEY,
+    payload TEXT NOT NULL
+);
+"""
+
+SCHEMA_SQL += MANAGEMENT_SQL
+
 MIGRATIONS = {
     2: SOURCE_RECORDS_SQL,
     3: ARTIFACTS_SQL,
     4: WHITEBOARD_SQL,
+    5: MANAGEMENT_SQL,
 }
 
 FTS_SQL = """

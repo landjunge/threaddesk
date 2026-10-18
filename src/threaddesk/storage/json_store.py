@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 import hashlib
 import json
 import os
+import threading
 from pathlib import Path
 from typing import Any, IO, Mapping
 
-from threaddesk.core.errors import InvalidState, NotFound
+from threaddesk.core.errors import InvalidState, ManagementError, NotFound
 from threaddesk.core.models import (
     GraphEvent,
     KnowledgeNode,
@@ -19,6 +21,8 @@ from threaddesk.core.models import (
 from threaddesk.core.provenance import SourceRecord
 
 DEFAULT_ROOT = Path.home() / ".threaddesk"
+_WORKSPACE_LOCKS: dict[str, threading.RLock] = {}
+_LOCK_REGISTRY = threading.Lock()
 
 
 def _lock_exclusive(lock: IO[bytes]) -> None:
@@ -67,18 +71,119 @@ class JsonStore:
         self.events_dir.mkdir(parents=True, exist_ok=True)
         self.source_records_dir.mkdir(parents=True, exist_ok=True)
         self.whiteboard_dir.mkdir(parents=True, exist_ok=True)
+        self._pending: dict[str, dict | None] | None = None
+        self._lock_depth = 0
+        with _LOCK_REGISTRY:
+            self._mutex = _WORKSPACE_LOCKS.setdefault(str(self.root.resolve()), threading.RLock())
+        with self._locked():
+            self._recover()
+
+    @contextmanager
+    def _locked(self):
+        with self._mutex:
+            if self._lock_depth:
+                self._lock_depth += 1
+                try:
+                    yield
+                finally:
+                    self._lock_depth -= 1
+                return
+            with (self.root / ".management.lock").open("a+b") as lock:
+                _lock_exclusive(lock)
+                self._lock_depth = 1
+                try:
+                    self._recover()
+                    yield
+                finally:
+                    self._lock_depth = 0
+                    _unlock(lock)
+
+    @property
+    def _journal(self):
+        return self.root / ".management-commit.json"
+
+    def _recover(self):
+        # A durable commit plan contains resulting state, never commands to repeat.
+        if self._journal.exists():
+            plan = json.loads(self._journal.read_text(encoding="utf-8"))
+            for relative, data in plan["writes"].items():
+                path = self.root / relative
+                if path.resolve().is_relative_to(self.root.resolve()) is False:
+                    raise InvalidState("management_journal_path")
+                if data is None:
+                    path.unlink(missing_ok=True)
+                else:
+                    self._atomic_json(path, data)
+            self._journal.unlink()
+
+    @contextmanager
+    def transaction(self):
+        with self._locked():
+            if self._pending is not None:
+                raise RuntimeError("Verschachtelte Transaktionen werden nicht unterstützt.")
+            self._pending = {}
+            try:
+                yield
+                writes = self._pending
+                self._pending = None
+                if writes:
+                    self._atomic_json(self._journal, {"version": 1, "writes": writes})
+                    self._recover()
+            finally:
+                self._pending = None
+
+    def list_management_operations(self):
+        folder = self.root / "management-operations"
+        return [self._read_json(path) for path in sorted(folder.glob("*.json"))]
+
+    def get_management_operation(self, operation_id):
+        path = self.root / "management-operations" / f"{operation_id}.json"
+        return self._read_json(path) if path.exists() else None
+
+    def save_management_operation(self, operation_id, data):
+        self._write_json(self.root / "management-operations" / f"{operation_id}.json", data)
+
+    def _delete_path(self, path):
+        if self._pending is not None:
+            self._pending[str(path.relative_to(self.root))] = None
+        else:
+            path.unlink(missing_ok=True)
 
     def _thread_path(self, thread_id: str) -> Path:
         return self.threads_dir / f"{thread_id}.json"
 
     def _read_json(self, path: Path) -> dict:
+        relative = str(path.relative_to(self.root))
+        if self._pending is not None and relative in self._pending:
+            value = self._pending[relative]
+            if value is None:
+                raise FileNotFoundError(path)
+            return json.loads(json.dumps(value))
         return json.loads(path.read_text(encoding="utf-8"))
 
     def _write_json(self, path: Path, data: dict) -> None:
+        if self._pending is not None:
+            self._pending[str(path.relative_to(self.root))] = json.loads(json.dumps(data))
+        else:
+            self._atomic_json(path, data)
+
+    def _atomic_json(self, path: Path, data: dict) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_suffix(".json.tmp")
-        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        with tmp.open("w", encoding="utf-8") as stream:
+            json.dump(data, stream, ensure_ascii=False, indent=2)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        tmp.chmod(0o600)
         tmp.replace(path)
+        # Persist rename before the commit plan can be discarded.
+        if os.name != "nt":
+            descriptor = os.open(path.parent, os.O_RDONLY)
+            try:
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
 
     def artifact_path(self, name: str) -> Path:
         """Resolve a top-level generated artifact without exposing store internals."""
@@ -98,6 +203,10 @@ class JsonStore:
         return path
 
     def list_threads(self, include_archived: bool = False) -> list[Thread]:
+        with self._locked():
+            return self._list_threads(include_archived)
+
+    def _list_threads(self, include_archived: bool = False) -> list[Thread]:
         items: list[Thread] = []
         for path in sorted(self.threads_dir.glob("*.json")):
             thread = Thread.from_dict(self._read_json(path))
@@ -108,33 +217,48 @@ class JsonStore:
 
     def get_thread(self, thread_id: str) -> Thread:
         path = self._thread_path(thread_id)
-        if not path.exists():
-            raise NotFound(f"Thread nicht gefunden: {thread_id}")
-        return Thread.from_dict(self._read_json(path))
+        with self._locked():
+            relative = str(path.relative_to(self.root))
+            staged = self._pending.get(relative) if self._pending is not None else None
+            if not path.exists() and staged is None:
+                raise NotFound(f"Thread nicht gefunden: {thread_id}")
+            return Thread.from_dict(self._read_json(path))
 
     def save_thread(self, thread: Thread) -> None:
-        self._write_json(self._thread_path(thread.id), thread.to_dict())
+        with self._locked():
+            path = self._thread_path(thread.id)
+            relative = str(path.relative_to(self.root))
+            exists = path.exists() or (self._pending is not None and self._pending.get(relative) is not None)
+            actual = int(self._read_json(path).get("revision") or 0) if exists else 0
+            if exists and thread.revision != actual:
+                raise ManagementError("revision_conflict", "Thread wurde zwischenzeitlich geändert.", expected_revision=thread.revision, actual_revision=actual)
+            thread.revision = actual + 1 if exists else max(1, thread.revision)
+            self._write_json(path, thread.to_dict())
 
     def delete_thread(self, thread_id: str) -> None:
         path = self._thread_path(thread_id)
         if not path.exists():
             raise NotFound(f"Thread nicht gefunden: {thread_id}")
-        path.unlink()
+        self._delete_path(path)
         snap_dir = self.snaps_dir / thread_id
         if snap_dir.exists():
             for p in snap_dir.glob("*.json"):
-                p.unlink()
-            snap_dir.rmdir()
+                self._delete_path(p)
+            if self._pending is None:
+                snap_dir.rmdir()
         board_dir = self._whiteboard_dir(thread_id)
         if board_dir.exists():
             for p in board_dir.glob("*.json"):
-                p.unlink()
-            board_dir.rmdir()
+                self._delete_path(p)
+            if self._pending is None:
+                board_dir.rmdir()
 
     def get_current_id(self) -> str | None:
-        if not self.state_path.exists():
-            return None
-        return self._read_json(self.state_path).get("current_id")
+        with self._locked():
+            staged = self._pending is not None and "state.json" in self._pending
+            if not self.state_path.exists() and not staged:
+                return None
+            return self._read_json(self.state_path).get("current_id")
 
     def set_current_id(self, thread_id: str | None) -> None:
         self._write_json(self.state_path, {"current_id": thread_id})
