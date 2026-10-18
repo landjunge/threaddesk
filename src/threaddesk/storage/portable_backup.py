@@ -80,7 +80,7 @@ def _download_backup(store) -> bytes:
             name = path.relative_to(source).as_posix()
             if not _allowed(name, backend):
                 continue
-            if path.is_symlink() or any(p.is_symlink() for p in path.parents if p != source.parent):
+            if path.is_symlink() or any(p.is_symlink() for p in path.parents if p == source or source in p.parents):
                 raise BackupError('Symbolic links cannot be backed up.')
             if not path.is_file():
                 continue

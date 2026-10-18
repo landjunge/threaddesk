@@ -204,7 +204,8 @@ def test_real_stdio_peer_uses_fixed_home_and_operation_receipts(tmp_path):
     result = subprocess.run([sys.executable, "-m", "threaddesk.ui.mcp_stdio"], input="\n".join(json.dumps(item) for item in calls) + "\n", text=True, capture_output=True, env=env, timeout=10, check=True)
     messages = [json.loads(line) for line in result.stdout.splitlines()]
     assert len(messages) == 3  # initialized notification must not pollute MCP stdout.
-    assert messages[0]["result"]["serverInfo"]["version"] != "0.1.0"
+    from importlib.metadata import version
+    assert messages[0]["result"]["serverInfo"]["version"] == version("threaddesk")
     created = json.loads(messages[1]["result"]["content"][0]["text"])
     receipt = json.loads(messages[2]["result"]["content"][0]["text"])
     assert receipt["result"] == created and receipt["found"]
