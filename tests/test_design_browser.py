@@ -124,7 +124,12 @@ def test_desktop_edit_and_error_remain_usable(design_browser):
         page.goto(url + "/data", wait_until="networkidle")
         page.locator('#backup-file').set_input_files({"name":"invalid.zip","mimeType":"application/zip","buffer":b"invalid"})
         page.locator('[name="confirm"]').check()
-        page.locator('form[action="/data/restore"] button').click()
+        # This POST returns a new HTML error document. Its alert can already be
+        # visible before that document's render-blocking stylesheets finish.
+        # Bind to this fresh navigation, not the previous /data load state.
+        with page.expect_navigation(wait_until="load") as restored:
+            page.locator('form[action="/data/restore"] button').click()
+        assert restored.value.status == 400
         expect(page.locator('[role="alert"]')).to_be_visible()
         assert_layout(page)
     finally:
