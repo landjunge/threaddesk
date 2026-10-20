@@ -1,0 +1,17 @@
+{
+  "v": 1,
+  "version": "1.0.0",
+  "designCoreVersion": "0.1",
+  "files": [
+    "networkpunkt.css",
+    "networkpunkt-appbar.js",
+    "networkpunkt-appbar-state.js",
+    "networkpunkt-appbar-catalog.js",
+    "networkpunkt-appbar.css",
+    "networkpunkt-appbar-assets.json",
+    "np-appbar-threaddesk-dark-48.png",
+    "np-appbar-4allpass-dark-48.png"
+  ],
+  "sourceOfTruth": "ThreadDesk; pinned local copies only",
+  "integrationStatus": "renderer-only; KiraBridge integration first"
+}

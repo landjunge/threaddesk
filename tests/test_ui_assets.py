@@ -71,6 +71,7 @@ RADIUS = re.compile(r"border-radius:\s*([^;]+);")
 # "999px ist ok" jedem Knopf, wieder rund zu werden — genau das ist beim
 # Schreiben dieses Tests passiert und erst durch die Probe aufgefallen.
 SHAPE_EXCEPTIONS = {
+    ".np-appbar-ring::before": "UI-01 verlangt genau einen runden Verbindungsring um das vorhandene App-Icon; kein gerundetes Bedienelement.",
     ".node-shape": "Kreis statt Ecke: die Form bedeutet auf der Karte die Knotenart.",
     ".map-legend .key-circle": "Zeigt dieselbe Kartenform in der Legende.",
     ".map-legend .key-tone": "Zeigt dieselbe Kartenform in der Legende.",

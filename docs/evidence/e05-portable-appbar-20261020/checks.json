@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "base": "b63fbd24743140fed68dc2a8eca7dcd9a7ca6c61",
+  "pureStateTestsPassed": 32,
+  "pytestTestsPassed": 28,
+  "realChromiumFixtureCases": 9,
+  "existingUiAssetTestsPassed": 17,
+  "browserFixtureUsesRealAppConnection": false,
+  "hostIntegrationsMounted": [],
+  "liveInstalledAppChanged": false,
+  "newDependencies": false,
+  "newSecretsPermissions": false,
+  "sourceSha256File": "SHA256SUMS",
+  "approvedKiraBridgeIconAssigned": false,
+  "documentedAp4RingColorAssigned": false,
+  "ap4FixtureColorIsSynthetic": true,
+  "iconDimensionsUserAccepted": false,
+  "independentReview": "pending"
+}

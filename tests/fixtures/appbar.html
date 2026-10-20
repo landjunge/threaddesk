@@ -1,0 +1,21 @@
+<!doctype html><html lang="de"><meta charset="utf-8"><title>Synthetic renderer fixture</title>
+<link rel="stylesheet" href="/static/networkpunkt.css"><link rel="stylesheet" href="/static/networkpunkt-appbar.css">
+<style>body{margin:0}header{display:flex;align-items:center;gap:16px;padding:8px}.brand{width:96px;flex:none}</style>
+<body class="np-ui"><header><span class="brand">Fixture</span><span id="slot"></span></header>
+<button id="after">After fixture</button>
+<script type="module">
+import {mountAppBar} from "/static/networkpunkt-appbar.js";
+import {APP_CATALOG} from "/static/networkpunkt-appbar-catalog.js";
+window.time=0;window.wall=100000;window.openCalls=[];window.resolvers=[];window.seq={threaddesk:0,"4allpass":0};
+window.activeIntervals=new Set();const setTimer=window.setInterval.bind(window),clearTimer=window.clearInterval.bind(window);
+window.setInterval=(fn,ms)=>{const id=setTimer(fn,ms);activeIntervals.add(id);return id;};
+window.clearInterval=id=>{activeIntervals.delete(id);clearTimer(id);};
+window.peers=Object.fromEntries(APP_CATALOG.map(e=>[e.id,{appId:e.id,connectionRef:"fixture-link",peerRef:"fixture-peer",peerEpoch:"epoch-1",unlockScope:{userRef:"fixture-user",vaultRef:"fixture-vault"}}]));
+window.options={peers:window.peers,colors:{"4allpass":{value:"#123456",sourceRef:"synthetic.browser.fixture.NOT-brand-approval"}},clock:()=>window.time,wallClock:()=>window.wall,onOpen:args=>{window.openCalls.push({appId:args.appId,actionId:args.actionId});return new Promise(resolve=>window.resolvers.push(outcome=>resolve({actionId:args.actionId,outcome})));}};
+window.bar=mountAppBar(document.querySelector("#slot"),window.options);
+window.mountAgain=()=>window.bar=mountAppBar(document.querySelector("#slot"),window.options);
+window.observation=(id,patch={})=>({v:1,appId:id,connectionRef:"fixture-link",peerRef:"fixture-peer",peerEpoch:"epoch-1",seq:window.seq[id]++,state:"confirmed",ttlMs:15000,...patch});
+window.check=(id,patch={})=>window.bar.receive(id,window.bar.begin(id),window.observation(id,patch));
+window.advance=ms=>{window.time+=ms;window.wall+=ms;window.bar.refresh();};
+window.ready=true;
+</script></body></html>
