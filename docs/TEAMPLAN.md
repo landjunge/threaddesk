@@ -114,7 +114,7 @@ an gemeinsamen Dateien werden vorab eindeutig einem Bearbeiter zugeteilt.
 | E05 | UI-01, zugehöriger TD-08-Umfang | Offen: gemeinsame kompakte App-Leiste, vorhandene Icons, bestätigte frische Verbindungen; nur 4AllPass bei bestätigtem Unlock sehr dezenter Puls. |
 | E06 | TD-03–TD-06/TD-08, AP-04 | Offen: Projektrollen, atomarer Transfer, Team-Sync, projekt-/thread-/revisions-/laufgebundene Agentenaufträge. |
 | E07 | AP-05–AP-07, P09/R13–R14 | Offen: begrenzte Freigaben, tatsächliche Hostgrenze und genau eine freigegebene reale Anbieteroperation; kein synthetischer Test als Produktionsbeweis. |
-| E08 | TD-07 | Offen: berechtigte FTS5-Inhaltssuche, getrennter optionaler Bridge-Dateiindex, benannte Datenmengen/Leistungsmessung. |
+| E08 | TD-07 | E08.1 in Prüfung: optionaler lokaler Titel-/Beschreibung-/Notizschnitt mit FTS5, begrenztem JSON-/No-FTS-Ersatz und `td search` auf main `88a5b4d`; default aus, expliziter Aufbau, ehrlicher Teilstand und frische lokale Policy. [Vertrag und Grenzen](LOCAL-SEARCH.md), [Quell-/Test-/Messnachweis](evidence/e08-local-search-20261020/STATUS.md). Echte 10k-/100k-Textmessung und unabhängige Abnahme werden getrennt nachgeführt. Projekt-/Teamrechte bleiben E06; optionaler Bridge-Dateiindex und Produktfreigabe weiter offen. |
 | E09 | TD-09/AP-08, P10–P12, R01–R17, H1–H6, T01–T22 | Offen: einschlägige Nachweise zuordnen, Nutzer-/Modulwege abnehmen, geprüfte Pakete nach bestehenden Release-Gates ausliefern. |
 
 Aktueller Fortsetzungsauftrag: `channel-958719a7a05448739bcdf8d217f6d493`,

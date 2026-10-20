@@ -797,6 +797,8 @@ def build_parser(language: str = i18n.DEFAULT_LANGUAGE,
     se.add_argument("--port", type=int, default=8765)
     se.add_argument("--open", action="store_true", help=t("cli.help.serve_open"))
     se.set_defaults(func=cmd_serve)
+    from threaddesk.ui.search_cli import register_search
+    register_search(sub, language, _svc)
     return p
 
 
