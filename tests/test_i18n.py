@@ -234,6 +234,48 @@ def test_browser_language_is_honoured(client) -> None:
     assert i18n.translate("nav.knowledge", "en") in page.text
 
 
+@pytest.mark.parametrize("context", ["referer", "view_headers"])
+def test_view_language_survives_fragment_post_with_english_browser(client, context) -> None:
+    from threaddesk.ui.server import _svc
+
+    client.headers["Accept-Language"] = "en-US,en;q=0.9"
+    page = client.get("/?lang=de&mode=expert")
+    assert 'lang="de"' in page.text and 'data-register="expert"' in page.text
+    thread = _svc().create("View locale regression")
+    headers = ({"Referer": "http://127.0.0.1/?lang=de&mode=expert"}
+               if context == "referer" else {
+                   "X-ThreadDesk-View-Language": "de",
+                   "X-ThreadDesk-View-Register": "expert",
+               })
+    response = client.post(f"/threads/{thread.id}/note", data={"text": "persistent note"}, headers=headers)
+    assert response.status_code == 200
+    assert "Notiz gespeichert" in response.text
+    assert _svc().get(thread.id).context.notes == "persistent note"
+    assert "threaddesk_lang" not in client.cookies
+    assert "threaddesk_register" not in client.cookies
+
+
+@pytest.mark.parametrize("referer", [
+    "http://attacker.invalid/?lang=de&mode=expert",
+    "http://127.0.0.1:9999/?lang=de&mode=expert",
+])
+def test_foreign_view_cannot_supply_language_or_register(client, referer) -> None:
+    page = client.get("/map", headers={"Accept-Language": "en-US", "Referer": referer})
+    assert 'lang="en"' in page.text and 'data-register="plain"' in page.text
+
+
+def test_saved_preferences_win_over_stale_query_headers_and_referer(client) -> None:
+    client.post("/lang/en", headers={"Referer": "/map?lang=de&mode=expert"})
+    client.post("/mode/plain", headers={"Referer": "/map?lang=de&mode=expert"})
+    page = client.get("/map?lang=de&mode=expert", headers={
+        "Referer": "http://127.0.0.1/?lang=de&mode=expert",
+        "X-ThreadDesk-View-Language": "de", "X-ThreadDesk-View-Register": "expert",
+    })
+    assert 'lang="en"' in page.text and 'data-register="plain"' in page.text
+    assert client.cookies["threaddesk_lang"] == "en"
+    assert client.cookies["threaddesk_register"] == "plain"
+
+
 def test_switch_route_remembers_the_choice(client) -> None:
     """Der Umschalter setzt ein Cookie und kehrt zurueck."""
     response = client.post("/lang/en", headers={"referer": "/knowledge"},

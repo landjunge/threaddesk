@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import tempfile
 from typing import Optional
+from urllib.parse import parse_qs, urlsplit
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from threaddesk.ui.http_access import LocalHTTPAccess, require_ui_csrf, safe_return_path
@@ -93,26 +94,40 @@ REGISTER_COOKIE = "threaddesk_register"
 
 
 def _language(request: Request) -> str:
-    """Sprache fuer diese Anfrage. Reihenfolge: ?lang=, Cookie, Browser."""
+    """Keep a saved preference, then this view's choice, then browser language."""
+    cookie = request.cookies.get(LANGUAGE_COOKIE)
+    if cookie in i18n.LANGUAGES:
+        return cookie
     chosen = request.query_params.get("lang")
     if chosen:
         return i18n.normalise(chosen)
-    cookie = request.cookies.get(LANGUAGE_COOKIE)
-    if cookie:
-        return i18n.normalise(cookie)
+    chosen = request.headers.get("x-threaddesk-view-language") or _view_choice(request, "lang")
+    if chosen:
+        return i18n.normalise(chosen)
     return i18n.from_accept_header(request.headers.get("accept-language"))
 
 
+def _view_choice(request: Request, key: str) -> str | None:
+    """Read transient display context only from a validated local Referer."""
+    values = parse_qs(urlsplit(safe_return_path(request)).query).get(key)
+    return values[0] if values else None
+
+
 def _register(request: Request) -> str:
-    """Sprachebene fuer diese Anfrage. Reihenfolge: ?mode=, Cookie, Klartext.
+    """Keep a saved register, then the current view, then the plain default.
 
     Anders als bei der Sprache fragen wir den Browser nicht: Klartext ist der
     Normalfall fuer alle, und wer Fachwoerter will, sagt es einmal.
     """
-    chosen = request.query_params.get("mode")
+    cookie = request.cookies.get(REGISTER_COOKIE)
+    if cookie in i18n.REGISTERS:
+        return cookie
+    chosen = (request.query_params.get("mode")
+              or request.headers.get("x-threaddesk-view-register")
+              or _view_choice(request, "mode"))
     if chosen:
         return i18n.normalise_register(chosen)
-    return i18n.normalise_register(request.cookies.get(REGISTER_COOKIE))
+    return i18n.DEFAULT_REGISTER
 
 
 def _browser_strings(language: str, register: str) -> str:

@@ -183,3 +183,28 @@ behalten ihre eigenen Tokens; keine bestätigte Person wird daraus abgeleitet.
 Echte Browser- und Zwei-Prozess-Fälle wurden vor Integration geprüft; die neue
 kombinierte Quelle benötigt jetzt ihre eigene Prüfung und Groks Abnahme.
 Keine produktive Profil-, Peer-, Installations- oder Tunneländerung.
+
+Der TD01-Pin `2fafc6a` hat anschließend den nativen Windows-Lauf mit 164
+bestandenen Fällen und die vollständige Ubuntu-Suite zweimal mit jeweils 814
+bestandenen Fällen erreicht, ohne Fehler oder Skips. Alle drei Installer wurden
+gebaut und selbstgeprüft; Groks unabhängige TD01-Abnahme steht noch aus.
+
+Der kombinierte TD02-Pin `c25bf76` besteht Windows mit 164 Fällen und den
+Installerbau auf allen drei Plattformen. Ubuntu meldet dagegen 835 bestanden,
+14 fehlgeschlagen und keine Skips: elf Navigationstimeouts, zwei nachgewiesene
+DE/EN-Abweichungen nach erfolgreichem Speichern und eine fehlende Übersetzung.
+Die zweite Gesamtrunde lief nach diesem Fehler nicht. Die Abweichung ist eng
+korrigiert: Ansichtskontext wird für Teilansichten und normale Formulare erhalten,
+gespeicherte Sprach-/Registerpräferenzen gewinnen; GET speichert keine Präferenz.
+128 betroffene Fälle einschließlich echter en-US-Browser mit JSON/SQLite bestehen.
+
+Die Navigationstimeouts sind noch nicht erklärt. Zwei isolierte lokale
+Prozessprüfungen, davon eine mit dem exakten bisherigen Pin und den CI-Versionen
+von Browser/Server, reproduzieren sie nicht. Ein nur in pytest ausdrücklich
+aktivierter Recorder erfasst beim ursprünglichen Timeout begrenzte Anfragezustände
+und lokale Python-Stacks vor dem Aufräumen. Er ändert weder Wartezeiten noch
+Ergebnisse, wiederholt nichts und liest keine Header, Inhalte oder URL-Werte.
+Nicht verfügbare Kindprozess-Stacks/Pipefüllstände werden ausdrücklich so benannt.
+Ubuntu prüft zunächst genau den ersten fehlgeschlagenen Fall und dann weiterhin
+die vollständige Suite zweimal mit unveränderter Fehler-/Skip-Abnahme. Der neue
+Linux-Nachweis und Groks Prüfung bleiben bis zu ihren tatsächlichen Ergebnissen offen.

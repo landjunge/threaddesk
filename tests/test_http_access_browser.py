@@ -4,6 +4,7 @@ import socket
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs, urlsplit
 
 from playwright.sync_api import expect, sync_playwright
 import uvicorn
@@ -48,9 +49,11 @@ def test_real_browser_can_save_and_download_but_foreign_form_cannot_write(tmp_pa
         with sync_playwright() as play:
             browser = play.chromium.launch(channel="chrome", headless=True)
             try:
-                context = browser.new_context(accept_downloads=True)
+                context = browser.new_context(accept_downloads=True, locale="en-US")
                 page = context.new_page()
                 page.goto(url + "/?lang=de")
+                expect(page.locator("html")).to_have_attribute("lang", "de")
+                expect(page.locator(".preferences > summary")).to_contain_text("DE")
                 assert startup_registries == {p: (p.read_bytes(), p.stat().st_mtime_ns) for p in registry_files}
                 token = page.locator('meta[name="threaddesk-csrf"]').get_attribute("content")
                 disclosure = page.locator('details[data-disclosure="notes"]')
@@ -64,14 +67,41 @@ def test_real_browser_can_save_and_download_but_foreign_form_cannot_write(tmp_pa
                 response = saved_note.value
                 assert response.status == 200, response.text()
                 response.finished()
+                assert response.request.headers["x-threaddesk-view-language"] == "de"
                 expect(page.locator("#workspace .banner-ok")).to_have_text("Notiz gespeichert")
+                expect(page.locator(".preferences > summary")).to_contain_text("DE")
                 expect(page.locator('#notes textarea[name="text"]')).to_have_value("legitimate HTMX note")
                 assert svc.get(thread.id).context.notes == "legitimate HTMX note"
+                # The same explicit view context also accompanies fetch callers.
+                fetched = page.evaluate("""async (path) => {
+                    const data = new FormData(); data.set('text', 'legitimate HTMX note');
+                    const response = await window.threadDeskWrite(path, {body: data});
+                    return {status: response.status, text: await response.text()};
+                }""", f"/threads/{thread.id}/note")
+                assert fetched["status"] == 200 and "Notiz gespeichert" in fetched["text"]
+                assert svc.get(thread.id).context.notes == "legitimate HTMX note"
+                # Actual protected preference POSTs override the old document's
+                # locale, including its stale Referer and transported query.
+                for code in ("en", "de"):
+                    if page.locator(".preferences").get_attribute("open") is None:
+                        page.locator(".preferences > summary").click()
+                    with page.expect_navigation(wait_until="domcontentloaded"):
+                        page.locator(f'form[action^="/lang/{code}"] button').click()
+                    expect(page.locator("html")).to_have_attribute("lang", code)
+                    expect(page.locator(".preferences > summary")).to_contain_text(code.upper())
+                for mode in ("expert", "plain"):
+                    if page.locator(".preferences").get_attribute("open") is None:
+                        page.locator(".preferences > summary").click()
+                    with page.expect_navigation(wait_until="domcontentloaded"):
+                        page.locator(f'form[action^="/mode/{mode}"] button').click()
+                    expect(page.locator("body")).to_have_attribute("data-register", mode)
+                    expect(page.locator("html")).to_have_attribute("lang", "de")
                 page.get_by_role("link", name="Daten", exact=True).click()
                 with page.expect_download() as download:
                     page.get_by_role("button", name="Sicherung herunterladen", exact=True).click()
                 saved = tmp_path / "synthetic-backup.zip"
                 download.value.save_as(saved)
+                assert parse_qs(urlsplit(download.value.url).query) == {"lang": ["de"], "mode": ["plain"]}
                 assert saved.stat().st_size > 0
                 assert svc.get(thread.id).context.notes == "legitimate HTMX note"
                 svc.set_note("original changed after backup", thread.id)

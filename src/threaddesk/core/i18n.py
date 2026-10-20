@@ -196,6 +196,8 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "desk.open_map": {"de": "In der Karte zeigen", "en": "Show on the map"},
     "hausmeister.title": {"de": "Hausmeister", "en": "Housekeeper"},
+    "hausmeister.unverified": {"de": "Ollama · Ungeprüft", "en": "Ollama · Unverified"},
+    "hausmeister.observed_time": {"de": "Stand: {time} UTC", "en": "As of: {time} UTC"},
     "hausmeister.reachable": {
         "de": "Ollama ist lokal erreichbar",
         "en": "Ollama is reachable on this machine",

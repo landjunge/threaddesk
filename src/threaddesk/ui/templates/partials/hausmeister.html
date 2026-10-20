@@ -1,9 +1,9 @@
 <section class="block desk-hausmeister" data-hausmeister data-ollama="{{ 'unknown' if hausmeister.ollama_ok is none else 'up' if hausmeister.ollama_ok else 'down' }}"
-         data-observation-remaining="{{ hausmeister.observation_remaining|default(0) }}" data-unverified="{{ t('status.unverified') }}">
+         data-observation-remaining="{{ hausmeister.observation_remaining|default(0) }}" data-unverified="{{ t('hausmeister.unverified') }}">
   <h3>{{ t("hausmeister.title") }}</h3>
   <p data-hausmeister-phase="{{ hausmeister.phase }}">
-    <span data-ollama-observation>{% if hausmeister.ollama_ok is none %}Ollama · {{ t("status.unverified") }}{% elif hausmeister.ollama_ok %}{{ t("hausmeister.reachable") }}{% else %}{{ t("hausmeister.unreachable") }}{% endif %}</span>
-    {% if hausmeister.observed_at %}<time datetime="{{ hausmeister.observed_at }}" title="{{ hausmeister.observed_at }}">{{ hausmeister.observed_at[11:19] }} UTC</time>{% endif %}
+    <span data-ollama-observation>{% if hausmeister.ollama_ok is none %}{{ t("hausmeister.unverified") }}{% elif hausmeister.ollama_ok %}{{ t("hausmeister.reachable") }}{% else %}{{ t("hausmeister.unreachable") }}{% endif %}</span>
+    {% if hausmeister.observed_at %}<time datetime="{{ hausmeister.observed_at }}" title="{{ hausmeister.observed_at }}">{{ t("hausmeister.observed_time", time=hausmeister.observed_at[11:19]) }}</time>{% endif %}
     {% if hausmeister.phase in ["waiting_for_order", "waiting_for_quiet", "working", "paused"] %}
     · {{ t("hausmeister.phase." ~ hausmeister.phase) }}
     {% endif %}
