@@ -133,3 +133,19 @@ Jeder folgende Unterpunkt ergänzt hier Commit, Dateien, konkrete Tests,
 unabhängiges Grok-Urteil, verbleibende Grenze und nächsten Schritt. Status bleiben
 offen / in Arbeit / in Prüfung / blockiert mit Ursache / abgeschlossen im benannten
 Umfang. Paketbau, Installation, Aktivierung und Produktfreigabe sind eigene Belege.
+
+### E02 / TD-01: erster nativer Gegenbefund
+
+Draft-PR #78, Ausgangskandidat `3284d4b`: macOS-Integration 170 bestanden.
+Der tatsächliche Windows-Lauf 39409334308 meldete dagegen 90 bestanden und
+69 fehlgeschlagen, keinen Skip. Ursachen: plattformabhängige Backslashes in
+Manifestnamen, ein von Windows abgewiesener WAL-Umbenennungsaufruf (Fehler87)
+und eine Keywordkollision in zwei Windows-Testparametrisierungen. Die enge
+Korrektur verwendet POSIX-Manifestnamen und einen dokumentierten nativen
+Same-directory-Rename des geöffneten Tempdateihandles. Neue Regressionen
+prüfen verschachtelte Artefakte sowie Journal-Ersetzen/Recovery/Löschen.
+Nach der Korrektur sind 119 betroffene Mac-Fälle grün; der neue native Lauf
+und Groks Urteil bleiben offen. Der erste fehlgeschlagene Lauf bleibt erhalten.
+Ein separater Apple-Silicon-Installerlauf scheiterte bei der DMG-Erstellung
+mit `hdiutil: Resource busy`; daraus folgt weder ein fertiges DMG noch ein
+Fehlernachweis im Backup-Code. Keine Live-Installation dieses Kandidaten.

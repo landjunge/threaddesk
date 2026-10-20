@@ -218,6 +218,27 @@ def test_native_windows_read_and_rename_lock_or_explicit_unsupported(tmp_path):
         assert source.read("file", inventory["file"], limit=6) == b"native"
 
 
+def test_native_windows_journal_and_nested_recovery_publish_in_bound_parent_or_unsupported(tmp_path):
+    if os.name != "nt":
+        with pytest.raises(SourceError, match="Windows-Handlezugriff"):
+            WindowsSourceTree(tmp_path, error_type=SourceError)
+        return
+    root = tmp_path / "source"
+    root.mkdir()
+    with WindowsSourceTree(root, error_type=SourceError) as source:
+        source.publish_control_journal(b"first")
+        assert source.read(".management-commit.json", source.info(".management-commit.json")) == b"first"
+        source.publish_control_journal(b"second")
+        assert source.read(".management-commit.json", source.info(".management-commit.json")) == b"second"
+        source.recover_data_entry(("new", "nested", "record.json"), b'{"saved":true}')
+        assert source.read("new/nested/record.json", source.info("new/nested/record.json")) == b'{"saved":true}'
+        source.recover_data_entry(("new", "nested", "record.json"), None)
+        with pytest.raises(SourceError):
+            source.info("new/nested/record.json")
+        source.remove_control_journal(source.info(".management-commit.json"))
+        assert not list(root.rglob("*.tmp"))
+
+
 def test_native_windows_directory_writer_blocked_or_explicit_unsupported(tmp_path):
     if os.name != "nt":
         with pytest.raises(SourceError, match="Windows-Handlezugriff"):

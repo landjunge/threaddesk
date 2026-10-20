@@ -62,6 +62,23 @@ def logical(store: SQLiteStore) -> dict:
     }
 
 
+def test_nested_artifact_manifest_round_trips_with_portable_separators(tmp_path):
+    source = workspace(tmp_path / "source")
+    nested = source.root / "imports" / "nested" / "reference.txt"
+    nested.parent.mkdir(parents=True)
+    nested.write_bytes(b"synthetic nested artifact")
+    manager = WorkspaceBackup(tmp_path / "backups")
+    try:
+        backup = manager.create(source)
+        manifest = json.loads((backup / "manifest.json").read_text())
+        assert "directories/imports/nested/reference.txt" in manifest["files"]
+        assert all("\\" not in name for name in manifest["files"])
+        restored = manager.restore_verified(backup, tmp_path / "restored")
+        assert (restored / "imports" / "nested" / "reference.txt").read_bytes() == nested.read_bytes()
+    finally:
+        source.connection.close()
+
+
 def test_backup_manifest_and_verified_restore_match_exactly(tmp_path: Path) -> None:
     source = workspace(tmp_path / "source")
     expected = logical(source)

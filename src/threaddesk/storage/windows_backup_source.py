@@ -14,6 +14,8 @@ https://learn.microsoft.com/windows/win32/api/ntdef/ns-ntdef-_object_attributes
 https://learn.microsoft.com/windows/win32/api/fileapi/nf-fileapi-createfilew
 https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-getfileinformationbyhandleex
 https://learn.microsoft.com/windows/win32/api/winbase/ns-winbase-file_full_dir_info
+https://learn.microsoft.com/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntsetinformationfile
+https://learn.microsoft.com/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_file_rename_information
 """
 
 from __future__ import annotations
@@ -78,6 +80,9 @@ class _WindowsAPI:
             ctypes.POINTER(ObjectAttributes), ctypes.POINTER(IOStatus), w.LPVOID,
             w.ULONG, w.ULONG, w.ULONG, w.ULONG, w.LPVOID, w.ULONG]
         self.native.NtCreateFile.restype = ctypes.c_int32
+        self.native.NtSetInformationFile.argtypes = [w.HANDLE, ctypes.POINTER(IOStatus),
+                                                     w.LPVOID, w.ULONG, ctypes.c_int]
+        self.native.NtSetInformationFile.restype = ctypes.c_int32
         self.native.RtlNtStatusToDosError.argtypes = [ctypes.c_int32]
         self.native.RtlNtStatusToDosError.restype = w.ULONG
 
@@ -185,6 +190,34 @@ class _WindowsAPI:
         if not self.kernel.ReadFile(handle, buffer, size, ctypes.byref(count), None):
             raise ctypes.WinError(ctypes.get_last_error())
         return buffer.raw[:count.value]
+
+    def rename_in_parent(self, handle, leaf):
+        """Native same-directory rename of the already opened temporary file.
+
+        FILE_RENAME_INFORMATION documents a simple leaf + NULL RootDirectory
+        as a rename within the source handle's existing parent. This avoids
+        Win32 path conversion and does not reopen a source/destination path.
+        """
+        if not leaf or any(c in leaf for c in "\\/:\0") or leaf in {".", ".."}:
+            raise ValueError("Ungültiges JSON-Recovery-Ziel.")
+
+        class Rename(ctypes.Structure):
+            _fields_ = [("ReplaceIfExists", ctypes.c_ubyte),
+                        ("RootDirectory", self.w.HANDLE),
+                        ("FileNameLength", self.w.ULONG),
+                        ("FileName", self.w.WCHAR * 1)]
+
+        encoded = leaf.encode("utf-16-le")
+        buffer = ctypes.create_string_buffer(ctypes.sizeof(Rename) + len(encoded))
+        rename = Rename.from_buffer(buffer)
+        rename.ReplaceIfExists, rename.RootDirectory = 1, None
+        rename.FileNameLength = len(encoded)
+        ctypes.memmove(ctypes.addressof(buffer) + Rename.FileName.offset, encoded, len(encoded))
+        status = self.IOStatus()
+        code = self.native.NtSetInformationFile(handle, ctypes.byref(status), buffer,
+                                                len(buffer), 10)  # FileRenameInformation
+        if code < 0:
+            raise ctypes.WinError(self.native.RtlNtStatusToDosError(code))
 
 
 class _Reader:
@@ -407,27 +440,8 @@ class WindowsSourceTree:
                     stream.flush()
                     os.fsync(stream.fileno())
 
-                    class Rename(ctypes.Structure):
-                        _fields_ = [("ReplaceIfExists", self.api.w.BOOL),
-                                    ("RootDirectory", self.api.w.HANDLE),
-                                    ("FileNameLength", self.api.w.DWORD),
-                                    ("FileName", self.api.w.WCHAR * 1)]
-
-                    # FileRenameInfo resolves this fixed leaf against the held
-                    # directory; no full source/destination pathname is reopened.
-                    encoded = leaf.encode("utf-16-le")
-                    buffer = ctypes.create_string_buffer(ctypes.sizeof(Rename) + len(encoded))
-                    rename = Rename.from_buffer(buffer)
-                    rename.ReplaceIfExists, rename.RootDirectory = True, parent
-                    rename.FileNameLength = len(encoded)
-                    ctypes.memmove(ctypes.addressof(buffer) + Rename.FileName.offset, encoded, len(encoded))
-                    function = self.api.kernel.SetFileInformationByHandle
-                    function.argtypes = [self.api.w.HANDLE, ctypes.c_int,
-                                         self.api.w.LPVOID, self.api.w.DWORD]
-                    function.restype = self.api.w.BOOL
                     validate()
-                    if not function(native, 3, buffer, len(buffer)):
-                        raise ctypes.WinError(ctypes.get_last_error())
+                    self.api.rename_in_parent(native, leaf)
                     published = True
                 finally:
                     if not published:

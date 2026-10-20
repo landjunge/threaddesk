@@ -378,7 +378,7 @@ class WorkspaceBackup:
 
             schema_version = store.connection.execute("SELECT version FROM schema_info").fetchone()[0]
             files = {
-                str(path.relative_to(partial)): {
+                path.relative_to(partial).as_posix(): {
                     "sha256": self._hash(path),
                     "size": path.stat().st_size,
                 }

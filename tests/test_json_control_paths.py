@@ -150,10 +150,10 @@ def test_recovery_parent_swapped_before_child_open_cannot_touch_external(tmp_pat
         from threaddesk.storage.windows_backup_source import _WindowsAPI
         original = _WindowsAPI._child
 
-        def before(self, directory, name, **kwargs):
+        def before(self, parent_handle, name, **kwargs):
             if name == "existing" and kwargs.get("directory") and not changed:
                 exchange()
-            return original(self, directory, name, **kwargs)
+            return original(self, parent_handle, name, **kwargs)
 
         monkeypatch.setattr(_WindowsAPI, "_child", before)
     else:
