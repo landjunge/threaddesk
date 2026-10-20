@@ -274,3 +274,8 @@ Uhren und hält unklare Starts bis Hostprüfung gesperrt. Tooltips bleiben auch
 im schmalen Ausschnitt sichtbar.35 Nodefälle/31 gezielte Repo-Prüfungen grün,
 unveränderte Reviewerproben vom Autor5 Node/6 Browser grün; unabhängige
 Nachabnahme folgt, echte Verbindungen/Hostintegration weiterhin offen.
+
+E05-F3-Nachbesserung: Ein ungültiges Uhralter erfüllt die600ms-Mindestwartezeit
+nicht; nach Hostprüfung beginnt sie vollständig neu.32 gezielte Repofälle
+grün, unveränderte Reviewerproben vom Autor5 Node/7 Browser grün; unabhängige
+Nachprüfung und alle echten Host-/Verbindungsabnahmen bleiben getrennt offen.

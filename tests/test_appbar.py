@@ -164,10 +164,32 @@ def test_open_clock_stall_or_rollback_stays_uncertain_until_host_recovery(appbar
     assert page.evaluate("openCalls.length") == 1
     assert button.get_attribute("aria-disabled") == "true"
     page.evaluate('bar.clearOpen("4allpass")')
+    page.evaluate("advance(600)")
     button.click()
     assert page.evaluate("openCalls.length") == 2
     page.evaluate('resolvers[1]("focused")')
     page.wait_for_function('document.querySelector("[data-app-id=\\"4allpass\\"]").getAttribute("aria-disabled") === "false"')
+
+
+def test_success_cooldown_clock_rollback_needs_host_recovery_and_new_full_cooldown(appbar):
+    page = appbar
+    page.evaluate('options.onOpen=async args=>{openCalls.push({appId:args.appId,actionId:args.actionId});return {actionId:args.actionId,outcome:"opened"};};mountAgain()')
+    button = page.locator('[data-app-id="4allpass"]')
+    button.click()
+    page.wait_for_function('document.querySelector("[data-app-id=\\"4allpass\\"]").getAttribute("aria-disabled") === "false"')
+    page.evaluate("time=100;wall=99900;bar.refresh()")
+    button.dispatch_event("click")
+    assert page.evaluate("openCalls.length") == 1
+    assert "Öffnung unklar" in button.get_attribute("aria-label")
+    page.evaluate("advance(10000)")
+    button.dispatch_event("click")
+    assert page.evaluate("openCalls.length") == 1
+    page.evaluate('bar.clearOpen("4allpass");advance(599)')
+    button.dispatch_event("click")
+    assert page.evaluate("openCalls.length") == 1
+    page.evaluate("advance(1)")
+    button.click()
+    assert page.evaluate("openCalls.length") == 2
 
 
 def test_missing_approved_tool_color_keeps_default_catalog_neutral(appbar):

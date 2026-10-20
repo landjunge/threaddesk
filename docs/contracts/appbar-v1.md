@@ -153,7 +153,11 @@ Wanduhrfortschritt bei stehender monotoner Uhr oder beobachteter Rücksprung
 können einen verspäteten Erfolg nicht nachträglich akzeptieren;
 unklarer Ausgang bleibt gegen weiteren Start gesperrt und hat keinen
 automatischen Retry. Erst nach eigener Zielprüfung darf der Host
-`clearOpen(appId)` aufrufen. Späte Ergebnisse ersetzen keinen neueren Vorgang.
+`clearOpen(appId)` aufrufen. Ein ungültiger Uhrwert erfüllt niemals die
+600ms-Mindestwartezeit. Ein Rücksprung während dieser Wartezeit sperrt auch
+nach einem sofortigen opened-Ergebnis; nach Hostprüfung beginnt eine neue volle
+600ms-Wartezeit. Erst ein endliches geprüftes Alter darf die Wartezeit beenden.
+Späte Ergebnisse ersetzen keinen neueren Vorgang.
 Destroy signalisiert Abbruch; ein unkooperativer Adapter kann nicht vom
 Renderer zwangsweise beendet werden, verändert aber dessen DOM nicht mehr.
 Fehlendes Ziel/Fehler führen zu festen DE/EN-Handlungen, nie rohen Responses.

@@ -47,19 +47,21 @@ NP-Regeln/Einbindungsvertrag: docs/contracts/appbar-v1.md.
  falsche Bindungen/Typen/TTL/Sequenzen/Generationen/Instanzen, Timeout/
  Uhr-Rücksprung/Invalidate, AP4 allowed Nutzer/Tresor und separate Vault-TTL,
  Sperren/unknown, Ausfall/Wiederverbindung; KB/TD/TollGate nie Puls.
-- 12 echte Chromium-Rendererfixturefälle grün: DE/EN, tatsächliche Tastatur/
+- 13 echte Chromium-Rendererfixturefälle grün: DE/EN, tatsächliche Tastatur/
  Tooltip-Escape, Inflight- und schneller Doppelklick, Open setzt keinen Ring,
  unklarer Ausgang mit später Antwort, periodischer TTL-Tick ohne manuelle
  Aktualisierung, Remount genau ein Timer/Destroy null Timer, keine Wiederbelebung,
  fehlender Farbtoken neutral, feste Bounds auch bei320px und reduced motion.
  Nur Ring-Pseudoelement animiert12s/1.0..0.9; Originalbildopacity bleibt1.
 - Bundle-/Assetintegrität und17 vorhandene UI-Assetregeln grün. Gemeinsamer
- pytest-Aufruf31/31; er enthält den Wrapper für die35 Nodefälle, keine
+ pytest-Aufruf32/32; er enthält den Wrapper für die35 Nodefälle, keine
  Doppelzählung als vollständige Produktabnahme. Keine neuen Dependencies.
 
 Kommando: `.venv/bin/python -m pytest -q tests/test_appbar.py tests/test_ui_assets.py`.
 Aktuelle private Logs im ursprünglichen Fortsetzungsordner:
-e05-author-regressions-green-node.log und e05-author-regressions-green.log.
+e05-f3-author-green.log (enthält den35-Node-Wrapper).
+Die vorigen Fixläufe bleiben als e05-author-regressions-green-node.log und
+e05-author-regressions-green.log erhalten.
 Die ursprünglichen b36-Logs e05-pure-state.log und
 e05-renderer-review-candidate.log bleiben als historische32/28-Prüfstände erhalten. Die Browserfixture fängt ausschließlich
 synthetische lokale Assetrequests ab, blockiert sonstiges Netz, startet einen
@@ -111,3 +113,28 @@ Private Logs: e05-author-regressions-red-node.log, -red-browser.log,
 -green-node.log und -green.log; e05-reviewer-probes-green-node.log und
 -green-browser.log. Unveränderte Reviewerprobendateien separat SHA256-erfasst
 in e05-fix-reviewer-probe-SHA256SUMS. Keine Rechte-/Adapter-/Liveausweitung.
+
+## Enge F3-Nachbesserung nach ef286-Nachreview
+
+Der unabhängige Nachreview schloss F1/F2/N1, fand aber einen neuen mittleren
+Fehler beim Verwenden desselben Samplers für die Mindestwartezeit: Nach einem
+sofortigen opened und Wanduhr-Rücksprung bei mono+100ms lieferte age Infinity;
+Infinity<600 war false und erlaubte einen zweiten Start. Der alte Stand
+ef286c2edd60131dbb541a2280f252f0223f1dc7 bleibt unter
+refs/repairs/e05-reviewed-ef286c2 sowie den bisherigen Logs erhalten.
+
+Jetzt endet die aktive600ms-Wartezeit ausschließlich nach endlichem geprüftem
+Alter>=600. Ein ungültiger Wert sperrt uncertain, auch nach sofortigem Erfolg;
+Zeitfortschritt allein entsperrt nicht. Nach expliziter Hostprüfung/clearOpen
+beginnt bei ungültiger Messung eine volle neue600ms-Wartezeit. Die2s-Deadline
+bleibt unverändert fail closed. Keine Adapterrechte oder Liveflächen geändert.
+
+Neue eigene echte Browserregression am unveränderten ef286:1rot (zweiter Start
+nach100ms). Nach Fix gezielter Repo-Aufruf32/32 grün, darin35 reine Nodefälle
+als ein Wrapper,13 echte Browserfälle,17 bestehende UI-Assetfälle und Hashes.
+Die neue Regression prüft auch kein Blind-Retry nach10s sowie599/600ms nach
+expliziter Recovery. Unveränderte Reviewerproben vom Autor erneut ausgeführt:
+5 Node-/7 Browserfälle grün einschließlich test_cooldown_rollback.py. Keine
+Änderung der privaten Reviewerfälle. Logs: e05-f3-author-red.log,
+e05-f3-author-green.log, e05-f3-reviewer-node-green.log und
+e05-f3-reviewer-browser-green.log. Unabhängige Nachprüfung bleibt offen.

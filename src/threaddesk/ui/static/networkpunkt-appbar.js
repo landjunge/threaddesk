@@ -85,6 +85,11 @@ export function mountAppBar(element, { catalog = APP_CATALOG, peers = {}, colors
     for (const item of items.values()) {
       const observed = item.peer?.snapshot();
       const state = item.color && observed ? observed : { state: "unknown", vault: "unknown", pulse: false };
+      const cooldown = item.lastOpen?.();
+      if (cooldown !== undefined && !Number.isFinite(cooldown)) {
+        if (item.open) item.open.state = "uncertain";
+        item.abort?.abort();
+      } else if (cooldown >= 600) item.lastOpen = null;
       if (item.open?.state === "opening" && item.open.age() >= 2000) {
         item.open.state = "uncertain"; item.abort?.abort();
       }
@@ -109,7 +114,7 @@ export function mountAppBar(element, { catalog = APP_CATALOG, peers = {}, colors
   }
   async function open(item) {
     paint();
-    if (destroyed || typeof onOpen !== "function" || ["opening", "uncertain"].includes(item.open?.state) || (item.lastOpen && item.lastOpen() < 600)) return;
+    if (destroyed || typeof onOpen !== "function" || ["opening", "uncertain"].includes(item.open?.state) || item.lastOpen) return;
     item.lastOpen = createElapsed(clock, wallClock); item.abort = new AbortController();
     const actionId = `np-appbar-${Date.now()}-${mountId}-${++item.serial}`;
     item.open = { state: "opening", age: item.lastOpen, actionId }; paint();
@@ -132,7 +137,12 @@ export function mountAppBar(element, { catalog = APP_CATALOG, peers = {}, colors
     reset(appId, expected) { if (destroyed) return; if (expected.appId !== appId) throw new TypeError("Peer app mismatch");
       const item = items.get(appId); if (item) { if (item.peer) item.peer.reset(expected); else item.peer = createPeerState(expected, {clock,wallClock}); } paint(); },
     // Only after the host checked an unknown opening outcome; never automatic retry.
-    clearOpen(appId) { const item = items.get(appId); if (item) { item.abort?.abort(); item.open = null; paint(); } },
+    clearOpen(appId) { const item = items.get(appId); if (item) {
+      item.abort?.abort();
+      // Invalid time cannot satisfy a minimum wait: host recovery starts it anew.
+      if (item.lastOpen && !Number.isFinite(item.lastOpen())) item.lastOpen = createElapsed(clock, wallClock);
+      item.open = null; paint();
+    } },
     setLocale(value) { language = value === "en" ? "en" : "de"; paint(); },
     refresh: paint,
     destroy() { if (destroyed) return; destroyed = true; win.clearInterval(timer); doc.removeEventListener("visibilitychange", invalidate);
