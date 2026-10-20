@@ -10,7 +10,7 @@ function setup(appId="4allpass") {
   const peer=createPeerState({ ...expected, appId }, { clock:()=>time, wallClock:()=>wall });
   const observation = patch => ({ v:1,appId,connectionRef:"fixture-link",peerRef:"fixture-peer",peerEpoch:"epoch-1",
     seq:0,state:"confirmed",ttlMs:15000,...patch });
-  return {peer, observation, advance(ms){time+=ms;wall+=ms;}, rollback(){wall--;}};
+  return {peer, observation, advance(ms){time+=ms;wall+=ms;}, rollback(){wall--;}, set(m,w){time=m;wall=w;}};
 }
 const unlocked = {userRef:"fixture-user",vaultRef:"fixture-vault",allowed:true,state:"unlocked",ttlMs:1000};
 test("unknown and connecting are distinct; only a fresh matching reply confirms",()=>{
@@ -60,4 +60,22 @@ test("failure and explicit disconnect remove ring; reconnect needs another accep
   x.peer.receive(x.peer.begin(),x.observation({seq:1,state:"disconnected"}));assert.equal(x.peer.snapshot().state,"disconnected");
   x.peer.begin();assert.equal(x.peer.snapshot().state,"connecting");
   x.peer.receive(x.peer.begin(),x.observation({seq:2}));assert.equal(x.peer.snapshot().state,"confirmed");
+});
+test("observed partial wall rollback invalidates an old ring and unlock lease",()=>{
+  const x=setup();x.peer.receive(x.peer.begin(),x.observation({vault:{...unlocked,ttlMs:15000}}));
+  x.set(100,114000);assert.equal(x.peer.snapshot().pulse,true);
+  x.set(200,101000);assert.deepEqual(x.peer.snapshot(),{state:"unknown",vault:"unknown",pulse:false});
+  x.set(300,114100);assert.equal(x.peer.snapshot().state,"unknown");
+  assert(x.peer.receive(x.peer.begin(),x.observation({seq:1})));
+  assert.equal(x.peer.snapshot().state,"confirmed");
+});
+test("observed monotonic rollback also invalidates a lease above its starting clock",()=>{
+  const x=setup();x.peer.receive(x.peer.begin(),x.observation());
+  x.set(1000,100100);assert.equal(x.peer.snapshot().state,"confirmed");
+  x.set(100,100200);assert.equal(x.peer.snapshot().state,"unknown");
+});
+test("a partial rollback during a pending check rejects its reply",()=>{
+  const x=setup(),t=x.peer.begin();x.set(100,101000);assert.equal(x.peer.snapshot().state,"connecting");
+  x.set(200,100500);assert.equal(x.peer.receive(t,x.observation()),false);
+  assert.equal(x.peer.snapshot().state,"unknown");
 });

@@ -49,7 +49,9 @@ erreichbar; dies ist keine Abnahme tatsächlicher Hostheader.
 Die Katalogreihenfolge KiraBridge/ThreadDesk/4AllPass/TollGate ist unabhängig vom
 Status; nur verfügbare konfigurierte Einträge erscheinen. Nativer Button mit
 Textname/Status/Öffnungsaktion als aria-label, Tab/ShiftTab/Enter/Space, sichtbarem
-Fokus und Tooltip bei Fokus/Hover, mit Escape schließbar. Kein Zusatzschloss.
+Fokus und Tooltip bei Fokus/Hover, mit Escape schließbar. Der Tooltip wird
+bei Anzeige, Text- und Viewportänderung innerhalb der sichtbaren Breite gehalten.
+Kein Zusatzschloss.
 Die Live-Region meldet semantische Änderungen, nicht jeden lokalen250ms-Tick.
 Nur der AP4-Ring darf bei erlaubtem aktuellem Unlock langsam pulsieren:
 12s, Deckkraft1.00…0.90, Glow10% Toolfarbe. Bild/Hitarea werden nicht animiert.
@@ -125,7 +127,10 @@ der reine Renderer fragt nichts ab. Gleiche/alte Sequenzen, falsche App/Verbindu
 Peer/Instanz, fremde Tickets, Zeitüberschreitung und ungültige Metadaten werden
 verworfen. Reset/Verstecken/pagehide invalidieren die Generation. Lokale monotone
 und Wanduhr werden gemeinsam konservativ bewertet; Schlaf oder Uhr-Rücksprung
-darf kein altes Grün verlängern. Es wird kein Status aus Storage restauriert.
+darf kein altes Grün verlängern. Das je Vorgang beobachtete Alter sinkt nie;
+ein beobachteter Rücksprung einer der beiden Uhren macht dessen Lease dauerhaft
+ungültig, auch wenn die Uhr noch nach dem ursprünglichen Checkbeginn liegt.
+Erst ein neuer Check kann wieder bestätigen. Es wird kein Status aus Storage restauriert.
 
 `confirmed` mit gültiger Verbindung erzeugt den ruhigen eigenen Ring. Nur AP4
 mit explizitem allowed:true und exakt erwartetem userRef/vaultRef darf zusätzlich
@@ -142,7 +147,10 @@ Der Host mappt diese ID auf bereits erlaubtes festes Ziel und schützt Fokus/
 Start sowie begrenzte Idempotenz selbst. Antwort:
 `{actionId,outcome:"focused"|"opened"|"failed"|"unknown"}`.
 
-Parallel-/Doppelklicks werden zusammengeführt (mindestens600ms). Deadline2s;
+Parallel-/Doppelklicks werden zusammengeführt (mindestens600ms). Deadline2s
+mit derselben konservativen monotonen/Wanduhrmessung wie beim Status: Schlaf,
+Wanduhrfortschritt bei stehender monotoner Uhr oder beobachteter Rücksprung
+können einen verspäteten Erfolg nicht nachträglich akzeptieren;
 unklarer Ausgang bleibt gegen weiteren Start gesperrt und hat keinen
 automatischen Retry. Erst nach eigener Zielprüfung darf der Host
 `clearOpen(appId)` aufrufen. Späte Ergebnisse ersetzen keinen neueren Vorgang.
@@ -154,7 +162,7 @@ Ein Öffnungserfolg bestätigt **niemals** eine Verbindung oder Tresorfreigabe.
 ## Geprüfter und weiterhin offener Umfang
 
 `python -m pytest -q tests/test_appbar.py tests/test_ui_assets.py` führt die
-32 reinen Node-Zustandsprüfungen sowie echtes Chromium-DOM/CSS aus. Die
+35 reinen Node-Zustandsprüfungen sowie echtes Chromium-DOM/CSS aus. Die
 Browserfixture liefert nur freigegebene lokale Assets über abgefangene
 Fixture-Requests; keine echte App, Verbindung, Konten, Datenbank oder Startziele.
 DE/EN/Keyboard, Scope/TTL/Fehler/Wiederverbindung, Ring-/Bildgeometrie, reduzierte

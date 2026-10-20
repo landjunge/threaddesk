@@ -43,23 +43,25 @@ NP-Regeln/Einbindungsvertrag: docs/contracts/appbar-v1.md.
 
 ## Wirklich ausgeführte Prüfungen
 
-- 32 reine Node-Zustandsfälle grün: unknown/connecting/disconnected/error,
+- 35 reine Node-Zustandsfälle grün: unknown/connecting/disconnected/error,
  falsche Bindungen/Typen/TTL/Sequenzen/Generationen/Instanzen, Timeout/
  Uhr-Rücksprung/Invalidate, AP4 allowed Nutzer/Tresor und separate Vault-TTL,
  Sperren/unknown, Ausfall/Wiederverbindung; KB/TD/TollGate nie Puls.
-- 9 echte Chromium-Rendererfixturefälle grün: DE/EN, tatsächliche Tastatur/
+- 12 echte Chromium-Rendererfixturefälle grün: DE/EN, tatsächliche Tastatur/
  Tooltip-Escape, Inflight- und schneller Doppelklick, Open setzt keinen Ring,
  unklarer Ausgang mit später Antwort, periodischer TTL-Tick ohne manuelle
  Aktualisierung, Remount genau ein Timer/Destroy null Timer, keine Wiederbelebung,
  fehlender Farbtoken neutral, feste Bounds auch bei320px und reduced motion.
  Nur Ring-Pseudoelement animiert12s/1.0..0.9; Originalbildopacity bleibt1.
 - Bundle-/Assetintegrität und17 vorhandene UI-Assetregeln grün. Gemeinsamer
- pytest-Aufruf28/28; er enthält den Wrapper für die32 Nodefälle, keine
+ pytest-Aufruf31/31; er enthält den Wrapper für die35 Nodefälle, keine
  Doppelzählung als vollständige Produktabnahme. Keine neuen Dependencies.
 
 Kommando: `.venv/bin/python -m pytest -q tests/test_appbar.py tests/test_ui_assets.py`.
-Private Logs im ursprünglichen Fortsetzungsordner: e05-pure-state.log und
-e05-renderer-review-candidate.log. Die Browserfixture fängt ausschließlich
+Aktuelle private Logs im ursprünglichen Fortsetzungsordner:
+e05-author-regressions-green-node.log und e05-author-regressions-green.log.
+Die ursprünglichen b36-Logs e05-pure-state.log und
+e05-renderer-review-candidate.log bleiben als historische32/28-Prüfstände erhalten. Die Browserfixture fängt ausschließlich
 synthetische lokale Assetrequests ab, blockiert sonstiges Netz, startet einen
 eigenen temporären Browserkontext und beendet ihn. Keine echte TD-/AP-/KB-
 Verbindung, Nutzerkonten, Datenbank, Appstarts oder Userbrowserprofile beteiligt.
@@ -77,3 +79,35 @@ KiraBridge-Icon, belegter AP4-Brandfarbwert, zugeordnete Icongrößenmeldung,
 KiraBridge-Ersteinbindung, echte abgesicherte Peer-/Status-/Openadapter,
 danach TD/AP-Hosts und deren echte Nutzer-/Nativewege. Diese Grenzen blockieren
 die reine Rendererprüfung nicht und werden durch sie nicht erledigt.
+
+## Korrektur nach unabhängigem b36-Review
+
+Der unabhängige Review von b36af8563f47f0d488d0f885a36b8ed99c33032b
+fand zwei mittlere Zeitgrenzfehler und einen kleinen Tooltipfehler. Die alten
+Quellen/Belege bleiben über refs/repairs/e05-reviewed-b36af85 und die privaten
+Reviewdateien erhalten. Dieser Stand ist noch keine unabhängige Nachabnahme.
+
+- F1: Nach beobachteten14s konnte ein partieller Wanduhr-Rücksprung das Alter
+  auf1s verkürzen und Ring/Puls erhalten. Der gemeinsame je Vorgang verwendete
+  Elapsedsampler hält Alter nicht sinkend und lässt jeden beobachteten Rücksprung
+  von monotoner Uhr oder Wanduhr dauerhaft ablaufen. Pendingchecks und die vom
+  Checkbeginn übernommene Verbindung/Vault-Lease verwenden denselben Sampler.
+  Neue echte Antworten können erst über einen neuen Check wieder bestätigen.
+- F2: Die Öffnungsdeadline verwendete zuvor nur die monotone Uhr. Wanduhr+5s
+  bei stehender monotoner Uhr akzeptierte dadurch einen verspäteten opened-
+  Ausgang. Jetzt gelten beide Uhren samt Rücksprungschutz für2s-Deadline und
+ 600ms-Dedupe. Ein unklarer Ausgang bleibt gesperrt, auch nach späterem Callback;
+  ausschließlich explizites clearOpen nach Hostprüfung ermöglicht die Erholung.
+- N1: Tooltips werden mit fester äußerer Maximalbreite und DOM-Bounds beim
+  Anzeigen, Text- und Viewportwechsel horizontal geklemmt. DE/EN und beide
+  Einträge bleiben bei320px erreichbar; unveränderte Icon-/Ring-/Buttonmaße.
+
+Eigene neue Regressionen auf altem Produktstand: Node3rot/32grün und die fünf
+gezielt gewählten Browserfälle rot. Nach Fix Node35/35, gesamter gezielter
+Repo-Aufruf31/31. Darin12 echte Browserfälle und17 vorhandene UI-Assetregeln.
+Zusätzlich dieselben unveränderten privaten Reviewerproben erneut ausgeführt:
+Node5/5 und Chromium6/6. Dies sind Autor-Gegenproben, kein unabhängiger Review.
+Private Logs: e05-author-regressions-red-node.log, -red-browser.log,
+-green-node.log und -green.log; e05-reviewer-probes-green-node.log und
+-green-browser.log. Unveränderte Reviewerprobendateien separat SHA256-erfasst
+in e05-fix-reviewer-probe-SHA256SUMS. Keine Rechte-/Adapter-/Liveausweitung.

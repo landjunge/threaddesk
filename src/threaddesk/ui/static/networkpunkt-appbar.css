@@ -13,7 +13,7 @@
 @keyframes np-appbar-unlocked { 0%,100% { opacity:1; } 50% { opacity:.9; } }
 .np-appbar-button[data-error="true"] { outline:1px solid var(--np-danger,#f49b9b); outline-offset:-1px; }
 .np-appbar-button[data-error="true"]:focus-visible { outline:2px solid var(--np-focus,#edf0f4); outline-offset:1px; }
-.np-appbar-tooltip { position:absolute; top:100%; left:0; z-index:20; width:max-content; max-width:280px; padding:var(--np-space-2,8px); background:var(--np-surface,#1a1c20); border:1px solid var(--np-control-border,#808996); pointer-events:none; }
+.np-appbar-tooltip { position:absolute; top:100%; left:0; z-index:20; box-sizing:border-box; width:max-content; max-width:min(280px,calc(100vw - 8px)); overflow-wrap:anywhere; padding:var(--np-space-2,8px); background:var(--np-surface,#1a1c20); border:1px solid var(--np-control-border,#808996); pointer-events:none; }
 .np-appbar [hidden] { display:none; }
 .np-appbar-sr { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
 @media (prefers-reduced-motion:reduce) { .np-appbar-ring[data-pulse="true"]::before { animation:none; } }

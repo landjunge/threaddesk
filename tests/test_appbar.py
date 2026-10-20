@@ -142,6 +142,34 @@ def test_fast_success_double_click_still_opens_once(appbar):
     assert ring(page).get_attribute("data-connected") == "false"
 
 
+def test_partial_clock_rollback_removes_rendered_ring_and_unlock_pulse(appbar):
+    page = appbar
+    page.evaluate('check("4allpass", {vault:{userRef:"fixture-user",vaultRef:"fixture-vault",allowed:true,state:"unlocked",ttlMs:15000}})')
+    page.evaluate("time=100;wall=114000;bar.refresh()")
+    assert ring(page).get_attribute("data-pulse") == "true"
+    page.evaluate("time=200;wall=101000;bar.refresh()")
+    assert ring(page).get_attribute("data-connected") == "false"
+    assert ring(page).get_attribute("data-pulse") == "false"
+
+
+@pytest.mark.parametrize("clock_change", ["wall+=5000", "time=100;wall+=1000;bar.refresh();time=200;wall-=500"])
+def test_open_clock_stall_or_rollback_stays_uncertain_until_host_recovery(appbar, clock_change):
+    page = appbar
+    button = page.locator('[data-app-id="4allpass"]')
+    button.click()
+    page.evaluate(f'{clock_change};bar.refresh();resolvers[0]("opened")')
+    page.wait_for_function('document.querySelector("[data-app-id=\\"4allpass\\"]").getAttribute("aria-label").includes("Öffnung unklar")', timeout=1000)
+    page.evaluate("advance(700)")
+    button.dispatch_event("click")
+    assert page.evaluate("openCalls.length") == 1
+    assert button.get_attribute("aria-disabled") == "true"
+    page.evaluate('bar.clearOpen("4allpass")')
+    button.click()
+    assert page.evaluate("openCalls.length") == 2
+    page.evaluate('resolvers[1]("focused")')
+    page.wait_for_function('document.querySelector("[data-app-id=\\"4allpass\\"]").getAttribute("aria-disabled") === "false"')
+
+
 def test_missing_approved_tool_color_keeps_default_catalog_neutral(appbar):
     page = appbar
     page.evaluate('options.colors={};mountAgain();check("4allpass", {vault:{userRef:"fixture-user",vaultRef:"fixture-vault",allowed:true,state:"unlocked",ttlMs:1000}})')
@@ -165,3 +193,13 @@ def test_fixed_icon_geometry_and_only_ring_motion(appbar, width):
     page.emulate_media(reduced_motion="reduce")
     assert ring(page).evaluate('e => getComputedStyle(e,"::before").animationName') == "none"
     assert "Tresor entsperrt" in page.locator('[data-app-id="4allpass"]').get_attribute("aria-label")
+    for locale in ["de", "en"]:
+        page.evaluate("locale => bar.setLocale(locale)", locale)
+        for app in ["threaddesk", "4allpass"]:
+            button = page.locator(f'[data-app-id="{app}"]')
+            button.focus()
+            box = page.locator(f'#{button.get_attribute("aria-describedby")}').bounding_box()
+            assert box["x"] >= 0 and box["x"] + box["width"] <= width
+    page.set_viewport_size({"width": 320, "height": 760})
+    box = page.locator(f'#{button.get_attribute("aria-describedby")}').bounding_box()
+    assert box["x"] >= 0 and box["x"] + box["width"] <= 320

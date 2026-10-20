@@ -7,6 +7,19 @@ const ttl = value => Number.isFinite(value) && value > 0 && value <= 15000;
 const keys = (value, allowed) => value && typeof value === "object" && !Array.isArray(value)
   && Object.keys(value).every(key => allowed.includes(key));
 
+// Per-operation age never gets younger; an observed clock rollback stays expired.
+export function createElapsed(clock, wallClock) {
+  const monoStart = clock(), wallStart = wallClock();
+  let lastMono = monoStart, lastWall = wallStart, elapsed = 0;
+  return () => {
+    const mono = clock(), wall = wallClock();
+    elapsed = ![monoStart, wallStart, mono, wall].every(Number.isFinite) || mono < lastMono || wall < lastWall
+      ? Infinity : Math.max(elapsed, mono - monoStart, wall - wallStart);
+    lastMono = mono; lastWall = wall;
+    return elapsed;
+  };
+}
+
 export function createPeerState(initial, { clock = () => performance.now(), wallClock = () => Date.now() } = {}) {
   let expected, generation = 0, serial = 0, pending = null, accepted = null, seq = -1, neutral = "unknown";
   function reset(next = expected) {
@@ -20,20 +33,16 @@ export function createPeerState(initial, { clock = () => performance.now(), wall
     generation++; pending = null; accepted = null; seq = -1; neutral = "unknown";
   }
   reset(initial);
-  const age = started => {
-    const mono = clock() - started.mono, wall = wallClock() - started.wall;
-    return mono < 0 || wall < 0 ? Infinity : Math.max(mono, wall);
-  };
   function snapshot() {
-    if (pending && age(pending) >= 2000) {
+    if (pending && pending.age() >= 2000) {
       pending = null; accepted = null; neutral = "unknown";
     }
-    if (accepted && age(accepted.started) >= accepted.ttlMs) {
+    if (accepted && accepted.age() >= accepted.ttlMs) {
       accepted = null; neutral = "unknown";
     }
     if (!accepted) return { state: neutral, vault: "unknown", pulse: false };
     const state = accepted.state;
-    const vault = state === "confirmed" && accepted.vault && age(accepted.started) < accepted.vault.ttlMs
+    const vault = state === "confirmed" && accepted.vault && accepted.age() < accepted.vault.ttlMs
       ? accepted.vault.state : "unknown";
     return { state, vault, pulse: expected.appId === "4allpass" && state === "confirmed" && vault === "unlocked" };
   }
@@ -42,7 +51,7 @@ export function createPeerState(initial, { clock = () => performance.now(), wall
     if (pending) return pending.ticket; // at most one outstanding check per peer
     if (accepted?.state !== "confirmed") accepted = null;
     const ticket = Object.freeze({ generation, check: ++serial });
-    pending = { ticket, mono: clock(), wall: wallClock() };
+    pending = { ticket, age: createElapsed(clock, wallClock) };
     if (!accepted) neutral = "connecting";
     return ticket;
   }
@@ -58,7 +67,7 @@ export function createPeerState(initial, { clock = () => performance.now(), wall
   }
   function receive(ticket, value) {
     if (!current(ticket)) return false;
-    const started = { mono: pending.mono, wall: pending.wall };
+    const age = pending.age;
     const valid = keys(value, ["v", "appId", "connectionRef", "peerRef", "peerEpoch", "seq", "state", "ttlMs", "vault"])
       && value.v === 1 && value.appId === expected.appId && value.connectionRef === expected.connectionRef
       && value.peerRef === expected.peerRef && value.peerEpoch === expected.peerEpoch
@@ -74,7 +83,7 @@ export function createPeerState(initial, { clock = () => performance.now(), wall
       }
     }
     seq = value.seq; pending = null;
-    accepted = { state: value.state, ttlMs: value.ttlMs, started, vault };
+    accepted = { state: value.state, ttlMs: value.ttlMs, age, vault };
     return true;
   }
   function invalidate() { generation++; pending = null; accepted = null; neutral = "unknown"; }

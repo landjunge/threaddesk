@@ -267,3 +267,10 @@ Start/Transport/PID und kein Bridge-Aktivitätspuls. Vertrag/Übernahme:
 kein KB-Ersatzlogo. Noch keine TD/AP/KB-Template-/Appintegration; KB-Mount
 bleibt gemäß Gesamtplan zuerst. Unabhängiger Source-/Browserreview und echte
 Öffnungs-/Status-/Hostabnahmen folgen getrennt.
+
+E05-Renderer-Nachbesserung nach unabhängigem b36-Review: beobachtete partielle
+Uhr-Rücksprünge neutralisieren die Statuslease; Öffnungsdeadline bewertet beide
+Uhren und hält unklare Starts bis Hostprüfung gesperrt. Tooltips bleiben auch
+im schmalen Ausschnitt sichtbar.35 Nodefälle/31 gezielte Repo-Prüfungen grün,
+unveränderte Reviewerproben vom Autor5 Node/6 Browser grün; unabhängige
+Nachabnahme folgt, echte Verbindungen/Hostintegration weiterhin offen.

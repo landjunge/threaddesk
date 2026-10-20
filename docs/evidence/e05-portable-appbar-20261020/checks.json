@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "base": "b63fbd24743140fed68dc2a8eca7dcd9a7ca6c61",
-  "pureStateTestsPassed": 32,
-  "pytestTestsPassed": 28,
-  "realChromiumFixtureCases": 9,
+  "pureStateTestsPassed": 35,
+  "pytestTestsPassed": 31,
+  "realChromiumFixtureCases": 12,
   "existingUiAssetTestsPassed": 17,
   "browserFixtureUsesRealAppConnection": false,
   "hostIntegrationsMounted": [],
@@ -15,5 +15,11 @@
   "documentedAp4RingColorAssigned": false,
   "ap4FixtureColorIsSynthetic": true,
   "iconDimensionsUserAccepted": false,
-  "independentReview": "pending"
+  "independentReview": "b36 request_changes; bounded fixes awaiting independent re-review",
+  "authorReranUnchangedReviewerNodeCasesPassed": 5,
+  "authorReranUnchangedReviewerBrowserCasesPassed": 6,
+  "reviewedOriginalCommit": "b36af8563f47f0d488d0f885a36b8ed99c33032b",
+  "clockRollbackFailClosed": true,
+  "openDeadlineUsesWallAndMonotonic": true,
+  "tooltipViewportClamped": true
 }

@@ -1,5 +1,5 @@
 /* NetzwerkPunkt appbar 1.0.0 — portable DOM renderer, no transport or host launch. */
-import { APPBAR_VERSION, APP_ORDER, createPeerState } from "./networkpunkt-appbar-state.js";
+import { APPBAR_VERSION, APP_ORDER, createElapsed, createPeerState } from "./networkpunkt-appbar-state.js";
 import { APP_CATALOG } from "./networkpunkt-appbar-catalog.js";
 export { APPBAR_VERSION };
 const mounts = new WeakMap();
@@ -61,16 +61,23 @@ export function mountAppBar(element, { catalog = APP_CATALOG, peers = {}, colors
     const tooltip = doc.createElement("span"); tooltip.className = "np-appbar-tooltip";
     tooltip.id = `np-appbar-tip-${mountId}-${entry.id}`; tooltip.setAttribute("role", "tooltip"); tooltip.hidden = true;
     button.setAttribute("aria-describedby", tooltip.id);
-    const show = () => { tooltip.hidden = false; };
+    const show = () => { tooltip.hidden = false; positionTooltip(tooltip); };
     const hide = () => { tooltip.hidden = true; };
     button.addEventListener("focus", show); button.addEventListener("blur", hide);
     button.addEventListener("mouseenter", show); wrapper.addEventListener("mouseleave", hide);
     button.addEventListener("keydown", event => { if (event.key === "Escape") { hide(); event.preventDefault(); } });
-    const item = { entry, peer, color, wrapper, button, ring, tooltip, open: null, lastOpen: -Infinity, abort: null, serial: 0 };
+    const item = { entry, peer, color, wrapper, button, ring, tooltip, open: null, lastOpen: null, abort: null, serial: 0 };
     button.addEventListener("click", () => open(item));
     wrapper.append(button, tooltip); root.append(wrapper); items.set(entry.id, item);
   }
   root.append(live); element.append(root);
+  function positionTooltip(tooltip) {
+    if (tooltip.hidden) return;
+    tooltip.style.left = "0px";
+    const bounds = tooltip.getBoundingClientRect(), width = doc.documentElement.clientWidth;
+    const left = Math.max(4, Math.min(bounds.left, width - bounds.width - 4));
+    tooltip.style.left = `${left - bounds.left}px`;
+  }
   function paint() {
     if (destroyed) return;
     const text = COPY[language], announcements = [];
@@ -78,7 +85,7 @@ export function mountAppBar(element, { catalog = APP_CATALOG, peers = {}, colors
     for (const item of items.values()) {
       const observed = item.peer?.snapshot();
       const state = item.color && observed ? observed : { state: "unknown", vault: "unknown", pulse: false };
-      if (item.open?.state === "opening" && clock() - item.open.started >= 2000) {
+      if (item.open?.state === "opening" && item.open.age() >= 2000) {
         item.open.state = "uncertain"; item.abort?.abort();
       }
       item.ring.dataset.connected = String(state.state === "confirmed");
@@ -91,6 +98,7 @@ export function mountAppBar(element, { catalog = APP_CATALOG, peers = {}, colors
       else if (item.open && !(["opened", "focused"].includes(item.open.state) && state.state === "confirmed")) status += ` · ${text[item.open.state]}`;
       const label = `${item.entry.name[language]} · ${status}`;
       item.tooltip.textContent = label;
+      positionTooltip(item.tooltip);
       item.button.setAttribute("aria-label", `${label} · ${text.open}`);
       item.button.setAttribute("aria-disabled", String(typeof onOpen !== "function" || ["opening", "uncertain"].includes(item.open?.state)));
       item.button.dataset.error = String(state.state === "error" || ["failed", "uncertain"].includes(item.open?.state));
@@ -101,10 +109,10 @@ export function mountAppBar(element, { catalog = APP_CATALOG, peers = {}, colors
   }
   async function open(item) {
     paint();
-    if (destroyed || typeof onOpen !== "function" || ["opening", "uncertain"].includes(item.open?.state) || clock() - item.lastOpen < 600) return;
-    item.lastOpen = clock(); item.abort = new AbortController();
+    if (destroyed || typeof onOpen !== "function" || ["opening", "uncertain"].includes(item.open?.state) || (item.lastOpen && item.lastOpen() < 600)) return;
+    item.lastOpen = createElapsed(clock, wallClock); item.abort = new AbortController();
     const actionId = `np-appbar-${Date.now()}-${mountId}-${++item.serial}`;
-    item.open = { state: "opening", started: clock(), actionId }; paint();
+    item.open = { state: "opening", age: item.lastOpen, actionId }; paint();
     try {
       const result = await onOpen({ appId: item.entry.id, actionId, signal: item.abort.signal });
       paint(); // enforce the deadline before accepting a late completion
@@ -115,6 +123,7 @@ export function mountAppBar(element, { catalog = APP_CATALOG, peers = {}, colors
   }
   function invalidate() { for (const item of items.values()) item.peer?.invalidate(); paint(); }
   doc.addEventListener("visibilitychange", invalidate); win.addEventListener("pagehide", invalidate);
+  win.addEventListener("resize", paint);
   const timer = win.setInterval(paint, 250);
   const api = Object.freeze({
     begin(appId) { if (destroyed) return null; const ticket = items.get(appId)?.peer?.begin() ?? null; paint(); return ticket; },
@@ -127,6 +136,7 @@ export function mountAppBar(element, { catalog = APP_CATALOG, peers = {}, colors
     setLocale(value) { language = value === "en" ? "en" : "de"; paint(); },
     refresh: paint,
     destroy() { if (destroyed) return; destroyed = true; win.clearInterval(timer); doc.removeEventListener("visibilitychange", invalidate);
+      win.removeEventListener("resize", paint);
       win.removeEventListener("pagehide", invalidate); for (const item of items.values()) { item.peer?.invalidate(); item.abort?.abort(); }
       root.remove(); mounts.delete(element); },
   });
