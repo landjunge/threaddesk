@@ -102,7 +102,7 @@ class SearchService:
         except UnicodeError:
             raise SearchError("invalid_search_query")
         if (not isinstance(text, str) or not text.strip() or text_size > 512
-                or any(ord(ch) < 32 for ch in text)
+                or any(ord(ch) < 32 or 127 <= ord(ch) <= 159 for ch in text)
                 or type(limit) is not int or not 1 <= limit <= 100
                 or type(include_archived) is not bool):
             raise SearchError("invalid_search_query")

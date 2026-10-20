@@ -189,13 +189,25 @@ class SQLiteSearchAdapter:
                     was_ready = False
                 if not was_ready:
                     config["status"] = "stale"
-                else:
-                    # Revoke publication before touching optional state. If its
-                    # write fails independently, the old index cannot stay ready.
+            config["epoch"] = uuid4().hex
+            if was_ready:
+                config["status"] = "stale"
+            try:
+                # Persist independent dirty state before any FTS mutation. A
+                # denied marker DELETE must not leave the old epoch published.
+                self._put(config)
+            except Exception:
+                if not self.store.connection.in_transaction:
+                    raise
+                if was_ready:
+                    # An isolated optional-state write failure still has the
+                    # independent marker as a way to revoke publication.
                     self.store.connection.execute("DELETE FROM search_index WHERE rowid=?",
                                                   (config["control_rowid"],))
-            config["epoch"] = uuid4().hex
-            self._put(config)
+                raise
+            if was_ready:
+                self.store.connection.execute("DELETE FROM search_index WHERE rowid=?",
+                                              (config["control_rowid"],))
             self.store.connection.execute("SAVEPOINT optional_search")
             try:
                 self._replace(exact_id, None if deleted else self.read(exact_id, canonical=True))
@@ -205,6 +217,7 @@ class SQLiteSearchAdapter:
                         (config["epoch"],))
                     config["control_rowid"] = marker.lastrowid
                     config["indexed_epoch"] = config["epoch"]
+                    config["status"] = "ready"
                 self.store.connection.execute("RELEASE optional_search")
             except Exception:
                 if not self.store.connection.in_transaction:

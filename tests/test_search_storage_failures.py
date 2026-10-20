@@ -148,3 +148,31 @@ def test_sqlite_interruption_pauses_without_losing_keyset_position(tmp_path, mon
     assert [hit.thread_id for hit in resumed.hits] == [thread.id]
     search.close()
     store.connection.close()
+
+
+# Independent reviewer counterexample, unchanged below.
+def ready(search):
+ search.set_enabled(True)
+ for _ in range(20):
+  state=search.rebuild_batch()
+  if state['status']=='ready':return
+ pytest.fail('synthetic rebuild did not finish')
+
+def test_optional_marker_delete_denial_must_not_leave_ready_stale_index(tmp_path):
+ store=SQLiteStore(tmp_path/'workspace');thread=new_thread('Original lavender');store.save_thread(thread)
+ search=SearchService(store,LocalFileOwnerPolicy(store.workspace_path));ready(search)
+ denials=[]
+ def authorizer(action,table,*rest):
+  if action==sqlite3.SQLITE_DELETE and table=='search_index':
+   denials.append(table);return sqlite3.SQLITE_DENY
+  return sqlite3.SQLITE_OK
+ store.connection.set_authorizer(authorizer)
+ try:
+  thread.title='Updated orchid';store.save_thread(thread)
+  assert store.get_thread(thread.id).title=='Updated orchid'
+  state=search.status();page=search.search('orchid')
+  print('E08_OPTIONAL_MARKER_DENIED',{'denials':len(denials),'status':state['status'],'mode':page.mode,'hits':len(page.hits),'complete':page.complete,'reasons':page.reasons})
+  assert denials
+  assert page.hits,'successful canonical save must remain searchable through fallback after optional index error'
+ finally:
+  store.connection.set_authorizer(None);search.close();store.connection.close()

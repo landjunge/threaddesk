@@ -24,8 +24,7 @@ kanonisches Speichern zu. Keine Produktdaten als Testfixture.
 `RAISE(ROLLBACK)` und isoliertes `RAISE(ABORT)` beim optionalen State-Write sowie
 eine Quellenfehler-Budgetprobe. Im Implementierungsentwurf waren die beiden
 letzten Fälle rot (alter FTS-Modus blieb bereit / 500 fehlerhafte Reads ohne
-Byteanrechnung). Der endgültige Schnitt entzieht zuerst den Veröffentlichungs-
-marker und reserviert Fehlerreads konservativ. Engine-Rollback wird nicht als
+Byteanrechnung). Der Schnitt reserviert Fehlerreads konservativ. Engine-Rollback wird nicht als
 kanonischer Save-Erfolg verschluckt. Das sind korrigierte Entwurfsbefunde, keine
 erfundene Regression einer vorher vorhandenen Inhaltssuche.
 
@@ -44,6 +43,18 @@ Zeitbudgetprobe prüft den Stopp/Fortsetzungsvertrag. Der reale Benchmark verwen
 die tatsächliche Uhr. Keine Addition überlappender Testläufe und keine daraus
 abgeleitete vollständige native CI oder unabhängige Abnahme. Unabhängiges Review
 koordiniert der Root-Agent.
+
+Unabhängiges Review auf `b966bd7` fand zusätzlich einen isoliert verweigerten
+FTS-Marker-DELETE: Rename wurde kanonisch gespeichert, aber der alte Index blieb
+`ready`, neue Wortsuche lieferte fälschlich vollständig null Treffer. Die
+unveränderte Reviewer-Gegenprobe ist nun in den Regressionen enthalten. Zuerst
+wird ein unabhängiger `epoch`-/`stale`-Stand geschrieben, danach der Marker
+geändert. Scheitert bereits der State-Write isoliert, entzieht der alternative
+Markerweg die Veröffentlichung. Beide einzelnen Fehlerwege und echter
+Engine-Rollback sind erneut geprüft. Der getrennte Steuerzeichen-Nit ist durch
+Ablehnung von C0, DEL und C1 erfüllt, ohne Normalisierungs-/Suchsemantikwechsel.
+Nach dieser engen Korrektur: **86 bestanden**, davon 74 Repositoryfälle und
+12 unveränderte private Reviewerfälle; keine Addition zu den früheren Läufen.
 
 ## Reproduzierbare Textmessung
 
@@ -77,16 +88,35 @@ gestartet, keine OS-Caches geleert. Niedrige CPU-Priorität berücksichtigt den
 parallel angekündigten nativen Rust-Build; Messungen sind kein isolierter SLO-
 oder Produktfreigabebeleg.
 
-Aktueller Status: 200-Thread-Smoke ausgeführt; der erste echte 10k-Aufbau hat
+Früher Messstatus: 200-Thread-Smoke ausgeführt; der erste echte 10k-Aufbau hat
 quadratische FTS-Löschung nach `UNINDEXED entity_id` aufgedeckt. Direkte, in der
 Projektion gespeicherte FTS-rowids ersetzen diesen Scan. Der nächste reale Lauf
 hat unter Last einen falsch als `index_changed` gemeldeten Progresshandler-
 Abbruch gefunden; INTERRUPT/BUSY halten jetzt dieselbe Keyset-Position als
 Teilstand für die Fortsetzung. Beide frühen Messläufe sind **kein** fertiger
-Leistungsnachweis. Neue 10k-/100k-Messungen vom eingefrorenen Reviewkandidaten
-stehen noch aus. Keine p95-/Vollständigkeitszusage vor tatsächlichem Resultat.
-Messartefakte bleiben privat; eine kompakte volumen-/umgebungsgebundene
-Zusammenfassung folgt nach den tatsächlich abgeschlossenen Läufen.
+Leistungsnachweis.
+
+Die vollständige 10k-Messung auf **`b966bd7` vor dem unabhängigen Reviewfix** ist
+inzwischen abgeschlossen: macOS 15.7.4 Intel/x86_64, 4 logische CPUs, 32 GiB RAM,
+Python 3.12.13/SQLite 3.53.2, `nice 10`, keine geleerten OS-Caches. Je Backend
+40.372.400 UTF-8-Textbytes (270.000 Titel, 1.600.000 Beschreibung, 38.502.400
+Notizen), 1000 warme Messungen mit jeweils tatsächlich erreichten ersten20.
+
+| Modus | Service p50 / p95 ms | Service CPU p50 ms | Service Peak-RSS MB | echte CLI p95 ms / erste20 |
+| --- | --- | --- | --- | --- |
+| FTS5 | 10,48 / 39,99 | 8,89 | 44,8 | 687,78 / 20 von20 |
+| SQLite bounded scan | 6,60 / 22,68 | 5,91 | 40,1 | 653,53 / 20 von20 |
+| JSON bounded scan | 59,75 / 158,95 | 56,62 | 33,7 | 428,33 / 20 von20 |
+
+Das JSON-Profil verfehlt das vorgeschlagene warme 100ms-Ziel in dieser Umgebung.
+Alle dichten ersten Seiten haben reguläre Fortsetzungen; das ist kein Fehler
+und keine vollständige Bestandssuche. JSON bleibt zusätzlich immer ausdrücklich
+`json_external_writers_unverified`. Kernel, kalter Prozess, CPU/RSS der CLI,
+Aufbau, exakte Quellhashes, Teilstände und seltene/fehlende Suchbegriffe stehen in
+[der kompakten Messdatei](benchmark-10000-b966bd7.json); rohe Stichproben privat.
+Diese historischen Werte werden den nachfolgenden Korrekturbytes **nicht**
+zugeschrieben. Eine 100k-Messung am neuen fixierten Reviewpin steht noch aus;
+kein vollständiges E08.3, SLO oder Produktfreigabebeleg.
 
 E08 bleibt teilweise offen: E08.1 erhält diesen lokalen Reviewkandidaten;
 Teamrechte bleiben E06, Bridge-Dateiindex und produktive Leistungs-/Paketabnahme

@@ -193,7 +193,7 @@ def test_transaction_rollback_preserves_content_and_search_generation(store):
     assert search.search("token").hits
 
 
-@pytest.mark.parametrize("query,limit", [("", 20), ("x"*513, 20), ("x\x00", 20), ("x", True), ("x", 101), (" ".join(["x"]*17), 20)])
+@pytest.mark.parametrize("query,limit", [("", 20), ("x"*513, 20), ("x\x00", 20), ("x\x7f", 20), ("x\x85", 20), ("x\x9f", 20), ("x", True), ("x", 101), (" ".join(["x"]*17), 20)])
 def test_query_bounds(store, query, limit):
     search = service(store)
     with pytest.raises(SearchError, match="invalid_search_query"):
