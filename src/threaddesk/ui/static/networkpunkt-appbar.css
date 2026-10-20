@@ -1,0 +1,19 @@
+/* NetzwerkPunkt appbar 1.0.0; NP desktop controls, one icon and one ring. */
+.np-appbar { display:flex; align-items:center; gap:var(--np-space-1,4px); flex-shrink:0; width:max-content; max-width:100%; font:400 var(--np-meta)/1.4 var(--np-font); color:var(--np-text,#edf0f4); }
+.np-appbar-item { position:relative; display:inline-flex; flex:none; }
+.np-appbar-button { display:inline-flex; align-items:center; justify-content:center; width:var(--np-control,40px); height:var(--np-control,40px); padding:0; border:0; border-radius:0; background:transparent; color:inherit; cursor:pointer; }
+.np-appbar-button:hover { background:var(--np-hover,#25282e); }
+.np-appbar-button[aria-disabled="true"] { cursor:default; }
+.np-appbar-button:focus-visible { outline:2px solid var(--np-focus,#edf0f4); outline-offset:1px; }
+.np-appbar-ring { position:relative; display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box; width:32px; height:32px; }
+.np-appbar-ring::before { content:""; position:absolute; inset:0; border:1px solid transparent; border-radius:50%; pointer-events:none; }
+.np-appbar-ring img { display:block; width:24px; height:24px; object-fit:contain; }
+.np-appbar-ring[data-connected="true"]::before { border-color:var(--np-appbar-color); box-shadow:0 0 4px color-mix(in srgb,var(--np-appbar-color) 10%,transparent); }
+.np-appbar-ring[data-pulse="true"]::before { animation:np-appbar-unlocked 12s ease-in-out infinite; }
+@keyframes np-appbar-unlocked { 0%,100% { opacity:1; } 50% { opacity:.9; } }
+.np-appbar-button[data-error="true"] { outline:1px solid var(--np-danger,#f49b9b); outline-offset:-1px; }
+.np-appbar-button[data-error="true"]:focus-visible { outline:2px solid var(--np-focus,#edf0f4); outline-offset:1px; }
+.np-appbar-tooltip { position:absolute; top:100%; left:0; z-index:20; box-sizing:border-box; width:max-content; max-width:min(280px,calc(100vw - 8px)); overflow-wrap:anywhere; padding:var(--np-space-2,8px); background:var(--np-surface,#1a1c20); border:1px solid var(--np-control-border,#808996); pointer-events:none; }
+.np-appbar [hidden] { display:none; }
+.np-appbar-sr { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+@media (prefers-reduced-motion:reduce) { .np-appbar-ring[data-pulse="true"]::before { animation:none; } }

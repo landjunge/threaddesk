@@ -111,7 +111,7 @@ an gemeinsamen Dateien werden vorab eindeutig einem Bearbeiter zugeteilt.
 | E02.3–4 | AP-01/AP-02/F4 | Quellumfänge abgeschlossen: AP01 PR #229 (`ab1aba3`) als `7a9416d`, AP02 PR #230 als `262917f` auf main; jeweils grüne PR-CI. Grok `ship` beider Umfänge, Ergebnis `9784c6e6-3258-42ad-8295-a30ea114ee27`, eigener Body-Lauf11/11. SQLite156+1 expliziter Skip; echter Postgres-CI-Lauf157 bestanden. Kein neues 4AllPass-Paket daraus abgeleitet. |
 | E03 | P01–P05, R02–R07/R12, AP-04 | Offen: Kryptografie, Snapshot, Konto/Sitzung, Geräte, Recovery und belastbarer Identitätsvertrag. Vorhandene Tests ersetzen keine Bereichsabnahme. |
 | E04 | P06–P08/P11–P12, R08–R11/R15–R17, AP-03 | Offen: Browser-/Desktop-/native Nutzerwege und Paketnachweise am tatsächlichen Kandidaten. |
-| E05 | UI-01, zugehöriger TD-08-Umfang | Offen: gemeinsame kompakte App-Leiste, vorhandene Icons, bestätigte frische Verbindungen; nur 4AllPass bei bestätigtem Unlock sehr dezenter Puls. |
+| E05 | UI-01, zugehöriger TD-08-Umfang | Reine portable DOM/CSS-/Kataloggrundlage1.0.0 in Arbeit, synthetische Browser-/Vertragsprüfung; keine Host-Einbindung oder echte Peerabnahme. KiraBridge zuerst, danach TD/AP; KB-Icon und authentisierte frische Status-/Openadapter weiter offen. Nutzerfeedback zur Icongröße noch ohne Oberflächenzuordnung. |
 | E06 | TD-03–TD-06/TD-08, AP-04 | Offen: Projektrollen, atomarer Transfer, Team-Sync, projekt-/thread-/revisions-/laufgebundene Agentenaufträge. |
 | E07 | AP-05–AP-07, P09/R13–R14 | Offen: begrenzte Freigaben, tatsächliche Hostgrenze und genau eine freigegebene reale Anbieteroperation; kein synthetischer Test als Produktionsbeweis. |
 | E08 | TD-07 | E08.1 in Prüfung: optionaler lokaler Titel-/Beschreibung-/Notizschnitt mit FTS5, begrenztem JSON-/No-FTS-Ersatz und `td search` auf main `88a5b4d`; default aus, expliziter Aufbau, ehrlicher Teilstand und frische lokale Policy. [Vertrag und Grenzen](LOCAL-SEARCH.md), [Quell-/Test-/Messnachweis](evidence/e08-local-search-20261020/STATUS.md). Echte 10k-/100k-Textmessung und unabhängige Abnahme werden getrennt nachgeführt. Projekt-/Teamrechte bleiben E06; optionaler Bridge-Dateiindex und Produktfreigabe weiter offen. |
@@ -257,3 +257,25 @@ Nächste unabhängige Arbeit: E03-IndexedDB-Commit/Abort und H1-Kontoregistrieru
 in getrennten bestehenden 4AllPass-Worktrees; Grok spezifiziert AP04 und holt
 vorhandene native Reviewresultate ab. E08/TD07 wird als lokales optionales
 Suchmodul vorbereitet. E03–E09 sind damit nicht insgesamt abgeschlossen.
+
+### E05 / UI-01: reine Renderer-Grundlage (20.10.2026)
+
+Versioniertes NP-Modul, feste Katalog-/Adaptermetadaten, TTL/Generation/Peer-
+zuordnung und getrennt erlaubter AP4-Nutzer-/Tresorstatus. Kein Ring aus bloßem
+Start/Transport/PID und kein Bridge-Aktivitätspuls. Vertrag/Übernahme:
+`docs/contracts/appbar-v1.md`. Bestehende freigegebene TD/AP4-Pixel bytegleich,
+kein KB-Ersatzlogo. Noch keine TD/AP/KB-Template-/Appintegration; KB-Mount
+bleibt gemäß Gesamtplan zuerst. Unabhängiger Source-/Browserreview und echte
+Öffnungs-/Status-/Hostabnahmen folgen getrennt.
+
+E05-Renderer-Nachbesserung nach unabhängigem b36-Review: beobachtete partielle
+Uhr-Rücksprünge neutralisieren die Statuslease; Öffnungsdeadline bewertet beide
+Uhren und hält unklare Starts bis Hostprüfung gesperrt. Tooltips bleiben auch
+im schmalen Ausschnitt sichtbar.35 Nodefälle/31 gezielte Repo-Prüfungen grün,
+unveränderte Reviewerproben vom Autor5 Node/6 Browser grün; unabhängige
+Nachabnahme folgt, echte Verbindungen/Hostintegration weiterhin offen.
+
+E05-F3-Nachbesserung: Ein ungültiges Uhralter erfüllt die600ms-Mindestwartezeit
+nicht; nach Hostprüfung beginnt sie vollständig neu.32 gezielte Repofälle
+grün, unveränderte Reviewerproben vom Autor5 Node/7 Browser grün; unabhängige
+Nachprüfung und alle echten Host-/Verbindungsabnahmen bleiben getrennt offen.

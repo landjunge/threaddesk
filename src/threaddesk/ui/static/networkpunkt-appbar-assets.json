@@ -1,0 +1,29 @@
+{
+  "v": 1,
+  "version": "1.0.0",
+  "files": [
+    {
+      "appId": "threaddesk",
+      "file": "np-appbar-threaddesk-dark-48.png",
+      "source": "assets/design/icons/dark/ThreadDesk-dark-48.png",
+      "sourceRepository": "threaddesk",
+      "sourcePin": "b63fbd24743140fed68dc2a8eca7dcd9a7ca6c61",
+      "approval": "assets/design/README.md"
+    },
+    {
+      "appId": "4allpass",
+      "file": "np-appbar-4allpass-dark-48.png",
+      "source": "brand/ap4/dark/4allpass-dark-48.png",
+      "sourceRepository": "4allpass",
+      "sourcePin": "2bfe0c677ceda1352db98201dc568067600dccfe",
+      "approval": "brand/README.md"
+    }
+  ],
+  "blocked": {
+    "kirabridge": "approved-icon-missing",
+    "tollgate": "asset-not-assigned"
+  },
+  "colorBlockers": {
+    "4allpass": "documented-brand-color-unassigned"
+  }
+}

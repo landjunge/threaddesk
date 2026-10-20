@@ -4,3 +4,10 @@ src/threaddesk/ui/static/htmx.min.js -text
 src/threaddesk/ui/static/alpine.min.js -text
 src/threaddesk/ui/static/ui-vendor.json text eol=lf
 src/threaddesk/ui/static/UI-VENDOR-LICENSES.txt text eol=lf
+# Portable appbar copies pin exact source/asset bytes across host repositories.
+src/threaddesk/ui/static/networkpunkt.css text eol=lf
+src/threaddesk/ui/static/networkpunkt-appbar*.js text eol=lf
+src/threaddesk/ui/static/networkpunkt-appbar*.css text eol=lf
+src/threaddesk/ui/static/networkpunkt-appbar*.json text eol=lf
+src/threaddesk/ui/static/networkpunkt-appbar-SHA256SUMS text eol=lf
+src/threaddesk/ui/static/np-appbar-*.png -text
