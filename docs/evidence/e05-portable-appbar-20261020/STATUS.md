@@ -138,3 +138,28 @@ expliziter Recovery. Unveränderte Reviewerproben vom Autor erneut ausgeführt:
 Änderung der privaten Reviewerfälle. Logs: e05-f3-author-red.log,
 e05-f3-author-green.log, e05-f3-reviewer-node-green.log und
 e05-f3-reviewer-browser-green.log. Unabhängige Nachprüfung bleibt offen.
+
+## Abschließende Prüfbarriere und lokale Byteportabilität
+
+Der unabhängige d016-Nachreview schließt F1/F2/N1/F3 mit unveränderten
+Zustands-/Browserproben. Seine kombinierte Prüfung zeigte eine Race im neuen
+Resize-Test: set_viewport_size garantiert noch keine ausgeführte Neupositionierung.
+Der Test wartet jetzt konkret auf die erwarteten Tooltip-Bounds im320px-
+Viewport. Keine feste Pause, höhere Timeoutgrenze oder Runtimeänderung.
+Beide betroffenen Repo-Varianten frisch2/2 grün.
+
+Die bestehende mitgehashte networkpunkt.css war trotz LF im Gitobjekt unter
+core.autocrlf=true nicht vor CRLF-Konvertierung geschützt. Genau diese Datei
+erhält zusätzlich text eol=lf. Alle übrigen im Bundle gehashten Textdateien
+sind bereits explizit LF, PNGs bleiben -text. Ein eigener isolierter
+checkout-index-Export mit separatem Index, core.autocrlf=true und deaktivierter
+globaler Attributesdatei bestätigt alle9 Bundlehashes sowie Bytegleichheit
+mit den aktuellen Quellen; networkpunkt.css bleibt ohne CRLF. Keine Änderung
+an NP-Inhalt, Markenfarben, Größen oder Runtime. Dies ist Git-Exportprüfung
+auf macOS, keine native Windows-Abnahme.
+
+Private Belege: e05-resize-barrier-delta.log und
+e05-autocrlf-fixed-u04iqcom/results.json/attributes.txt.
+Runtime/Assetbytes bleiben d016be94681c368e7f3db9f71bc62d350855d6b8-identisch;
+Basis wird auf main b32eef3 mit dem gesonderten CSS-Navigationstestfix gesetzt.
+Unabhängiger finaler Source-/Delta-Recheck folgt; keine Liveintegration.

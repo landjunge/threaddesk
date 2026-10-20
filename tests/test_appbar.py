@@ -223,5 +223,9 @@ def test_fixed_icon_geometry_and_only_ring_motion(appbar, width):
             box = page.locator(f'#{button.get_attribute("aria-describedby")}').bounding_box()
             assert box["x"] >= 0 and box["x"] + box["width"] <= width
     page.set_viewport_size({"width": 320, "height": 760})
+    page.wait_for_function("""id => {
+        const box = document.getElementById(id).getBoundingClientRect();
+        return box.left >= 0 && box.right <= 320;
+    }""", arg=button.get_attribute("aria-describedby"))
     box = page.locator(f'#{button.get_attribute("aria-describedby")}').bounding_box()
     assert box["x"] >= 0 and box["x"] + box["width"] <= 320

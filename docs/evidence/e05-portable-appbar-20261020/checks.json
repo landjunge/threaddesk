@@ -15,7 +15,7 @@
   "documentedAp4RingColorAssigned": false,
   "ap4FixtureColorIsSynthetic": true,
   "iconDimensionsUserAccepted": false,
-  "independentReview": "ef286 F1/F2/N1 closed; bounded F3 cooldown fix awaiting independent re-review",
+  "independentReview": "d016 F1/F2/N1/F3 closed; resize-test/LF-attribute correction awaiting final recheck",
   "authorReranUnchangedReviewerNodeCasesPassed": 5,
   "authorReranUnchangedReviewerBrowserCasesPassed": 7,
   "reviewedOriginalCommit": "b36af8563f47f0d488d0f885a36b8ed99c33032b",
@@ -24,5 +24,10 @@
   "tooltipViewportClamped": true,
   "previousReviewCommit": "ef286c2edd60131dbb541a2280f252f0223f1dc7",
   "invalidCooldownDoesNotSatisfyMinimum": true,
-  "cooldownRecoveryRestartsFull600Ms": true
+  "cooldownRecoveryRestartsFull600Ms": true,
+  "runtimeIdenticalTo": "d016be94681c368e7f3db9f71bc62d350855d6b8",
+  "resizeDeltaCasesPassed": 2,
+  "bundleAutocrlfExportMatches": true,
+  "bundleTextAttributesLf": true,
+  "autocrlfExportIsWindowsNativeProof": false
 }
