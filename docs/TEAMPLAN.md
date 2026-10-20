@@ -208,3 +208,27 @@ Nicht verfügbare Kindprozess-Stacks/Pipefüllstände werden ausdrücklich so be
 Ubuntu prüft zunächst genau den ersten fehlgeschlagenen Fall und dann weiterhin
 die vollständige Suite zweimal mit unveränderter Fehler-/Skip-Abnahme. Der neue
 Linux-Nachweis und Groks Prüfung bleiben bis zu ihren tatsächlichen Ergebnissen offen.
+
+Der instrumentierte Pin `c059b81` liefert den konkreten Befund: Ubuntu 844
+bestanden/16 fehlgeschlagen, keine Skips, alle Fehler ursprüngliche
+30-Sekunden-Navigationstimeouts. Alle 16 Aufnahmen zeigen ausschließlich je zwei
+offene `POST /hausmeister/activity` mit HTTP 200; HTML und Static-Dateien sind
+abgeschlossen. Die Sprach-/Übersetzungsfälle bestehen. Der Browser verwirft den
+kleinen Fetch-Antwortbody, während der neue HTTP-Guard `no-store` setzt. Der
+versionsgenaue [Chromium-156-Quellpfad](https://chromium.googlesource.com/chromium/src/+/refs/tags/156.0.8078.4/third_party/blink/renderer/core/fetch/fetch_manager.cc#820)
+liest solche Antworten nicht automatisch leer. HTTP 200 allein ist kein
+Anfrageabschluss. Ein neuer echter Browsergegenfall reproduziert denselben
+30-Sekunden-Fehler lokal, ohne Fetch-Mock oder Bodykonsum aus dem Test.
+
+Die enge Korrektur konsumiert ausschließlich die kleine Activity-Antwort im
+bestehenden Promise. `keepalive`, `no-store`, Drosselung, Nutzdaten, Origin und
+CSRF bleiben erhalten; es gibt keinen Retry. Derselbe Gegenfall, Hausmeister-
+Fälle und der ursprüngliche Layoutfall bestehen danach zusammen mit 40 Fällen.
+Ein getrennter Chromium-156-A/B-Lauf bestätigt bei identischem Server und
+DOMContentLoaded-Eingaben: Original nach 30,003 Sekunden gesperrt, nur mit
+Bodykonsum Navigation nach 0,651 Sekunden erfolgreich; beide Activity-Antworten
+einschließlich der nach 15 Sekunden folgenden Meldung vollständig abgeschlossen.
+Die CI prüft zuerst diesen Gegenfall und den bisherigen Layoutfall; die beiden
+vollständigen Gesamtläufe und ihre ursprünglichen Fehler-/Skipregeln bleiben
+verbindlich. Der vorherige fehlgeschlagene Lauf bleibt als Beleg erhalten.
+Neuer Linux-Pin und tatsächliches Grok-Review bleiben offen, bis sie vorliegen.

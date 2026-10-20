@@ -252,12 +252,14 @@ function activityKind(event) {
 }
 
 function sendActivity(kind) {
+  // no-store responses are not automatically drained by Chromium. Consume the
+  // small acknowledgement so the request completes, including during navigation.
   window.threadDeskWrite("/hausmeister/activity", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ kind }),
     keepalive: true,
-  }).catch(() => {});
+  }).then(response => response.arrayBuffer()).catch(() => {});
 }
 
 function reportActivity(event) {
