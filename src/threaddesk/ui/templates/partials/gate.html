@@ -25,6 +25,7 @@
     hx-swap="innerHTML"
     {% if not gate.frozen %}hx-confirm="{{ t('gate.confirm_freeze') }}"{% endif %}
   >
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
     {% if gate.frozen %}
     <input type="hidden" name="frozen" value="0" />
     <button type="submit" class="btn btn-ghost">{{ t("gate.thaw") }}</button>

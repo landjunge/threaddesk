@@ -184,7 +184,7 @@ def test_graph_payload_is_read_only_and_filterable(svc: ThreadService) -> None:
 
 def test_graph_endpoint_returns_map_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("fastapi")
-    from fastapi.testclient import TestClient
+    from http_ui_client import UIClient as TestClient
 
     from threaddesk.ui.server import create_app
 
@@ -203,7 +203,7 @@ def test_knowledge_list_can_create_nodes_and_relations(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     pytest.importorskip("fastapi")
-    from fastapi.testclient import TestClient
+    from http_ui_client import UIClient as TestClient
 
     from threaddesk.ui.server import create_app
 

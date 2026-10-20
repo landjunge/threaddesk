@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+from http_ui_client import choose_language
+
 import pytest
 from playwright.sync_api import expect, sync_playwright
 from test_desk_browser import Desk, _launch, _open_section
@@ -61,7 +63,7 @@ def test_return_decision_and_unknown_scope_are_visible_without_foreign_content(
         with sync_playwright() as play:
             browser = _launch(play)
             page = browser.new_page(viewport={"width": 1440, "height": 900})
-            page.goto(url + "/lang/" + language, wait_until="networkidle")
+            choose_language(page, url, language)
             expect(page.locator('[data-return-review="unverified"]')).to_have_count(1)
             expect(page.locator('[data-return-review="unknown"]')).to_have_count(2)
             assert (
@@ -102,7 +104,7 @@ def test_lost_accepted_note_response_stays_uncertain_without_post_retry(
         with sync_playwright() as play:
             browser = _launch(play)
             page = browser.new_page(viewport={"width": 1440, "height": 900})
-            page.goto(url + "/lang/" + language, wait_until="networkidle")
+            choose_language(page, url, language)
             _open_section(page, "notes")
             notes = page.locator('#notes textarea[name="text"]')
             notes.fill("Synthetic text accepted exactly once")

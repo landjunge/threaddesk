@@ -74,7 +74,7 @@ class RoomBook:
         peers = self._peers_for(current["id"]) if current else []
         invite = self._open_invite(current["id"]) if current else None
         return {
-            "instance_id": self.instance_id(),
+            "instance_id": ActorRegistry(self.store).existing_instance_id(),
             "rooms": [_public_room(room) for room in state["rooms"]],
             "current": _public_room(current) if current else None,
             "peers": [
@@ -342,7 +342,8 @@ class RoomBook:
         return room
 
     def _role(self, room: dict[str, Any] | None) -> str:
-        return _member_role(room, self.instance_id()) if room else ""
+        identity = ActorRegistry(self.store).existing_instance_id()
+        return _member_role(room, identity) if room and identity else ""
 
     def _open_invite(self, room_id: str) -> dict[str, Any] | None:
         state = self._load(INVITES, {"version": 1, "invites": []})

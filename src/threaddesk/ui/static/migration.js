@@ -125,7 +125,7 @@
     conflicts.replaceChildren(); conflictSection.hidden = true; resolutions = {};
     const data = new FormData(); data.append('bundle', file.files[0]);
     try {
-      const response = await fetch('/api/migration/dry-run', {method: 'POST', body: data});
+      const response = await window.threadDeskWrite('/api/migration/dry-run', {method: 'POST', body: data});
       const result = await response.json();
       if (!response.ok) throw new Error(result.detail || 'preview_failed');
       summary.textContent = result.blockers.length
@@ -155,7 +155,7 @@
     data.append('bundle_sha256', reviewSha);
     data.append('resolutions_json', JSON.stringify(resolutions));
     try {
-      const response = await fetch('/api/migration/confirm', {method: 'POST', body: data});
+      const response = await window.threadDeskWrite('/api/migration/confirm', {method: 'POST', body: data});
       const result = await response.json();
       if (response.status === 202) { summary.textContent = uiText('browser.migration.uncertain', {batch: result.batch_id}); return; }
       if (!response.ok) throw new Error(result.detail || 'import_failed');
@@ -179,7 +179,7 @@
     recover.disabled = true;
     const data = new FormData(); data.append('batch_id', batchId);
     try {
-      const response = await fetch('/api/migration/recover', {method: 'POST', body: data});
+      const response = await window.threadDeskWrite('/api/migration/recover', {method: 'POST', body: data});
       const result = await response.json();
       if (!response.ok) throw new Error(result.detail || 'recovery_failed');
       summary.textContent = uiText('browser.migration.recovered', {path: result.path});

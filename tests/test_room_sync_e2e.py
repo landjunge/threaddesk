@@ -9,6 +9,8 @@ two homes. The forms below are the same posts the desk sends.
 from __future__ import annotations
 
 import json
+import http.cookiejar
+import re
 import os
 import signal
 import socket
@@ -26,8 +28,23 @@ from threaddesk.core.models import WhiteboardEntry
 from threaddesk.storage.json_store import JsonStore
 
 ROOT = Path(__file__).resolve().parents[1]
-PORT_A = 8765
-PORT_B = 8766
+_LISTENERS = {}
+_CLIENTS = {}
+
+
+def _reserve_port(port=0):
+    listener = socket.socket()
+    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener.bind(("127.0.0.1", port))
+    listener.listen(128)
+    selected = listener.getsockname()[1]
+    assert selected not in {8765, 8766, 8767}
+    _LISTENERS[selected] = listener
+    return selected
+
+
+PORT_A = _reserve_port()
+PORT_B = _reserve_port()
 URL_A = f"http://127.0.0.1:{PORT_A}"
 URL_B = f"http://127.0.0.1:{PORT_B}"
 
@@ -54,23 +71,28 @@ def _serve(home: Path, port: int, log_path: Path) -> subprocess.Popen:
     env = os.environ.copy()
     env["THREADDESK_HOME"] = str(home)
     env.pop("THREADDESK_STORAGE", None)
-    return subprocess.Popen(
-        [
-            sys.executable,
-            "-m",
-            "threaddesk.ui.cli",
-            "serve",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            str(port),
-        ],
-        cwd=ROOT,
-        env=env,
-        stdout=log,
-        stderr=subprocess.STDOUT,
-        start_new_session=True,
+    if port not in _LISTENERS:
+        _reserve_port(port)
+    listener = _LISTENERS.pop(port)
+    env["TD_TEST_LISTENER_FD"] = str(listener.fileno())
+    _CLIENTS.pop(f"http://127.0.0.1:{port}", None)
+    program = (
+        "import os,socket,uvicorn; import threaddesk.ui.server as ui; "
+        "ui.Hausmeister.probe_models=lambda self:dict(models=[],ollama_ok=None); "
+        "ui._hausmeister_status=lambda *_:dict(enabled=False,model='',models=[],ollama_ok=False,phase='off'); "
+        "listener=socket.socket(fileno=int(os.environ['TD_TEST_LISTENER_FD'])); "
+        "uvicorn.Server(uvicorn.Config(ui.create_app(),log_level='error',proxy_headers=False))"
+        ".run(sockets=[listener])"
     )
+    try:
+        return subprocess.Popen(
+            [sys.executable, "-c", program], cwd=ROOT, env=env,
+            stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
+            pass_fds=(listener.fileno(),),
+        )
+    finally:
+        listener.close()
+        log.close()
 
 
 def _stop(proc: subprocess.Popen | None) -> None:
@@ -110,10 +132,20 @@ def _logs(message: str, paths: list[Path]) -> str:
 
 
 def _request(base: str, path: str, form: dict[str, str] | None = None) -> str:
+    if base not in _CLIENTS:
+        opener = urllib.request.build_opener(
+            urllib.request.ProxyHandler({}), urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+        )
+        with opener.open(base + "/", timeout=15) as response:
+            page = response.read().decode()
+        token = re.search(r'name="threaddesk-csrf" content="([a-f0-9]+)"', page)[1]
+        _CLIENTS[base] = (opener, token)
+    opener, token = _CLIENTS[base]
     data = None if form is None else urllib.parse.urlencode(form).encode()
-    request = urllib.request.Request(base + path, data=data, method="POST" if form is not None else "GET")
+    headers = {} if form is None else {"Origin": base, "X-ThreadDesk-CSRF": token}
+    request = urllib.request.Request(base + path, data=data, method="POST" if form is not None else "GET", headers=headers)
     try:
-        with urllib.request.urlopen(request, timeout=15) as response:
+        with opener.open(request, timeout=15) as response:
             return response.read().decode()
     except urllib.error.HTTPError as exc:
         body = exc.read().decode(errors="replace")
@@ -189,8 +221,7 @@ def test_two_live_servers_sync_a_room(tmp_path: Path) -> None:
     assert home_a.resolve() != home_b.resolve()
     assert real_home.resolve() not in {home_a.resolve(), home_b.resolve()}
     assert str(home_a.resolve()).startswith(str(tmp_path.resolve()))
-    if not _wait_until_free(PORT_A) or not _wait_until_free(PORT_B):
-        pytest.fail(f"Port {PORT_A} oder {PORT_B} ist belegt")
+    # Ports are held by our own listening sockets and handed directly to each child.
 
     log_a = tmp_path / "a.log"
     log_b = tmp_path / "b.log"

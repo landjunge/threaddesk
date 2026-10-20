@@ -1,3 +1,40 @@
+// Only this document's session supplies write authorization; never a URL token.
+const viewPreferences = () => ({lang: document.body.dataset.language, mode: document.body.dataset.register});
+const viewHeaders = () => ({
+  "X-ThreadDesk-View-Language": viewPreferences().lang,
+  "X-ThreadDesk-View-Register": viewPreferences().mode,
+});
+window.threadDeskWrite = (path, options = {}) => {
+  const target = new URL(path, location.href);
+  if (target.origin !== location.origin) throw new Error("foreign_write_target");
+  const headers = new Headers(options.headers || {});
+  Object.entries(viewHeaders()).forEach(([name, value]) => { if (value) headers.set(name, value); });
+  headers.set("X-ThreadDesk-CSRF", document.querySelector('meta[name="threaddesk-csrf"]').content);
+  return fetch(target, {...options, method: options.method || "POST", headers});
+};
+document.addEventListener("htmx:configRequest", event => {
+  const reading = event.detail.verb?.toLowerCase() === "get";
+  const target = new URL(event.detail.path, location.href);
+  if (target.origin !== location.origin) { if (!reading) event.preventDefault(); return; }
+  Object.entries(viewHeaders()).forEach(([name, value]) => { if (value) event.detail.headers[name] = value; });
+  if (reading) return;
+  event.detail.headers["X-ThreadDesk-CSRF"] = document.querySelector('meta[name="threaddesk-csrf"]').content;
+});
+// Regular POSTs (including multipart uploads/downloads) need the same transient
+// display context. Authorization remains in the existing session and form body.
+document.addEventListener("submit", event => {
+  const form = event.target;
+  if (!(form instanceof HTMLFormElement) || form.method.toLowerCase() !== "post") return;
+  const submitter = event.submitter;
+  const override = submitter?.getAttribute("formaction");
+  const target = new URL(override || form.getAttribute("action") || location.href, location.href);
+  if (target.origin !== location.origin) return;
+  Object.entries(viewPreferences()).forEach(([name, value]) => {
+    if (value && !target.searchParams.has(name)) target.searchParams.set(name, value);
+  });
+  if (override) submitter.setAttribute("formaction", target.href);
+  else form.action = target.href;
+}, true);
 let UI_STRINGS = {};
 try {
   UI_STRINGS = JSON.parse(document.body.dataset.uiStrings || "{}");
@@ -11,6 +48,22 @@ const uiText = (key, values = {}) => {
   });
   return text;
 };
+
+// Expire only the displayed observation. No polling, model discovery or writes.
+const observationTimers = new WeakSet();
+function expireModelObservations(root = document) {
+  root.querySelectorAll("[data-hausmeister]").forEach(section => {
+    if (observationTimers.has(section) || section.dataset.ollama === "unknown") return;
+    observationTimers.add(section);
+    const remaining = Math.max(0, Number(section.dataset.observationRemaining) || 0);
+    window.setTimeout(() => {
+      if (!section.isConnected) return;
+      section.dataset.ollama = "unknown";
+      section.querySelector("[data-ollama-observation]").textContent = section.dataset.unverified;
+    }, remaining * 1000);
+  });
+}
+expireModelObservations();
 
 function typingTarget(el) {
   if (!el) return false;
@@ -178,6 +231,7 @@ document.addEventListener("click", (event) => {
 
 document.body.addEventListener("htmx:afterSwap", (event) => {
   const root = event.detail && event.detail.target;
+  if (root) expireModelObservations(root);
   if (root && window.Alpine) {
     window.Alpine.initTree(root);
   }
@@ -198,12 +252,14 @@ function activityKind(event) {
 }
 
 function sendActivity(kind) {
-  fetch("/hausmeister/activity", {
+  // no-store responses are not automatically drained by Chromium. Consume the
+  // small acknowledgement so the request completes, including during navigation.
+  window.threadDeskWrite("/hausmeister/activity", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ kind }),
     keepalive: true,
-  }).catch(() => {});
+  }).then(response => response.arrayBuffer()).catch(() => {});
 }
 
 function reportActivity(event) {

@@ -2,6 +2,7 @@
 <html lang="{{ lang }}">
   <head>
     <meta charset="utf-8" />
+    <meta name="threaddesk-csrf" content="{{ request.state.csrf_token }}" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ThreadDesk</title>
     <link rel="stylesheet" href="/static/networkpunkt.css" />
@@ -12,7 +13,7 @@
     <script src="/static/htmx.min.js" defer></script>
     <script src="/static/alpine.min.js" defer></script>
   </head>
-  <body class="np-ui" data-language="{{ lang }}" data-ui-strings="{{ browser_strings|default('{}')|e }}">
+  <body class="np-ui" data-language="{{ lang }}" data-register="{{ register }}" data-ui-strings="{{ browser_strings|default('{}')|e }}">
     <div class="shell np-desktop">
       <header class="topbar">
         <div class="brand">
@@ -33,17 +34,21 @@
             <div class="preferences-menu">
           <nav class="lang-switch" aria-label="{{ t('nav.language') }}">
             {% for code in languages %}
-            <a href="/lang/{{ code }}" class="btn btn-ghost btn-compact{{ ' is-active' if code == lang else '' }}"
-               hreflang="{{ code }}" lang="{{ code }}"
-               aria-current="{{ 'true' if code == lang else 'false' }}">{{ code|upper }}</a>
+            <form method="post" action="/lang/{{ code }}">
+              <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
+              <button type="submit" class="btn btn-ghost btn-compact{{ ' is-active' if code == lang else '' }}"
+               lang="{{ code }}"
+               aria-current="{{ 'true' if code == lang else 'false' }}">{{ code|upper }}</button></form>
             {% endfor %}
           </nav>
           {# Klartext ist der Normalfall, Fachsprache ist zuschaltbar. #}
           <nav class="lang-switch" aria-label="{{ t('nav.register') }}">
             {% for value in registers %}
-            <a href="/mode/{{ value }}" class="btn btn-ghost btn-compact{{ ' is-active' if value == register else '' }}"
+            <form method="post" action="/mode/{{ value }}">
+              <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
+              <button type="submit" class="btn btn-ghost btn-compact{{ ' is-active' if value == register else '' }}"
                title="{{ t('register.' ~ value ~ '.hint') }}"
-               aria-current="{{ 'true' if value == register else 'false' }}">{{ t('register.' ~ value) }}</a>
+               aria-current="{{ 'true' if value == register else 'false' }}">{{ t('register.' ~ value) }}</button></form>
             {% endfor %}
           </nav>
             </div>

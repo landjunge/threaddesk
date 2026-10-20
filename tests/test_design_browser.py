@@ -6,6 +6,7 @@ No screenshots substitute for behaviour assertions. All data is synthetic.
 import os
 
 import pytest
+from http_ui_client import choose_language
 
 pytest.importorskip("playwright.sync_api")
 from playwright.sync_api import expect, sync_playwright
@@ -70,7 +71,7 @@ def test_five_pages_use_consistent_desktop_controls(design_browser, width, heigh
     errors = []
     page.on("pageerror", lambda error: errors.append(str(error)))
     try:
-        page.goto(url + "/lang/" + language)
+        choose_language(page, url, language)
         for route in ["/", "/knowledge", "/data", "/migration", "/map"]:
             page.goto(url + route, wait_until="networkidle")
             expect(page.locator("h1").first).to_be_visible()
@@ -112,7 +113,7 @@ def test_desktop_edit_and_error_remain_usable(design_browser):
     browser, url = design_browser
     page = browser.new_page(viewport={"width":1180,"height":760})
     try:
-        page.goto(url + "/lang/de", wait_until="networkidle")
+        choose_language(page, url, "de")
         _open_section(page, "thread-edit")
         page.locator('.desk-description input[name="text"]').fill("Beschreibung " * 25)
         page.locator('.desk-description button').click()

@@ -4,6 +4,8 @@ from __future__ import annotations
 from contextlib import ExitStack, contextmanager
 import os
 from pathlib import Path
+
+from http_ui_client import choose_language
 import socket
 import subprocess
 import sys
@@ -330,7 +332,7 @@ def _toast(page, text: str) -> None:
 
 
 def _english(page, url: str) -> None:
-    page.goto(url + "/lang/en", wait_until="networkidle")
+    choose_language(page, url, "en")
     page.wait_for_function("() => window.Alpine !== undefined")
     expect(page.locator("html")).to_have_attribute("lang", "en")
     page.locator('[data-disclosure="room"] > summary').click()

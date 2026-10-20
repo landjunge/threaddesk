@@ -49,6 +49,18 @@ def test_id_survives_rename_and_recolor_and_reload(svc: ThreadService, tmp_path:
     assert person["kind"] == "human" and assistant["kind"] == "agent"
 
 
+def test_existing_identity_read_never_initializes_or_rewrites_registry(svc: ThreadService) -> None:
+    from threaddesk.services.actors import ActorRegistry
+
+    registry = ActorRegistry(svc.store)
+    assert registry.existing_instance_id() == ""
+    assert not registry.path.exists()
+    identity = registry.instance_id()  # Explicit initialization remains available to commands.
+    before = (registry.path.read_bytes(), registry.path.stat().st_mtime_ns)
+    assert registry.existing_instance_id() == identity
+    assert before == (registry.path.read_bytes(), registry.path.stat().st_mtime_ns)
+
+
 def test_invalid_agent_links_are_rejected(svc: ThreadService) -> None:
     human = svc.register_human("Ada", "moss")
     other = svc.register_agent("Hilf", human["id"], "local-assistant")
@@ -164,7 +176,7 @@ def test_rendered_marks_share_a_color_and_distinguish_the_agent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     pytest.importorskip("fastapi")
-    from fastapi.testclient import TestClient
+    from http_ui_client import UIClient as TestClient
 
     from threaddesk.ui.server import create_app
 

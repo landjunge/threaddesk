@@ -6,7 +6,7 @@ import zipfile
 from contextlib import contextmanager
 
 import pytest
-from fastapi.testclient import TestClient
+from http_ui_client import UIClient as TestClient
 
 from threaddesk.api.service import ThreadService
 from threaddesk.storage.json_store import JsonStore

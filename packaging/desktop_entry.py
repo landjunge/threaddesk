@@ -50,7 +50,7 @@ def running_server(listener):
     # Windowed Windows executables have no stdout/stderr. The default console
     # formatter calls isatty() during setup and prevents startup in that case.
     server = uvicorn.Server(uvicorn.Config(
-        create_app(), host="127.0.0.1", port=port, log_level="error", log_config=None,
+        create_app(), host="127.0.0.1", port=port, log_level="error", log_config=None, proxy_headers=False,
     ))
     thread = threading.Thread(target=server.run, kwargs={"sockets": [listener]},
                               daemon=True, name="threaddesk-server")

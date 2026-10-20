@@ -476,11 +476,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
         print(t("cli.serve.missing"), file=sys.stderr)
         return 2
     print(t("cli.serve.running", host=args.host, port=args.port))
-    if args.open:
-        import webbrowser
-
-        webbrowser.open(f"http://{args.host}:{args.port}/")
-    run(host=args.host, port=args.port)
+    run(host=args.host, port=args.port, open_browser=args.open)
     return 0
 
 

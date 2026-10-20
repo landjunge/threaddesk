@@ -1,18 +1,22 @@
-<section class="block desk-hausmeister" data-hausmeister data-ollama="{{ 'up' if hausmeister.ollama_ok else 'down' }}">
+<section class="block desk-hausmeister" data-hausmeister data-ollama="{{ 'unknown' if hausmeister.ollama_ok is none else 'up' if hausmeister.ollama_ok else 'down' }}"
+         data-observation-remaining="{{ hausmeister.observation_remaining|default(0) }}" data-unverified="{{ t('hausmeister.unverified') }}">
   <h3>{{ t("hausmeister.title") }}</h3>
   <p data-hausmeister-phase="{{ hausmeister.phase }}">
-    {% if hausmeister.ollama_ok %}{{ t("hausmeister.reachable") }}{% else %}{{ t("hausmeister.unreachable") }}{% endif %}
+    <span data-ollama-observation>{% if hausmeister.ollama_ok is none %}{{ t("hausmeister.unverified") }}{% elif hausmeister.ollama_ok %}{{ t("hausmeister.reachable") }}{% else %}{{ t("hausmeister.unreachable") }}{% endif %}</span>
+    {% if hausmeister.observed_at %}<time datetime="{{ hausmeister.observed_at }}" title="{{ hausmeister.observed_at }}">{{ t("hausmeister.observed_time", time=hausmeister.observed_at[11:19]) }}</time>{% endif %}
     {% if hausmeister.phase in ["waiting_for_order", "waiting_for_quiet", "working", "paused"] %}
     · {{ t("hausmeister.phase." ~ hausmeister.phase) }}
     {% endif %}
   </p>
   <form class="inline-form" hx-post="/hausmeister/toggle" hx-target="#workspace" hx-swap="innerHTML">
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
     <input type="hidden" name="enabled" value="{{ '0' if hausmeister.enabled else '1' }}" />
     <button type="submit" class="btn">
       {% if hausmeister.enabled %}{{ t("hausmeister.turn_off") }}{% else %}{{ t("hausmeister.turn_on") }}{% endif %}
     </button>
   </form>
   <form class="inline-form" hx-post="/hausmeister/model" hx-target="#workspace" hx-swap="innerHTML">
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
     <label>
       <select name="model" data-hausmeister-model aria-label="{{ t('hausmeister.use_model') }}">
         <option value="" {% if not hausmeister.model %}selected{% endif %}>{{ t("hausmeister.model_none") }}</option>
@@ -28,6 +32,7 @@
   {% endif %}
   {% if hausmeister.enabled %}
   <form hx-post="/threads/{{ current.id }}/hausmeister" hx-target="#workspace" hx-swap="innerHTML">
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
     <textarea name="order" rows="2" maxlength="500" placeholder="{{ t('hausmeister.order_placeholder') }}" data-hausmeister-order></textarea>
     <button type="submit" class="btn btn-primary" name="mode" value="now" data-hausmeister-run>{{ t("hausmeister.run") }}</button>
     <button type="submit" class="btn" name="mode" value="later" data-hausmeister-later>{{ t("hausmeister.later") }}</button>

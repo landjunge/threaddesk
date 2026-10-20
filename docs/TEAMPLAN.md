@@ -103,12 +103,12 @@ an gemeinsamen Dateien werden vorab eindeutig einem Bearbeiter zugeteilt.
 
 | ID | Umfang / bestehende Zuordnung | Stand und nächster Schritt |
 | --- | --- | --- |
-| E01.1 | P00/R01, Quell-/Paket-/Arbeitsbestand | Teilbasis erfasst: ThreadDesk main `ce8b403`, 4AllPass main `905e6b5`; vorhandene M1/M2/Wissens-/Design-/RC3-Belege erhalten. Isolierte Tests und vollständige Claim-/Prüfzuordnung noch offen. |
-| E01.2 | RC9/RC10, ST-01–ST-05 | Kira-Katalog-/Leseweg praktisch belegt; Codex-Bereitschaftsreparatur `2062055` mit 921 Gesamttests und anschließenden 172 gezielten Tests. Grok nahm nach eigenen 172 Tests begrenzt ab; RC11 ist kontrolliert aktiv, geladene Quelle/Konfiguration stimmen überein. Echter Kira→Original-Codex→Kira-Test bleibt offen. |
-| E01.3 | Native Teams und verbindliche Übergaben | Codex-Team für Parser/Regressionen sowie Import/Client/Bestand eingesetzt; Ergebnisse zusammengeführt. Grok-Review `e4c91752-bd49-425d-a3ce-a1c8bd887dc4` wartete bei `desktop_locked` ohne Eingabe; nach Entsperren im zugeordneten Fenster authentifiziert empfangsquittiert, Grok-Urteil eingegangen: ship im geprüften RC11-Umfang. Ergebnisse seiner zwei nativen Unteragenten noch offen. Kein zweiter RC11-Reviewauftrag. |
-| E02.1 | TD-01, F1/F2 | Kandidat auf main `ce8b403`: gebundene Quellen und JSON-WAL-Controlpfade, manifestgebundener Restore, exklusive Zieldateien und Veröffentlichung. Unabhängige Codex-Gegenproben korrigiert; abschließend 170 Integrationstests bestanden. Grok und native Windows-/Linux-CI offen; keine Live-Installation. |
-| E02.2 | TD-02 | Kandidat im separaten TD02-Worktree: lokale Host-/Origin-/Sitzungs-/CSRF-Grenze, drei exakte Room-Ausnahmen, echte Browser-/Zwei-Prozess-Gegenproben. Zusätzliche Codex-Prüfung fand Erstinitialisierung beim GET; eng zu korrigieren. Grok und Integration offen. |
-| E02.3–4 | AP-01/AP-02/F4 | In 4AllPass `ROADMAP.md`: AP01 Dokumente/Template in DraftPR229 (HEAD `ab1aba3`, identischer Quellbaum zu Reviewpin `4bfc476`); AP02 sofortige413 im DraftPR230, `3951697`, 156 Backendtests bestanden/1 expliziter Postgres-Migrationstest ohne isoliertes Postgres ausgenommen. Grok-Review `e5db3654` queued, nicht als empfangen behauptet. |
+| E01.1 | P00/R01, Quell-/Paket-/Arbeitsbestand | Aktuelle Bestandsaufnahme: ThreadDesk main `b366552` (TD01), 4AllPass main `262917f` (AP01/AP02); fremde schmutzige Hauptcheckouts erhalten. Vorhandene M1/M2/Wissens-/Design-/RC3-Belege bleiben ihrem Quellstand zugeordnet. Vollständige Claim-/Prüfzuordnung bleibt offen. |
+| E01.2 | RC9/RC10, ST-01–ST-05 | Bridge-Reparatur abgeschlossen übernommen: Code `956b0f8`, Architektur `41f4b89`, aktiver Quellpin `cfad2a30…ceb7`; 941 Mac-Gesamttests. Echter Kira→sichtbares Original-Codex→Kira-Weg mit getrenntem Einfügen/Return, Codex-ACK, Rückantwort und tatsächlichem Kira-Connector-ACK belegt. Originaltest nicht wiederholt. Siehe KiraBridge `docs/evidence/receiver-resilience-mac-20261020.json`. |
+| E01.3 | Native Teams und verbindliche Übergaben | Codex führt drei abgegrenzte native Teamaufgaben. Grok hat die vorhandenen E02-Aufträge authentisiert empfangen und selbst unabhängig geprüft; sechs native Teilreviews tatsächlich gestartet, Einzelresultate werden abgeholt. Bestehende sichtbare Hauptsitzungen erhalten, kein Ersatzagent. |
+| E02.1 | TD-01, F1/F2 | Abgeschlossen im Quellumfang: PR #78 (`2fafc6a`) als `b366552` integriert. Native Windows164, Ubuntu814 zweimal, drei native Installer-Selbsttests grün. Grok `ship` mit eigenen 175 Mac-Tests, Ergebnis `3c004034-0e3d-4dea-8811-18d66aa0a24a`. Keine Live-Installation; JSON-UNC bleibt nativ unbestätigt, UNC-Backup ausdrücklich gesperrt. |
+| E02.2 | TD-02 | Aktueller Reviewpin `129a42e`: Windows164, Ubuntu861 zweimal ohne Skips, drei Installer gebaut/selbstgeprüft. Grok `ship`, Ergebnis `71d17409-3db3-4212-9923-45c2483776d2`; eigener gezielter Lauf zunächst fehlendes Browserbinary, betroffener Fall mit vorhandenem Chrome danach bestanden. Echte WKWebView-Abnahme JSON8/8 + SQLite8/8; WLAN-Socketvertrag am selben Host11/11. Physischer zweiter LAN-Client fehlt. Auf TD01-main ohne Laufzeitänderung neu aufgesetzt, frische CI/Integration folgen. |
+| E02.3–4 | AP-01/AP-02/F4 | Quellumfänge abgeschlossen: AP01 PR #229 (`ab1aba3`) als `7a9416d`, AP02 PR #230 als `262917f` auf main; jeweils grüne PR-CI. Grok `ship` beider Umfänge, Ergebnis `9784c6e6-3258-42ad-8295-a30ea114ee27`, eigener Body-Lauf11/11. SQLite156+1 expliziter Skip; echter Postgres-CI-Lauf157 bestanden. Kein neues 4AllPass-Paket daraus abgeleitet. |
 | E03 | P01–P05, R02–R07/R12, AP-04 | Offen: Kryptografie, Snapshot, Konto/Sitzung, Geräte, Recovery und belastbarer Identitätsvertrag. Vorhandene Tests ersetzen keine Bereichsabnahme. |
 | E04 | P06–P08/P11–P12, R08–R11/R15–R17, AP-03 | Offen: Browser-/Desktop-/native Nutzerwege und Paketnachweise am tatsächlichen Kandidaten. |
 | E05 | UI-01, zugehöriger TD-08-Umfang | Offen: gemeinsame kompakte App-Leiste, vorhandene Icons, bestätigte frische Verbindungen; nur 4AllPass bei bestätigtem Unlock sehr dezenter Puls. |
@@ -117,13 +117,14 @@ an gemeinsamen Dateien werden vorab eindeutig einem Bearbeiter zugeteilt.
 | E08 | TD-07 | Offen: berechtigte FTS5-Inhaltssuche, getrennter optionaler Bridge-Dateiindex, benannte Datenmengen/Leistungsmessung. |
 | E09 | TD-09/AP-08, P10–P12, R01–R17, H1–H6, T01–T22 | Offen: einschlägige Nachweise zuordnen, Nutzer-/Modulwege abnehmen, geprüfte Pakete nach bestehenden Release-Gates ausliefern. |
 
-Stand dieser Einpflege: E01 ist noch nicht abgeschlossen. Die Mac-Sperre
-verhinderte zunächst die sichtbare Grok-Prüfung; die RC11-Prüfung wurde nach
-Entsperren abgeschlossen. Der Mac ist erneut gesperrt. Der auf 15 Minuten
-begrenzte Altfall-Abgleich beobachtete kein Entsperren und endete ohne Versuch,
-Eingabe oder Return; der Originaltest bleibt `unknown`, keine Wiederholung.
-Die praktische Codex-Terminalabnahme bleibt offen, isolierte E02-Arbeit läuft
-unabhängig weiter. Der öffentliche Handy-/Tunnelweg
+Aktueller Fortsetzungsauftrag: `channel-958719a7a05448739bcdf8d217f6d493`,
+Nachricht `51ade15c-4acb-494f-8cf0-d4035786f6c0`, authentisiert quittiert.
+Der vorhandene Planthread enthält den Wiedereinstieg ab Revision4; seine
+Originalbeschreibung und Originalnotizen bleiben unverändert. Die frühere
+Mac-Sperre und damalige unbekannte Testlage sind überholt: Der Originaltest
+ist abgeschlossen, die zusätzliche einmalige Sitzungskontrolle ebenfalls.
+Keiner dieser Aufträge wird erneut ausgeführt. Andere ungeklärte historische
+Übergaben bleiben ohne neue Eingabe erhalten. Der öffentliche Handy-/Tunnelweg
 ist auf Daniels Wunsch zurückgestellt und wird hierbei nicht verändert.
 Restrolle nach Leitungstransfer, genaue Manager-/Abnahmerechte, Stellvertretung
 sowie Executor-Betriebsprofil/erste reale Operation benötigen vor dem jeweiligen
@@ -168,3 +169,91 @@ E03-Vorbereitung ergänzt die Bestandsmatrix um neue Bibliotheksbelege:
 keine Skips. Synthetische Vektoren/FakeAuthenticator sind keine Hardware-,
 Browser-, Personen-/Geräte- oder E03-Gesamtabnahme. Keine E03-Funktion
 vor Abschluss der E02-Reparaturen freigegeben.
+
+
+### E02 / TD-02: kombinierter Prüfkandidat
+
+Die lokale HTTP-Grenze und schreibfreie GET-Ansichten sind auf die TD01-Reparatur
+aufgesetzt. Der bisherige rohe TestClient des Backup-UI-Tests verwendet jetzt
+auch den echten Sitzungs-/CSRF-Bootstrap; es gibt keinen Allowall-Testschalter.
+Codex-interne Gegenprüfung fand und korrigierte Actor-/Modulinitialisierung beim
+GET. Expliziter App-/Profilstart erhält bestehende IDs/Freigaben. Modellstatus
+ist zeitlich begrenzt und läuft auch in offenen Seiten nach 30 Sekunden sichtbar
+auf ungeprüft ab, ohne GET-Netzwerk/Modellstart. Drei exakte Room-Maschinenwege
+behalten ihre eigenen Tokens; keine bestätigte Person wird daraus abgeleitet.
+Echte Browser- und Zwei-Prozess-Fälle wurden vor Integration geprüft; die neue
+kombinierte Quelle benötigt jetzt ihre eigene Prüfung und Groks Abnahme.
+Keine produktive Profil-, Peer-, Installations- oder Tunneländerung.
+
+Der TD01-Pin `2fafc6a` hat anschließend den nativen Windows-Lauf mit 164
+bestandenen Fällen und die vollständige Ubuntu-Suite zweimal mit jeweils 814
+bestandenen Fällen erreicht, ohne Fehler oder Skips. Alle drei Installer wurden
+gebaut und selbstgeprüft; Groks unabhängige TD01-Abnahme steht noch aus.
+
+Der kombinierte TD02-Pin `c25bf76` besteht Windows mit 164 Fällen und den
+Installerbau auf allen drei Plattformen. Ubuntu meldet dagegen 835 bestanden,
+14 fehlgeschlagen und keine Skips: elf Navigationstimeouts, zwei nachgewiesene
+DE/EN-Abweichungen nach erfolgreichem Speichern und eine fehlende Übersetzung.
+Die zweite Gesamtrunde lief nach diesem Fehler nicht. Die Abweichung ist eng
+korrigiert: Ansichtskontext wird für Teilansichten und normale Formulare erhalten,
+gespeicherte Sprach-/Registerpräferenzen gewinnen; GET speichert keine Präferenz.
+128 betroffene Fälle einschließlich echter en-US-Browser mit JSON/SQLite bestehen.
+
+Die Navigationstimeouts sind noch nicht erklärt. Zwei isolierte lokale
+Prozessprüfungen, davon eine mit dem exakten bisherigen Pin und den CI-Versionen
+von Browser/Server, reproduzieren sie nicht. Ein nur in pytest ausdrücklich
+aktivierter Recorder erfasst beim ursprünglichen Timeout begrenzte Anfragezustände
+und lokale Python-Stacks vor dem Aufräumen. Er ändert weder Wartezeiten noch
+Ergebnisse, wiederholt nichts und liest keine Header, Inhalte oder URL-Werte.
+Nicht verfügbare Kindprozess-Stacks/Pipefüllstände werden ausdrücklich so benannt.
+Ubuntu prüft zunächst genau den ersten fehlgeschlagenen Fall und dann weiterhin
+die vollständige Suite zweimal mit unveränderter Fehler-/Skip-Abnahme. Der neue
+Linux-Nachweis und Groks Prüfung bleiben bis zu ihren tatsächlichen Ergebnissen offen.
+
+Der instrumentierte Pin `c059b81` liefert den konkreten Befund: Ubuntu 844
+bestanden/16 fehlgeschlagen, keine Skips, alle Fehler ursprüngliche
+30-Sekunden-Navigationstimeouts. Alle 16 Aufnahmen zeigen ausschließlich je zwei
+offene `POST /hausmeister/activity` mit HTTP 200; HTML und Static-Dateien sind
+abgeschlossen. Die Sprach-/Übersetzungsfälle bestehen. Der Browser verwirft den
+kleinen Fetch-Antwortbody, während der neue HTTP-Guard `no-store` setzt. Der
+versionsgenaue [Chromium-156-Quellpfad](https://chromium.googlesource.com/chromium/src/+/refs/tags/156.0.8078.4/third_party/blink/renderer/core/fetch/fetch_manager.cc#820)
+liest solche Antworten nicht automatisch leer. HTTP 200 allein ist kein
+Anfrageabschluss. Ein neuer echter Browsergegenfall reproduziert denselben
+30-Sekunden-Fehler lokal, ohne Fetch-Mock oder Bodykonsum aus dem Test.
+
+Die enge Korrektur konsumiert ausschließlich die kleine Activity-Antwort im
+bestehenden Promise. `keepalive`, `no-store`, Drosselung, Nutzdaten, Origin und
+CSRF bleiben erhalten; es gibt keinen Retry. Derselbe Gegenfall, Hausmeister-
+Fälle und der ursprüngliche Layoutfall bestehen danach zusammen mit 40 Fällen.
+Ein getrennter Chromium-156-A/B-Lauf bestätigt bei identischem Server und
+DOMContentLoaded-Eingaben: Original nach 30,003 Sekunden gesperrt, nur mit
+Bodykonsum Navigation nach 0,651 Sekunden erfolgreich; beide Activity-Antworten
+einschließlich der nach 15 Sekunden folgenden Meldung vollständig abgeschlossen.
+Die CI prüft zuerst diesen Gegenfall und den bisherigen Layoutfall; die beiden
+vollständigen Gesamtläufe und ihre ursprünglichen Fehler-/Skipregeln bleiben
+verbindlich. Der vorherige fehlgeschlagene Lauf bleibt als Beleg erhalten.
+Neuer Linux-Pin und tatsächliches Grok-Review bleiben offen, bis sie vorliegen.
+
+### E02 – aktuelle Abnahme und Fortsetzung (20.10.2026, nach 16:23)
+
+Die vorstehenden Zwischenläufe bleiben historische Fehler- und Korrekturbelege.
+Der abschließende TD02-Pin `129a42e` besteht CI-Run `39418788437`:
+Windows164 und Ubuntu861 zweimal, ohne Fehler oder Skips. Installer-Run
+`39418788426` baut und prüft Windows, Intel-Mac und Apple-Silicon-Mac.
+Groks unabhängiges `ship` gilt genau diesem Pin; der alte Pin `c25bf76`
+ist nicht freigegeben. Beim Neuaufsetzen auf den squash-integrierten TD01-main
+sind `src`, `tests`, `pyproject.toml` und `.github` bytegleich geblieben.
+
+Codex-Unteragent `td_e02_inventory` prüfte zusätzlich das echte WKWebView
+auf Intel/macOS15.7.4, pywebview6.2.1, mit unverändertem Cocoa-Adapter:
+JSON8/8 und SQLite8/8 Prüfgruppen. Temporäre Foundation-Homes, Browserprofile,
+Daten und Modell-Fixture sind belegt; vorhandene Dienste wurden erhalten.
+Elf weitere Fälle prüfen echte TCP-Tupel über die eigene WLAN-Adresse.
+Das ist ein Same-host-Transportnachweis und keine Zwei-Geräte-LAN-Abnahme;
+es fehlt ein zugeordneter kontrollierbarer zweiter Client. Private Einzelbelege:
+`~/.config/kirabridge/repairs/gesamtplan-fortsetzung-20261020-1623/td02-native-lan-129a42e/FINAL-RESULT.json`.
+
+Nächste unabhängige Arbeit: E03-IndexedDB-Commit/Abort und H1-Kontoregistrierung
+in getrennten bestehenden 4AllPass-Worktrees; Grok spezifiziert AP04 und holt
+vorhandene native Reviewresultate ab. E08/TD07 wird als lokales optionales
+Suchmodul vorbereitet. E03–E09 sind damit nicht insgesamt abgeschlossen.

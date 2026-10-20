@@ -20,6 +20,7 @@
           hx-target="#workspace"
           hx-swap="innerHTML"
         >
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
           <input type="text" name="title" value="{{ current.title }}" required maxlength="160" />
           <button type="submit" class="btn btn-primary">{{ t("detail.ok") }}</button>
         </form>
@@ -36,6 +37,7 @@
         hx-swap="innerHTML"
         hx-confirm="{{ t('detail.confirm_archive') }}"
       >
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
         <button type="submit" class="btn btn-ghost btn-compact">{{ t("detail.archive") }}</button>
       </form>
       </div>
@@ -49,6 +51,7 @@
           hx-target="#workspace"
           hx-swap="innerHTML"
         >
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
           <input type="hidden" name="status" value="{{ s }}" />
           <button
             type="submit"
@@ -67,6 +70,7 @@
         hx-target="#workspace"
         hx-swap="innerHTML"
       >
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
         <input type="text" name="text" value="{{ current.description }}" maxlength="400" placeholder="{{ t('detail.description_placeholder') }}" />
         <button type="submit" class="btn btn-primary">{{ t("detail.save") }}</button>
       </form>

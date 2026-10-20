@@ -109,6 +109,19 @@ are different states. Use a matching source installation and operator-configured
 MCP/Bridge permissions for the new tools. No claim of Internet team deployment,
 external source verification or a newly published native package is made.
 
+### Lokales Fenster und Neustart
+
+Diese Quelländerung schützt Änderungen aus dem lokalen Browserfenster gegen
+fremde Webseiten. Nach einem Dienstneustart die Seite einmal neu öffnen, bevor
+du weiterarbeitest; ein alter Schreibauftrag wird nicht automatisch wiederholt.
+Die Raumkopplung verwendet weiterhin ihre eigenen Einladungen und Gegenstellentokens.
+Eine lokale Browserverbindung bestätigt keine Person oder Teamrolle.
+
+Die Modellanzeige zeigt den Zeitpunkt ihrer letzten Prüfung. Nach 30 Sekunden
+wird sie „Ungeprüft“; die gespeicherte Modellwahl bleibt erhalten. Ein Seitenaufruf
+installiert keine Module und startet keine Modellprüfung. Diese Änderung ist
+ein geprüfter Quellkandidat, noch kein neu installierter Desktop-Download.
+
 ### Gemeinsam arbeiten – ausdrücklich freigeben
 
 Im Bereich **Raum** einen Namen eingeben und **Raum anlegen** wählen. Die Leitung

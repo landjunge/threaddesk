@@ -45,7 +45,7 @@ def test_graph_schema_stays_and_threads_are_not_nodes(home: Path) -> None:
 
 def test_thread_and_map_link_both_ways(home: Path) -> None:
     pytest.importorskip("fastapi")
-    from fastapi.testclient import TestClient
+    from http_ui_client import UIClient as TestClient
 
     from threaddesk.ui.server import create_app
 

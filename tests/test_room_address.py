@@ -2,7 +2,7 @@
 import pytest
 
 pytest.importorskip("fastapi")
-from fastapi.testclient import TestClient
+from http_ui_client import UIClient as TestClient
 from threaddesk.ui.server import create_app
 
 

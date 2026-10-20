@@ -15,6 +15,7 @@
       hx-target="#workspace"
       hx-swap="innerHTML"
     >
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
       <label class="field">
         <span>{{ t("list.title_label") }}</span>
         <input type="text" name="title" data-new-title required maxlength="160" placeholder="{{ t('list.new_thread_placeholder') }}" />

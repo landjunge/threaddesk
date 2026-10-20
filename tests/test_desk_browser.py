@@ -17,6 +17,8 @@ import sys
 import time
 from pathlib import Path
 
+from http_ui_client import choose_language
+
 import pytest
 
 pytest.importorskip("playwright.sync_api")
@@ -186,7 +188,7 @@ def test_user_keeps_notes_and_snapshot_across_restart(tmp_path: Path) -> None:
             page.on("pageerror", lambda exc: page_errors.append(str(exc)))
             page.on("dialog", lambda dialog: dialog.accept())
 
-            page.goto(url + "/lang/de", wait_until="networkidle")
+            choose_language(page, url, "de")
             page.wait_for_function("() => window.Alpine !== undefined")
             expect(page.get_by_text("Wähle links einen Thread")).to_be_visible()
             expect(page.get_by_text("Keine Threads. Lege oben einen an.")).to_be_visible()
@@ -318,7 +320,7 @@ def test_user_renames_switches_archives_and_keeps_file_paths(tmp_path: Path) -> 
             page.bring_to_front()
             page.on("pageerror", lambda exc: page_errors.append(str(exc)))
             page.on("dialog", lambda dialog: dialog.accept())
-            page.goto(url + "/lang/de", wait_until="networkidle")
+            choose_language(page, url, "de")
             page.wait_for_function("() => window.Alpine !== undefined")
             _raise_chrome(before)
 
@@ -368,10 +370,10 @@ def test_user_renames_switches_archives_and_keeps_file_paths(tmp_path: Path) -> 
             expect(page.locator("#help")).to_be_hidden()
 
             _open_section(page, "preferences")
-            page.get_by_role("link", name="EN", exact=True).click()
+            page.get_by_role("button", name="EN", exact=True).click()
             expect(page.locator("[data-new-thread]")).to_contain_text("New")
             _open_section(page, "preferences")
-            page.get_by_role("link", name="DE", exact=True).click()
+            page.get_by_role("button", name="DE", exact=True).click()
             expect(page.locator("[data-new-thread]")).to_contain_text("Neu")
 
             layout = page.evaluate(
@@ -444,7 +446,7 @@ def test_user_edits_description_status_and_whiteboard_order(tmp_path: Path) -> N
             page.bring_to_front()
             page.on("pageerror", lambda exc: page_errors.append(str(exc)))
             page.on("dialog", lambda dialog: dialog.accept())
-            page.goto(url + "/lang/de", wait_until="networkidle")
+            choose_language(page, url, "de")
             page.wait_for_function("() => window.Alpine !== undefined")
             _raise_chrome(before)
 
@@ -553,7 +555,7 @@ def test_user_creates_filters_and_opens_knowledge_on_the_map(tmp_path: Path) -> 
             page = browser.new_page(viewport={"width": 1440, "height": 900})
             page.bring_to_front()
             page.on("pageerror", lambda exc: page_errors.append(str(exc)))
-            page.goto(url + "/lang/de", wait_until="networkidle")
+            choose_language(page, url, "de")
             page.wait_for_function("() => window.Alpine !== undefined")
             _raise_chrome(before)
             page.get_by_role("link", name="Wissenspool", exact=True).click()
@@ -631,30 +633,30 @@ def test_user_switches_plain_and_expert_wording(tmp_path: Path) -> None:
             page = browser.new_page(viewport={"width": 1440, "height": 900})
             page.bring_to_front()
             page.on("pageerror", lambda exc: page_errors.append(str(exc)))
-            page.goto(url + "/lang/de", wait_until="networkidle")
+            choose_language(page, url, "de")
             page.wait_for_function("() => window.Alpine !== undefined")
             _raise_chrome(before)
             _create(page, "Sprachebene")
             heading = page.locator("#snapshots h3")
             expect(heading).to_have_text("Zwischenstände")
             _open_section(page, "preferences")
-            page.get_by_role("link", name="Fachsprache", exact=True).click()
+            page.get_by_role("button", name="Fachsprache", exact=True).click()
             expect(heading).to_have_text("Snapshots")
             expect(page.locator("#snapshots .muted").first).to_contain_text("Snapshot-ID")
             _open_section(page, "preferences")
-            page.get_by_role("link", name="Klartext", exact=True).click()
+            page.get_by_role("button", name="Klartext", exact=True).click()
             expect(heading).to_have_text("Zwischenstände")
             _open_section(page, "preferences")
-            page.get_by_role("link", name="EN", exact=True).click()
+            page.get_by_role("button", name="EN", exact=True).click()
             expect(heading).to_have_text("Saved states")
             _open_section(page, "preferences")
-            page.get_by_role("link", name="Expert", exact=True).click()
+            page.get_by_role("button", name="Expert", exact=True).click()
             expect(heading).to_have_text("Snapshots")
             _open_section(page, "preferences")
-            page.get_by_role("link", name="Plain", exact=True).click()
+            page.get_by_role("button", name="Plain", exact=True).click()
             expect(heading).to_have_text("Saved states")
             _open_section(page, "preferences")
-            page.get_by_role("link", name="DE", exact=True).click()
+            page.get_by_role("button", name="DE", exact=True).click()
             expect(heading).to_have_text("Zwischenstände")
             expect(page.locator(".banner-error:visible")).to_have_count(0)
             _raise_chrome(before, "fenster-sprache.png")
@@ -699,7 +701,7 @@ def test_user_opens_graph_json_and_exports_private_knowledge(tmp_path: Path) -> 
             page = browser.new_page(viewport={"width": 1440, "height": 900})
             page.bring_to_front()
             page.on("pageerror", lambda exc: page_errors.append(str(exc)))
-            page.goto(url + "/lang/de", wait_until="networkidle")
+            choose_language(page, url, "de")
             page.wait_for_function("() => window.Alpine !== undefined")
             _raise_chrome(before)
             page.get_by_role("link", name="Wissenspool", exact=True).click()
@@ -739,7 +741,7 @@ def test_user_switches_the_housekeeper_without_a_model(tmp_path: Path) -> None:
             page = browser.new_page(viewport={"width": 1440, "height": 900})
             page.bring_to_front()
             page.on("pageerror", lambda exc: page_errors.append(str(exc)))
-            page.goto(url + "/lang/de", wait_until="networkidle")
+            choose_language(page, url, "de")
             page.wait_for_function("() => window.Alpine !== undefined")
             _raise_chrome(before)
             _create(page, "Hausmeister")
@@ -846,7 +848,7 @@ def test_user_reads_the_main_pages_in_both_languages(tmp_path: Path) -> None:
             page = browser.new_page(viewport={"width": 1440, "height": 900})
             page.bring_to_front()
             page.on("pageerror", lambda exc: page_errors.append(str(exc)))
-            page.goto(url + "/lang/de", wait_until="networkidle")
+            choose_language(page, url, "de")
             page.wait_for_function("() => window.Alpine !== undefined")
             _raise_chrome(before)
             expect(page.locator("html")).to_have_attribute("lang", "de")
@@ -872,7 +874,7 @@ def test_user_reads_the_main_pages_in_both_languages(tmp_path: Path) -> None:
             _shows(page, "de", *data_keys)
 
             _open_section(page, "preferences")
-            page.get_by_role("link", name="EN", exact=True).click()
+            page.get_by_role("button", name="EN", exact=True).click()
             expect(page.locator("html")).to_have_attribute("lang", "en")
             _shows(page, "en", *data_keys)
             _hides(
@@ -926,7 +928,7 @@ def test_user_reads_action_notices_in_english(tmp_path: Path) -> None:
             page = browser.new_page(viewport={"width": 1440, "height": 900})
             page.bring_to_front()
             page.on("pageerror", lambda exc: page_errors.append(str(exc)))
-            page.goto(url + "/lang/en", wait_until="networkidle")
+            choose_language(page, url, "en")
             page.wait_for_function("() => window.Alpine !== undefined")
             _raise_chrome(before)
             expect(page.locator("html")).to_have_attribute("lang", "en")
@@ -1036,7 +1038,7 @@ def test_user_reads_housekeeper_phases_in_english(tmp_path: Path) -> None:
             )
             page.bring_to_front()
             page.on("pageerror", lambda exc: page_errors.append(str(exc)))
-            page.goto(url + "/lang/en", wait_until="networkidle")
+            choose_language(page, url, "en")
             page.wait_for_function("() => window.Alpine !== undefined")
             _raise_chrome(before)
             expect(page.locator("html")).to_have_attribute("lang", "en")
@@ -1218,7 +1220,7 @@ def test_user_reads_rename_and_archive_in_english(tmp_path: Path) -> None:
                 "dialog",
                 lambda dialog: (dialogs.append(dialog.message), dialog.accept()),
             )
-            page.goto(url + "/lang/en", wait_until="networkidle")
+            choose_language(page, url, "en")
             page.wait_for_function("() => window.Alpine !== undefined")
             _raise_chrome(before)
             expect(page.locator("html")).to_have_attribute("lang", "en")
