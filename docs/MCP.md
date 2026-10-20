@@ -170,6 +170,42 @@ programs writing concurrently without locks remain outside this local contract;
 upgrade active writers before sharing a mutable workspace. Portable JSON backups
 and JSON→SQLite migration preserve receipts; tombstones are not a new task queue.
 
+TD-01 backup source reads bind the selected root, ancestors and regular files
+before reading content. POSIX uses descriptor-relative no-follow operations;
+Windows has a separate handle-relative adapter for local drives that refuses
+reparse traversal; UNC roots are explicitly unsupported.
+The JSON comparison read uses the same binding. Workspace restore checks the
+complete source inventory against the manifest and copies only those verified
+files into private staging; SQLite checks the captured copy, not a reopened
+source path. Capture uses exclusive file creation and then compares actual
+filesystem directory entries, sizes and content hashes against the manifest;
+case/Unicode aliases cannot silently replace another member. Local POSIX workspace
+recovery keeps native names such as `note:daily.json`; Windows alias restrictions
+apply to portable archives and Windows restore destinations. Stage cleanup runs
+only after successful creation and acquisition of its directory identity;
+preexisting or subsequently exchanged roots are not recursively removed.
+The staging parent must remain under trusted local ownership: an unrestricted
+same-user actor can exchange a newly created name before that identity is
+first acquired. This repair does not claim to close that acquisition window.
+Existing restore destinations are never replaced, including an empty
+directory created immediately before publication. Checksums identify captured
+bytes; they do not authenticate the backup author. Cooperative JSON writer locks
+and the SQLite backup API remain in use. These guards do not isolate the process
+from an actor with unrestricted access to the same user account.
+
+The fixed JSON lock/journal and WAL replay also use bound roots/parents,
+exclusive temporary files and guarded publication. Journal hardlinks are refused
+before content reads. Direct general data writes outside WAL replay retain
+their existing pathname semantics; this is not a universal filesystem sandbox.
+
+The current repair is verified with synthetic temporary profiles on macOS
+(170 final integration cases).
+Windows handle-contract tests run locally with an injected API; they are not a
+native Windows result. Native Windows CI and a Linux run must be recorded
+separately before declaring those platform paths verified. A missing safe source
+or exclusive-publish primitive fails explicitly; there is no link-following or
+overwrite fallback.
+
 | Existing MCP capability | Tools | Executes agents? |
 |---|---|---|
 | Context reads / Lesen | `list_threads`, `get_thread`, `current_thread` | No |

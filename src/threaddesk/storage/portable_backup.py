@@ -5,7 +5,6 @@ import hashlib
 import io
 import json
 from pathlib import Path, PurePosixPath
-import shutil
 import stat
 from datetime import datetime, timezone
 import tempfile
@@ -14,7 +13,10 @@ import zipfile
 
 from threaddesk.storage.json_store import DEFAULT_ROOT, JsonStore
 from threaddesk.storage.sqlite_store import SQLiteStore
-from threaddesk.storage.workspace_backup import BackupError, WorkspaceBackup
+from threaddesk.core.errors import InvalidState
+from threaddesk.storage.workspace_backup import (
+    BackupError, WorkspaceBackup, _SourceTree, _relative, _verify_captured, _cleanup_owned, _stamp,
+)
 
 LIMIT = 128 * 1024 * 1024
 DATA_DIRS = {'threads', 'snapshots', 'nodes', 'relations', 'graph-events',
@@ -47,23 +49,37 @@ def selected_profile(root: Path) -> tuple[Path, str | None]:
         raise BackupError('The selected workspace cannot be opened.') from exc
 
 
-def _allowed(name: str, backend: str) -> bool:
+def _allowed(name: str, backend: str, *, strict: bool = False) -> bool:
     path = PurePosixPath(name)
-    if (not name or '\\' in name or path.is_absolute() or name != str(path)
-            or any(p in {'', '.', '..'} or p.startswith('.') for p in path.parts)):
+    try:
+        _relative(name, portable=True)
+    except BackupError:
+        if strict:
+            raise
+        return False
+    if any(p.startswith('.') for p in path.parts):
         return False
     if len(path.parts) == 1:
+        if name.casefold() in RUNTIME_FILES:
+            if strict and name not in RUNTIME_FILES:
+                raise BackupError('Reserved runtime filename alias.')
+            return False
         return (name == 'threaddesk.sqlite3' and backend == 'sqlite') or (
             name not in RUNTIME_FILES and path.suffix in {'.json', '.txt', '.md'})
     return path.parts[0] in DATA_DIRS
 
 
 def download_backup(store) -> bytes:
-    if isinstance(store, JsonStore):
-        # Recover committed state and hold the same writer lock for the snapshot.
-        with store.transaction():
-            return _download_backup(store)
-    return _download_backup(store)
+    try:
+        if isinstance(store, JsonStore):
+            # Recover committed state and hold the same writer lock for the snapshot.
+            with store.transaction():
+                return _download_backup(store)
+        return _download_backup(store)
+    except BackupError:
+        raise
+    except (OSError, InvalidState) as exc:
+        raise BackupError('Backup source cannot be read safely.') from exc
 
 
 def _download_backup(store) -> bytes:
@@ -76,25 +92,21 @@ def _download_backup(store) -> bytes:
             WorkspaceBackup(Path(temp)).restore_verified(backup, source)
         files = {}
         bodies = {}
-        for path in sorted(source.rglob('*')):
-            name = path.relative_to(source).as_posix()
-            if not _allowed(name, backend):
-                continue
-            if path.is_symlink() or any(p.is_symlink() for p in path.parents if p == source or source in p.parents):
-                raise BackupError('Symbolic links cannot be backed up.')
-            if not path.is_file():
-                continue
-            body = path.read_bytes()
-            if sum(len(value) for value in bodies.values()) + len(body) > LIMIT:
-                raise BackupError('Workspace exceeds the backup size limit.')
-            bodies[name] = body
-            files[name] = {'size': len(body), 'sha256': hashlib.sha256(body).hexdigest()}
-        # JSON has no database snapshot: refuse a changing source rather than
-        # silently return a mixture of versions.
-        if backend == 'json':
-            current = {p.relative_to(source).as_posix() for p in source.rglob('*')
-                       if p.is_file() and _allowed(p.relative_to(source).as_posix(), backend)}
-            if current != set(bodies) or any((source / n).read_bytes() != b for n, b in bodies.items()):
+        allowed = lambda name: _allowed(name, backend, strict=True)
+        descend = lambda name: PurePosixPath(name).parts[0] in DATA_DIRS
+        with _SourceTree(source) as tree:
+            inventory = tree.scan(allowed, descend)
+            total = 0
+            for name, expected in inventory.items():
+                body = tree.read(name, expected, limit=LIMIT - total)
+                total += len(body)
+                bodies[name] = body
+                files[name] = {'size': len(body), 'sha256': hashlib.sha256(body).hexdigest()}
+            # JSON has no database snapshot: both reads must use the same
+            # descriptor-bound names/inodes, including this comparison read.
+            if (tree.scan(allowed, descend) != inventory or backend == 'json' and any(
+                    tree.read(name, inventory[name], limit=LIMIT) != body
+                    for name, body in bodies.items())):
                 raise BackupError('Workspace changed during backup. Please try again.')
         output = io.BytesIO()
         with zipfile.ZipFile(output, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
@@ -116,6 +128,7 @@ def restore_backup(body: bytes, root: Path) -> Path:
         raise BackupError('Invalid profile directory.')
     name = uuid4().hex
     target = profiles / name
+    owned = None
     try:
         with zipfile.ZipFile(io.BytesIO(body)) as archive:
             members = archive.infolist()
@@ -137,14 +150,17 @@ def restore_backup(body: bytes, root: Path) -> Path:
             if any(stat.S_ISLNK(m.external_attr >> 16) for m in members):
                 raise BackupError('Symbolic links are not allowed.')
             target.mkdir(mode=0o700)
+            owned = _stamp(target.lstat())[:2]
             for relative, expected in files.items():
                 data = archive.read('workspace/' + relative)
                 if len(data) != expected['size'] or hashlib.sha256(data).hexdigest() != expected['sha256']:
                     raise BackupError('Backup checksum does not match.')
                 path = target / relative
                 path.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
-                path.write_bytes(data)
-                path.chmod(0o600)
+                with path.open('xb') as output:
+                    path.chmod(0o600)
+                    output.write(data)
+            _verify_captured(target, files)
         if backend == 'sqlite' and 'threaddesk.sqlite3' not in files:
             raise BackupError('Missing workspace database.')
         store = SQLiteStore(target) if backend == 'sqlite' else JsonStore(target)
@@ -165,21 +181,26 @@ def restore_backup(body: bytes, root: Path) -> Path:
         # Preserve this installation's listening port, never import another
         # machine's port. Housekeeper remains off until explicitly enabled.
         active, _ = selected_profile(root)
-        port = active / 'desktop-port.json'
-        if port.is_file():
-            shutil.copy2(port, target / 'desktop-port.json')
+        with _SourceTree(active) as source:
+            inventory = source.scan(lambda name: name == 'desktop-port.json', lambda _: False)
+            if 'desktop-port.json' in inventory:
+                port = source.read('desktop-port.json', inventory['desktop-port.json'], limit=LIMIT)
+                with (target / 'desktop-port.json').open('xb') as output:
+                    output.write(port)
         caretaker = target / 'hausmeister.json'
         if caretaker.exists():
             data = json.loads(caretaker.read_text(encoding='utf-8'))
             data['enabled'] = False
             caretaker.write_text(json.dumps(data), encoding='utf-8')
-        (target / '.profile-info.json').write_text(json.dumps({'backend': backend, 'created_at': datetime.now(timezone.utc).isoformat(timespec='seconds')}), encoding='utf-8')
+        with (target / '.profile-info.json').open('x', encoding='utf-8') as output:
+            output.write(json.dumps({'backend': backend, 'created_at': datetime.now(timezone.utc).isoformat(timespec='seconds')}))
         temporary = root / ('profile-' + uuid4().hex + '.tmp')
-        temporary.write_text(json.dumps({'name': name, 'backend': backend}), encoding='utf-8')
+        with temporary.open('x', encoding='utf-8') as output:
+            output.write(json.dumps({'name': name, 'backend': backend}))
         temporary.replace(root / 'active-profile.json')
         return target
     except Exception as exc:
-        shutil.rmtree(target, ignore_errors=True)
+        _cleanup_owned(target, owned)
         if isinstance(exc, BackupError):
             raise
         raise BackupError('Backup could not be opened.') from exc

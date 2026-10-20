@@ -15,6 +15,33 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  backup-windows:
+    name: Native Windows backup source and restore
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install backup test dependencies
+        run: python -m pip install -e '.[dev,ui]'
+      - name: Test actual Windows handles, JSON and SQLite restore
+        run: python -m pytest tests/test_windows_backup_source.py tests/test_workspace_backup.py tests/test_portable_backup.py tests/test_json_control_paths.py tests/test_thread_management.py tests/test_atomic_import.py tests/test_json_migration.py tests/test_relative_json_workspace.py -q -ra --junitxml=test-results/windows-backup.xml
+      - name: Reject missing or skipped Windows evidence
+        run: |
+          python -c "import xml.etree.ElementTree as E; s=list(E.parse('test-results/windows-backup.xml').getroot().iter('testsuite')); assert s and sum(int(x.get('tests',0)) for x in s)>0; assert all(sum(int(x.get(k,0)) for x in s)==0 for k in ('skipped','failures','errors'))"
+      - name: Windows backup results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-backup-test-results
+          path: test-results/windows-backup.xml
+          if-no-files-found: error
   test:
     name: Complete suite including browser, twice
     runs-on: ubuntu-latest

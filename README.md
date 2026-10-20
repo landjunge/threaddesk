@@ -142,7 +142,10 @@ ein eigener, noch abzunehmender Ausbau.
 Oben **Daten** öffnen und **Sicherung herunterladen** wählen. Die ZIP-Datei enthält
 Threads, Notizen, Zwischenstände, Wissenskarte, Whiteboards und lokal gespeicherte
 Übergaben für JSON oder SQLite. Verlinkte Dateien außerhalb von ThreadDesk bleiben
-an ihrem ursprünglichen Ort und sind nicht Teil dieser Sicherung.
+an ihrem ursprünglichen Ort. Symbolische Links und Verzeichnisverknüpfungen im
+ausgewählten Sicherungsbestand werden mit einer Fehlermeldung abgewiesen;
+ihre Ziele werden nicht gelesen. Änderungen oder ein Austausch der Quelldateien
+während der Sicherung führen ebenfalls zum Abbruch.
 
 Zum Wiederherstellen die Sicherung auswählen, das Öffnen bestätigen und
 **Sicherung öffnen** wählen. ThreadDesk prüft die Dateien und öffnet einen eigenen
@@ -152,7 +155,15 @@ und spätere Änderungen bleiben über Neustarts erhalten; CLI und MCP verwenden
 dieselbe Auswahl. Der lokale Hausmeister bleibt nach dem Wiederherstellen aus.
 
 Die ZIP-Datei enthält auch private Inhalte und Raum-Zugangsdaten. Bewahre sie an
-einem sicheren Ort auf. Beschädigte oder zu große Sicherungen werden abgewiesen.
+einem sicheren Ort auf. Beschädigte oder zu große Sicherungen sowie zusätzliche,
+nicht im Manifest geprüfte Dateien werden abgewiesen. Restore übernimmt nur die
+geprüften Dateien; ein vorhandenes Ziel wird nicht ersetzt. Dateinamen müssen
+auch unter Windows eindeutig sein: Gerätenamen wie `NUL` oder `CON.json`,
+Laufwerks-/Datenstromangaben und abschließende Punkte oder Leerzeichen sind
+unzulässig. Eine solche Quelle wird abgelehnt, statt Dateien still wegzulassen.
+Wenn Namen auf dem Ziel-Dateisystem kollidieren, etwa durch Groß-/Kleinschreibung
+oder Unicode-Varianten, wird ebenfalls abgebrochen. Keine Datei wird dabei durch
+eine andere Datei aus derselben Sicherung überschrieben.
 
 ### Lokaler Hausmeister / Local caretaker
 
