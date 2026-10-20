@@ -1,4 +1,7 @@
-<p align="center"><img src="brand/mark.svg" width="180" alt="ThreadDesk Bildmarke"></p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/design/icons/dark/ThreadDesk-dark-128.png">
+  <img src="assets/design/icons/light/ThreadDesk-light-128.png" alt="ThreadDesk" width="96" height="96">
+</picture>
 <p align="center"><img src="brand/wordmark.svg" width="520" alt="ThreadDesk"></p>
 <p align="center"><a href="https://github.com/landjunge/threaddesk/releases/tag/v0.1.1rc1"><img src="brand/download-button.svg" width="320" alt="ThreadDesk herunterladen"></a></p>
 
@@ -11,6 +14,15 @@ ThreadDesk speichert Threads, Notizen, Dateien und Snapshots. Externe Aktionen w
 ### 🛠️ [Für Entwickler – CLI, MCP und Aufbau](#für-entwickler)
 
 ---
+
+## Aktueller Funktionsstand / Current capabilities
+
+**Deutsch:** ThreadDesk hält Projektkontext lokal fest: Threads, Notizen, Dateiverweise, Snapshots und Wissen. CLI, MCP und die Oberfläche greifen auf diese Ablage zu. Der aktuelle Quellstand ergänzt revisionsgeprüfte Änderungen, zugeordnete Übergaben und Rückgaben sowie gespeicherte Rückfragen. Kontextverwaltung und Ausführung bleiben getrennt: Ein vorbereiteter Auftrag startet keinen externen Agenten, eine Lieferung ist noch keine Abnahme.
+
+**English:** ThreadDesk keeps project context locally: threads, notes, file references, snapshots and knowledge. Its CLI, MCP tools and interface use that store. Current source adds revision-checked changes, correlated handoffs and returns, and recorded questions. Preparing work does not start an external agent; receiving a delivery does not accept it.
+
+Die Entwicklerinstallation benötigt Python 3.9+. Neue Quellfunktionen sind nicht automatisch im vorhandenen Desktop-Download enthalten. / Developer installation requires Python 3.9+. New source features are not automatically included in existing desktop downloads. [Übergaben / Handoffs](docs/evidence/seven-tools-20261018/TD-C02.md) · [Fachmutationen / Managed changes](docs/evidence/seven-tools-20261018/TD-C01.md).
+
 
 ## Lizenz / License
 
