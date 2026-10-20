@@ -168,3 +168,18 @@ E03-Vorbereitung ergänzt die Bestandsmatrix um neue Bibliotheksbelege:
 keine Skips. Synthetische Vektoren/FakeAuthenticator sind keine Hardware-,
 Browser-, Personen-/Geräte- oder E03-Gesamtabnahme. Keine E03-Funktion
 vor Abschluss der E02-Reparaturen freigegeben.
+
+
+### E02 / TD-02: kombinierter Prüfkandidat
+
+Die lokale HTTP-Grenze und schreibfreie GET-Ansichten sind auf die TD01-Reparatur
+aufgesetzt. Der bisherige rohe TestClient des Backup-UI-Tests verwendet jetzt
+auch den echten Sitzungs-/CSRF-Bootstrap; es gibt keinen Allowall-Testschalter.
+Codex-interne Gegenprüfung fand und korrigierte Actor-/Modulinitialisierung beim
+GET. Expliziter App-/Profilstart erhält bestehende IDs/Freigaben. Modellstatus
+ist zeitlich begrenzt und läuft auch in offenen Seiten nach 30 Sekunden sichtbar
+auf ungeprüft ab, ohne GET-Netzwerk/Modellstart. Drei exakte Room-Maschinenwege
+behalten ihre eigenen Tokens; keine bestätigte Person wird daraus abgeleitet.
+Echte Browser- und Zwei-Prozess-Fälle wurden vor Integration geprüft; die neue
+kombinierte Quelle benötigt jetzt ihre eigene Prüfung und Groks Abnahme.
+Keine produktive Profil-, Peer-, Installations- oder Tunneländerung.

@@ -57,7 +57,14 @@ def test_real_browser_can_save_and_download_but_foreign_form_cannot_write(tmp_pa
                 disclosure.locator("summary").click()
                 note = disclosure.locator('textarea[name="text"]')
                 note.fill("legitimate HTMX note")
-                disclosure.locator('button[type="submit"]').click()
+                note_url = url + f"/threads/{thread.id}/note"
+                with page.expect_response(lambda response: response.url == note_url
+                                          and response.request.method == "POST") as saved_note:
+                    disclosure.locator('button[type="submit"]').click()
+                response = saved_note.value
+                assert response.status == 200, response.text()
+                response.finished()
+                expect(page.locator("#workspace .banner-ok")).to_have_text("Notiz gespeichert")
                 expect(page.locator('#notes textarea[name="text"]')).to_have_value("legitimate HTMX note")
                 assert svc.get(thread.id).context.notes == "legitimate HTMX note"
                 page.get_by_role("link", name="Daten", exact=True).click()
