@@ -4,9 +4,11 @@ from contextlib import contextmanager
 import hashlib
 import json
 import os
+import stat
 import threading
 from pathlib import Path
 from typing import Any, IO, Mapping
+from uuid import uuid4
 
 from threaddesk.core.errors import InvalidState, ManagementError, NotFound
 from threaddesk.core.models import (
@@ -73,6 +75,8 @@ class JsonStore:
         self.whiteboard_dir.mkdir(parents=True, exist_ok=True)
         self._pending: dict[str, dict | None] | None = None
         self._lock_depth = 0
+        self._control_source = None
+        self._recovering = False
         with _LOCK_REGISTRY:
             self._mutex = _WORKSPACE_LOCKS.setdefault(str(self.root.resolve()), threading.RLock())
         with self._locked():
@@ -88,15 +92,64 @@ class JsonStore:
                 finally:
                     self._lock_depth -= 1
                 return
-            with (self.root / ".management.lock").open("a+b") as lock:
-                _lock_exclusive(lock)
-                self._lock_depth = 1
-                try:
-                    self._recover()
-                    yield
-                finally:
-                    self._lock_depth = 0
-                    _unlock(lock)
+            # Bind before accessing either hidden control file. A preceding
+            # pathname lstat cannot protect the first lock write/journal read.
+            from threaddesk.storage.workspace_backup import BackupError, _SourceTree
+
+            try:
+                if os.name == "nt":
+                    from threaddesk.storage.windows_backup_source import WindowsSourceTree
+                    tree = WindowsSourceTree(self.root, error_type=InvalidState,
+                                             _allow_unc_controls=True)
+                else:
+                    tree = _SourceTree(self.root)
+                with tree as source, self._control_lock(source) as (lock, validate):
+                    validate()
+                    _lock_exclusive(lock)
+                    self._lock_depth = 1
+                    self._control_source = source
+                    try:
+                        validate()
+                        self._recover()
+                        yield
+                    finally:
+                        self._control_source = None
+                        self._lock_depth = 0
+                        _unlock(lock)
+            except (OSError, ValueError, BackupError) as exc:
+                raise InvalidState("management_control_path") from exc
+
+    @contextmanager
+    def _control_lock(self, source):
+        if os.name == "nt":
+            with source.control_lock() as result:
+                yield result
+            return
+        source._check_root()
+        fd = os.open(".management.lock", os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK,
+                     0o600, dir_fd=source.fd)
+        try:
+            before = os.fstat(fd)
+            if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
+                raise InvalidState("management_lock_path")
+            identity = before.st_dev, before.st_ino
+
+            def validate():
+                source._check_root()
+                current = os.stat(".management.lock", dir_fd=source.fd, follow_symlinks=False)
+                if (not stat.S_ISREG(current.st_mode) or current.st_nlink != 1
+                        or (current.st_dev, current.st_ino) != identity):
+                    raise InvalidState("management_lock_path")
+
+            validate()
+            stream = os.fdopen(fd, "r+b")
+            fd = None
+            with stream:
+                yield stream, validate
+                validate()
+        finally:
+            if fd is not None:
+                os.close(fd)
 
     @property
     def _journal(self):
@@ -104,17 +157,51 @@ class JsonStore:
 
     def _recover(self):
         # A durable commit plan contains resulting state, never commands to repeat.
-        if self._journal.exists():
-            plan = json.loads(self._journal.read_text(encoding="utf-8"))
-            for relative, data in plan["writes"].items():
-                path = self.root / relative
-                if path.resolve().is_relative_to(self.root.resolve()) is False:
+        source = self._control_source
+        if source is None:
+            with self._locked():
+                return
+        try:
+            expected = source.info(".management-commit.json")
+        except Exception as exc:
+            cause = exc
+            while cause is not None:
+                if isinstance(cause, FileNotFoundError):
+                    # A missing ancestor is not the same as an absent journal.
+                    try:
+                        source._check_root()
+                    except Exception as changed:
+                        raise InvalidState("management_journal_path") from changed
+                    return
+                cause = cause.__cause__
+            raise InvalidState("management_journal_path") from exc
+        try:
+            with source.open(".management-commit.json", expected) as guard:
+                if os.name == "nt":
+                    source.check_control_journal_links(guard)
+                elif os.fstat(guard.fileno()).st_nlink != 1:
                     raise InvalidState("management_journal_path")
-                if data is None:
-                    path.unlink(missing_ok=True)
-                else:
-                    self._atomic_json(path, data)
-            self._journal.unlink()
+                plan = json.loads(source.read(".management-commit.json", expected))
+            self._recovering = True
+            try:
+                for relative, data in plan["writes"].items():
+                    self._recovery_parts(relative)
+                    path = self.root / relative
+                    if data is None:
+                        self._apply_recovery_data(relative, None)
+                    else:
+                        self._atomic_json(path, data)
+            finally:
+                self._recovering = False
+            if source.info(".management-commit.json") != expected:
+                raise InvalidState("management_journal_path")
+            if os.name == "nt":
+                source.remove_control_journal(expected)
+            else:
+                source._check_root()
+                os.unlink(".management-commit.json", dir_fd=source.fd)
+        except (OSError, ValueError) as exc:
+            raise InvalidState("management_journal_path") from exc
 
     @contextmanager
     def transaction(self):
@@ -178,6 +265,12 @@ class JsonStore:
             self._atomic_json(path, data)
 
     def _atomic_json(self, path: Path, data: dict) -> None:
+        if path == self._journal:
+            self._publish_control_journal(data)
+            return
+        if self._recovering:
+            self._apply_recovery_data(str(path.relative_to(self.root)), data)
+            return
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(path.suffix + ".tmp")
         with tmp.open("w", encoding="utf-8") as stream:
@@ -194,6 +287,127 @@ class JsonStore:
                 os.fsync(descriptor)
             finally:
                 os.close(descriptor)
+
+    def _publish_control_journal(self, data):
+        """The fixed WAL has bound I/O; arbitrary data writes keep their API."""
+        source = self._control_source
+        if source is None:
+            with self._locked():
+                self._publish_control_journal(data)
+            return
+        body = (json.dumps(data, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+        if os.name == "nt":
+            source.publish_control_journal(body)
+            return
+        self._publish_recovery_bytes(source, source.fd, ".management-commit.json", body,
+                                     source._check_root, prefix=".management-commit-")
+
+    @staticmethod
+    def _recovery_parts(relative):
+        if not isinstance(relative, str):
+            raise InvalidState("management_journal_path")
+        path = Path(relative)
+        if (not path.parts or path.anchor or path.drive
+                or str(path) != relative or any(part in {".", ".."} for part in path.parts)):
+            raise InvalidState("management_journal_path")
+        return path.parts
+
+    @contextmanager
+    def _recovery_parent(self, source, parts, *, create):
+        parent, opened, guards = source.fd, [], []
+
+        def validate():
+            source._check_root()
+            for directory, name, identity in guards:
+                current = os.stat(name, dir_fd=directory, follow_symlinks=False)
+                if (not stat.S_ISDIR(current.st_mode)
+                        or (current.st_dev, current.st_ino) != identity):
+                    raise InvalidState("management_journal_path")
+
+        try:
+            validate()
+            for part in parts:
+                validate()
+                if create:
+                    try:
+                        os.mkdir(part, mode=0o700, dir_fd=parent)
+                    except FileExistsError:
+                        pass
+                child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_NONBLOCK,
+                                dir_fd=parent)
+                opened.append(child)
+                info = os.fstat(child)
+                guards.append((parent, part, (info.st_dev, info.st_ino)))
+                parent = child
+            validate()
+            yield parent, validate
+            validate()
+        finally:
+            for descriptor in reversed(opened):
+                os.close(descriptor)
+
+    def _apply_recovery_data(self, relative, data):
+        source = self._control_source
+        if source is None:
+            raise InvalidState("management_journal_path")
+        parts = self._recovery_parts(relative)
+        body = None if data is None else (json.dumps(data, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+        if os.name == "nt":
+            source.recover_data_entry(parts, body)
+            return
+        try:
+            with self._recovery_parent(source, parts[:-1], create=body is not None) as (parent, validate):
+                if body is None:
+                    validate()
+                    info = os.stat(parts[-1], dir_fd=parent, follow_symlinks=False)
+                    if not stat.S_ISREG(info.st_mode):
+                        raise InvalidState("management_journal_path")
+                    os.unlink(parts[-1], dir_fd=parent)
+                    os.fsync(parent)
+                else:
+                    self._publish_recovery_bytes(source, parent, parts[-1], body, validate)
+        except FileNotFoundError:
+            source._check_root()
+            if body is not None:
+                raise
+
+    @staticmethod
+    def _publish_recovery_bytes(source, parent, leaf, body, validate, *, prefix=".management-data-"):
+        """Only the fixed WAL and its replay use this bound POSIX publisher."""
+        temporary = prefix + uuid4().hex + ".tmp"
+        descriptor, identity, published = None, None, False
+        try:
+            validate()
+            descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                                 0o600, dir_fd=parent)
+            info = os.fstat(descriptor)
+            identity = info.st_dev, info.st_ino
+            os.fchmod(descriptor, 0o600)
+            stream = os.fdopen(descriptor, "wb")
+            descriptor = None
+            with stream:
+                validate()
+                stream.write(body)
+                stream.flush()
+                os.fsync(stream.fileno())
+                current = os.stat(temporary, dir_fd=parent, follow_symlinks=False)
+                if (not stat.S_ISREG(current.st_mode)
+                        or (current.st_dev, current.st_ino) != identity):
+                    raise InvalidState("management_journal_path")
+                validate()
+                os.replace(temporary, leaf, src_dir_fd=parent, dst_dir_fd=parent)
+                published = True
+                os.fsync(parent)
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
+            if identity is not None and not published:
+                try:
+                    current = os.stat(temporary, dir_fd=parent, follow_symlinks=False)
+                    if stat.S_ISREG(current.st_mode) and (current.st_dev, current.st_ino) == identity:
+                        os.unlink(temporary, dir_fd=parent)
+                except FileNotFoundError:
+                    pass
 
     def artifact_path(self, name: str) -> Path:
         """Resolve a top-level generated artifact without exposing store internals."""

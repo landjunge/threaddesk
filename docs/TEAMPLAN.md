@@ -95,19 +95,20 @@ Gespräch `kira-gesamtplan-team-20261020-1031` und quittierte Übergabe
 
 Codex koordiniert und implementiert mit abgegrenzten nativen Teamaufgaben;
 Grok prüft konkrete Commits unabhängig über sein zugeordnetes bestehendes
-sichtbares Fenster. Groks tatsächlich angebotener Teammodus ist noch zu
-bestätigen. Kein Codex-Unteragent ersetzt diese unabhängige Prüfung. Neue
+sichtbares Fenster. Groks nativer `spawn_subagent`-Modus ist praktisch belegt;
+für RC11 startete er zwei abgegrenzte Prüfaufträge. Ihre Einzelresultate stehen
+noch aus; Groks eigene unabhängige RC11-Prüfung ist bereits eingegangen. Kein Codex-Unteragent ersetzt diese unabhängige Prüfung. Neue
 Hauptsitzungen oder ein Hintergrundersatz sind nicht vorgesehen. Änderungen
 an gemeinsamen Dateien werden vorab eindeutig einem Bearbeiter zugeteilt.
 
 | ID | Umfang / bestehende Zuordnung | Stand und nächster Schritt |
 | --- | --- | --- |
 | E01.1 | P00/R01, Quell-/Paket-/Arbeitsbestand | Teilbasis erfasst: ThreadDesk main `ce8b403`, 4AllPass main `905e6b5`; vorhandene M1/M2/Wissens-/Design-/RC3-Belege erhalten. Isolierte Tests und vollständige Claim-/Prüfzuordnung noch offen. |
-| E01.2 | RC9/RC10, ST-01–ST-05 | Kira-Katalog-/Leseweg praktisch belegt; Codex-Bereitschaftsreparatur Kandidat `2062055` mit 921 Gesamttests und anschließenden 172 gezielten Tests. Grok-Review und Aktivierung offen. Echter Kira→Original-Codex→Kira-Test bleibt offen. |
-| E01.3 | Native Teams und verbindliche Übergaben | Codex-Team für Parser/Regressionen sowie Import/Client/Bestand eingesetzt; Ergebnisse zusammengeführt. Grok-Review `e4c91752-bd49-425d-a3ce-a1c8bd887dc4` einmal gespeichert, noch ohne Empfangsquittung; bei `desktop_locked` wartet die zentrale sichtbare Route ohne Eingabe. Kein zweiter Reviewauftrag. |
-| E02.1 | TD-01, F1/F2 | In Arbeit: isolierte Backup-Reparatur auf aktuellem main; deskriptorgebundene Quellen, manifestgebundener Restore, synthetische JSON-/SQLite-Gegenproben. Keine Änderung produktiver Daten-/Runnerpfade. |
-| E02.2 | TD-02 | Offen: lokale Aufrufer-/Host-/Origin-/CSRF-Schreibgrenze, erlaubte Maschinenwege und tatsächlicher Browser-Gegenversuch. |
-| E02.3–4 | AP-01/AP-02/F4 | Offen; in 4AllPass `ROADMAP.md` führen: aktive Anweisungen angleichen, überlangen stockenden Stream sofort begrenzt ablehnen. |
+| E01.2 | RC9/RC10, ST-01–ST-05 | Kira-Katalog-/Leseweg praktisch belegt; Codex-Bereitschaftsreparatur `2062055` mit 921 Gesamttests und anschließenden 172 gezielten Tests. Grok nahm nach eigenen 172 Tests begrenzt ab; RC11 ist kontrolliert aktiv, geladene Quelle/Konfiguration stimmen überein. Echter Kira→Original-Codex→Kira-Test bleibt offen. |
+| E01.3 | Native Teams und verbindliche Übergaben | Codex-Team für Parser/Regressionen sowie Import/Client/Bestand eingesetzt; Ergebnisse zusammengeführt. Grok-Review `e4c91752-bd49-425d-a3ce-a1c8bd887dc4` wartete bei `desktop_locked` ohne Eingabe; nach Entsperren im zugeordneten Fenster authentifiziert empfangsquittiert, Grok-Urteil eingegangen: ship im geprüften RC11-Umfang. Ergebnisse seiner zwei nativen Unteragenten noch offen. Kein zweiter RC11-Reviewauftrag. |
+| E02.1 | TD-01, F1/F2 | Kandidat auf main `ce8b403`: gebundene Quellen und JSON-WAL-Controlpfade, manifestgebundener Restore, exklusive Zieldateien und Veröffentlichung. Unabhängige Codex-Gegenproben korrigiert; abschließend 170 Integrationstests bestanden. Grok und native Windows-/Linux-CI offen; keine Live-Installation. |
+| E02.2 | TD-02 | Kandidat im separaten TD02-Worktree: lokale Host-/Origin-/Sitzungs-/CSRF-Grenze, drei exakte Room-Ausnahmen, echte Browser-/Zwei-Prozess-Gegenproben. Zusätzliche Codex-Prüfung fand Erstinitialisierung beim GET; eng zu korrigieren. Grok und Integration offen. |
+| E02.3–4 | AP-01/AP-02/F4 | In 4AllPass `ROADMAP.md`: AP01 Dokumente/Template in DraftPR229 (HEAD `ab1aba3`, identischer Quellbaum zu Reviewpin `4bfc476`); AP02 sofortige413 im DraftPR230, `3951697`, 156 Backendtests bestanden/1 expliziter Postgres-Migrationstest ohne isoliertes Postgres ausgenommen. Grok-Review `e5db3654` queued, nicht als empfangen behauptet. |
 | E03 | P01–P05, R02–R07/R12, AP-04 | Offen: Kryptografie, Snapshot, Konto/Sitzung, Geräte, Recovery und belastbarer Identitätsvertrag. Vorhandene Tests ersetzen keine Bereichsabnahme. |
 | E04 | P06–P08/P11–P12, R08–R11/R15–R17, AP-03 | Offen: Browser-/Desktop-/native Nutzerwege und Paketnachweise am tatsächlichen Kandidaten. |
 | E05 | UI-01, zugehöriger TD-08-Umfang | Offen: gemeinsame kompakte App-Leiste, vorhandene Icons, bestätigte frische Verbindungen; nur 4AllPass bei bestätigtem Unlock sehr dezenter Puls. |
@@ -116,9 +117,13 @@ an gemeinsamen Dateien werden vorab eindeutig einem Bearbeiter zugeteilt.
 | E08 | TD-07 | Offen: berechtigte FTS5-Inhaltssuche, getrennter optionaler Bridge-Dateiindex, benannte Datenmengen/Leistungsmessung. |
 | E09 | TD-09/AP-08, P10–P12, R01–R17, H1–H6, T01–T22 | Offen: einschlägige Nachweise zuordnen, Nutzer-/Modulwege abnehmen, geprüfte Pakete nach bestehenden Release-Gates ausliefern. |
 
-Stand dieser Einpflege: E01 ist noch nicht abgeschlossen. Der gesperrte Mac
-verhindert gerade die sichtbare Grok-Prüfung und die praktische Terminalabnahme;
-isolierte E02.1-Arbeit läuft unabhängig weiter. Der öffentliche Handy-/Tunnelweg
+Stand dieser Einpflege: E01 ist noch nicht abgeschlossen. Die Mac-Sperre
+verhinderte zunächst die sichtbare Grok-Prüfung; die RC11-Prüfung wurde nach
+Entsperren abgeschlossen. Der Mac ist erneut gesperrt. Der auf 15 Minuten
+begrenzte Altfall-Abgleich beobachtete kein Entsperren und endete ohne Versuch,
+Eingabe oder Return; der Originaltest bleibt `unknown`, keine Wiederholung.
+Die praktische Codex-Terminalabnahme bleibt offen, isolierte E02-Arbeit läuft
+unabhängig weiter. Der öffentliche Handy-/Tunnelweg
 ist auf Daniels Wunsch zurückgestellt und wird hierbei nicht verändert.
 Restrolle nach Leitungstransfer, genaue Manager-/Abnahmerechte, Stellvertretung
 sowie Executor-Betriebsprofil/erste reale Operation benötigen vor dem jeweiligen
