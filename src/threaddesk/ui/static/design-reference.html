@@ -14,6 +14,8 @@
   .stage { border: 1px solid var(--np-divider); }
   .stage-head { display: flex; gap: var(--np-space-5); align-items: center; padding: var(--np-space-4) var(--np-space-5); border-bottom: 1px solid var(--np-divider); }
   .stage-head .np-meta { margin-left: auto; }
+  .stage-head .td-wordmark-thread { color: #b99cff; }
+  .stage-head .td-wordmark-desk { color: var(--np-text); }
   .composition { display: grid; grid-template-columns: 192px minmax(0,1fr) 224px; min-height: 408px; }
   .rail { padding: var(--np-space-5) var(--np-space-4); border-right: 1px solid var(--np-divider); }
   .rail a { display: block; color: var(--np-muted); text-decoration: none; padding: var(--np-space-3); }
@@ -50,7 +52,7 @@
     <button class="np-button" data-product="4allpass" aria-pressed="false">4AllPass</button>
   </nav>
   <section class="stage" aria-label="Gemeinsamer Aufbau">
-    <header class="stage-head"><h2 data-name>ThreadDesk</h2><span class="np-meta" data-purpose>Kontext behalten</span><span class="np-meta">DE · Klartext</span></header>
+    <header class="stage-head"><h2 data-name><span class="td-wordmark-thread">Thread</span><span class="td-wordmark-desk">Desk</span></h2><span class="np-meta" data-purpose>Kontext behalten</span><span class="np-meta">DE · Klartext</span></header>
     <div class="composition">
       <nav class="rail" aria-label="Beispielnavigation">
         <a href="#work" aria-current="page" data-section>Threads</a>
@@ -93,7 +95,15 @@ const products = {
 };
 document.querySelectorAll('[data-product]').forEach(button => button.addEventListener('click', () => {
   const data = products[button.dataset.product];
-  ['name','purpose','section','context','title','description','field','action'].forEach((key,i)=>document.querySelector('[data-'+key+']').textContent=data[i]);
+  ['name','purpose','section','context','title','description','field','action'].forEach((key,i)=>{
+    const target = document.querySelector('[data-'+key+']');
+    if (key === 'name' && button.dataset.product === 'threaddesk') {
+      const first = document.createElement('span'), second = document.createElement('span');
+      first.className = 'td-wordmark-thread'; first.textContent = 'Thread';
+      second.className = 'td-wordmark-desk'; second.textContent = 'Desk';
+      target.replaceChildren(first, second);
+    } else target.textContent = data[i];
+  });
   document.querySelectorAll('[data-product]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
   document.querySelector('#feedback').textContent='';
 }));
