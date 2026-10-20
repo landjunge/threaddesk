@@ -77,3 +77,54 @@ Bereits veröffentlichte Versionen werden nicht ersetzt.
 Externe Agenten werden weiterhin über vorbereitete Übergaben angebunden. Die
 lokale KI benötigt ein vom Nutzer ausgewähltes und vorhandenes Ollama-Modell.
 Internet-Teamhosting bleibt außerhalb dieser lokalen Ausgabe.
+
+## Gesamtauftrag E01–E09, 20. Oktober 2026
+
+Dieser Abschnitt führt den bestehenden Plan fort. Die aktuelle ausdrückliche
+Beauftragung geht älteren Übergabeformulierungen vor; historische Nachweise
+bleiben datiert erhalten. Vollständiger Originalplan: ThreadDesk-Thread
+`6b5b73b9de36`, „Gesamtplan ThreadDesk & 4AllPass – 20.10.2026“, Revision 3.
+Zehn geordnete Bridge-Anlagen ergeben 107935 UTF-8-Bytes, SHA256
+`4b8ac493add0b76bd1a353d59d13152bbb5ec62bc956c1def9f1ccc1aa211ca8`.
+Die vollständige Fach-API-Nachlese stimmt bytegenau überein. Im Thread steht
+der erste Originalteil in der markierten Beschreibung, der Rest in den
+Notizen; beide werden ohne zusätzliches Trennzeichen aneinandergefügt.
+Gespräch `kira-gesamtplan-team-20261020-1031` und quittierte Übergabe
+`7a7a268e-09c2-4a0f-a333-031cd7fc094c` gehören zum selben Auftrag. Ihre
+Übernahme löst keinen zweiten CLI-Auftrag aus und bedeutet keine Fachabnahme.
+
+Codex koordiniert und implementiert mit abgegrenzten nativen Teamaufgaben;
+Grok prüft konkrete Commits unabhängig über sein zugeordnetes bestehendes
+sichtbares Fenster. Groks tatsächlich angebotener Teammodus ist noch zu
+bestätigen. Kein Codex-Unteragent ersetzt diese unabhängige Prüfung. Neue
+Hauptsitzungen oder ein Hintergrundersatz sind nicht vorgesehen. Änderungen
+an gemeinsamen Dateien werden vorab eindeutig einem Bearbeiter zugeteilt.
+
+| ID | Umfang / bestehende Zuordnung | Stand und nächster Schritt |
+| --- | --- | --- |
+| E01.1 | P00/R01, Quell-/Paket-/Arbeitsbestand | Teilbasis erfasst: ThreadDesk main `ce8b403`, 4AllPass main `905e6b5`; vorhandene M1/M2/Wissens-/Design-/RC3-Belege erhalten. Isolierte Tests und vollständige Claim-/Prüfzuordnung noch offen. |
+| E01.2 | RC9/RC10, ST-01–ST-05 | Kira-Katalog-/Leseweg praktisch belegt; Codex-Bereitschaftsreparatur Kandidat `2062055` mit 921 Gesamttests und anschließenden 172 gezielten Tests. Grok-Review und Aktivierung offen. Echter Kira→Original-Codex→Kira-Test bleibt offen. |
+| E01.3 | Native Teams und verbindliche Übergaben | Codex-Team für Parser/Regressionen sowie Import/Client/Bestand eingesetzt; Ergebnisse zusammengeführt. Grok-Review `e4c91752-bd49-425d-a3ce-a1c8bd887dc4` einmal gespeichert, noch ohne Empfangsquittung; bei `desktop_locked` wartet die zentrale sichtbare Route ohne Eingabe. Kein zweiter Reviewauftrag. |
+| E02.1 | TD-01, F1/F2 | In Arbeit: isolierte Backup-Reparatur auf aktuellem main; deskriptorgebundene Quellen, manifestgebundener Restore, synthetische JSON-/SQLite-Gegenproben. Keine Änderung produktiver Daten-/Runnerpfade. |
+| E02.2 | TD-02 | Offen: lokale Aufrufer-/Host-/Origin-/CSRF-Schreibgrenze, erlaubte Maschinenwege und tatsächlicher Browser-Gegenversuch. |
+| E02.3–4 | AP-01/AP-02/F4 | Offen; in 4AllPass `ROADMAP.md` führen: aktive Anweisungen angleichen, überlangen stockenden Stream sofort begrenzt ablehnen. |
+| E03 | P01–P05, R02–R07/R12, AP-04 | Offen: Kryptografie, Snapshot, Konto/Sitzung, Geräte, Recovery und belastbarer Identitätsvertrag. Vorhandene Tests ersetzen keine Bereichsabnahme. |
+| E04 | P06–P08/P11–P12, R08–R11/R15–R17, AP-03 | Offen: Browser-/Desktop-/native Nutzerwege und Paketnachweise am tatsächlichen Kandidaten. |
+| E05 | UI-01, zugehöriger TD-08-Umfang | Offen: gemeinsame kompakte App-Leiste, vorhandene Icons, bestätigte frische Verbindungen; nur 4AllPass bei bestätigtem Unlock sehr dezenter Puls. |
+| E06 | TD-03–TD-06/TD-08, AP-04 | Offen: Projektrollen, atomarer Transfer, Team-Sync, projekt-/thread-/revisions-/laufgebundene Agentenaufträge. |
+| E07 | AP-05–AP-07, P09/R13–R14 | Offen: begrenzte Freigaben, tatsächliche Hostgrenze und genau eine freigegebene reale Anbieteroperation; kein synthetischer Test als Produktionsbeweis. |
+| E08 | TD-07 | Offen: berechtigte FTS5-Inhaltssuche, getrennter optionaler Bridge-Dateiindex, benannte Datenmengen/Leistungsmessung. |
+| E09 | TD-09/AP-08, P10–P12, R01–R17, H1–H6, T01–T22 | Offen: einschlägige Nachweise zuordnen, Nutzer-/Modulwege abnehmen, geprüfte Pakete nach bestehenden Release-Gates ausliefern. |
+
+Stand dieser Einpflege: E01 ist noch nicht abgeschlossen. Der gesperrte Mac
+verhindert gerade die sichtbare Grok-Prüfung und die praktische Terminalabnahme;
+isolierte E02.1-Arbeit läuft unabhängig weiter. Der öffentliche Handy-/Tunnelweg
+ist auf Daniels Wunsch zurückgestellt und wird hierbei nicht verändert.
+Restrolle nach Leitungstransfer, genaue Manager-/Abnahmerechte, Stellvertretung
+sowie Executor-Betriebsprofil/erste reale Operation benötigen vor dem jeweiligen
+Ausbau eine fachliche Entscheidung; sie blockieren lokale Reparaturen nicht.
+
+Jeder folgende Unterpunkt ergänzt hier Commit, Dateien, konkrete Tests,
+unabhängiges Grok-Urteil, verbleibende Grenze und nächsten Schritt. Status bleiben
+offen / in Arbeit / in Prüfung / blockiert mit Ursache / abgeschlossen im benannten
+Umfang. Paketbau, Installation, Aktivierung und Produktfreigabe sind eigene Belege.
