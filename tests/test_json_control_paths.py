@@ -9,6 +9,27 @@ from threaddesk.core.errors import InvalidState
 from threaddesk.storage.json_store import JsonStore
 
 
+@pytest.mark.parametrize("kind", ["value", "os", "json"])
+def test_operation_error_is_preserved_and_transaction_unlocks(tmp_path, kind):
+    store = JsonStore(tmp_path / "source")
+    error = (ValueError("synthetic domain error") if kind == "value" else
+             OSError("synthetic domain I/O error") if kind == "os" else
+             json.JSONDecodeError("synthetic corrupt domain JSON", "{", 1))
+    with pytest.raises(type(error)) as caught:
+        with store.transaction():
+            store._write_json(store.root / "uncommitted.json", {"saved": False})
+            raise error
+    assert caught.value is error
+    assert store._lock_depth == 0 and store._control_source is None and store._pending is None
+    assert not (store.root / "uncommitted.json").exists()
+    assert not store._journal.exists()
+    # A new owner can acquire the same OS lock and commit after the failure.
+    reopened = JsonStore(store.root)
+    with reopened.transaction():
+        reopened._write_json(reopened.root / "subsequent.json", {"saved": True})
+    assert json.loads((store.root / "subsequent.json").read_text()) == {"saved": True}
+
+
 @pytest.mark.parametrize("control", [".management.lock", ".management-commit.json"])
 def test_external_control_symlink_is_never_read_or_modified(tmp_path, control):
     store = JsonStore(tmp_path / "source")

@@ -299,6 +299,7 @@ class WindowsSourceTree:
         """
         import msvcrt
         handle = None
+        operation_error = None
         try:
             self._check_root()
             handle = self.api._child(self.root, ".management.lock", access=0xC0100000,
@@ -325,9 +326,15 @@ class WindowsSourceTree:
                         raise ValueError("JSON-Sperrdatei wurde ausgetauscht.")
 
                 validate()
-                yield stream, validate
+                try:
+                    yield stream, validate
+                except BaseException as exc:
+                    operation_error = exc
+                    raise
                 validate()
         except (OSError, ValueError) as exc:
+            if exc is operation_error:
+                raise
             raise self.error_type(str(exc)) from exc
         finally:
             if handle is not None:

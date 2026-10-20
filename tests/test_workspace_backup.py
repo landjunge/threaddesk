@@ -152,9 +152,16 @@ def test_disk_full_cleans_up_incomplete_backup(tmp_path: Path) -> None:
     def no_space(_source: Path, _target: Path) -> None:
         raise OSError(28, "No space left on device")
 
-    with pytest.raises(BackupError, match="OSError"):
+    with pytest.raises(BackupError) as failure:
         WorkspaceBackup(tmp_path / "backups", copy_file=no_space).create(source)
+    # Native source adapters preserve the errno in a chained BackupError;
+    # the public contract is a failed backup with the original I/O cause.
+    cause = failure.value
+    while cause is not None and not isinstance(cause, OSError):
+        cause = cause.__cause__
+    assert isinstance(cause, OSError) and cause.errno == 28
     assert not list((tmp_path / "backups").glob("*.partial"))
+    assert not list((tmp_path / "backups").glob("*.complete"))
 
 
 @pytest.mark.parametrize("status", ["committing", "recovery_required"])
@@ -525,27 +532,45 @@ def test_exchanged_stage_is_never_recursively_cleaned(tmp_path, operation):
     target = tmp_path / "restored"
     moved = tmp_path / "our-moved-stage"
     exchanged = None
+    blocked_exchange = None
+    source_before = logical(source)
 
     def exchange(stage):
-        nonlocal exchanged
+        nonlocal exchanged, blocked_exchange
         if (operation, stage) not in {
             ("create", "after_database"), ("restore", "after_restore_verification")
         }:
             return
         partial = (next(manager.backup_root.glob("*.partial")) if operation == "create"
                    else next(tmp_path.glob("restored.partial-*")))
-        partial.rename(moved)
+        identity = partial.stat().st_ino
+        try:
+            partial.rename(moved)
+        except OSError as exc:
+            # Windows can reject the exact attempted rename. Prove that
+            # rejection here rather than accepting an arbitrary early error;
+            # its error code alone does not identify the denying subsystem.
+            if os.name != "nt" or getattr(exc, "winerror", None) not in {5, 32}:
+                raise
+            assert partial.stat().st_ino == identity and not moved.exists()
+            blocked_exchange = exc.winerror
+            raise RuntimeError("Windows rejected the attempted stage exchange") from exc
         partial.mkdir()
         (partial / "keep").write_bytes(b"foreign replacement stage")
         exchanged = partial
         raise RuntimeError("source operation stopped after the namespace exchange")
 
     failing = WorkspaceBackup(manager.backup_root, fault=exchange)
-    with pytest.raises(BackupError):
+    with pytest.raises(BackupError) as failure:
         failing.create(source) if operation == "create" else failing.restore_verified(backup, target)
-    assert exchanged is not None
-    assert (exchanged / "keep").read_bytes() == b"foreign replacement stage"
-    assert (moved / "threaddesk.sqlite3").is_file()
+    assert logical(source) == source_before
+    assert not target.exists()
+    if blocked_exchange is not None:
+        assert not moved.exists() and exchanged is None
+    else:
+        assert exchanged is not None, repr(failure.value)
+        assert (exchanged / "keep").read_bytes() == b"foreign replacement stage"
+        assert (moved / "threaddesk.sqlite3").is_file()
 
 
 def test_local_workspace_name_rules_do_not_add_windows_restrictions_on_posix(tmp_path):

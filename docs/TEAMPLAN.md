@@ -149,3 +149,22 @@ und Groks Urteil bleiben offen. Der erste fehlgeschlagene Lauf bleibt erhalten.
 Ein separater Apple-Silicon-Installerlauf scheiterte bei der DMG-Erstellung
 mit `hdiutil: Resource busy`; daraus folgt weder ein fertiges DMG noch ein
 Fehlernachweis im Backup-Code. Keine Live-Installation dieses Kandidaten.
+
+Der Folgelauf `2b62285` bestätigt nativ 25 Source-Adapter- und 17
+JSON-Controlfälle; insgesamt Windows158 bestanden/3 fehlgeschlagen,
+Ubuntu810 bestanden/1 fehlgeschlagen. Die Installer dieses Pins wurden
+auf allen drei Plattformen erfolgreich gebaut und selbstgeprüft; das ist
+keine Gesamtabnahme der noch fehlerhaften Quelle und keine Veröffentlichung.
+Die verbliebene Fachfehler-Umdeutung ist im nächsten kleinen Diff korrigiert.
+Die Windows-Gegenproben prüfen nun den echten ENOSPC-Cause statt dessen
+Textdarstellung sowie eine tatsächlich verweigerte Umbenennung getrennt
+vom erfolgreichen Austausch mit Fremddaten-Erhalt. Eine Verweigerung
+belegt dabei allein noch nicht die Ursache. Codex-interne Gegenprüfung
+bestätigt diese Testgrenze; 31 betroffene Mac-Fälle grün, nativer neuer
+Gesamtlauf und Grok weiter offen.
+
+E03-Vorbereitung ergänzt die Bestandsmatrix um neue Bibliotheksbelege:
+321 Kryptofälle mit `RUN_HEAVY=1` und 26 WebAuthn-Bibliotheksfälle bestanden,
+keine Skips. Synthetische Vektoren/FakeAuthenticator sind keine Hardware-,
+Browser-, Personen-/Geräte- oder E03-Gesamtabnahme. Keine E03-Funktion
+vor Abschluss der E02-Reparaturen freigegeben.

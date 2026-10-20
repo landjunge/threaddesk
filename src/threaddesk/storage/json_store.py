@@ -96,6 +96,7 @@ class JsonStore:
             # pathname lstat cannot protect the first lock write/journal read.
             from threaddesk.storage.workspace_backup import BackupError, _SourceTree
 
+            operation_error = None
             try:
                 if os.name == "nt":
                     from threaddesk.storage.windows_backup_source import WindowsSourceTree
@@ -111,12 +112,18 @@ class JsonStore:
                     try:
                         validate()
                         self._recover()
-                        yield
+                        try:
+                            yield
+                        except BaseException as exc:
+                            operation_error = exc
+                            raise
                     finally:
                         self._control_source = None
                         self._lock_depth = 0
                         _unlock(lock)
             except (OSError, ValueError, BackupError) as exc:
+                if exc is operation_error:
+                    raise
                 raise InvalidState("management_control_path") from exc
 
     @contextmanager
@@ -299,8 +306,11 @@ class JsonStore:
         if os.name == "nt":
             source.publish_control_journal(body)
             return
-        self._publish_recovery_bytes(source, source.fd, ".management-commit.json", body,
-                                     source._check_root, prefix=".management-commit-")
+        try:
+            self._publish_recovery_bytes(source, source.fd, ".management-commit.json", body,
+                                         source._check_root, prefix=".management-commit-")
+        except (OSError, ValueError) as exc:
+            raise InvalidState("management_journal_path") from exc
 
     @staticmethod
     def _recovery_parts(relative):
