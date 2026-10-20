@@ -4,6 +4,7 @@ import sqlite3
 import pytest
 
 from threaddesk.core.models import new_thread
+from threaddesk.core.search import SearchError
 from threaddesk.services.search import LocalFileOwnerPolicy, SearchService
 from threaddesk.storage.sqlite_store import SQLiteStore
 
@@ -176,3 +177,29 @@ def test_optional_marker_delete_denial_must_not_leave_ready_stale_index(tmp_path
   assert page.hits,'successful canonical save must remain searchable through fallback after optional index error'
  finally:
   store.connection.set_authorizer(None);search.close();store.connection.close()
+
+
+# Strong independent in-flight regression: trigger precedes the page.
+@pytest.mark.parametrize('indexed',[True,False])
+def test_committed_save_with_preexisting_state_fault_invalidates_page(tmp_path,indexed):
+ store=SQLiteStore(tmp_path/'workspace');thread=new_thread('Original orchid');store.save_thread(thread)
+ search=SearchService(store,LocalFileOwnerPolicy(store.workspace_path));search.set_enabled(True)
+ if indexed:
+  for _ in range(20):
+   if search.rebuild_batch()['status']=='ready':break
+ # Install the fault before the page starts. Only the real save commits during policy evaluation.
+ store.connection.execute("CREATE TRIGGER synthetic_state_abort BEFORE INSERT ON app_state WHEN NEW.key='local_search' BEGIN SELECT RAISE(ABORT,'synthetic optional state failure'); END")
+ store.connection.commit()
+ class SaveInPolicy(LocalFileOwnerPolicy):
+  saved=False
+  def can_read_current(self,doc):
+   if not self.saved:
+    self.saved=True
+    current=store.get_thread(doc.thread_id);current.title='Replacement tulip';store.save_thread(current)
+   return True
+ search.policy=SaveInPolicy(store.workspace_path)
+ try:
+  with pytest.raises(SearchError,match='generation_changed'):
+   search.search('orchid',limit=1)
+  assert store.get_thread(thread.id).title=='Replacement tulip'
+ finally:search.close();store.connection.close()

@@ -66,6 +66,11 @@ class SQLiteSearchAdapter:
                     "reason": "write_transaction_active"}
         try:
             config = self._config()
+            # Local observer on this persistent read-only connection. Canonical
+            # commits happen on another connection, including when optional
+            # epoch writes fail. This is not a persisted/global snapshot token.
+            version = self._reader().execute("PRAGMA data_version").fetchone()[0]
+            generation = config["incarnation"] + ":" + config["epoch"] + ":" + str(version)
         except Exception:
             return {"enabled": False, "status": "unavailable", "generation": "",
                     "reason": "search_state_invalid"}
@@ -76,10 +81,10 @@ class SQLiteSearchAdapter:
                     raise ValueError("missing derived publication marker")
                 self._reader().execute("SELECT id FROM thread_search_meta LIMIT 1").fetchone()
             return {**config, "mode": mode,
-                    "generation": config["incarnation"] + ":" + config["epoch"]}
+                    "generation": generation}
         except Exception:
             return {**config, "status": "degraded", "mode": "bounded_scan",
-                    "generation": config["incarnation"] + ":" + config["epoch"],
+                    "generation": generation,
                     "reason": "search_index_invalid"}
 
     def configure(self, enabled):

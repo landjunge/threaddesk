@@ -47,6 +47,13 @@ führen zur begrenzten kanonischen Ersatzsuche. Ein isolierter Indexfehler darf
 einen gültigen Save nicht scheitern lassen; ein echter Engine-Rollback der
 gesamten Transaktion muss weiterhin als fehlgeschlagener Save gemeldet werden.
 Ein neuer expliziter Rebuild reconciliert den vollständigen verwalteten Bestand.
+Zusätzlich beobachtet die dauerhaft getrennte read-only-Verbindung mittels
+[SQLite `data_version`](https://www.sqlite.org/pragma.html#pragma_data_version)
+fremde Commits während einer Seite/Fortsetzung, auch wenn ein optionaler
+Epoch-Write fehlschlägt. Der Vergleich gilt nur auf derselben Verbindung im
+laufenden Prozess; er ist keine persistente/global vergleichbare Generation
+oder Snapshotgarantie. Jeder Workspace-DB-Commit darf konservativ invalidieren.
+Der Seitenabschluss bindet zusätzlich aktuellen Quellmodus und Enabled-Stand.
 
 JSON besitzt ausdrücklich **keinen** persistenten Inhaltsindex. Der Modus
 `bounded_scan` liest aktuelle Quellen über die vorhandenen gebundenen

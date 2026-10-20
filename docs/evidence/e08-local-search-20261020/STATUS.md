@@ -56,6 +56,19 @@ Ablehnung von C0, DEL und C1 erfüllt, ohne Normalisierungs-/Suchsemantikwechsel
 Nach dieser engen Korrektur: **86 bestanden**, davon 74 Repositoryfälle und
 12 unveränderte private Reviewerfälle; keine Addition zu den früheren Läufen.
 
+Ein weiterer unabhängiger Gegenfall auf `b8da29d` betraf einen Save während
+der Policyprüfung: isolierter State-ABORT ließ den Epochstring gleich. Sowohl
+FTS-Moduswechsel als auch bereits aktiver Scanmodus konnten dadurch eine alte
+Seite zurückgeben. Die vorhandene dauerhaft getrennte read-only-Verbindung
+liefert jetzt einen zusätzlichen verbindungslokalen `data_version`-Beobachter;
+der Abschluss vergleicht außerdem Enabled-Stand/Quellmodus. Der stärkere
+Reviewerfall installiert den Fehlertrigger bereits vor Seitenbeginn, sodass
+nur der echte kanonische Save während der Seite committet. Keine Schema-, WAL-
+oder globale Snapshotgeneration wurde ergänzt. Die unveränderten privaten
+Reviewerproben sind erneut grün: **92 bestanden** (76 Repositoryfälle plus
+16 unveränderte private Reviewerfälle), einschließlich beider FTS-/Scan-Fälle
+ohne DDL während der Seite. Keine Addition zu den überlappenden früheren Läufen.
+
 ## Reproduzierbare Textmessung
 
 ```sh
@@ -115,8 +128,22 @@ und keine vollständige Bestandssuche. JSON bleibt zusätzlich immer ausdrückli
 Aufbau, exakte Quellhashes, Teilstände und seltene/fehlende Suchbegriffe stehen in
 [der kompakten Messdatei](benchmark-10000-b966bd7.json); rohe Stichproben privat.
 Diese historischen Werte werden den nachfolgenden Korrekturbytes **nicht**
-zugeschrieben. Eine 100k-Messung am neuen fixierten Reviewpin steht noch aus;
-kein vollständiges E08.3, SLO oder Produktfreigabebeleg.
+zugeschrieben.
+
+Die vollständige **100k-Messung auf `b8da29d` vor dem Inflight-Fix** liegt separat
+in [benchmark-100000-b8da29d.json](benchmark-100000-b8da29d.json): dieselbe
+Umgebung, 403.724.000 tatsächliche UTF-8-Textbytes je Backend, 1000/1000 warme
+Serviceproben mit erreichten ersten20. Service p95 FTS5 11,64 ms, SQLite-Scan
+24,39 ms, JSON 56,65 ms; Service-RSS 45,3/40,1/33,8 MB. Die einzelne echte
+CLI-Seite erreicht erste20 nur in18/20,20/20,19/20 Aufrufen; übrige Aufrufe sind
+am Zeitbudget partiell und in der Messdatei als solche aufgeführt. JSON-
+Fixtureerzeugung 394,7 s ist eigener Aufbauaufwand, kein Suchwert. Die
+100k-Indexbefüllung benötigte 25,34 s. Hardware neben den eingebetteten Werten:
+Intel i5-6500 3,20 GHz, iMac17,1; tatsächliche Scratch-Belegung blieb unter4 GiB.
+Die verschiedenen Pins und veränderliche konkurrierende Hostlast erlauben
+keinen direkten Größen-/Backend-SLO-Vergleich. Beide fertigen historischen
+Läufe haben `source_dirty=false` und geprüfte Sourcehashes. Finale Quellbytes
+erhalten eine eigene Messzuordnung; kein vollständiges E08.3 oder Produktgate.
 
 E08 bleibt teilweise offen: E08.1 erhält diesen lokalen Reviewkandidaten;
 Teamrechte bleiben E06, Bridge-Dateiindex und produktive Leistungs-/Paketabnahme

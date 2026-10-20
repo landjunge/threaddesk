@@ -198,7 +198,10 @@ class SearchService:
                                                   doc.title[:240], value[max(0, begin - 60):max(0, begin - 60) + 240],
                                                   projection_digest(doc)))
                         break
-            if self._authorize() != policy_generation or self.status().get("generation") != source["generation"]:
+            current_source = self.status()
+            source_key = lambda value: (value.get("generation"), value.get("enabled"),
+                                        value.get("mode", "bounded_scan"))
+            if self._authorize() != policy_generation or source_key(current_source) != source_key(source):
                 raise SearchError("generation_changed")
             if page.scanned >= CANDIDATES:
                 page.reasons.append("candidate_budget")
