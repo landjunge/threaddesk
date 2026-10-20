@@ -56,6 +56,14 @@ def _unlock(lock: IO[bytes]) -> None:
 
 
 class JsonStore:
+    @property
+    def workspace_path(self) -> Path:
+        return self.root
+
+    def search_adapter(self):
+        from threaddesk.storage.search_source import JsonSearchAdapter
+        return JsonSearchAdapter(self)
+
     def __init__(self, root: Path | None = None) -> None:
         self.root = Path(root or DEFAULT_ROOT).resolve()
         self.threads_dir = self.root / "threads"

@@ -23,6 +23,10 @@ from threaddesk.storage.schema import FTS_SQL, MIGRATIONS, SCHEMA_SQL, SCHEMA_VE
 
 
 class SQLiteStore:
+    def search_adapter(self):
+        from threaddesk.storage.search_sqlite import SQLiteSearchAdapter
+        return SQLiteSearchAdapter(self)
+
     def __init__(self, root: Path | None = None) -> None:
         self.root = Path(root or Path.home() / ".threaddesk")
         self.root.mkdir(parents=True, exist_ok=True)
@@ -143,6 +147,7 @@ class SQLiteStore:
             "ON CONFLICT(id) DO UPDATE SET status=excluded.status, updated_at=excluded.updated_at, payload=excluded.payload",
             (thread.id, thread.status, thread.updated_at, payload),
         )
+        self.search_adapter().changed(thread.id)
 
     def list_issued_handoffs(self):
         return [self._load(row) for row in self.connection.execute("SELECT payload FROM issued_handoffs ORDER BY id")]
@@ -167,9 +172,14 @@ class SQLiteStore:
         self._commit()
 
     def delete_thread(self, thread_id: str) -> None:
+        if not self._transaction_depth:
+            with self.transaction():
+                self.delete_thread(thread_id)
+            return
         cursor = self.connection.execute("DELETE FROM threads WHERE id = ?", (thread_id,))
         if not cursor.rowcount:
             raise NotFound(f"Thread nicht gefunden: {thread_id}")
+        self.search_adapter().changed(thread_id, deleted=True)
         self._commit()
 
     def get_current_id(self) -> str | None:
