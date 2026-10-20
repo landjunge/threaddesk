@@ -12,6 +12,7 @@
         hx-swap="innerHTML"
         hx-confirm="{{ t('files.confirm_remove') }}"
       >
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
         <input type="hidden" name="path" value="{{ path }}" />
         <button type="submit" class="btn btn-ghost btn-compact">{{ t("files.remove") }}</button>
       </form>
@@ -27,6 +28,7 @@
     hx-target="#workspace"
     hx-swap="innerHTML"
   >
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
     <input type="text" name="path" required maxlength="400" placeholder="src/app.py" />
     <button type="submit" class="btn btn-primary">{{ t("files.add") }}</button>
   </form>

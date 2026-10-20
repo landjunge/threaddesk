@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 import json
 import os
 from pathlib import Path
 import tempfile
 from typing import Optional
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
+from threaddesk.ui.http_access import LocalHTTPAccess, require_ui_csrf, safe_return_path
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -124,15 +126,15 @@ def _browser_strings(language: str, register: str) -> str:
     )
 
 
-def _hausmeister_status(store) -> dict:
+def _hausmeister_status(store, model_status: dict | None = None) -> dict:
     try:
-        return Hausmeister(store).status()
+        return Hausmeister(store).status(model_status=model_status)
     except (ThreadDeskError, OSError, ValueError):
         return {
             "enabled": False,
             "model": "",
             "models": [],
-            "ollama_ok": False,
+            "ollama_ok": None,
             "actor_id": "",
             "agent_type": "",
             "kind": "",
@@ -169,6 +171,14 @@ def _return_review_states(svc, current, entries):
 def _ctx(request: Request, extra: dict | None = None) -> dict:
     svc = _svc()
     current = svc.current()
+    selected = request.query_params.get("thread")
+    if request.method == "POST" and not request.url.path.endswith("/archive"):
+        selected = request.path_params.get("thread_id") or selected
+    if selected:
+        try:
+            current = svc.get(selected)
+        except ThreadDeskError:
+            pass
     snapshots = svc.snapshots(current.id) if current else []
     entries = svc.whiteboard(current.id) if current else []
     extra = extra or {}
@@ -180,7 +190,7 @@ def _ctx(request: Request, extra: dict | None = None) -> dict:
         "browser_strings": _browser_strings(lang, _register(request)),
         "threads": svc.list(include_archived=False),
         "current": current,
-        "current_id": svc.store.get_current_id(),
+        "current_id": current.id if current else None,
         "gate": svc.gate(),
         "snapshots": snapshots,
         "statuses": WRITE_STATUSES,
@@ -195,7 +205,9 @@ def _ctx(request: Request, extra: dict | None = None) -> dict:
         "actor_marks": ActorRegistry(svc.store).marks(),
         "linked_nodes": _linked_nodes(svc, current),
         "focus_node": "",
-        "hausmeister": _hausmeister_status(svc.store),
+        "hausmeister": _hausmeister_status(svc.store, request.app.state.hausmeister_probes.get(
+            str(svc.store.artifact_path("hausmeister.json"))
+        )),
         "room": RoomBook(svc.store).view(),
     }
     if current is not None:
@@ -207,7 +219,40 @@ def _ctx(request: Request, extra: dict | None = None) -> dict:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="ThreadDesk", docs_url=None, redoc_url=None)
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        # Startup is separate from HTTP GET. Restored/selected profiles are
+        # refreshed by their protected POST actions, never by rendering a view.
+        bootstrap_profile()
+        yield
+
+    app = FastAPI(title="ThreadDesk", docs_url=None, redoc_url=None,
+                  dependencies=[Depends(require_ui_csrf)], lifespan=lifespan)
+    app.state.hausmeister_probes = {}
+    app.add_middleware(LocalHTTPAccess)
+
+    def remember_probe(store, status: dict) -> None:
+        key = str(store.artifact_path("hausmeister.json"))
+        app.state.hausmeister_probes[key] = {
+            "models": list(status.get("models", [])), "ollama_ok": status.get("ollama_ok"),
+            "observed_at": status.get("observed_at"),
+            "observed_monotonic": status.get("observed_monotonic"),
+        }
+
+    def bootstrap_profile() -> None:
+        store = _svc().store
+        try:
+            # Controlled app/profile startup, before serving its GET views.
+            # Keep existing identities, module enablement and grants unchanged.
+            ActorRegistry(store).instance_id()
+            home = Hausmeister(store)
+            home.install()
+            # Transport timeout 0.4s, caller budget 0.5s; late results cannot
+            # alter this profile's cache or install/execute a model.
+            remember_probe(store, home.probe_models())
+        finally:
+            if isinstance(store, SQLiteStore):
+                store.connection.close()
     templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
     # Kein sichtbarer Text gehoert direkt ins Template — nur Schluessel.
     @pass_context
@@ -223,10 +268,6 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     def workspace(request: Request, extra: dict | None = None) -> HTMLResponse:
-        try:
-            note_activity(_svc().store)
-        except OSError:
-            pass
         return templates.TemplateResponse(
             request, "partials/workspace.html", _ctx(request, extra)
         )
@@ -247,11 +288,6 @@ def create_app() -> FastAPI:
 
     @app.get("/", response_class=HTMLResponse)
     def index(request: Request, thread: Optional[str] = None) -> HTMLResponse:
-        if thread:
-            try:
-                _svc().switch(thread)
-            except ThreadDeskError:
-                pass
         return templates.TemplateResponse(request, "index.html", _ctx(request))
 
     def data_page(request: Request, **extra) -> HTMLResponse:
@@ -290,6 +326,7 @@ def create_app() -> FastAPI:
                 raise BackupError("backup_confirmation")
             body = await backup.read(LIMIT + 1)
             restore_backup(body, base_root())
+            bootstrap_profile()
             return RedirectResponse("/?restored=1", status_code=303)
         except BackupError:
             response = data_page(request, error=i18n.translate("data.restore_error", _language(request)))
@@ -302,6 +339,7 @@ def create_app() -> FastAPI:
     def data_profile(request: Request, name: str = Form(...)) -> Response:
         try:
             activate_profile(base_root(), name)
+            bootstrap_profile()
             return RedirectResponse("/", status_code=303)
         except BackupError:
             response = data_page(request, error=i18n.translate("data.restore_error", _language(request)))
@@ -311,12 +349,13 @@ def create_app() -> FastAPI:
     @app.post("/data/original")
     def data_original() -> Response:
         (base_root() / "active-profile.json").unlink(missing_ok=True)
+        bootstrap_profile()
         return RedirectResponse("/", status_code=303)
 
-    @app.get("/lang/{code}", response_class=RedirectResponse)
+    @app.post("/lang/{code}", response_class=RedirectResponse)
     def switch_language(code: str, request: Request) -> RedirectResponse:
         """Merkt die Sprache und kehrt dorthin zurueck, wo der Nutzer war."""
-        target = request.headers.get("referer") or "/"
+        target = safe_return_path(request, exclude_query={"lang"})
         response = RedirectResponse(target, status_code=303)
         response.set_cookie(
             LANGUAGE_COOKIE, i18n.normalise(code),
@@ -324,10 +363,10 @@ def create_app() -> FastAPI:
         )
         return response
 
-    @app.get("/mode/{value}", response_class=RedirectResponse)
+    @app.post("/mode/{value}", response_class=RedirectResponse)
     def switch_register(value: str, request: Request) -> RedirectResponse:
         """Merkt die Sprachebene — Klartext oder Fachsprache."""
-        target = request.headers.get("referer") or "/"
+        target = safe_return_path(request, exclude_query={"mode"})
         response = RedirectResponse(target, status_code=303)
         response.set_cookie(
             REGISTER_COOKIE, i18n.normalise_register(value),
@@ -613,14 +652,17 @@ def create_app() -> FastAPI:
 
     @app.post("/hausmeister/toggle", response_class=HTMLResponse)
     def hausmeister_toggle(request: Request, enabled: str = Form("0")) -> HTMLResponse:
-        Hausmeister(_svc().store).set_enabled(enabled == "1")
+        store = _svc().store
+        remember_probe(store, Hausmeister(store).set_enabled(enabled == "1"))
         key = "hausmeister.turn_on" if enabled == "1" else "hausmeister.turn_off"
         return workspace(request, {"notice": i18n.translate(key, _language(request))})
 
     @app.post("/hausmeister/model", response_class=HTMLResponse)
     def hausmeister_model(request: Request, model: str = Form("")) -> HTMLResponse:
         try:
-            chosen = Hausmeister(_svc().store).set_model(model)
+            store = _svc().store
+            chosen = Hausmeister(store).set_model(model)
+            remember_probe(store, chosen)
         except OllamaError as exc:
             return _hausmeister_notice(request, str(exc))
         key = "hausmeister.no_model" if not chosen["model"] else "hausmeister.use_model"
@@ -884,7 +926,7 @@ def create_app() -> FastAPI:
     return app
 
 
-def run(host: str = "127.0.0.1", port: int = 8765) -> None:
+def run(host: str = "127.0.0.1", port: int = 8765, *, open_browser: bool = False) -> None:
     import threading
     import time
     import uvicorn
@@ -899,4 +941,22 @@ def run(host: str = "127.0.0.1", port: int = 8765) -> None:
                 continue
 
     threading.Thread(target=_idle, name="hausmeister-idle", daemon=True).start()
-    uvicorn.run(create_app(), host=host, port=port, log_level="info")
+    server = uvicorn.Server(uvicorn.Config(
+        create_app(), host=host, port=port, log_level="info", proxy_headers=False,
+    ))
+    if open_browser:
+        def _open_when_ready():
+            import webbrowser
+
+            deadline = time.monotonic() + 15
+            while time.monotonic() < deadline and not server.should_exit:
+                if server.started:
+                    name = "127.0.0.1" if host == "0.0.0.0" else "::1" if host == "::" else host
+                    authority = f"[{name}]" if ":" in name else name
+                    bound_port = server.servers[0].sockets[0].getsockname()[1]
+                    webbrowser.open(f"http://{authority}:{bound_port}/")
+                    return
+                time.sleep(0.05)
+
+        threading.Thread(target=_open_when_ready, name="browser-open", daemon=True).start()
+    server.run()

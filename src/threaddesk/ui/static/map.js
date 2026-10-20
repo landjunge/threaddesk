@@ -438,6 +438,15 @@
         link.href = `/?thread=${encodeURIComponent(threadId)}&node=${encodeURIComponent(node.id)}`;
         link.textContent = t("map.open_thread");
         link.setAttribute("data-map-thread", threadId);
+        link.addEventListener("click", async event => {
+          if (event.button || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+          event.preventDefault();
+          try {
+            const response = await window.threadDeskWrite(`/threads/${encodeURIComponent(threadId)}/switch`);
+            if (!response.ok) throw new Error("switch_rejected");
+            location.assign(link.href);
+          } catch (_) { requestState("browser.save_uncertain", true); }
+        });
         item.appendChild(link);
         detailMeta.appendChild(item);
       }

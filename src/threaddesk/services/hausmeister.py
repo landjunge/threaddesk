@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 import os
+import threading
 import time
 from typing import Any, Callable
 
@@ -35,6 +36,9 @@ LOAD_LIMIT = 1.5
 ACTIVITY_GAP_SECONDS = 15
 SURFACE_KINDS = frozenset({"pointer", "click", "key", "scroll", "touch"})
 OPEN = frozenset({"waiting", "paused", "running"})
+PROBE_WAIT_SECONDS = 0.5
+# Discovery is a short setup/status snapshot, never a continuous health check.
+MODEL_STATUS_TTL_SECONDS = 30.0
 
 
 @dataclass(frozen=True)
@@ -109,26 +113,59 @@ class Hausmeister:
         except NotFound:
             self.registry.install(MANIFEST)
 
-    def status(self) -> dict[str, Any]:
-        self.install()
-        installed = self.registry.get(MANIFEST.id)
-        models: list[str] = []
-        ollama_ok = False
+    def probe_models(self) -> dict[str, Any]:
+        """Explicit, bounded local discovery; never install or execute a model."""
+        done = threading.Event()
+        result: dict[str, Any] = {}
+
+        def discover() -> None:
+            try:
+                result.update(models=list_models(self.transport, timeout=0.4), ollama_ok=True)
+            except OllamaError:
+                result.update(models=[], ollama_ok=False)
+            except Exception as exc:
+                result["error"] = exc
+            finally:
+                result.update(observed_at=now_iso(), observed_monotonic=time.monotonic())
+                done.set()
+
+        threading.Thread(target=discover, name="hausmeister-probe", daemon=True).start()
+        if not done.wait(PROBE_WAIT_SECONDS):
+            # A late worker cannot update the caller's snapshot or run a model.
+            return {"models": [], "ollama_ok": None}
+        if "error" in result:
+            raise result["error"]
+        return result
+
+    def status(self, *, model_status: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Read saved state and an optional prior probe; never install or connect."""
         try:
-            models = list_models(self.transport, timeout=0.4)
-            ollama_ok = True
-        except OllamaError:
-            ollama_ok = False
+            enabled = self.registry.get(MANIFEST.id).enabled
+        except NotFound:
+            enabled = False
+        model = self._stored_model()
+        models = list((model_status or {}).get("models", []))
+        if model and model not in models:
+            models.append(model)
+        observed_at = (model_status or {}).get("observed_at")
+        observed_monotonic = (model_status or {}).get("observed_monotonic")
+        age = (time.monotonic() - observed_monotonic
+               if isinstance(observed_monotonic, (float, int)) else -1)
+        fresh = bool(observed_at) and 0 <= age < MODEL_STATUS_TTL_SECONDS
+        ollama_ok = (model_status or {}).get("ollama_ok") if fresh else None
         actor = _find_agent(ActorRegistry(self.store))
         return {
-            "enabled": installed.enabled,
-            "model": self._stored_model(),
+            "enabled": enabled,
+            "model": model,
             "models": models,
             "ollama_ok": ollama_ok,
+            "observed_at": observed_at,
+            "observed_monotonic": observed_monotonic,
+            "observation_remaining": MODEL_STATUS_TTL_SECONDS - age if fresh and ollama_ok is not None else 0,
             "actor_id": actor["id"] if actor else "",
             "agent_type": AGENT_TYPE if actor else "",
             "kind": actor["kind"] if actor else "",
-            "phase": self._phase(installed.enabled, ollama_ok, self._stored_model()),
+            "phase": self._phase(enabled, ollama_ok, model),
         }
 
     def set_enabled(self, enabled: bool) -> dict[str, Any]:
@@ -136,7 +173,7 @@ class Hausmeister:
         if enabled:
             self.ensure_actor()
         self.registry.set_enabled(MANIFEST.id, enabled)
-        return self.status()
+        return self.status(model_status=self.probe_models())
 
     def set_model(self, model: str) -> dict[str, Any]:
         self.install()
@@ -144,7 +181,7 @@ class Hausmeister:
             raise InvalidState("ollama_model_missing")
         if not model.strip():
             self.store.write_json_artifact(SETTINGS, {"version": 1, "model": ""})
-            return self.status()
+            return self.status(model_status=self.probe_models())
         model = _model_name(model)
         try:
             available = list_models(self.transport, timeout=0.4)
@@ -153,7 +190,7 @@ class Hausmeister:
         if model not in available:
             raise OllamaError("ollama_model_missing")
         self.store.write_json_artifact(SETTINGS, {"version": 1, "model": model})
-        return self.status()
+        return self.status(model_status=self.probe_models())
 
     def ensure_actor(self) -> dict[str, Any]:
         registry = ActorRegistry(self.store)
@@ -285,9 +322,11 @@ class Hausmeister:
             written.append(item["entry"])
         return {"entries": written}
 
-    def _phase(self, enabled: bool, ollama_ok: bool, model: str) -> str:
+    def _phase(self, enabled: bool, ollama_ok: bool | None, model: str) -> str:
         if not enabled:
             return "off"
+        if ollama_ok is None:
+            return "unverified"
         if not ollama_ok:
             return "ollama_down"
         if not model:

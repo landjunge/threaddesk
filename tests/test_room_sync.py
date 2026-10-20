@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from urllib.parse import urlparse
 
 import pytest
 
-from threaddesk.api.service import ThreadService
 from threaddesk.core.errors import InvalidState
 from threaddesk.core.models import WhiteboardEntry, new_thread
 from threaddesk.services.room_sync import RoomBook, RoomDown, local_base_url
@@ -87,6 +85,23 @@ def test_instance_id_is_stable_and_different_per_desk(desks) -> None:
     first = RoomBook(left).instance_id()
     assert RoomBook(left).instance_id() == first
     assert RoomBook(right).instance_id() not in {"", first}
+
+
+def test_room_view_never_initializes_identity_even_with_orphaned_rooms(desks) -> None:
+    left, _ = desks
+    book = RoomBook(left)
+    path = left.artifact_path("actors.json")
+    assert book.view()["instance_id"] == ""
+    assert not path.exists()
+    book.create_room("Explicitly created")
+    identity = book.instance_id()
+    before = (path.read_bytes(), path.stat().st_mtime_ns)
+    assert book.view()["instance_id"] == identity
+    assert before == (path.read_bytes(), path.stat().st_mtime_ns)
+    path.unlink()  # An incomplete restored profile must not receive a new owner identity on GET.
+    view = book.view()
+    assert view["instance_id"] == "" and view["role"] == ""
+    assert not path.exists()
 
 
 def test_local_addresses_only() -> None:
@@ -275,7 +290,7 @@ def test_read_only_can_receive_but_not_publish(desks) -> None:
 
 def test_unpaired_http_route_returns_no_room_body(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("fastapi")
-    from fastapi.testclient import TestClient
+    from http_ui_client import UIClient as TestClient
 
     from threaddesk.ui.server import create_app
 

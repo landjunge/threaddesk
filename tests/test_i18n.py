@@ -207,11 +207,12 @@ def test_unknown_key_returns_key() -> None:
 
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
-    fastapi_testclient = pytest.importorskip("fastapi.testclient")
+    pytest.importorskip("fastapi.testclient")
     monkeypatch.setenv("THREADDESK_HOME", str(tmp_path))
     from threaddesk.ui.server import create_app
 
-    return fastapi_testclient.TestClient(create_app())
+    from http_ui_client import UIClient
+    return UIClient(create_app())
 
 
 def test_german_is_the_default(client) -> None:
@@ -235,7 +236,7 @@ def test_browser_language_is_honoured(client) -> None:
 
 def test_switch_route_remembers_the_choice(client) -> None:
     """Der Umschalter setzt ein Cookie und kehrt zurueck."""
-    response = client.get("/lang/en", headers={"referer": "/knowledge"},
+    response = client.post("/lang/en", headers={"referer": "/knowledge"},
                           follow_redirects=False)
     assert response.status_code == 303
     assert response.headers["location"] == "/knowledge"

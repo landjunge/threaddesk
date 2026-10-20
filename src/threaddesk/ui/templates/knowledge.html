@@ -29,6 +29,7 @@
 
   <section class="knowledge-grid">
     <form class="panel knowledge-form" method="post" action="/knowledge/nodes">
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
       <div class="panel-head"><h2>{{ t("knowledge.new_node") }}</h2></div>
       <label>{{ t("knowledge.kind") }}<select name="kind">{% for kind in node_kinds %}<option value="{{ kind }}">{{ t("kind." ~ kind) }}</option>{% endfor %}</select></label>
       <label>{{ t("knowledge.node_title") }}<input name="title" required placeholder="{{ t('knowledge.node_title_hint') }}" /></label>
@@ -38,6 +39,7 @@
     </form>
 
     <form class="panel knowledge-form" method="post" action="/knowledge/relations">
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
       <div class="panel-head"><h2>{{ t("knowledge.new_relation") }}</h2></div>
       {% if nodes|length >= 2 %}
       <label>{{ t("knowledge.from") }}<select name="source_id">{% for node in nodes %}<option value="{{ node.id }}">{{ node.title }} · {{ t("kind." ~ node.kind) }}</option>{% endfor %}</select></label>
@@ -67,6 +69,7 @@
         {% set transitions = transitions_by_node[node.id] %}
         {% if transitions %}
         <form method="post" action="/knowledge/nodes/{{ node.id }}/transition">
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
           <input type="hidden" name="expected_revision" value="{{ node.revision }}" />
           <select name="status" aria-label="{{ t('knowledge.next_status_for', title=node.title) }}">
             {% for status in transitions %}<option value="{{ status }}">{{ t("status." ~ status) }}</option>{% endfor %}

@@ -1,6 +1,6 @@
 """TD-NM8: sichtbare Migration muss als echte Seite abnehmbar sein."""
 
-from fastapi.testclient import TestClient
+from http_ui_client import UIClient as TestClient
 from pathlib import Path
 
 from threaddesk.ui.server import create_app
@@ -34,7 +34,7 @@ def test_bundle_selection_never_imports_and_dry_run_is_explicit():
     assert "addEventListener('submit'" not in script
     assert "confirm.disabled = true" in script
     assert "dryRun.addEventListener('click'" in script
-    assert "fetch('/api/migration/dry-run'" in script
+    assert "window.threadDeskWrite('/api/migration/dry-run'" in script
 
 
 def test_dry_run_rejects_invalid_bundle_without_writing_graph(monkeypatch, tmp_path):

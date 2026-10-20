@@ -6,11 +6,13 @@
   <p data-room-instance>{{ t("room.instance") }} {{ room.instance_id }}</p>
   <p><code data-room-address>{{ request.base_url }}</code></p>
   <form method="post" action="/rooms" hx-post="/rooms" hx-target="#workspace" hx-swap="innerHTML">
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
     <input type="text" name="name" maxlength="80" required placeholder="{{ t('room.name') }}" aria-label="{{ t('room.name') }}" data-room-name />
     <button type="submit" class="btn" data-room-create>{{ t("room.create") }}</button>
   </form>
   {% if room.rooms %}
   <form method="post" action="/rooms/select" hx-post="/rooms/select" hx-target="#workspace" hx-swap="innerHTML">
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
     <label>
       <span>{{ t("room.choose") }}</span>
       <select name="room_id" data-room-select aria-label="{{ t('room.choose') }}">
@@ -25,6 +27,7 @@
   <p>{{ t("room.none") }}</p>
   {% endif %}
   <form method="post" action="/rooms/join" hx-post="/rooms/join" hx-target="#workspace" hx-swap="innerHTML">
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
     <input type="text" name="code" maxlength="80" autocomplete="off" placeholder="{{ t('room.code') }}" aria-label="{{ t('room.code') }}" data-room-join-code />
     <input type="text" name="base_url" maxlength="120" placeholder="{{ t('room.peer') }}" aria-label="{{ t('room.peer') }}" data-room-peer />
     <button type="submit" class="btn" data-room-join>{{ t("room.join") }}</button>
@@ -33,6 +36,7 @@
   <p data-room-current>{{ room.current.name }}</p>
   {% if room.role == "owner" %}
   <form method="post" action="/rooms/invite" hx-post="/rooms/invite" hx-target="#workspace" hx-swap="innerHTML">
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
     <label>
       <span>{{ t("room.invite_role") }}</span>
       <select name="role" data-room-invite-role aria-label="{{ t('room.invite_role') }}">
@@ -53,6 +57,7 @@
     {% endfor %}
   </ul>
   <form method="post" action="/rooms/sync" hx-post="/rooms/sync" hx-target="#workspace" hx-swap="innerHTML">
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
     <button type="submit" class="btn btn-primary" data-room-sync>{{ t("room.sync") }}</button>
   </form>
   <p data-room-last>

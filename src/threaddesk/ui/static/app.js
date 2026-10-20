@@ -1,3 +1,17 @@
+// Only this document's session supplies write authorization; never a URL token.
+window.threadDeskWrite = (path, options = {}) => {
+  const target = new URL(path, location.href);
+  if (target.origin !== location.origin) throw new Error("foreign_write_target");
+  const headers = new Headers(options.headers || {});
+  headers.set("X-ThreadDesk-CSRF", document.querySelector('meta[name="threaddesk-csrf"]').content);
+  return fetch(target, {...options, method: options.method || "POST", headers});
+};
+document.addEventListener("htmx:configRequest", event => {
+  if (event.detail.verb?.toLowerCase() === "get") return;
+  const target = new URL(event.detail.path, location.href);
+  if (target.origin !== location.origin) { event.preventDefault(); return; }
+  event.detail.headers["X-ThreadDesk-CSRF"] = document.querySelector('meta[name="threaddesk-csrf"]').content;
+});
 let UI_STRINGS = {};
 try {
   UI_STRINGS = JSON.parse(document.body.dataset.uiStrings || "{}");
@@ -11,6 +25,22 @@ const uiText = (key, values = {}) => {
   });
   return text;
 };
+
+// Expire only the displayed observation. No polling, model discovery or writes.
+const observationTimers = new WeakSet();
+function expireModelObservations(root = document) {
+  root.querySelectorAll("[data-hausmeister]").forEach(section => {
+    if (observationTimers.has(section) || section.dataset.ollama === "unknown") return;
+    observationTimers.add(section);
+    const remaining = Math.max(0, Number(section.dataset.observationRemaining) || 0);
+    window.setTimeout(() => {
+      if (!section.isConnected) return;
+      section.dataset.ollama = "unknown";
+      section.querySelector("[data-ollama-observation]").textContent = `Ollama · ${section.dataset.unverified}`;
+    }, remaining * 1000);
+  });
+}
+expireModelObservations();
 
 function typingTarget(el) {
   if (!el) return false;
@@ -178,6 +208,7 @@ document.addEventListener("click", (event) => {
 
 document.body.addEventListener("htmx:afterSwap", (event) => {
   const root = event.detail && event.detail.target;
+  if (root) expireModelObservations(root);
   if (root && window.Alpine) {
     window.Alpine.initTree(root);
   }
@@ -198,7 +229,7 @@ function activityKind(event) {
 }
 
 function sendActivity(kind) {
-  fetch("/hausmeister/activity", {
+  window.threadDeskWrite("/hausmeister/activity", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ kind }),

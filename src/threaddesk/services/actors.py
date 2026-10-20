@@ -30,6 +30,10 @@ class ActorRegistry:
             self._write(state)
         return str(state["instance_id"])
 
+    def existing_instance_id(self) -> str:
+        """Read the saved desk identity without creating one during a view."""
+        return str(self._read().get("instance_id") or "")
+
     def list(self) -> list[dict[str, Any]]:
         return [dict(item) for item in self._read()["actors"]]
 

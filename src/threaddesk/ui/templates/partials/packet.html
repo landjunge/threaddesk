@@ -7,6 +7,7 @@
       hx-target="#workspace"
       hx-swap="innerHTML"
     >
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
       <button type="submit" class="btn btn-ghost">{{ t("packet.write_handoff") }}</button>
     </form>
     <form
@@ -14,6 +15,7 @@
       hx-target="#workspace"
       hx-swap="innerHTML"
     >
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
       <button type="submit" class="btn btn-ghost">{{ t("packet.gnom") }}</button>
     </form>
     <form
@@ -21,6 +23,7 @@
       hx-target="#workspace"
       hx-swap="innerHTML"
     >
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
       <button type="submit" class="btn btn-primary">{{ t("packet.grok") }}</button>
     </form>
   </div>

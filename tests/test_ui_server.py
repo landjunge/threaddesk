@@ -16,7 +16,7 @@ def home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 def test_index_lists_threads(home: Path) -> None:
     pytest.importorskip("fastapi")
-    from fastapi.testclient import TestClient
+    from http_ui_client import UIClient as TestClient
 
     from threaddesk.ui.server import create_app
 
@@ -32,7 +32,7 @@ def test_index_lists_threads(home: Path) -> None:
 
 def test_partial_threads_and_switch(home: Path) -> None:
     pytest.importorskip("fastapi")
-    from fastapi.testclient import TestClient
+    from http_ui_client import UIClient as TestClient
 
     from threaddesk.ui.server import create_app
 
@@ -54,7 +54,7 @@ def test_partial_threads_and_switch(home: Path) -> None:
 
 def test_write_note_status_snapshot_and_gate(home: Path) -> None:
     pytest.importorskip("fastapi")
-    from fastapi.testclient import TestClient
+    from http_ui_client import UIClient as TestClient
 
     from threaddesk.ui.server import create_app
 
@@ -92,7 +92,7 @@ def test_write_note_status_snapshot_and_gate(home: Path) -> None:
 
 def test_packet_and_archive(home: Path) -> None:
     pytest.importorskip("fastapi")
-    from fastapi.testclient import TestClient
+    from http_ui_client import UIClient as TestClient
 
     from threaddesk.ui.server import create_app
 
@@ -122,7 +122,7 @@ def test_packet_and_archive(home: Path) -> None:
 
 def test_index_has_shortcuts_help(home: Path) -> None:
     pytest.importorskip("fastapi")
-    from fastapi.testclient import TestClient
+    from http_ui_client import UIClient as TestClient
 
     from threaddesk.ui.server import create_app
 
@@ -136,7 +136,7 @@ def test_index_has_shortcuts_help(home: Path) -> None:
 
 def test_rename_files_and_prompt_preview(home: Path) -> None:
     pytest.importorskip("fastapi")
-    from fastapi.testclient import TestClient
+    from http_ui_client import UIClient as TestClient
 
     from threaddesk.ui.server import create_app
 
@@ -177,7 +177,7 @@ def test_rename_files_and_prompt_preview(home: Path) -> None:
 
 def test_map_page_is_a_read_only_api_graph_view(home: Path) -> None:
     pytest.importorskip("fastapi")
-    from fastapi.testclient import TestClient
+    from http_ui_client import UIClient as TestClient
 
     from threaddesk.ui.server import create_app
 
@@ -203,7 +203,7 @@ def test_map_page_is_a_read_only_api_graph_view(home: Path) -> None:
 
 def test_knowledge_page_applies_guarded_node_transition(home: Path) -> None:
     pytest.importorskip("fastapi")
-    from fastapi.testclient import TestClient
+    from http_ui_client import UIClient as TestClient
 
     from threaddesk.ui.server import create_app
 
@@ -229,7 +229,7 @@ def test_knowledge_page_applies_guarded_node_transition(home: Path) -> None:
 
 def test_knowledge_page_filters_nodes_and_relations(home: Path) -> None:
     pytest.importorskip("fastapi")
-    from fastapi.testclient import TestClient
+    from http_ui_client import UIClient as TestClient
 
     from threaddesk.ui.server import create_app
 

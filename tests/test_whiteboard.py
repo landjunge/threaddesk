@@ -326,7 +326,7 @@ def test_sqlite_v3_threads_survive_and_can_take_entries(tmp_path: Path) -> None:
 
 def test_api_reads_and_appends_without_leaving_the_thread(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("fastapi")
-    from fastapi.testclient import TestClient
+    from http_ui_client import UIClient as TestClient
 
     from threaddesk.ui.server import create_app
 
@@ -406,7 +406,7 @@ def test_api_reads_and_appends_without_leaving_the_thread(tmp_path: Path, monkey
 
 def test_api_sqlite_round_trip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("fastapi")
-    from fastapi.testclient import TestClient
+    from http_ui_client import UIClient as TestClient
 
     from threaddesk.ui.server import create_app
 

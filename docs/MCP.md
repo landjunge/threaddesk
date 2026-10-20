@@ -2,6 +2,29 @@
 
 Lokaler stdio-Server. Stellt Thread-Kontext bereit. Startet keine Agenten.
 
+## Local HTTP boundary (TD-02 source candidate, 20 October 2026)
+
+The HTTP UI separately checks the actual listener authority, Host, Origin and
+loopback peer before domain access. Every unsafe UI request also needs the
+current process's signed browser session and its bound CSRF token (header or
+form); no token is accepted from a URL. SameSite=Lax preserves incoming-link
+navigation, while explicit Origin and CSRF checks protect writes. Restart or
+expiry requires a fresh GET page; failed writes are never replayed automatically.
+
+Only the exact Room pair/pull/push routes are machine exceptions; they retain
+their invitation/peer-token authorization and private-peer checks. Neither a
+browser cookie nor a room token proves a person, device possession or project
+role. This boundary does not isolate another process with unrestricted access
+to the same local user account.
+
+GET rendering does not create actor/module registrations, switch the selected
+thread, record activity or discover models. Explicit app/profile bootstrap
+retains existing IDs and module settings. Bounded model discovery belongs to
+startup and protected actions; its profile-bound observation expires after
+30 seconds to unverified, including on an already open page. MCP domain rules
+remain separate from this HTTP transport boundary. Native webview/LAN and
+Grok acceptance of the candidate remain separate checks.
+
 ```bash
 td mcp
 # oder

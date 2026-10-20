@@ -7,6 +7,7 @@
     hx-target="#workspace"
     hx-swap="innerHTML"
   >
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
     <input type="hidden" name="actor_type" value="human" />
     <textarea
       name="content"

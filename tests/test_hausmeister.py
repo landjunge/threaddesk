@@ -147,6 +147,72 @@ def test_blank_model_clears_the_choice_without_calling_ollama(svc: ThreadService
     assert len(called) == 1 and called[0].endswith("/api/tags")
 
 
+def test_status_does_not_install_register_or_contact_ollama(svc: ThreadService) -> None:
+    def forbidden(*args, **kwargs):
+        pytest.fail("status contacted a model transport")
+
+    home = Hausmeister(svc.store, forbidden)
+    status = home.status()
+    assert not status["enabled"] and status["ollama_ok"] is None
+    assert not svc.store.artifact_path("modules.json").exists()
+    assert not svc.store.artifact_path("actors.json").exists()
+    home.install()  # Installation remains an explicit command, with the module disabled.
+    path = svc.store.artifact_path("modules.json")
+    before = (path.read_bytes(), path.stat().st_mtime_ns)
+    status = home.status(model_status={"models": ["cached-synthetic"], "ollama_ok": True,
+                                      "observed_at": "2026-10-20T00:00:00+00:00",
+                                      "observed_monotonic": time.monotonic()})
+    assert status["models"] == ["cached-synthetic"] and status["ollama_ok"] is True
+    assert before == (path.read_bytes(), path.stat().st_mtime_ns)
+
+
+def test_model_probe_has_a_caller_deadline_and_late_result_cannot_become_current(svc, monkeypatch):
+    import threading
+
+    release = threading.Event()
+    completed = threading.Event()
+
+    def slow(*args, **kwargs):
+        release.wait(1)
+        completed.set()
+        return {"models": [{"name": "late-synthetic"}]}
+
+    monkeypatch.setattr("threaddesk.services.hausmeister.PROBE_WAIT_SECONDS", 0.02)
+    home = Hausmeister(svc.store, slow)
+    started = time.monotonic()
+    try:
+        result = home.probe_models()
+        assert time.monotonic() - started < 0.5
+        assert result == {"models": [], "ollama_ok": None}
+    finally:
+        release.set()
+    assert completed.wait(1)
+    assert result == {"models": [], "ollama_ok": None}
+    assert not svc.store.artifact_path("modules.json").exists()
+
+
+def test_expired_probe_is_unverified_without_losing_model_choice_or_discovery(svc):
+    from threaddesk.services.hausmeister import MODEL_STATUS_TTL_SECONDS
+
+    home = Hausmeister(svc.store, lambda *a, **kw: pytest.fail("status contacted Ollama"))
+    svc.store.write_json_artifact("hausmeister.json", {"version": 1, "model": "saved-synthetic"})
+    probe = {"models": ["discovered-synthetic"], "ollama_ok": True,
+             "observed_at": "2026-10-20T00:00:00+00:00", "observed_monotonic": time.monotonic()}
+    fresh = home.status(model_status=probe)
+    assert fresh["ollama_ok"] is True and 0 < fresh["observation_remaining"] <= MODEL_STATUS_TTL_SECONDS
+    path = svc.store.artifact_path("hausmeister.json")
+    before = (path.read_bytes(), path.stat().st_mtime_ns)
+    probe["observed_monotonic"] -= MODEL_STATUS_TTL_SECONDS + 1
+    expired = home.status(model_status=probe)
+    assert expired["ollama_ok"] is None and expired["observation_remaining"] == 0
+    assert expired["model"] == "saved-synthetic"
+    assert set(expired["models"]) == {"discovered-synthetic", "saved-synthetic"}
+    assert expired["observed_at"] == probe["observed_at"]
+    assert before == (path.read_bytes(), path.stat().st_mtime_ns)
+    probe["observed_monotonic"] = time.monotonic() + 100
+    assert home.status(model_status=probe)["ollama_ok"] is None
+
+
 def test_missing_ollama_and_missing_model_stay_quiet(svc: ThreadService) -> None:
     thread = svc.create("Leer")
     down = Hausmeister(svc.store, lambda *args, **kwargs: (_ for _ in ()).throw(OllamaError("ollama_unavailable")))
@@ -351,7 +417,7 @@ def test_desk_script_throttles_surface_activity() -> None:
 
 def test_activity_route_records_one_surface_ping(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("fastapi")
-    from fastapi.testclient import TestClient
+    from http_ui_client import UIClient as TestClient
 
     from threaddesk.ui.server import create_app
 
@@ -373,7 +439,7 @@ def test_empty_housekeeper_order_stays_visible_on_the_desk(
 ) -> None:
     """order= muss die Meldung tauschen. Ein 422 lässt den Schreibtisch stehen."""
     pytest.importorskip("fastapi")
-    from fastapi.testclient import TestClient
+    from http_ui_client import UIClient as TestClient
 
     from threaddesk.ui.server import create_app
 
