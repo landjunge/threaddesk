@@ -104,6 +104,285 @@ def test_reentry_after_restart_keeps_source_decisions_questions_and_task(svc):
         reopened.store.connection.close()
 
 
+def test_update_changes_a_thread_node_with_revision_and_source_tracking(svc):
+    thread = svc.create("Update a plan")
+    saved = record(
+        svc,
+        thread.id,
+        "original-plan",
+        kind="task",
+        title="Draft plan",
+        details="First version",
+    )
+    node_id = saved["node_id"]
+    node = svc.get_node(node_id)
+
+    updated = call(
+        svc,
+        thread.id,
+        "update-plan",
+        "update",
+        node_id=node_id,
+        expected_node_revision=node.revision,
+        title="Reviewed plan",
+        details="Second version",
+    )
+
+    assert updated["ok"] is True
+    changed = svc.get_node(node_id)
+    assert changed.title == "Reviewed plan"
+    assert changed.details == "Second version"
+    assert changed.revision == node.revision + 1
+    assert changed.metadata["source_ref"] == "synthetic conversation:42"
+    assert changed.metadata["source_revision"] == "message-7"
+
+
+def test_update_rejects_stale_node_revision(svc):
+    thread = svc.create("Update a plan")
+    saved = record(svc, thread.id, "original", kind="task", title="Draft plan")
+    node = svc.get_node(saved["node_id"])
+    svc.transition_node(node.id, "assigned", expected_revision=node.revision)
+
+    result = call(
+        svc,
+        thread.id,
+        "stale-update",
+        "update",
+        node_id=node.id,
+        expected_node_revision=node.revision,
+        title="Revised draft",
+    )
+
+    assert result["ok"] is False
+    assert result["code"] == "revision_conflict"
+    assert svc.get_node(node.id).title == "Draft plan"
+
+
+def test_transition_uses_thread_desk_state_machine_and_tracks_source(svc):
+    thread = svc.create("Move a task forward")
+    saved = record(svc, thread.id, "task", kind="task", title="Prepare work")
+    node = svc.get_node(saved["node_id"])
+
+    changed = call(
+        svc,
+        thread.id,
+        "assign-task",
+        "transition",
+        node_id=node.id,
+        expected_node_revision=node.revision,
+        status="assigned",
+    )
+
+    assert changed["ok"] is True
+    updated = svc.get_node(node.id)
+    assert updated.status == "assigned"
+    assert updated.revision == node.revision + 1
+    assert updated.metadata["source_ref"] == "synthetic conversation:42"
+
+
+def test_transition_rejects_a_status_outside_thread_desk_state_machine(svc):
+    thread = svc.create("Do not skip workflow states")
+    saved = record(svc, thread.id, "task", kind="task", title="Prepare work")
+    node = svc.get_node(saved["node_id"])
+
+    refused = call(
+        svc,
+        thread.id,
+        "skip-to-done",
+        "transition",
+        node_id=node.id,
+        expected_node_revision=node.revision,
+        status="done",
+    )
+
+    assert refused["ok"] is False
+    assert refused["code"] == "invalid_state"
+    assert svc.get_node(node.id).status == "ready"
+
+
+def test_link_connects_two_nodes_inside_the_thread(svc):
+    thread = svc.create("Connect related plans")
+    first = record(svc, thread.id, "first", kind="task", title="Draft")
+    second = record(svc, thread.id, "second", kind="task", title="Review")
+
+    linked = call(
+        svc,
+        thread.id,
+        "connect-plans",
+        "link",
+        source_node_id=first["node_id"],
+        target_node_id=second["node_id"],
+        expected_source_revision=1,
+        expected_target_revision=1,
+        relation_kind="related_to",
+    )
+
+    assert linked["ok"] is True
+    relation = svc.relations_for(first["node_id"])[0]
+    assert relation.id == linked["result"]["relation_id"]
+    assert relation.target_id == second["node_id"]
+    assert relation.metadata["thread_id"] == thread.id
+
+
+def test_link_rejects_nodes_from_another_thread(svc):
+    thread = svc.create("Local links")
+    foreign = svc.create("Other links")
+    local_node = record(svc, thread.id, "local", kind="task", title="Local")
+    foreign_node = record(svc, foreign.id, "foreign", kind="task", title="Foreign")
+
+    refused = call(
+        svc,
+        thread.id,
+        "cross-thread-link",
+        "link",
+        source_node_id=local_node["node_id"],
+        target_node_id=foreign_node["node_id"],
+        expected_source_revision=1,
+        expected_target_revision=1,
+        relation_kind="related_to",
+    )
+
+    assert refused["ok"] is False
+    assert refused["code"] == "scope_conflict"
+    assert svc.relations_for(local_node["node_id"]) == []
+
+
+def test_merge_preserves_source_in_trash_and_copies_relationship_context(svc):
+    thread = svc.create("Merge related plans")
+    destination = record(
+        svc,
+        thread.id,
+        "destination",
+        kind="task",
+        title="Main plan",
+        details="Keep this",
+    )
+    source_node = record(
+        svc,
+        thread.id,
+        "source",
+        kind="task",
+        title="Extra plan",
+        details="Bring this too",
+        source_ref="brainstorm:original",
+        source_revision="original-3",
+    )
+    related = record(svc, thread.id, "related", kind="task", title="Evidence")
+    edge = svc.connect(source_node["node_id"], related["node_id"], "produced")
+
+    merged = call(
+        svc,
+        thread.id,
+        "merge-plans",
+        "merge",
+        node_id=destination["node_id"],
+        expected_node_revision=1,
+        source_node_id=source_node["node_id"],
+        expected_source_revision=1,
+    )
+
+    assert merged["ok"] is True
+    final = svc.get_node(destination["node_id"])
+    trashed = svc.get_node(source_node["node_id"])
+    assert final.details == "Keep this\n\nBring this too"
+    assert final.metadata["merged_sources"] == [
+        {
+            "node_id": source_node["node_id"],
+            "revision": 1,
+            "source": "brainstorm:original",
+            "source_ref": "brainstorm:original",
+            "source_revision": "original-3",
+            "merged_by_source_ref": "synthetic conversation:42",
+            "merged_by_source_revision": "message-7",
+        }
+    ]
+    assert trashed.status == "archived"
+    assert trashed.metadata["archived_from"] == "ready"
+    assert trashed.metadata["merged_into"] == destination["node_id"]
+    assert trashed.metadata["source_revision"] == "original-3"
+    assert trashed.metadata["merge_action_source"]["source_revision"] == "message-7"
+    copied = [
+        item
+        for item in svc.relations_for(destination["node_id"])
+        if item.target_id == related["node_id"]
+    ]
+    assert len(copied) == 1
+    assert copied[0].kind == edge.kind
+    assert edge.id in {item.id for item in svc.relations_for(source_node["node_id"])}
+
+
+def test_merge_rejects_source_equals_destination(svc):
+    thread = svc.create("No self merge")
+    node = record(svc, thread.id, "only", kind="task", title="Only plan")
+    refused = call(
+        svc,
+        thread.id,
+        "self-merge",
+        "merge",
+        node_id=node["node_id"],
+        expected_node_revision=1,
+        source_node_id=node["node_id"],
+        expected_source_revision=1,
+    )
+    assert refused["ok"] is False
+    assert refused["code"] == "invalid_state"
+    assert svc.get_node(node["node_id"]).status == "ready"
+
+
+def test_archive_and_unarchive_preserve_the_original_status(svc):
+    thread = svc.create("Archive stale plan")
+    saved = record(svc, thread.id, "plan", kind="task", title="Old plan")
+    node = svc.get_node(saved["node_id"])
+
+    archived = call(
+        svc,
+        thread.id,
+        "archive-plan",
+        "archive",
+        node_id=node.id,
+        expected_node_revision=node.revision,
+    )
+    archived_node = svc.get_node(node.id)
+    assert archived["ok"] is True
+    assert archived_node.status == "archived"
+    assert archived_node.revision == node.revision + 1
+
+    restored = call(
+        svc,
+        thread.id,
+        "restore-plan",
+        "unarchive",
+        node_id=node.id,
+        expected_node_revision=archived_node.revision,
+    )
+    restored_node = svc.get_node(node.id)
+    assert restored["ok"] is True
+    assert restored_node.status == "ready"
+    assert restored_node.revision == archived_node.revision + 1
+    assert "archived_from" not in restored_node.metadata
+
+
+def test_archived_knowledge_is_available_in_the_trash(svc):
+    thread = svc.create("Trash contents")
+    saved = record(svc, thread.id, "trash-item", kind="task", title="Old task")
+    node = svc.get_node(saved["node_id"])
+    archived = call(
+        svc,
+        thread.id,
+        "trash-old-task",
+        "archive",
+        node_id=node.id,
+        expected_node_revision=node.revision,
+    )
+    assert archived["ok"] is True
+
+    result = McpBridge(svc).call("list_trash", {"thread_id": thread.id})["result"]
+
+    assert result["count"] == 1
+    assert result["matches"][0]["id"] == node.id
+    assert result["matches"][0]["archived_from"] == "ready"
+
+
 def test_supersede_retains_original_source_and_follows_relation(svc):
     thread = svc.create("Decisions")
     original = record(

@@ -30,6 +30,62 @@ def test_index_lists_threads(home: Path) -> None:
     assert "erster Gedanke" in res.text
 
 
+def test_file_preview_supports_code_html_images_and_attachment_scope(
+    home: Path, tmp_path: Path
+) -> None:
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from threaddesk.ui.server import create_app
+
+    svc = ThreadService(store=JsonStore(home))
+    thread = svc.create("Preview files")
+    html_file = tmp_path / "sample.html"
+    code_file = tmp_path / "sample.py"
+    image_file = tmp_path / "sample.png"
+    html_file.write_text("<!doctype html><h1>Hello</h1>", encoding="utf-8")
+    code_file.write_text("print('hello')", encoding="utf-8")
+    image_file.write_bytes(b"png-data")
+    for path in (html_file, code_file, image_file):
+        svc.add_file(str(path), thread.id)
+
+    client = TestClient(create_app())
+    html_preview = client.get(
+        f"/threads/{thread.id}/files/preview", params={"path": str(html_file)}
+    )
+    code_preview = client.get(
+        f"/threads/{thread.id}/files/preview", params={"path": str(code_file)}
+    )
+    image_preview = client.get(
+        f"/threads/{thread.id}/files/preview", params={"path": str(image_file)}
+    )
+    assert html_preview.json()["kind"] == "html"
+    assert "<h1>Hello</h1>" in html_preview.json()["source"]
+    assert code_preview.json()["kind"] == "code"
+    assert code_preview.json()["language"] == "python"
+    assert image_preview.json()["kind"] == "image"
+    image_response = client.get(image_preview.json()["content_url"])
+    assert image_response.content == b"png-data"
+    assert image_response.headers["content-security-policy"].endswith("sandbox")
+
+    unlinked = client.get(
+        f"/threads/{thread.id}/files/preview",
+        params={"path": str(tmp_path / "other.py")},
+    )
+    assert unlinked.status_code == 404
+
+
+def test_tasks_page_is_linked_from_main_navigation(home: Path) -> None:
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from threaddesk.ui.server import create_app
+
+    page = TestClient(create_app()).get("/")
+    assert page.status_code == 200
+    assert 'href="/tasks"' in page.text
+
+
 def test_partial_threads_and_switch(home: Path) -> None:
     pytest.importorskip("fastapi")
     from fastapi.testclient import TestClient
@@ -172,7 +228,9 @@ def test_rename_files_and_prompt_preview(home: Path) -> None:
         f"/threads/{thread.id}/files/remove", data={"path": "src/app.py"}
     )
     assert removed.status_code == 200
-    assert "src/app.py" not in ThreadService(store=JsonStore(home)).current().context.files
+    assert (
+        "src/app.py" not in ThreadService(store=JsonStore(home)).current().context.files
+    )
 
 
 def test_map_page_is_a_read_only_api_graph_view(home: Path) -> None:

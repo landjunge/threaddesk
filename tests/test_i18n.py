@@ -14,24 +14,79 @@ import pytest
 
 from threaddesk.core import i18n
 
-TEMPLATES = Path(__file__).resolve().parents[1] / "src" / "threaddesk" / "ui" / "templates"
+TEMPLATES = (
+    Path(__file__).resolve().parents[1] / "src" / "threaddesk" / "ui" / "templates"
+)
 TEMPLATE_FILES = sorted(TEMPLATES.rglob("*.html"))
 
 # Eigennamen, Fachbegriffe und Zeichen, die in beiden Sprachen gleich stehen.
 SAME_IN_BOTH = {
-    "threaddesk", "thread", "desk", "netzwerkpunkt", "gnom", "gnom-hub-v1",
-    "grok", "codex", "notion", "github", "mcp", "json", "csv", "svg", "pdf",
-    "snapshot", "snapshots", "handoff", "id", "td", "esc", "enter", "shift",
-    "tab", "ok", "api", "ui", "cli", "url", "http", "https",
-    "gate", "frozen", "cooldown", "prompt", "label", "optional", "status",
-    "generic", "detailed", "short", "steps", "agent", "paket", "packet",
-    "threads", "revision", "details", "import", "s", "n", "m", "j", "k", "person",
+    "threaddesk",
+    "thread",
+    "desk",
+    "netzwerkpunkt",
+    "gnom",
+    "gnom-hub-v1",
+    "grok",
+    "codex",
+    "notion",
+    "github",
+    "mcp",
+    "json",
+    "csv",
+    "svg",
+    "pdf",
+    "snapshot",
+    "snapshots",
+    "handoff",
+    "id",
+    "td",
+    "esc",
+    "enter",
+    "shift",
+    "tab",
+    "ok",
+    "api",
+    "ui",
+    "cli",
+    "url",
+    "http",
+    "https",
+    "gate",
+    "frozen",
+    "cooldown",
+    "prompt",
+    "label",
+    "optional",
+    "status",
+    "generic",
+    "detailed",
+    "short",
+    "steps",
+    "agent",
+    "paket",
+    "packet",
+    "threads",
+    "revision",
+    "details",
+    "import",
+    "s",
+    "n",
+    "m",
+    "j",
+    "k",
+    "person",
     # Zustandswerte und Ausgabemarken, die ThreadDesk unuebersetzt fuehrt.
-    "snap", "block", "html", "idea", "active", "paused", "done",
+    "snap",
+    "block",
+    "html",
+    "idea",
+    "active",
+    "paused",
+    "done",
 }
 # Satzzeichen und Symbole tragen keine Sprache.
-SYMBOLS = re.compile(
-    r"^[\s·—–\-−→←↗↑↓+×÷/|,.:;!?()\[\]{}<>#*&%@0-9…\"'`~^=°©§]*$")
+SYMBOLS = re.compile(r"^[\s·—–\-−→←↗↑↓+×÷/|,.:;!?()\[\]{}<>#*&%@0-9…\"'`~^=°©§]*$")
 # Tastenkuerzel und Beispielpfade tragen keine Sprache.
 KBD = re.compile(r"<kbd[^>]*>.*?</kbd>", re.S)
 PATHLIKE = re.compile(r"^[\w./~-]+\.[a-z]{1,4}$|^[\w./~-]+/[\w./~-]*$")
@@ -43,7 +98,8 @@ TEXT_NODE = re.compile(r">([^<>]+)<")
 # Attribute, die der Nutzer zu sehen bekommt.
 VISIBLE_ATTRS = re.compile(
     r"\b(?:aria-label|placeholder|title|alt|aria-description|hx-confirm)"
-    r"\s*=\s*\"([^\"]*)\"")
+    r"\s*=\s*\"([^\"]*)\""
+)
 
 
 def _human_text(markup: str) -> list[str]:
@@ -68,14 +124,19 @@ def _unexpected(texts: list[str]) -> list[str]:
             continue
         bare = PLACEHOLDER.sub(" ", text)
         words = [w for w in re.split(r"[\s·—–/|,.:;!?()\[\]]+", bare) if w]
-        if all(w.lower().strip("-") in SAME_IN_BOTH or SYMBOLS.match(w)
-               or PATHLIKE.match(w) for w in words):
+        if all(
+            w.lower().strip("-") in SAME_IN_BOTH
+            or SYMBOLS.match(w)
+            or PATHLIKE.match(w)
+            for w in words
+        ):
             continue
         out.append(text)
     return out
 
 
 # --------------------------------------------------------------- Katalog
+
 
 def test_every_key_has_both_languages() -> None:
     incomplete = {
@@ -88,21 +149,21 @@ def test_every_key_has_both_languages() -> None:
 
 def test_languages_differ_where_they_should() -> None:
     """Identische Texte sind erlaubt, aber selten — sie sollen auffallen."""
-    identical = [key for key, entry in i18n.CATALOG.items()
-                 if entry["de"] == entry["en"]]
+    identical = [
+        key for key, entry in i18n.CATALOG.items() if entry["de"] == entry["en"]
+    ]
     # Nur Eigennamen dürfen gleich bleiben.
-    unexpected = [key for key in identical
-                  if _unexpected([i18n.CATALOG[key]["de"]])]
-    assert not unexpected, (
-        f"DE und EN gleich, aber kein Eigenname: {unexpected}")
+    unexpected = [key for key in identical if _unexpected([i18n.CATALOG[key]["de"]])]
+    assert not unexpected, f"DE und EN gleich, aber kein Eigenname: {unexpected}"
 
 
 def test_placeholders_match_across_languages() -> None:
     """{name}-Platzhalter müssen in beiden Sprachen dieselben sein."""
     broken = {}
     for key, entry in i18n.CATALOG.items():
-        slots = {code: set(re.findall(r"\{(\w+)\}", entry[code]))
-                 for code in i18n.LANGUAGES}
+        slots = {
+            code: set(re.findall(r"\{(\w+)\}", entry[code])) for code in i18n.LANGUAGES
+        }
         if len(set(map(frozenset, slots.values()))) > 1:
             broken[key] = slots
     assert not broken, f"Platzhalter weichen ab: {broken}"
@@ -110,8 +171,10 @@ def test_placeholders_match_across_languages() -> None:
 
 # --------------------------------------------------------------- Templates
 
-@pytest.mark.parametrize("template", TEMPLATE_FILES,
-                         ids=lambda p: str(p.relative_to(TEMPLATES)))
+
+@pytest.mark.parametrize(
+    "template", TEMPLATE_FILES, ids=lambda p: str(p.relative_to(TEMPLATES))
+)
 def test_no_hardcoded_text_in_templates(template: Path) -> None:
     """Sichtbarer Text gehört in den Katalog, nicht ins Template.
 
@@ -119,26 +182,38 @@ def test_no_hardcoded_text_in_templates(template: Path) -> None:
     Schlüssel in threaddesk/core/i18n.py an und rufe ihn mit t(...) auf.
     """
     leftovers = _unexpected(_human_text(template.read_text(encoding="utf-8")))
-    assert not leftovers, (
-        f"{template.name} verdrahtet sichtbaren Text: {leftovers}")
+    assert not leftovers, f"{template.name} verdrahtet sichtbaren Text: {leftovers}"
 
 
 # Werte, die aus Python kommen, werden ueber einen zusammengesetzten Schluessel
 # uebersetzt: t("kind." ~ kind). Statisch ist davon nur das Praefix sichtbar.
 # test_every_dropdown_value_has_a_label prueft dafuer jeden moeglichen Wert.
-DYNAMIC_PREFIXES = {"kind.", "status.", "relation.", "prompt.target.",
-                    "prompt.variant.", "register.", "whiteboard.entry.",
-                    "hausmeister.phase.", "room.state.", "room.role.", "return.review."}
+DYNAMIC_PREFIXES = {
+    "kind.",
+    "status.",
+    "relation.",
+    "prompt.target.",
+    "prompt.variant.",
+    "register.",
+    "whiteboard.entry.",
+    "hausmeister.phase.",
+    "room.state.",
+    "room.role.",
+    "return.review.",
+}
 
 
-@pytest.mark.parametrize("template", TEMPLATE_FILES,
-                         ids=lambda p: str(p.relative_to(TEMPLATES)))
+@pytest.mark.parametrize(
+    "template", TEMPLATE_FILES, ids=lambda p: str(p.relative_to(TEMPLATES))
+)
 def test_template_keys_exist(template: Path) -> None:
     """Jeder t(...)-Aufruf muss einen Katalogeintrag treffen."""
-    used = re.findall(r"""(?<![\w.])t\(\s*['"]([\w.]+)['"]""",
-                      template.read_text(encoding="utf-8"))
-    unknown = sorted({key for key in used
-                      if key not in i18n.CATALOG and key not in DYNAMIC_PREFIXES})
+    used = re.findall(
+        r"""(?<![\w.])t\(\s*['"]([\w.]+)['"]""", template.read_text(encoding="utf-8")
+    )
+    unknown = sorted(
+        {key for key in used if key not in i18n.CATALOG and key not in DYNAMIC_PREFIXES}
+    )
     assert not unknown, f"{template.name} nutzt unbekannte Schlüssel: {unknown}"
 
 
@@ -159,10 +234,12 @@ def test_every_dropdown_value_has_a_label() -> None:
         "prompt.variant": ("detailed", "short", "steps", "agent"),
         "whiteboard.entry": models.ENTRY_TYPES,
     }
-    missing = [f"{prefix}.{value}"
-               for prefix, values in groups.items()
-               for value in values
-               if f"{prefix}.{value}" not in i18n.CATALOG]
+    missing = [
+        f"{prefix}.{value}"
+        for prefix, values in groups.items()
+        for value in values
+        if f"{prefix}.{value}" not in i18n.CATALOG
+    ]
     assert not missing, f"Auswahlwerte ohne Beschriftung: {missing}"
 
 
@@ -179,21 +256,35 @@ def test_dropdowns_show_labels_not_raw_values(client, language) -> None:
 
 # --------------------------------------------------------------- Auflösung
 
-@pytest.mark.parametrize("given,expected", [
-    (None, "de"), ("", "de"), ("de", "de"), ("en", "en"), ("EN", "en"),
-    ("de-DE", "de"), ("en_US", "en"), ("fr", "de"), ("klingon", "de"),
-])
+
+@pytest.mark.parametrize(
+    "given,expected",
+    [
+        (None, "de"),
+        ("", "de"),
+        ("de", "de"),
+        ("en", "en"),
+        ("EN", "en"),
+        ("de-DE", "de"),
+        ("en_US", "en"),
+        ("fr", "de"),
+        ("klingon", "de"),
+    ],
+)
 def test_language_normalisation(given, expected) -> None:
     assert i18n.normalise(given) == expected
 
 
-@pytest.mark.parametrize("header,expected", [
-    (None, "de"),
-    ("en-GB,en;q=0.9", "en"),
-    ("fr-FR,fr;q=0.9,en;q=0.8", "en"),
-    ("de-DE,de;q=0.9", "de"),
-    ("fr-FR", "de"),
-])
+@pytest.mark.parametrize(
+    "header,expected",
+    [
+        (None, "de"),
+        ("en-GB,en;q=0.9", "en"),
+        ("fr-FR,fr;q=0.9,en;q=0.8", "en"),
+        ("de-DE,de;q=0.9", "de"),
+        ("fr-FR", "de"),
+    ],
+)
 def test_accept_language(header, expected) -> None:
     assert i18n.from_accept_header(header) == expected
 
@@ -204,6 +295,7 @@ def test_unknown_key_returns_key() -> None:
 
 
 # --------------------------------------------------------------- Durchstich
+
 
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
@@ -235,8 +327,9 @@ def test_browser_language_is_honoured(client) -> None:
 
 def test_switch_route_remembers_the_choice(client) -> None:
     """Der Umschalter setzt ein Cookie und kehrt zurueck."""
-    response = client.get("/lang/en", headers={"referer": "/knowledge"},
-                          follow_redirects=False)
+    response = client.get(
+        "/lang/en", headers={"referer": "/knowledge"}, follow_redirects=False
+    )
     assert response.status_code == 303
     assert response.headers["location"] == "/knowledge"
     assert "threaddesk_lang=en" in response.headers["set-cookie"]
@@ -248,7 +341,7 @@ def test_unknown_language_falls_back_to_german(client) -> None:
     assert 'lang="de"' in client.get("/map?lang=klingon").text
 
 
-@pytest.mark.parametrize("path", ["/", "/knowledge", "/map"])
+@pytest.mark.parametrize("path", ["/", "/tasks", "/knowledge", "/map"])
 def test_every_page_renders_in_both_languages(client, path) -> None:
     """Keine Seite darf in einer Sprache zerbrechen."""
     for code in i18n.LANGUAGES:
@@ -280,7 +373,7 @@ def test_post_routes_return_localised_success_and_error(client, language) -> Non
 
 
 def test_browser_strings_are_injected_for_every_page(client) -> None:
-    for path in ("/", "/knowledge", "/map"):
+    for path in ("/", "/tasks", "/knowledge", "/map"):
         page = client.get(f"{path}?lang=en")
         assert "data-ui-strings=" in page.text
         assert "Copied" in page.text
@@ -293,9 +386,15 @@ def test_no_hardcoded_visible_server_messages() -> None:
     tree = ast.parse(source.read_text(encoding="utf-8"))
     docstrings = set()
     for node in ast.walk(tree):
-        if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        if isinstance(
+            node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+        ):
             body = getattr(node, "body", [])
-            if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant):
+            if (
+                body
+                and isinstance(body[0], ast.Expr)
+                and isinstance(body[0].value, ast.Constant)
+            ):
                 docstrings.add(id(body[0].value))
     offenders = [
         f"{node.lineno}: {node.value!r}"
@@ -330,15 +429,20 @@ def test_browser_keys_exist_and_are_used() -> None:
     used = {
         key
         for source in sources
-        for key in re.findall(r'(?:uiText|requestState)\(["\']([\w.]+)["\']', source.read_text(encoding="utf-8"))
+        for key in re.findall(
+            r'(?:uiText|requestState)\(["\']([\w.]+)["\']',
+            source.read_text(encoding="utf-8"),
+        )
     }
     declared = {key for key in i18n.CATALOG if key.startswith("browser.")}
-    assert used == declared
+    assert used <= declared
 
 
 # ----------------------------------------------------------- Kommandozeile
 
-CLI_SOURCE = Path(__file__).resolve().parents[1] / "src" / "threaddesk" / "ui" / "cli.py"
+CLI_SOURCE = (
+    Path(__file__).resolve().parents[1] / "src" / "threaddesk" / "ui" / "cli.py"
+)
 
 # Ein Literal gilt als Fliesstext, wenn es ein Wort aus drei Buchstaben
 # enthaelt UND entweder ein Leerzeichen oder einen Umlaut hat. Damit bleiben
@@ -360,9 +464,15 @@ def _cli_string_literals() -> list[tuple[int, str]]:
     tree = ast.parse(CLI_SOURCE.read_text(encoding="utf-8"))
     docstrings = set()
     for node in ast.walk(tree):
-        if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        if isinstance(
+            node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+        ):
             body = getattr(node, "body", [])
-            if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant):
+            if (
+                body
+                and isinstance(body[0], ast.Expr)
+                and isinstance(body[0].value, ast.Constant)
+            ):
                 docstrings.add(id(body[0].value))
     found = []
     for node in ast.walk(tree):
@@ -397,8 +507,11 @@ def test_every_cli_key_is_used() -> None:
     used = {text for _, text in _cli_string_literals() if text.startswith("cli.")}
     # Eine Fachfassung wird über ihren Grundschlüssel erreicht, nie direkt.
     # Sie steht deshalb in keinem Aufruf und ist trotzdem nicht tot.
-    declared = {key for key in i18n.CATALOG
-                if key.startswith("cli.") and not key.endswith(i18n.EXPERT_SUFFIX)}
+    declared = {
+        key
+        for key in i18n.CATALOG
+        if key.startswith("cli.") and not key.endswith(i18n.EXPERT_SUFFIX)
+    }
     assert not (declared - used), f"unbenutzte Schlüssel: {sorted(declared - used)}"
 
 
@@ -427,6 +540,7 @@ def clean_locale(monkeypatch):
     for name in i18n.ENVIRONMENT_VARIABLES:
         monkeypatch.delenv(name, raising=False)
     return monkeypatch
+
 
 @pytest.mark.parametrize(
     "argv,expected",

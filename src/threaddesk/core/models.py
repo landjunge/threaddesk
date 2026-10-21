@@ -139,6 +139,8 @@ class Snapshot:
     created_at: str
     label: str
     context: ThreadContext
+    knowledge_nodes: list[dict[str, Any]] = field(default_factory=list)
+    knowledge_relations: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -147,6 +149,8 @@ class Snapshot:
             "created_at": self.created_at,
             "label": self.label,
             "context": self.context.to_dict(),
+            "knowledge_nodes": self.knowledge_nodes,
+            "knowledge_relations": self.knowledge_relations,
         }
 
     @classmethod
@@ -157,6 +161,8 @@ class Snapshot:
             created_at=data["created_at"],
             label=data.get("label") or "",
             context=ThreadContext.from_dict(data.get("context")),
+            knowledge_nodes=list(data.get("knowledge_nodes") or []),
+            knowledge_relations=list(data.get("knowledge_relations") or []),
         )
 
 

@@ -182,7 +182,9 @@ def test_graph_payload_is_read_only_and_filterable(svc: ThreadService) -> None:
     assert graph["relations"] == []
 
 
-def test_graph_endpoint_returns_map_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_graph_endpoint_returns_map_data(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     pytest.importorskip("fastapi")
     from fastapi.testclient import TestClient
 
@@ -239,13 +241,50 @@ def test_knowledge_list_can_create_nodes_and_relations(
     assert "contains" in page.text
 
 
+def test_task_module_creates_lists_and_advances_task(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from threaddesk.ui.server import create_app
+
+    monkeypatch.setenv("THREADDESK_HOME", str(tmp_path))
+    svc = ThreadService(store=JsonStore(tmp_path))
+    thread = svc.create("Task module project")
+    client = TestClient(create_app())
+
+    created = client.post(
+        "/tasks",
+        data={
+            "title": "Prepare task module",
+            "details": "Make progress visible",
+            "thread_id": thread.id,
+        },
+        follow_redirects=False,
+    )
+    assert created.status_code == 303
+    task = next(node for node in svc.list_nodes() if node.kind == "task")
+    page = client.get("/tasks")
+    assert page.status_code == 200
+    assert "Aufgaben" in page.text
+    assert task.title in page.text
+    assert thread.title in page.text
+
+    changed = client.post(
+        f"/tasks/{task.id}/transition",
+        data={"status": "assigned", "expected_revision": task.revision},
+        follow_redirects=False,
+    )
+    assert changed.status_code == 303
+    assert svc.get_node(task.id).status == "assigned"
+
+
 def test_relation_records_revision_and_source(svc: ThreadService) -> None:
     project = svc.create_node("project", "ThreadDesk")
     task = svc.create_node("task", "Beziehungen", status="ready")
 
-    relation = svc.connect(
-        project.id, task.id, "contains", source="user-confirmed"
-    )
+    relation = svc.connect(project.id, task.id, "contains", source="user-confirmed")
 
     assert relation.revision == 1
     assert relation.source == "user-confirmed"

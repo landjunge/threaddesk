@@ -6,20 +6,45 @@ import hashlib
 import json
 
 from threaddesk.core.errors import InvalidState, ManagementError, NotFound
-from threaddesk.core.models import now_iso
+from threaddesk.core.models import NODE_STATUSES, RELATION_KINDS, Relation, now_iso
 from threaddesk.core.secrets import reject_secrets
 from threaddesk.services.thread_management import ID
 
 SOURCE = {"source_ref", "source_revision"}
 FIELDS = {
     "record": SOURCE | {"kind", "title", "details", "status"},
+    "update": SOURCE | {"node_id", "expected_node_revision", "title", "details"},
+    "transition": SOURCE | {"node_id", "expected_node_revision", "status"},
+    "link": SOURCE
+    | {
+        "source_node_id",
+        "target_node_id",
+        "expected_source_revision",
+        "expected_target_revision",
+        "relation_kind",
+    },
+    "archive": SOURCE | {"node_id", "expected_node_revision"},
+    "unarchive": SOURCE | {"node_id", "expected_node_revision"},
     "supersede": SOURCE | {"node_id", "expected_node_revision", "title", "details"},
+    "merge": SOURCE
+    | {
+        "node_id",
+        "expected_node_revision",
+        "source_node_id",
+        "expected_source_revision",
+    },
     "resolve_question": SOURCE | {"node_id", "expected_node_revision", "text"},
     "save_reentry": SOURCE | {"summary", "next_step"},
 }
 REQUIRED = {
     "record": SOURCE | {"kind", "title"},
+    "update": SOURCE | {"node_id", "expected_node_revision"},
+    "transition": FIELDS["transition"],
+    "link": FIELDS["link"],
+    "archive": FIELDS["archive"],
+    "unarchive": FIELDS["unarchive"],
     "supersede": FIELDS["supersede"] - {"details"},
+    "merge": FIELDS["merge"],
     "resolve_question": FIELDS["resolve_question"],
     "save_reentry": FIELDS["save_reentry"],
 }
@@ -61,10 +86,15 @@ def schema():
             "kind": {"type": "string", "enum": list(START)},
             "status": {
                 "type": "string",
-                "enum": sorted({item for values in START.values() for item in values}),
+                "enum": list(NODE_STATUSES),
             },
             "node_id": {"type": "string", "pattern": ID.pattern},
             "expected_node_revision": {"type": "integer", "minimum": 1},
+            "source_node_id": {"type": "string", "pattern": ID.pattern},
+            "target_node_id": {"type": "string", "pattern": ID.pattern},
+            "expected_source_revision": {"type": "integer", "minimum": 1},
+            "expected_target_revision": {"type": "integer", "minimum": 1},
+            "relation_kind": {"type": "string", "enum": list(RELATION_KINDS)},
         }
     )
     result = {
@@ -99,6 +129,12 @@ def schema():
         {"properties": {"kind": {"const": kind}, "status": {"enum": list(statuses)}}}
         for kind, statuses in START.items()
     ]
+    update_data = next(
+        item["properties"]["data"]
+        for item in result["oneOf"]
+        if item["properties"]["action"]["const"] == "update"
+    )
+    update_data["anyOf"] = [{"required": ["title"]}, {"required": ["details"]}]
     return result
 
 
@@ -128,11 +164,17 @@ def validate(arguments):
         or REQUIRED[action] - set(data)
     ):
         _invalid("data enthält fehlende oder unbekannte Aktionsfelder.")
+    if action == "update" and not (set(data) & {"title", "details"}):
+        _invalid("Eine Aktualisierung braucht einen neuen Titel oder Inhalt.")
     for name, value in data.items():
-        if name == "expected_node_revision":
+        if name in {
+            "expected_node_revision",
+            "expected_source_revision",
+            "expected_target_revision",
+        }:
             if type(value) is not int or value < 1:
                 _invalid("expected_node_revision muss eine positive ganze Zahl sein.")
-        elif name == "node_id":
+        elif name in {"node_id", "source_node_id", "target_node_id"}:
             _identity(value)
         elif (
             not isinstance(value, str)
@@ -151,6 +193,8 @@ def validate(arguments):
         kind = data["kind"]
         if kind not in START or data.get("status", START[kind][0]) not in START[kind]:
             _invalid("Unzulässiger Startzustand für diese Wissensart.")
+    if action == "link" and data["relation_kind"] not in RELATION_KINDS:
+        _invalid("Unbekannter Beziehungstyp.")
     reject_secrets(json.dumps(arguments, ensure_ascii=False))
     return arguments
 
@@ -226,6 +270,190 @@ def manage(svc, arguments):
             node = None
             if action == "record":
                 node = _record(svc, thread, data)
+            elif action == "update":
+                node = _owned_node(svc, thread, data)
+                if "title" in data:
+                    node.title = data["title"]
+                if "details" in data:
+                    node.details = data["details"]
+                node.source = data["source_ref"]
+                node.metadata.update(_source(data))
+                node.revision += 1
+                node.updated_at = now_iso()
+                svc.store.save_node(node)
+                svc._record_graph_event(
+                    "knowledge.updated", node.id, node.kind, node.revision
+                )
+            elif action == "transition":
+                node = _owned_node(svc, thread, data)
+                node = svc.transition_node(
+                    node.id,
+                    data["status"],
+                    expected_revision=node.revision,
+                )
+                node.source = data["source_ref"]
+                node.metadata.update(_source(data))
+                svc.store.save_node(node)
+            elif action == "merge":
+                target = _owned_node(svc, thread, data)
+                source_node = _owned_node(
+                    svc,
+                    thread,
+                    {
+                        "node_id": data["source_node_id"],
+                        "expected_node_revision": data["expected_source_revision"],
+                    },
+                )
+                if target.id == source_node.id:
+                    raise ManagementError(
+                        "invalid_state",
+                        "Ein Eintrag kann nicht mit sich selbst zusammengeführt werden.",
+                    )
+                if source_node.status == "archived":
+                    raise ManagementError(
+                        "invalid_state",
+                        "Ein archivierter Eintrag kann nicht zusammengeführt werden.",
+                    )
+                source_record = {
+                    "node_id": source_node.id,
+                    "revision": source_node.revision,
+                    "source": source_node.source,
+                    "source_ref": source_node.metadata.get("source_ref"),
+                    "source_revision": source_node.metadata.get("source_revision"),
+                    "merged_by_source_ref": data["source_ref"],
+                    "merged_by_source_revision": data["source_revision"],
+                }
+                merged = target.metadata.setdefault("merged_sources", [])
+                if not any(item.get("node_id") == source_node.id for item in merged):
+                    merged.append(source_record)
+                target.details = "\n\n".join(
+                    part
+                    for part in (target.details.strip(), source_node.details.strip())
+                    if part
+                )
+                target.metadata.update(_source(data))
+                target.source = data["source_ref"]
+                target.revision += 1
+                target.updated_at = now_iso()
+                svc.store.save_node(target)
+                svc._record_graph_event(
+                    "knowledge.merged_into", target.id, target.kind, target.revision
+                )
+
+                # Copy the source's graph context to the destination. Keep the original
+                # edges intact so unarchiving the source restores its full graph view.
+                for edge in svc.relations_for(source_node.id):
+                    other_id = (
+                        edge.target_id
+                        if edge.source_id == source_node.id
+                        else edge.source_id
+                    )
+                    if other_id in {target.id, source_node.id}:
+                        continue
+                    source_id, target_id = (
+                        (target.id, other_id)
+                        if edge.source_id == source_node.id
+                        else (other_id, target.id)
+                    )
+                    if any(
+                        rel.source_id == source_id
+                        and rel.target_id == target_id
+                        and rel.kind == edge.kind
+                        for rel in svc.list_relations()
+                    ):
+                        continue
+                    svc.connect(
+                        source_id,
+                        target_id,
+                        edge.kind,
+                        source=data["source_ref"],
+                        metadata={
+                            "thread_id": thread.id,
+                            "merged_from": source_node.id,
+                            **_source(data),
+                        },
+                    )
+                source_node.metadata["archived_from"] = source_node.status
+                source_node.metadata["merged_into"] = target.id
+                source_node.metadata["merge_action_source"] = _source(data)
+                source_node.status = "archived"
+                source_node.revision += 1
+                source_node.updated_at = now_iso()
+                svc.store.save_node(source_node)
+                svc._record_graph_event(
+                    "knowledge.merged_source_archived",
+                    source_node.id,
+                    source_node.kind,
+                    source_node.revision,
+                )
+                node = target
+            elif action == "link":
+                source_node = _owned_node(
+                    svc,
+                    thread,
+                    {
+                        "node_id": data["source_node_id"],
+                        "expected_node_revision": data["expected_source_revision"],
+                    },
+                )
+                _owned_node(
+                    svc,
+                    thread,
+                    {
+                        "node_id": data["target_node_id"],
+                        "expected_node_revision": data["expected_target_revision"],
+                    },
+                )
+                relation = svc.connect(
+                    source_node.id,
+                    data["target_node_id"],
+                    data["relation_kind"],
+                    source=data["source_ref"],
+                    metadata={"thread_id": thread.id, **_source(data)},
+                )
+            elif action in {"archive", "unarchive"}:
+                node = _owned_node(svc, thread, data)
+                if action == "archive":
+                    if node.status == "archived":
+                        raise ManagementError(
+                            "invalid_state", "Eintrag ist bereits archiviert."
+                        )
+                    node.metadata["archived_from"] = node.status
+                    node.status = "archived"
+                else:
+                    previous_status = node.metadata.get("archived_from")
+                    if (
+                        node.status != "archived"
+                        or not isinstance(previous_status, str)
+                        or previous_status not in NODE_STATUSES
+                        or previous_status == "archived"
+                    ):
+                        raise ManagementError(
+                            "invalid_state",
+                            "Eintrag kann nicht wiederhergestellt werden.",
+                        )
+                    node.status = previous_status
+                    node.metadata.pop("archived_from", None)
+                    for value in node.metadata.pop("snapshot_archived_relations", []):
+                        relation = Relation.from_dict(value)
+                        svc.store.get_node(relation.source_id)
+                        svc.store.get_node(relation.target_id)
+                        svc.store.save_relation(relation)
+                        svc._record_graph_event(
+                            "relation.snapshot_recovered",
+                            relation.id,
+                            "relation",
+                            relation.revision,
+                        )
+                    node.metadata.pop("snapshot_restore_id", None)
+                node.source = data["source_ref"]
+                node.metadata.update(_source(data))
+                node.revision += 1
+                node.updated_at = now_iso()
+                svc.store.save_node(node)
+                svc._record_graph_event(
+                    f"knowledge.{action}d", node.id, node.kind, node.revision
+                )
             elif action == "supersede":
                 previous = _owned_node(svc, thread, data)
                 if previous.kind != "decision" or previous.status != "confirmed":
@@ -296,6 +524,7 @@ def manage(svc, arguments):
                 "thread": thread.to_dict(),
                 "node_id": node.id if node else None,
                 "node": node.to_dict() if node else None,
+                "relation_id": relation.id if action == "link" else None,
                 "instruction": INSTRUCTION,
             }
             svc.store.save_management_operation(

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block body %}
+<main class="tasks-page" tabindex="0" aria-label="{{ t('tasks.title') }}">
+  <header class="knowledge-head">
+    <div>
+      <p class="eyebrow">{{ t("tasks.eyebrow") }}</p>
+      <h1>{{ t("tasks.title") }}</h1>
+      <p class="muted">{{ t("tasks.lead") }}</p>
+    </div>
+    <span class="count">{{ tasks|length }}</span>
+  </header>
+
+  <section class="task-module-grid">
+    <form class="panel knowledge-form" method="post" action="/tasks">
+      <div class="panel-head"><h2>{{ t("tasks.create") }}</h2></div>
+      <label>{{ t("tasks.task_title") }}<input name="title" required maxlength="2000" /></label>
+      <label>{{ t("tasks.details") }}<textarea name="details" rows="4" maxlength="20000"></textarea></label>
+      <label>{{ t("tasks.thread") }}
+        <select name="thread_id" required>
+          {% if not threads %}<option value="" disabled selected>{{ t("tasks.no_thread") }}</option>{% endif %}
+          {% for thread in threads %}<option value="{{ thread.id }}"{% if current and thread.id == current.id %} selected{% endif %}>{{ thread.title }}</option>{% endfor %}
+        </select>
+      </label>
+      <button class="btn btn-primary" type="submit"{% if not threads %} disabled{% endif %}>{{ t("tasks.save") }}</button>
+    </form>
+
+    <form class="panel knowledge-filter task-filter" method="get" action="/tasks">
+      <label>{{ t("knowledge.status") }}
+        <select name="status">
+          <option value="">{{ t("knowledge.all") }}</option>
+          {% for status in task_statuses %}<option value="{{ status }}"{% if active_status == status %} selected{% endif %}>{{ t("status." ~ status) }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>{{ t("tasks.thread") }}
+        <select name="thread_id">
+          <option value="">{{ t("tasks.all_threads") }}</option>
+          {% for thread in threads %}<option value="{{ thread.id }}"{% if active_thread == thread.id %} selected{% endif %}>{{ thread.title }}</option>{% endfor %}
+        </select>
+      </label>
+      <button class="btn btn-ghost" type="submit">{{ t("tasks.filter") }}</button>
+      <a class="btn btn-ghost" href="/tasks">{{ t("knowledge.reset") }}</a>
+    </form>
+  </section>
+
+  <section class="panel knowledge-list task-list">
+    <div class="panel-head"><h2>{{ t("tasks.list") }}</h2><span class="count">{{ tasks|length }}</span></div>
+    {% if tasks %}
+    <div class="task-cards">
+      {% for task in tasks %}
+      <article class="task-card" data-status="{{ task.status }}">
+        <div class="task-card-heading">
+          <span class="node-shape node-shape-task" aria-hidden="true"></span>
+          <div class="node-main"><strong>{{ task.title }}</strong><span>{{ task.details or t("tasks.no_details") }}</span></div>
+          <span class="status status-{{ task.status }}">{{ t("status." ~ task.status) }}</span>
+        </div>
+        <div class="task-card-meta">
+          {% if task.thread_id and thread_titles.get(task.thread_id) %}<a href="/?thread={{ task.thread_id }}">{{ thread_titles[task.thread_id] }}</a>{% else %}<span>{{ t("tasks.no_thread") }}</span>{% endif %}
+          <code>{{ task.id }}</code>
+        </div>
+        {% set transitions = transitions_by_task[task.id] %}
+        {% if transitions %}
+        <form class="task-transition" method="post" action="/tasks/{{ task.id }}/transition">
+          <input type="hidden" name="expected_revision" value="{{ task.revision }}" />
+          <label>{{ t("tasks.next_status") }}
+            <select name="status" aria-label="{{ t('knowledge.next_status_for', title=task.title) }}">
+              {% for status in transitions %}<option value="{{ status }}">{{ t("status." ~ status) }}</option>{% endfor %}
+            </select>
+          </label>
+          <button class="btn btn-ghost btn-compact" type="submit">{{ t("knowledge.apply") }}</button>
+        </form>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}<p class="empty">{{ t("tasks.empty") }}</p>{% endif %}
+  </section>
+</main>
+{% endblock %}

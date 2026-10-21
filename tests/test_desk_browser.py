@@ -116,7 +116,10 @@ def _chrome_pids() -> set[int]:
     out = subprocess.check_output(["ps", "-ax", "-o", "pid=,command="], text=True)
     found: set[int] = set()
     for line in out.splitlines():
-        if "Google Chrome.app/Contents/MacOS/Google Chrome" in line and "Helper" not in line:
+        if (
+            "Google Chrome.app/Contents/MacOS/Google Chrome" in line
+            and "Helper" not in line
+        ):
             found.add(int(line.split(None, 1)[0]))
     return found
 
@@ -131,9 +134,13 @@ def _raise_chrome(before: set[int], shot: str | None = None) -> int | None:
         return None
     pid = new[-1]
     subprocess.run([str(helper), str(pid), "activate"], check=False)
-    front = subprocess.run([str(helper), str(pid), "front"], capture_output=True, text=True)
+    front = subprocess.run(
+        [str(helper), str(pid), "front"], capture_output=True, text=True
+    )
     if front.returncode != 0:
-        raise AssertionError(f"Chrome ist nicht das vordere Fenster: {front.stdout.strip()}")
+        raise AssertionError(
+            f"Chrome ist nicht das vordere Fenster: {front.stdout.strip()}"
+        )
     if SHOTS and shot:
         listed = subprocess.run(
             [str(helper), str(pid), "windows"], capture_output=True, text=True
@@ -189,7 +196,9 @@ def test_user_keeps_notes_and_snapshot_across_restart(tmp_path: Path) -> None:
             page.goto(url + "/lang/de", wait_until="networkidle")
             page.wait_for_function("() => window.Alpine !== undefined")
             expect(page.get_by_text("Wähle links einen Thread")).to_be_visible()
-            expect(page.get_by_text("Keine Threads. Lege oben einen an.")).to_be_visible()
+            expect(
+                page.get_by_text("Keine Threads. Lege oben einen an.")
+            ).to_be_visible()
             _raise_chrome(before, "fenster-leer.png")
             _shot(page, "01-leer.png")
 
@@ -199,7 +208,9 @@ def test_user_keeps_notes_and_snapshot_across_restart(tmp_path: Path) -> None:
             page.locator("#thread-list").get_by_role(
                 "button", name="Anlegen", exact=True
             ).click()
-            expect(page.get_by_text("Keine Threads. Lege oben einen an.")).to_be_visible()
+            expect(
+                page.get_by_text("Keine Threads. Lege oben einen an.")
+            ).to_be_visible()
 
             title.fill(TITLE)
             page.locator('#thread-list input[name="description"]').fill(DESCRIPTION)
@@ -282,11 +293,11 @@ def test_user_keeps_notes_and_snapshot_across_restart(tmp_path: Path) -> None:
     assert page_errors == []
 
 
-
 def _open_section(page, name: str) -> None:
     section = page.locator(f'details[data-disclosure="{name}"]')
     if not section.evaluate("el => el.open"):
         section.locator(":scope > summary").click()
+
 
 def _create(page, title: str) -> None:
     page.wait_for_function(
@@ -299,7 +310,9 @@ def _create(page, title: str) -> None:
     # Alpine updates asynchronously; a second click can close the form again.
     expect(field).to_be_visible()
     field.fill(title)
-    page.locator("#thread-list").get_by_role("button", name="Anlegen", exact=True).click()
+    page.locator("#thread-list").get_by_role(
+        "button", name="Anlegen", exact=True
+    ).click()
     expect(page.locator(".thread-title").filter(has_text=title)).to_be_visible()
 
 
@@ -336,12 +349,16 @@ def test_user_renames_switches_archives_and_keeps_file_paths(tmp_path: Path) -> 
                 "button", name="OK", exact=True
             ).click()
             expect(page.locator("h1")).to_have_text("Erster umbenannt")
-            expect(page.locator(".thread-title").filter(has_text="Erster umbenannt")).to_be_visible()
+            expect(
+                page.locator(".thread-title").filter(has_text="Erster umbenannt")
+            ).to_be_visible()
 
             _open_section(page, "files")
             path = "Notizen/Überblick.txt"
             page.locator('#files input[name="path"]').fill(path)
-            page.locator("#files").get_by_role("button", name="Hinzufügen", exact=True).click()
+            page.locator("#files").get_by_role(
+                "button", name="Hinzufügen", exact=True
+            ).click()
             expect(page.locator("#files code")).to_have_text(path)
             page.locator("#files").get_by_role("button", name="Weg", exact=True).click()
             expect(page.locator("#files code")).to_have_count(0)
@@ -352,13 +369,19 @@ def test_user_renames_switches_archives_and_keeps_file_paths(tmp_path: Path) -> 
             page.locator("[data-hausmeister]").scroll_into_view_if_needed()
             model = page.locator("[data-hausmeister-model]")
             expect(model).to_have_value("")
-            expect(page.locator("[data-hausmeister]")).to_contain_text("Kein lokales Modell gewählt")
+            expect(page.locator("[data-hausmeister]")).to_contain_text(
+                "Kein lokales Modell gewählt"
+            )
             page.locator("[data-hausmeister]").get_by_role(
                 "button", name="Modell übernehmen", exact=True
             ).click()
             expect(model).to_have_value("")
-            expect(page.locator("[data-hausmeister]")).to_contain_text("Kein lokales Modell gewählt")
-            expect(page.get_by_role("status")).to_have_text("Kein lokales Modell gewählt")
+            expect(page.locator("[data-hausmeister]")).to_contain_text(
+                "Kein lokales Modell gewählt"
+            )
+            expect(page.get_by_role("status")).to_have_text(
+                "Kein lokales Modell gewählt"
+            )
             expect(page.locator(".banner-error:visible")).to_have_count(0)
 
             page.locator("[data-help-open]").click()
@@ -396,8 +419,12 @@ def test_user_renames_switches_archives_and_keeps_file_paths(tmp_path: Path) -> 
             expect(page.locator("h1")).to_have_text("Zweiter Faden")
             _open_section(page, "thread-edit")
             page.get_by_role("button", name="Archivieren", exact=True).click()
-            expect(page.locator(".thread-title").filter(has_text="Zweiter Faden")).to_have_count(0)
-            expect(page.locator(".thread-title").filter(has_text="Erster umbenannt")).to_be_visible()
+            expect(
+                page.locator(".thread-title").filter(has_text="Zweiter Faden")
+            ).to_have_count(0)
+            expect(
+                page.locator(".thread-title").filter(has_text="Erster umbenannt")
+            ).to_be_visible()
             expect(page.get_by_text("Wähle links einen Thread")).to_be_visible()
             stored = "\n".join(
                 item.read_text(encoding="utf-8")
@@ -451,13 +478,17 @@ def test_user_edits_description_status_and_whiteboard_order(tmp_path: Path) -> N
             page.locator("[data-new-thread]").click()
             page.locator("[data-new-title]").fill("Statusfaden")
             page.locator('#thread-list input[name="description"]').fill("Erster Zweck")
-            page.locator("#thread-list").get_by_role("button", name="Anlegen", exact=True).click()
+            page.locator("#thread-list").get_by_role(
+                "button", name="Anlegen", exact=True
+            ).click()
             expect(page.locator("h1")).to_have_text("Statusfaden")
             description = page.locator('.desk-description input[name="text"]')
             expect(description).to_have_value("Erster Zweck")
             _open_section(page, "thread-edit")
             expect(page.locator(".desk-status button.is-on")).to_have_text("idea")
-            expect(page.locator("[data-whiteboard-empty]")).to_have_text("Noch kein Beitrag.")
+            expect(page.locator("[data-whiteboard-empty]")).to_have_text(
+                "Noch kein Beitrag."
+            )
 
             page.locator("[data-whiteboard-submit]").click()
             expect(page.locator("[data-whiteboard-entry]")).to_have_count(0)
@@ -470,13 +501,19 @@ def test_user_edits_description_status_and_whiteboard_order(tmp_path: Path) -> N
             expect(description).to_have_value("Neuer Zweck mit ÄÖÜ")
 
             for name in ("active", "paused", "done"):
-                page.locator(".desk-status").get_by_role("button", name=name, exact=True).click()
+                page.locator(".desk-status").get_by_role(
+                    "button", name=name, exact=True
+                ).click()
                 expect(page.locator(".desk-status button.is-on")).to_have_text(name)
                 expect(page.locator(".detail-head .status")).to_have_text(name)
-                expect(page.locator(".thread-item.is-current .status")).to_have_text(name)
+                expect(page.locator(".thread-item.is-current .status")).to_have_text(
+                    name
+                )
                 expect(page.get_by_role("status")).to_have_text(f"Status: {name}")
             previous_status = page.locator(".desk-status").element_handle()
-            page.locator(".desk-status").get_by_role("button", name="done", exact=True).click()
+            page.locator(".desk-status").get_by_role(
+                "button", name="done", exact=True
+            ).click()
             # Re-selecting done leaves all visible assertions unchanged until
             # HTMX replaces the workspace. Do not type into the outgoing form.
             previous_status.wait_for_element_state("hidden")
@@ -558,8 +595,16 @@ def test_user_creates_filters_and_opens_knowledge_on_the_map(tmp_path: Path) -> 
             _raise_chrome(before)
             page.get_by_role("link", name="Wissenspool", exact=True).click()
             expect(page.locator("h1")).to_have_text("Wissenspool")
-            expect(page.get_by_text("Noch keine Knoten. Der erste Knoten kann ein Projekt sein.")).to_be_visible()
-            expect(page.get_by_text("Für eine Verbindung werden mindestens zwei Knoten benötigt.")).to_be_visible()
+            expect(
+                page.get_by_text(
+                    "Noch keine Knoten. Der erste Knoten kann ein Projekt sein."
+                )
+            ).to_be_visible()
+            expect(
+                page.get_by_text(
+                    "Für eine Verbindung werden mindestens zwei Knoten benötigt."
+                )
+            ).to_be_visible()
 
             form = page.locator('form[action="/knowledge/nodes"]')
             form.get_by_role("button", name="Knoten speichern", exact=True).click()
@@ -591,9 +636,13 @@ def test_user_creates_filters_and_opens_knowledge_on_the_map(tmp_path: Path) -> 
             expect(page.locator(".node-row")).to_have_count(2)
 
             relation = page.locator('form[action="/knowledge/relations"]')
-            relation.locator('select[name="source_id"]').select_option(label=f"{title} · Projekt")
+            relation.locator('select[name="source_id"]').select_option(
+                label=f"{title} · Projekt"
+            )
             relation.locator('select[name="kind"]').select_option("contains")
-            relation.locator('select[name="target_id"]').select_option(label="Prüferin · Person")
+            relation.locator('select[name="target_id"]').select_option(
+                label="Prüferin · Person"
+            )
             relation.get_by_role("button", name="Linie speichern", exact=True).click()
             expect(page.locator(".relation-row")).to_have_count(1)
             expect(page.locator(".relation-row")).to_contain_text("contains")
@@ -608,9 +657,59 @@ def test_user_creates_filters_and_opens_knowledge_on_the_map(tmp_path: Path) -> 
             expect(page.locator("[data-map-world]")).to_contain_text("Prüferin")
             page.locator(f'[data-map-world] [aria-label^="{title},"]').click()
             expect(page.locator("[data-map-detail-title]")).to_have_text(title)
-            expect(page.locator("[data-map-detail-text]")).to_have_text("Sichtbarer Zweck")
+            expect(page.locator("[data-map-detail-text]")).to_have_text(
+                "Sichtbarer Zweck"
+            )
             _raise_chrome(before, "fenster-wissen.png")
             _shot(page, "08-wissen.png")
+            browser.close()
+    finally:
+        desk.stop()
+    assert page_errors == []
+
+
+def test_attached_html_opens_in_isolated_popup_with_source_toggle(
+    tmp_path: Path,
+) -> None:
+    """TD-FILE-PREVIEW-01. Local HTML previews stay sandboxed and close cleanly."""
+    from threaddesk.api.service import ThreadService
+    from threaddesk.storage.json_store import JsonStore
+
+    home = tmp_path / "desk"
+    home.mkdir()
+    html_file = tmp_path / "sample-preview.html"
+    html_file.write_text(
+        "<!doctype html><h1>Popup preview</h1><script>document.body.dataset.ran='yes'</script>",
+        encoding="utf-8",
+    )
+    service = ThreadService(store=JsonStore(home))
+    thread = service.create("Preview thread")
+    service.add_file(str(html_file), thread.id)
+    desk = Desk(home)
+    page_errors: list[str] = []
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            browser = _launch(play)
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.goto(url, wait_until="networkidle")
+            page.locator('details[data-disclosure="files"] > summary').click()
+            trigger = page.locator("[data-file-preview]")
+            trigger.click()
+            dialog = page.locator("#file-preview-dialog")
+            expect(dialog).to_be_visible()
+            frame = dialog.locator("iframe")
+            expect(frame).to_be_visible()
+            expect(frame.content_frame.locator("h1")).to_have_text("Popup preview")
+            assert frame.get_attribute("sandbox") == ""
+            assert frame.content_frame.locator("body").get_attribute("data-ran") is None
+
+            dialog.get_by_role("button", name="Quelltext anzeigen").click()
+            expect(dialog.locator("pre code")).to_contain_text("Popup preview")
+            dialog.get_by_role("button", name="Schließen").click()
+            expect(dialog).not_to_be_visible()
+            expect(trigger).to_be_focused()
             browser.close()
     finally:
         desk.stop()
@@ -640,7 +739,9 @@ def test_user_switches_plain_and_expert_wording(tmp_path: Path) -> None:
             _open_section(page, "preferences")
             page.get_by_role("link", name="Fachsprache", exact=True).click()
             expect(heading).to_have_text("Snapshots")
-            expect(page.locator("#snapshots .muted").first).to_contain_text("Snapshot-ID")
+            expect(page.locator("#snapshots .muted").first).to_contain_text(
+                "Snapshot-ID"
+            )
             _open_section(page, "preferences")
             page.get_by_role("link", name="Klartext", exact=True).click()
             expect(heading).to_have_text("Zwischenstände")
@@ -672,8 +773,16 @@ def _export(home: Path, fmt: str, target: Path) -> None:
     env.pop("THREADDESK_STORAGE", None)
     completed = subprocess.run(
         [
-            sys.executable, "-m", "threaddesk.ui.cli", "graph", "--export",
-            "--format", fmt, "--include-private", "--output", str(target),
+            sys.executable,
+            "-m",
+            "threaddesk.ui.cli",
+            "graph",
+            "--export",
+            "--format",
+            fmt,
+            "--include-private",
+            "--output",
+            str(target),
         ],
         cwd=ROOT,
         env=env,
@@ -712,7 +821,11 @@ def test_user_opens_graph_json_and_exports_private_knowledge(tmp_path: Path) -> 
             page.get_by_role("link", name="Graph-JSON", exact=True).click()
             expect(page.locator("body")).to_contain_text(title)
             expect(page.locator("body")).to_contain_text("threaddesk.graph.v1")
-            for fmt, name in (("json", "export.json"), ("markdown", "export.md"), ("csv", "export.csv")):
+            for fmt, name in (
+                ("json", "export.json"),
+                ("markdown", "export.md"),
+                ("csv", "export.csv"),
+            ):
                 target = tmp_path / name
                 _export(home, fmt, target)
                 assert title in target.read_text(encoding="utf-8")
@@ -753,7 +866,9 @@ def test_user_switches_the_housekeeper_without_a_model(tmp_path: Path) -> None:
                 or "Ollama ist nicht erreichbar" in probe
             )
             section.get_by_role("button", name="Einschalten", exact=True).click()
-            expect(section.get_by_role("button", name="Ausschalten", exact=True)).to_be_visible()
+            expect(
+                section.get_by_role("button", name="Ausschalten", exact=True)
+            ).to_be_visible()
             expect(page.locator("[data-hausmeister-order]")).to_be_visible()
             expect(page.get_by_role("status")).to_have_text("Einschalten")
             page.locator("[data-hausmeister-run]").click()
@@ -761,7 +876,9 @@ def test_user_switches_the_housekeeper_without_a_model(tmp_path: Path) -> None:
             expect(page.locator("[data-hausmeister-entry]")).to_have_count(0)
             page.locator("[data-hausmeister-order]").fill(order)
             page.locator("[data-hausmeister-run]").click()
-            expect(page.get_by_role("alert")).to_have_text("Kein lokales Modell gewählt")
+            expect(page.get_by_role("alert")).to_have_text(
+                "Kein lokales Modell gewählt"
+            )
             expect(page.locator("h1")).to_have_text("Hausmeister")
             page.locator("[data-hausmeister-order]").fill(order)
             page.locator("[data-hausmeister-later]").click()
@@ -772,9 +889,11 @@ def test_user_switches_the_housekeeper_without_a_model(tmp_path: Path) -> None:
                 "button", name="Ausschalten", exact=True
             ).click()
             expect(page.locator("[data-hausmeister-order]")).to_have_count(0)
-            expect(page.locator("[data-hausmeister]").get_by_role(
-                "button", name="Einschalten", exact=True
-            )).to_be_visible()
+            expect(
+                page.locator("[data-hausmeister]").get_by_role(
+                    "button", name="Einschalten", exact=True
+                )
+            ).to_be_visible()
             expect(page.get_by_role("status")).to_have_text("Ausschalten")
             _raise_chrome(before, "fenster-hausmeister.png")
             _shot(page, "13-hausmeister.png")
@@ -782,7 +901,6 @@ def test_user_switches_the_housekeeper_without_a_model(tmp_path: Path) -> None:
     finally:
         desk.stop()
     assert page_errors == []
-
 
 
 def _sentence(key: str, language: str) -> str:
@@ -816,27 +934,56 @@ def test_user_reads_the_main_pages_in_both_languages(tmp_path: Path) -> None:
     desk = Desk(home)
     page_errors: list[str] = []
     desk_keys = (
-        "nav.knowledge", "data.nav", "nav.map",
-        "register.plain", "register.expert", "help.open",
-        "list.new", "list.empty", "detail.pick", "detail.or_new",
-        "gate.title", "room.title", "room.create",
+        "nav.knowledge",
+        "data.nav",
+        "nav.map",
+        "register.plain",
+        "register.expert",
+        "help.open",
+        "list.new",
+        "list.empty",
+        "detail.pick",
+        "detail.or_new",
+        "gate.title",
+        "room.title",
+        "room.create",
     )
     help_keys = (
-        "help.title", "help.new_thread", "help.next_prev", "help.pick_thread",
-        "help.snapshot_field", "help.microphone", "help.save_form",
-        "help.this_help", "help.no_agent",
+        "help.title",
+        "help.new_thread",
+        "help.next_prev",
+        "help.pick_thread",
+        "help.snapshot_field",
+        "help.microphone",
+        "help.save_form",
+        "help.this_help",
+        "help.no_agent",
     )
     knowledge_keys = (
-        "knowledge.lead", "knowledge.graph_json", "knowledge.save_node",
-        "knowledge.filter", "knowledge.reset",
+        "knowledge.lead",
+        "knowledge.graph_json",
+        "knowledge.save_node",
+        "knowledge.filter",
+        "knowledge.reset",
     )
     map_keys = (
-        "map.title", "map.eyebrow", "map.fit", "map.no_selection",
-        "map.legend_circle", "map.legend_rect", "map.legend_risk", "map.legend_ai",
+        "map.title",
+        "map.eyebrow",
+        "map.fit",
+        "map.no_selection",
+        "map.legend_circle",
+        "map.legend_rect",
+        "map.legend_risk",
+        "map.legend_ai",
     )
     data_keys = (
-        "data.title", "data.intro", "data.download", "data.file",
-        "data.confirm", "data.restore", "data.private",
+        "data.title",
+        "data.intro",
+        "data.download",
+        "data.file",
+        "data.confirm",
+        "data.restore",
+        "data.private",
     )
     try:
         url = desk.start()
@@ -876,9 +1023,15 @@ def test_user_reads_the_main_pages_in_both_languages(tmp_path: Path) -> None:
             expect(page.locator("html")).to_have_attribute("lang", "en")
             _shows(page, "en", *data_keys)
             _hides(
-                page, "de",
-                "data.title", "data.intro", "app.tagline", "knowledge.save_node",
-                "map.title", "help.no_agent", "detail.pick",
+                page,
+                "de",
+                "data.title",
+                "data.intro",
+                "app.tagline",
+                "knowledge.save_node",
+                "map.title",
+                "help.no_agent",
+                "detail.pick",
             )
             page.get_by_role("link", name="Map", exact=True).click()
             _shows(page, "en", *map_keys)
@@ -950,12 +1103,18 @@ def test_user_reads_action_notices_in_english(tmp_path: Path) -> None:
             )
 
             _open_section(page, "files")
-            expect(page.locator("#files")).to_contain_text(_sentence("files.hint", "en"))
-            expect(page.locator("#files")).to_contain_text(_sentence("files.empty", "en"))
+            expect(page.locator("#files")).to_contain_text(
+                _sentence("files.hint", "en")
+            )
+            expect(page.locator("#files")).to_contain_text(
+                _sentence("files.empty", "en")
+            )
             _hides(page, "de", "files.hint", "files.empty")
 
             _open_section(page, "thread-edit")
-            page.locator('.desk-description input[name="text"]').fill("A visible purpose")
+            page.locator('.desk-description input[name="text"]').fill(
+                "A visible purpose"
+            )
             page.locator(".desk-description").get_by_role(
                 "button", name=_sentence("detail.save", "en"), exact=True
             ).click()
@@ -1067,22 +1226,35 @@ def test_user_reads_housekeeper_phases_in_english(tmp_path: Path) -> None:
             for key in phase_keys:
                 expect(phase).not_to_contain_text(_sentence(key, "en"))
             expect(page.locator("[data-hausmeister-model]")).to_have_value("")
-            expect(page.locator("[data-hausmeister-model] option:checked")).to_have_text(
-                _sentence("hausmeister.model_none", "en")
-            )
+            expect(
+                page.locator("[data-hausmeister-model] option:checked")
+            ).to_have_text(_sentence("hausmeister.model_none", "en"))
             expect(section).to_contain_text(_sentence("hausmeister.title", "en"))
             expect(section).to_contain_text(_sentence("hausmeister.no_model", "en"))
-            expect(section.get_by_role(
-                "button", name=_sentence("hausmeister.turn_on", "en"), exact=True
-            )).to_be_visible()
+            expect(
+                section.get_by_role(
+                    "button", name=_sentence("hausmeister.turn_on", "en"), exact=True
+                )
+            ).to_be_visible()
             _hides(
-                page, "de",
-                "hausmeister.title", "hausmeister.reachable", "hausmeister.unreachable",
-                "hausmeister.no_model", "hausmeister.model_none", "hausmeister.turn_on",
-                "hausmeister.turn_off", "hausmeister.use_model", "hausmeister.run",
-                "hausmeister.later", "hausmeister.failed", "hausmeister.queued",
-                "hausmeister.phase.waiting_for_order", "hausmeister.phase.waiting_for_quiet",
-                "hausmeister.phase.working", "hausmeister.phase.paused",
+                page,
+                "de",
+                "hausmeister.title",
+                "hausmeister.reachable",
+                "hausmeister.unreachable",
+                "hausmeister.no_model",
+                "hausmeister.model_none",
+                "hausmeister.turn_on",
+                "hausmeister.turn_off",
+                "hausmeister.use_model",
+                "hausmeister.run",
+                "hausmeister.later",
+                "hausmeister.failed",
+                "hausmeister.queued",
+                "hausmeister.phase.waiting_for_order",
+                "hausmeister.phase.waiting_for_quiet",
+                "hausmeister.phase.working",
+                "hausmeister.phase.paused",
                 "hausmeister.disabled",
             )
 
@@ -1096,12 +1268,16 @@ def test_user_reads_housekeeper_phases_in_english(tmp_path: Path) -> None:
                 ).click()
                 _notice(page, _sentence("hausmeister.use_model", "en"))
                 expect(phase).to_have_attribute("data-hausmeister-phase", "off")
-                expect(section).not_to_contain_text(_sentence("hausmeister.no_model", "en"))
+                expect(section).not_to_contain_text(
+                    _sentence("hausmeister.no_model", "en")
+                )
                 section.get_by_role(
                     "button", name=_sentence("hausmeister.turn_on", "en"), exact=True
                 ).click()
                 _notice(page, _sentence("hausmeister.turn_on", "en"))
-                expect(phase).to_have_attribute("data-hausmeister-phase", "waiting_for_order")
+                expect(phase).to_have_attribute(
+                    "data-hausmeister-phase", "waiting_for_order"
+                )
                 expect(phase).to_contain_text(_sentence("hausmeister.reachable", "en"))
                 expect(phase).to_contain_text(
                     _sentence("hausmeister.phase.waiting_for_order", "en")
@@ -1137,12 +1313,16 @@ def test_user_reads_housekeeper_phases_in_english(tmp_path: Path) -> None:
             expect(page.locator("[data-hausmeister-order]")).to_have_attribute(
                 "placeholder", _sentence("hausmeister.order_placeholder", "en")
             )
-            expect(section.get_by_role(
-                "button", name=_sentence("hausmeister.run", "en"), exact=True
-            )).to_be_visible()
-            expect(section.get_by_role(
-                "button", name=_sentence("hausmeister.later", "en"), exact=True
-            )).to_be_visible()
+            expect(
+                section.get_by_role(
+                    "button", name=_sentence("hausmeister.run", "en"), exact=True
+                )
+            ).to_be_visible()
+            expect(
+                section.get_by_role(
+                    "button", name=_sentence("hausmeister.later", "en"), exact=True
+                )
+            ).to_be_visible()
             page.locator("[data-hausmeister-run]").click()
             _alert(page, _sentence("hausmeister.failed", "en"))
             expect(page.locator("[data-hausmeister-entry]")).to_have_count(0)
@@ -1166,9 +1346,11 @@ def test_user_reads_housekeeper_phases_in_english(tmp_path: Path) -> None:
                 "button", name=_sentence("hausmeister.turn_off", "en"), exact=True
             ).click()
             expect(page.locator("[data-hausmeister-order]")).to_have_count(0)
-            expect(section.get_by_role(
-                "button", name=_sentence("hausmeister.turn_on", "en"), exact=True
-            )).to_be_visible()
+            expect(
+                section.get_by_role(
+                    "button", name=_sentence("hausmeister.turn_on", "en"), exact=True
+                )
+            ).to_be_visible()
             _notice(page, _sentence("hausmeister.turn_off", "en"))
             expect(phase).to_have_attribute("data-hausmeister-phase", "off")
             browser.close()
@@ -1237,7 +1419,9 @@ def test_user_reads_rename_and_archive_in_english(tmp_path: Path) -> None:
                 "button", name=_sentence("detail.ok", "en"), exact=True
             ).click()
             expect(page.locator("h1")).to_have_text(renamed)
-            expect(page.locator(".thread-title").filter(has_text=renamed)).to_be_visible()
+            expect(
+                page.locator(".thread-title").filter(has_text=renamed)
+            ).to_be_visible()
             _notice(page, _sentence("ui.renamed", "en").format(title=renamed))
             expect(page.locator("body")).not_to_contain_text(
                 _sentence("ui.renamed", "de").format(title=renamed)
@@ -1252,8 +1436,12 @@ def test_user_reads_rename_and_archive_in_english(tmp_path: Path) -> None:
                 "button", name=_sentence("detail.archive", "en"), exact=True
             ).click()
             assert dialogs == [_sentence("detail.confirm_archive", "en")]
-            expect(page.locator(".thread-title").filter(has_text=second)).to_have_count(0)
-            expect(page.locator(".thread-title").filter(has_text=renamed)).to_be_visible()
+            expect(page.locator(".thread-title").filter(has_text=second)).to_have_count(
+                0
+            )
+            expect(
+                page.locator(".thread-title").filter(has_text=renamed)
+            ).to_be_visible()
             expect(page.get_by_text(_sentence("detail.pick", "en"))).to_be_visible()
             _notice(page, _sentence("ui.archived", "en").format(title=second))
             expect(page.locator("body")).not_to_contain_text(

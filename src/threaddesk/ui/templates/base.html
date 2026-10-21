@@ -24,6 +24,7 @@
         <div class="topbar-actions">
           <nav class="view-nav" aria-label="{{ t('nav.label') }}">
             <a href="/" class="btn btn-ghost btn-compact"{% if request.url.path == '/' %} aria-current="page"{% endif %}>{{ t("nav.threads") }}</a>
+            <a href="/tasks" class="btn btn-ghost btn-compact"{% if request.url.path == '/tasks' %} aria-current="page"{% endif %}>{{ t("nav.tasks") }}</a>
             <a href="/knowledge" class="btn btn-ghost btn-compact"{% if request.url.path == '/knowledge' %} aria-current="page"{% endif %}>{{ t("nav.knowledge") }}</a>
             <a href="/data" class="btn btn-ghost btn-compact"{% if request.url.path == '/data' %} aria-current="page"{% endif %}>{{ t("data.nav") }}</a>
             <a href="/map" class="btn btn-ghost btn-compact"{% if request.url.path == '/map' %} aria-current="page"{% endif %}>{{ t("nav.map") }}</a>

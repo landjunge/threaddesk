@@ -34,40 +34,132 @@ DEFAULT_REGISTER = PLAIN
 EXPERT_SUFFIX = "#expert"
 
 CATALOG: dict[str, dict[str, str]] = {
-    "knowledge.provenance": {"de": "Referenz: {source} · Knotenrevision {revision}", "en": "Reference: {source} · node revision {revision}"},
-    "knowledge.source_unverified": {"de": "Quellenangabe nicht extern verifiziert", "en": "Source reference not externally verified"},
-    "knowledge.question_record": {"de": "Gespeicherte Frage", "en": "Recorded question"},
-    "return.review.unverified": {"de": "Geliefert · noch ungeprüft", "en": "Delivered · not reviewed yet"},
-    "return.review.accepted": {"de": "Ergebnis ausdrücklich angenommen", "en": "Result explicitly accepted"},
-    "return.review.rejected": {"de": "Ergebnis ausdrücklich abgelehnt", "en": "Result explicitly rejected"},
-    "return.review.rework": {"de": "Nacharbeit ausdrücklich angefordert", "en": "Rework explicitly requested"},
-    "return.review.unknown": {"de": "Ergebnisentscheidung nicht nachgewiesen", "en": "Result decision not established"},
-    "return.scope": {"de": "Lieferung und Entscheidung sind getrennt. Ein Agentendurchgang nimmt den Gesamtauftrag nicht automatisch ab.", "en": "Delivery and decision are separate. An agent turn does not automatically accept the overall assignment."},
-    "return.outcome_unknown": {"de": "Ausgang unklar · vorhandene Belege zuerst lesen, nicht automatisch neu starten.", "en": "Outcome unknown · inspect existing evidence first; do not restart automatically."},
-    "browser.unsaved": {"de": "Geänderter Text ist noch nicht gespeichert.", "en": "Edited text has not been saved yet."},
-    "browser.saving": {"de": "Anfrage gesendet · Speicherbestätigung steht noch aus.", "en": "Request sent · storage confirmation is still pending."},
-    "browser.save_uncertain": {"de": "Keine verlässliche Speicherbestätigung. Texte nicht als gespeichert behandeln. Bestehenden Stand zuerst lesen; nicht automatisch erneut senden.", "en": "No reliable storage confirmation. Do not treat edits as saved. Read existing state first; do not resend automatically."},
+    "knowledge.provenance": {
+        "de": "Referenz: {source} · Knotenrevision {revision}",
+        "en": "Reference: {source} · node revision {revision}",
+    },
+    "knowledge.source_unverified": {
+        "de": "Quellenangabe nicht extern verifiziert",
+        "en": "Source reference not externally verified",
+    },
+    "knowledge.question_record": {
+        "de": "Gespeicherte Frage",
+        "en": "Recorded question",
+    },
+    "return.review.unverified": {
+        "de": "Geliefert · noch ungeprüft",
+        "en": "Delivered · not reviewed yet",
+    },
+    "return.review.accepted": {
+        "de": "Ergebnis ausdrücklich angenommen",
+        "en": "Result explicitly accepted",
+    },
+    "return.review.rejected": {
+        "de": "Ergebnis ausdrücklich abgelehnt",
+        "en": "Result explicitly rejected",
+    },
+    "return.review.rework": {
+        "de": "Nacharbeit ausdrücklich angefordert",
+        "en": "Rework explicitly requested",
+    },
+    "return.review.unknown": {
+        "de": "Ergebnisentscheidung nicht nachgewiesen",
+        "en": "Result decision not established",
+    },
+    "return.scope": {
+        "de": "Lieferung und Entscheidung sind getrennt. Ein Agentendurchgang nimmt den Gesamtauftrag nicht automatisch ab.",
+        "en": "Delivery and decision are separate. An agent turn does not automatically accept the overall assignment.",
+    },
+    "return.outcome_unknown": {
+        "de": "Ausgang unklar · vorhandene Belege zuerst lesen, nicht automatisch neu starten.",
+        "en": "Outcome unknown · inspect existing evidence first; do not restart automatically.",
+    },
+    "browser.unsaved": {
+        "de": "Geänderter Text ist noch nicht gespeichert.",
+        "en": "Edited text has not been saved yet.",
+    },
+    "browser.file_preview": {"de": "Dateivorschau", "en": "File preview"},
+    "browser.file_preview_loading": {
+        "de": "Vorschau wird geladen …",
+        "en": "Loading preview …",
+    },
+    "browser.file_preview_failed": {
+        "de": "Dateivorschau konnte nicht geladen werden.",
+        "en": "Could not load the file preview.",
+    },
+    "browser.file_preview_unsupported": {
+        "de": "Für diesen Dateityp gibt es keine sichere Vorschau.",
+        "en": "This file type has no safe preview.",
+    },
+    "browser.file_preview_render_hint": {
+        "de": "HTML läuft isoliert ohne Skripte und externe Ressourcen.",
+        "en": "HTML is isolated with scripts and external resources disabled.",
+    },
+    "browser.saving": {
+        "de": "Anfrage gesendet · Speicherbestätigung steht noch aus.",
+        "en": "Request sent · storage confirmation is still pending.",
+    },
+    "browser.save_uncertain": {
+        "de": "Keine verlässliche Speicherbestätigung. Texte nicht als gespeichert behandeln. Bestehenden Stand zuerst lesen; nicht automatisch erneut senden.",
+        "en": "No reliable storage confirmation. Do not treat edits as saved. Read existing state first; do not resend automatically.",
+    },
     "ui.edit_thread": {"de": "Thread bearbeiten", "en": "Edit thread"},
-    "ui.tools_hint": {"de": "Dateien, Sicherungen und Übergaben bei Bedarf öffnen.", "en": "Open files, snapshots and handoffs when needed."},
+    "ui.tools_hint": {
+        "de": "Dateien, Sicherungen und Übergaben bei Bedarf öffnen.",
+        "en": "Open files, snapshots and handoffs when needed.",
+    },
     "ui.capture": {"de": "Fortschritt festhalten", "en": "Record progress"},
-    "ui.capture_hint": {"de": "Was hat sich geändert, was kommt als Nächstes?", "en": "What changed, and what comes next?"},
-    "ui.next_empty": {"de": "Noch offen. Halte unten deinen nächsten Schritt fest.", "en": "Still open. Record your next step below."},
+    "ui.capture_hint": {
+        "de": "Was hat sich geändert, was kommt als Nächstes?",
+        "en": "What changed, and what comes next?",
+    },
+    "ui.next_empty": {
+        "de": "Noch offen. Halte unten deinen nächsten Schritt fest.",
+        "en": "Still open. Record your next step below.",
+    },
     "ui.activity": {"de": "Bisheriger Verlauf", "en": "Previous activity"},
     "ui.tools": {"de": "Werkzeuge zum Thread", "en": "Thread tools"},
-    "data.profiles": {"de": "Wiederhergestellte Arbeitsbereiche", "en": "Restored workspaces"},
+    "data.profiles": {
+        "de": "Wiederhergestellte Arbeitsbereiche",
+        "en": "Restored workspaces",
+    },
     "data.open_profile": {"de": "Arbeitsbereich öffnen", "en": "Open workspace"},
     "data.nav": {"de": "Daten", "en": "Data"},
     "data.title": {"de": "Sicherung und Wiederherstellung", "en": "Backup and restore"},
-    "data.intro": {"de": "Eine Sicherung enthält deine Threads, Zwischenstände, Wissenskarte, Whiteboards und lokal gespeicherten Übergaben. Verlinkte Dateien außerhalb von ThreadDesk bleiben an ihrem bisherigen Ort.", "en": "A backup contains your threads, snapshots, knowledge map, whiteboards and locally stored handoffs. Linked files outside ThreadDesk stay in their original location."},
+    "data.intro": {
+        "de": "Eine Sicherung enthält deine Threads, Zwischenstände, Wissenskarte, Whiteboards und lokal gespeicherten Übergaben. Verlinkte Dateien außerhalb von ThreadDesk bleiben an ihrem bisherigen Ort.",
+        "en": "A backup contains your threads, snapshots, knowledge map, whiteboards and locally stored handoffs. Linked files outside ThreadDesk stay in their original location.",
+    },
     "data.download": {"de": "Sicherung herunterladen", "en": "Download backup"},
-    "data.file": {"de": "ThreadDesk-Sicherung auswählen", "en": "Choose a ThreadDesk backup"},
-    "data.confirm": {"de": "Diese Sicherung als eigenen Arbeitsbereich öffnen. Meine bisherigen Daten bleiben erhalten.", "en": "Open this backup as a separate workspace. Keep my existing data."},
+    "data.file": {
+        "de": "ThreadDesk-Sicherung auswählen",
+        "en": "Choose a ThreadDesk backup",
+    },
+    "data.confirm": {
+        "de": "Diese Sicherung als eigenen Arbeitsbereich öffnen. Meine bisherigen Daten bleiben erhalten.",
+        "en": "Open this backup as a separate workspace. Keep my existing data.",
+    },
     "data.restore": {"de": "Sicherung öffnen", "en": "Open backup"},
-    "data.active": {"de": "Du arbeitest in einer wiederhergestellten Sicherung. Änderungen bleiben in diesem Arbeitsbereich gespeichert, auch nach einem Neustart.", "en": "You are working in a restored backup. Changes stay in this workspace, including after restarting."},
-    "data.original": {"de": "Zum bisherigen Arbeitsbereich", "en": "Return to original workspace"},
-    "data.private": {"de": "Die Sicherung enthält auch private Inhalte und Raum-Zugangsdaten. Bewahre sie an einem sicheren Ort auf. Der lokale Hausmeister bleibt nach dem Wiederherstellen ausgeschaltet.", "en": "The backup includes private content and room credentials. Keep it in a safe place. The local caretaker stays disabled after restoring."},
-    "data.backup_error": {"de": "Die Sicherung konnte nicht erstellt werden. Beende laufende Änderungen und versuche es erneut. Prüfe außerdem den freien Speicherplatz.", "en": "The backup could not be created. Finish pending changes and try again. Also check available disk space."},
-    "data.restore_error": {"de": "Die Sicherung konnte nicht geöffnet werden. Wähle eine vollständige ThreadDesk-Sicherung und bestätige das Öffnen. Deine bisherigen Daten bleiben erhalten.", "en": "The backup could not be opened. Choose a complete ThreadDesk backup and confirm opening it. Your existing data is preserved."},
+    "data.active": {
+        "de": "Du arbeitest in einer wiederhergestellten Sicherung. Änderungen bleiben in diesem Arbeitsbereich gespeichert, auch nach einem Neustart.",
+        "en": "You are working in a restored backup. Changes stay in this workspace, including after restarting.",
+    },
+    "data.original": {
+        "de": "Zum bisherigen Arbeitsbereich",
+        "en": "Return to original workspace",
+    },
+    "data.private": {
+        "de": "Die Sicherung enthält auch private Inhalte und Raum-Zugangsdaten. Bewahre sie an einem sicheren Ort auf. Der lokale Hausmeister bleibt nach dem Wiederherstellen ausgeschaltet.",
+        "en": "The backup includes private content and room credentials. Keep it in a safe place. The local caretaker stays disabled after restoring.",
+    },
+    "data.backup_error": {
+        "de": "Die Sicherung konnte nicht erstellt werden. Beende laufende Änderungen und versuche es erneut. Prüfe außerdem den freien Speicherplatz.",
+        "en": "The backup could not be created. Finish pending changes and try again. Also check available disk space.",
+    },
+    "data.restore_error": {
+        "de": "Die Sicherung konnte nicht geöffnet werden. Wähle eine vollständige ThreadDesk-Sicherung und bestätige das Öffnen. Deine bisherigen Daten bleiben erhalten.",
+        "en": "The backup could not be opened. Choose a complete ThreadDesk backup and confirm opening it. Your existing data is preserved.",
+    },
     # --- Grundgeruest ---
     "app.tagline": {
         "de": "Kontext halten · nichts ausführen",
@@ -79,6 +171,7 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "nav.label": {"de": "Ansichten", "en": "Views"},
     "nav.threads": {"de": "Threads", "en": "Threads"},
+    "nav.tasks": {"de": "Aufgaben", "en": "Tasks"},
     "nav.knowledge": {"de": "Wissenspool", "en": "Knowledge"},
     "nav.map": {"de": "Karte", "en": "Map"},
     "nav.language": {"de": "Sprache", "en": "Language"},
@@ -256,14 +349,23 @@ CATALOG: dict[str, dict[str, str]] = {
     "room.choose": {"de": "Raum wählen", "en": "Choose room"},
     "room.none": {"de": "Kein Raum gewählt", "en": "No room selected"},
     "room.invite": {"de": "Einladung erzeugen", "en": "Create invitation"},
-    "room.invite_role": {"de": "Rolle für die Einladung", "en": "Role for the invitation"},
+    "room.invite_role": {
+        "de": "Rolle für die Einladung",
+        "en": "Role for the invitation",
+    },
     "room.code": {"de": "Einladungscode", "en": "Invitation code"},
     "room.peer": {"de": "Adresse der Gegenstelle", "en": "Address of the other side"},
     "room.join": {"de": "Koppeln", "en": "Pair"},
     "room.sync": {"de": "Synchronisieren", "en": "Synchronize"},
     "room.members": {"de": "Mitglieder", "en": "Members"},
-    "room.share_entry": {"de": "Eintrag und Thread-Titel für den Raum freigeben", "en": "Share entry and thread title with the room"},
-    "room.local_only": {"de": "Nur lesen – neue Einträge bleiben privat", "en": "Read only – new entries stay private"},
+    "room.share_entry": {
+        "de": "Eintrag und Thread-Titel für den Raum freigeben",
+        "en": "Share entry and thread title with the room",
+    },
+    "room.local_only": {
+        "de": "Nur lesen – neue Einträge bleiben privat",
+        "en": "Read only – new entries stay private",
+    },
     "room.last": {"de": "Letzter Sync", "en": "Last sync"},
     "room.never": {"de": "Noch kein Sync", "en": "No sync yet"},
     "room.created": {"de": "Raum angelegt", "en": "Room created"},
@@ -276,7 +378,10 @@ CATALOG: dict[str, dict[str, str]] = {
     "room.state.synced": {"de": "Synchronisiert", "en": "Synchronized"},
     "room.state.changes": {"de": "Änderungen vorhanden", "en": "Changes waiting"},
     "room.state.conflict_kept": {"de": "Konflikt erhalten", "en": "Conflict kept"},
-    "room.state.peer_down": {"de": "Gegenstelle nicht erreichbar", "en": "Other side is not reachable"},
+    "room.state.peer_down": {
+        "de": "Gegenstelle nicht erreichbar",
+        "en": "Other side is not reachable",
+    },
     "room.role.owner": {"de": "Leitung", "en": "Owner"},
     "room.role.member": {"de": "Mitglied", "en": "Member"},
     "room.role.read_only": {"de": "Nur lesen", "en": "Read only"},
@@ -333,13 +438,40 @@ CATALOG: dict[str, dict[str, str]] = {
         "de": "Noch keine Verbindungen.",
         "en": "No relations yet.",
     },
+    "tasks.eyebrow": {"de": "ThreadDesk · Arbeit", "en": "ThreadDesk · work"},
+    "tasks.title": {"de": "Aufgaben", "en": "Tasks"},
+    "tasks.lead": {
+        "de": "Aufgaben finden, Threads zuordnen und ihren Fortschritt festhalten.",
+        "en": "Find tasks, link them to threads and track their progress.",
+    },
+    "tasks.create": {"de": "Aufgabe anlegen", "en": "Create a task"},
+    "tasks.task_title": {"de": "Aufgabe", "en": "Task"},
+    "tasks.details": {"de": "Beschreibung", "en": "Details"},
+    "tasks.thread": {"de": "Thread", "en": "Thread"},
+    "tasks.no_thread": {"de": "Ohne Thread", "en": "No thread"},
+    "tasks.all_threads": {"de": "Alle Threads", "en": "All threads"},
+    "tasks.save": {"de": "Aufgabe speichern", "en": "Save task"},
+    "tasks.filter": {"de": "Filtern", "en": "Filter"},
+    "tasks.list": {"de": "Aufgabenliste", "en": "Task list"},
+    "tasks.no_details": {"de": "Keine Beschreibung", "en": "No details"},
+    "tasks.next_status": {"de": "Nächster Schritt", "en": "Next step"},
+    "tasks.empty": {
+        "de": "Noch keine Aufgaben vorhanden.",
+        "en": "There are no tasks yet.",
+    },
     # --- Arbeitsflaeche ---
     "ui.saving": {"de": "Speichere…", "en": "Saving…"},
-    "ui.error": {"de": "Das hat nicht funktioniert. Bitte Eingabe prüfen.", "en": "That did not work. Please check your input."},
+    "ui.error": {
+        "de": "Das hat nicht funktioniert. Bitte Eingabe prüfen.",
+        "en": "That did not work. Please check your input.",
+    },
     "ui.created": {"de": "Angelegt: {title}", "en": "Created: {title}"},
     "ui.note_saved": {"de": "Notiz gespeichert", "en": "Note saved"},
     "ui.whiteboard_saved": {"de": "Beitrag angehängt", "en": "Entry appended"},
-    "ui.description_saved": {"de": "Beschreibung gespeichert", "en": "Description saved"},
+    "ui.description_saved": {
+        "de": "Beschreibung gespeichert",
+        "en": "Description saved",
+    },
     "ui.status_saved": {"de": "Status: {status}", "en": "Status: {status}"},
     "ui.snapshot_saved": {"de": "Snapshot {id}", "en": "Snapshot {id}"},
     "ui.renamed": {"de": "Umbenannt: {title}", "en": "Renamed: {title}"},
@@ -348,43 +480,97 @@ CATALOG: dict[str, dict[str, str]] = {
     "ui.prompt_saved": {"de": "Prompt gespeichert", "en": "Prompt saved"},
     "ui.prompt_preview": {"de": "Prompt-Vorschau", "en": "Prompt preview"},
     "ui.archived": {"de": "Archiviert: {title}", "en": "Archived: {title}"},
-    "ui.handoff_written": {"de": "Handoff geschrieben · nicht gesendet", "en": "Handoff written · not sent"},
-    "ui.gnom_written": {"de": "Gnom-Paket geschrieben · nicht gestartet", "en": "Gnom packet written · not started"},
-    "ui.grok_written": {"de": "Grok-Paket geschrieben · nicht gestartet", "en": "Grok packet written · not started"},
+    "ui.handoff_written": {
+        "de": "Handoff geschrieben · nicht gesendet",
+        "en": "Handoff written · not sent",
+    },
+    "ui.gnom_written": {
+        "de": "Gnom-Paket geschrieben · nicht gestartet",
+        "en": "Gnom packet written · not started",
+    },
+    "ui.grok_written": {
+        "de": "Grok-Paket geschrieben · nicht gestartet",
+        "en": "Grok packet written · not started",
+    },
     "ui.snapshot_loaded": {"de": "Geladen: {id}", "en": "Loaded: {id}"},
     "ui.gate_closed": {"de": "Schranke geschlossen", "en": "Gate closed"},
     "ui.gate_opened": {"de": "Schranke geöffnet", "en": "Gate opened"},
     "migration.eyebrow": {"de": "Sichere Übernahme", "en": "Safe migration"},
     "migration.title": {"de": "Migrationszentrum", "en": "Migration center"},
-    "migration.intro": {"de": "Prüfe ein Bundle, bevor etwas übernommen wird.", "en": "Review a bundle before anything is imported."},
+    "migration.intro": {
+        "de": "Prüfe ein Bundle, bevor etwas übernommen wird.",
+        "en": "Review a bundle before anything is imported.",
+    },
     "migration.file": {"de": "Bundle-Datei", "en": "Bundle file"},
     "migration.dry_run": {"de": "Vorschau", "en": "Dry run"},
-    "migration.select_hint": {"de": "Noch keine Datei ausgewählt.", "en": "No file selected yet."},
+    "migration.select_hint": {
+        "de": "Noch keine Datei ausgewählt.",
+        "en": "No file selected yet.",
+    },
     "migration.confirm": {"de": "Import bestätigen", "en": "Confirm import"},
     "migration.run_dry_run": {"de": "Vorschau prüfen", "en": "Run preview"},
-    "migration.recover": {"de": "Wiederherstellungs-Kopie erstellen", "en": "Create recovery copy"},
+    "migration.recover": {
+        "de": "Wiederherstellungs-Kopie erstellen",
+        "en": "Create recovery copy",
+    },
     "migration.conflicts": {"de": "Konflikte entscheiden", "en": "Resolve conflicts"},
     "migration.conflicts_hint": {
         "de": "Jeder Konflikt braucht deine ausdrückliche Entscheidung.",
         "en": "Each conflict requires your explicit decision.",
     },
-    "browser.migration.choose_bundle": {"de": "Bitte eine .tdbundle-Datei auswählen.", "en": "Please choose a .tdbundle file."},
+    "browser.migration.choose_bundle": {
+        "de": "Bitte eine .tdbundle-Datei auswählen.",
+        "en": "Please choose a .tdbundle file.",
+    },
     "browser.migration.checking": {"de": "Prüfe Bundle…", "en": "Checking bundle…"},
-    "browser.migration.blocked": {"de": "Prüfung blockiert: {blockers}", "en": "Preview blocked: {blockers}"},
-    "browser.migration.ready": {"de": "Prüfung fertig · {hash}", "en": "Preview ready · {hash}"},
-    "browser.migration.failed": {"de": "Prüfung nicht möglich: {reason}", "en": "Preview failed: {reason}"},
-    "browser.migration.importing": {"de": "Importiere bestätigtes Bundle…", "en": "Importing confirmed bundle…"},
-    "browser.migration.imported": {"de": "Import fertig · Batch {batch}", "en": "Import complete · batch {batch}"},
-    "browser.migration.uncertain": {"de": "Ausgang unklar · sicher erneut prüfen: {batch}", "en": "Outcome uncertain · safely check again: {batch}"},
-    "browser.migration.recovered": {"de": "Wiederherstellungs-Kopie erstellt: {path}", "en": "Recovery copy created: {path}"},
+    "browser.migration.blocked": {
+        "de": "Prüfung blockiert: {blockers}",
+        "en": "Preview blocked: {blockers}",
+    },
+    "browser.migration.ready": {
+        "de": "Prüfung fertig · {hash}",
+        "en": "Preview ready · {hash}",
+    },
+    "browser.migration.failed": {
+        "de": "Prüfung nicht möglich: {reason}",
+        "en": "Preview failed: {reason}",
+    },
+    "browser.migration.importing": {
+        "de": "Importiere bestätigtes Bundle…",
+        "en": "Importing confirmed bundle…",
+    },
+    "browser.migration.imported": {
+        "de": "Import fertig · Batch {batch}",
+        "en": "Import complete · batch {batch}",
+    },
+    "browser.migration.uncertain": {
+        "de": "Ausgang unklar · sicher erneut prüfen: {batch}",
+        "en": "Outcome uncertain · safely check again: {batch}",
+    },
+    "browser.migration.recovered": {
+        "de": "Wiederherstellungs-Kopie erstellt: {path}",
+        "en": "Recovery copy created: {path}",
+    },
     "browser.migration.conflict": {
         "de": "Lokal und in Notion geändert: {title}",
         "en": "Changed locally and in Notion: {title}",
     },
-    "browser.migration.keep_local": {"de": "Lokalen Stand behalten", "en": "Keep local version"},
-    "browser.migration.take_source": {"de": "Notion-Stand übernehmen", "en": "Use Notion version"},
-    "browser.migration.local_version": {"de": "ThreadDesk-Stand", "en": "ThreadDesk version"},
-    "browser.migration.source_version": {"de": "Notion-Vorschlag", "en": "Notion proposal"},
+    "browser.migration.keep_local": {
+        "de": "Lokalen Stand behalten",
+        "en": "Keep local version",
+    },
+    "browser.migration.take_source": {
+        "de": "Notion-Stand übernehmen",
+        "en": "Use Notion version",
+    },
+    "browser.migration.local_version": {
+        "de": "ThreadDesk-Stand",
+        "en": "ThreadDesk version",
+    },
+    "browser.migration.source_version": {
+        "de": "Notion-Vorschlag",
+        "en": "Notion proposal",
+    },
     "browser.migration.field_title": {"de": "Titel", "en": "Title"},
     "browser.migration.field_status": {"de": "Status", "en": "Status"},
     "browser.migration.field_content": {"de": "Inhalt", "en": "Content"},
@@ -403,14 +589,29 @@ CATALOG: dict[str, dict[str, str]] = {
     # --- Browser-JavaScript ---
     "browser.copied": {"de": "Kopiert", "en": "Copied"},
     "browser.request_failed": {"de": "Anfrage fehlgeschlagen", "en": "Request failed"},
-    "browser.mic_unavailable": {"de": "Dieser Browser hat keine Spracheingabe.", "en": "This browser has no speech input."},
-    "browser.mic_insecure": {"de": "Mikrofon braucht einen sicheren Kontext.", "en": "The microphone needs a secure context."},
-    "browser.mic_denied": {"de": "Mikrofon nicht erlaubt.", "en": "Microphone permission denied."},
-    "browser.speech_error": {"de": "Spracheingabe: {error}", "en": "Speech input: {error}"},
+    "browser.mic_unavailable": {
+        "de": "Dieser Browser hat keine Spracheingabe.",
+        "en": "This browser has no speech input.",
+    },
+    "browser.mic_insecure": {
+        "de": "Mikrofon braucht einen sicheren Kontext.",
+        "en": "The microphone needs a secure context.",
+    },
+    "browser.mic_denied": {
+        "de": "Mikrofon nicht erlaubt.",
+        "en": "Microphone permission denied.",
+    },
+    "browser.speech_error": {
+        "de": "Spracheingabe: {error}",
+        "en": "Speech input: {error}",
+    },
     # --- Migration: Klartext und Fachsprache ---
     "import.title": {"de": "Daten übernehmen", "en": "Bring in data"},
     "import.title#expert": {"de": "Import", "en": "Import"},
-    "import.preview": {"de": "Änderungen vorher ansehen", "en": "Preview changes first"},
+    "import.preview": {
+        "de": "Änderungen vorher ansehen",
+        "en": "Preview changes first",
+    },
     "import.preview#expert": {"de": "Dry-run und Diff", "en": "Dry run and diff"},
     "import.batch": {"de": "Übernahmevorgang", "en": "Import operation"},
     "import.batch#expert": {"de": "Import-Batch", "en": "Import batch"},
@@ -420,6 +621,25 @@ CATALOG: dict[str, dict[str, str]] = {
     "import.mapping#expert": {"de": "Mapping-Regel", "en": "Mapping rule"},
     # --- Dateien ---
     "files.title": {"de": "Dateien", "en": "Files"},
+    "files.preview": {"de": "Dateivorschau", "en": "File preview"},
+    "files.preview_loading": {
+        "de": "Vorschau wird geladen …",
+        "en": "Loading preview …",
+    },
+    "files.preview_failed": {
+        "de": "Dateivorschau konnte nicht geladen werden.",
+        "en": "Could not load the file preview.",
+    },
+    "files.preview_unsupported": {
+        "de": "Für diesen Dateityp gibt es keine sichere Vorschau.",
+        "en": "This file type has no safe preview.",
+    },
+    "files.preview_render": {"de": "HTML anzeigen", "en": "Render HTML"},
+    "files.preview_source": {"de": "Quelltext anzeigen", "en": "Show source"},
+    "files.preview_render_hint": {
+        "de": "HTML läuft isoliert ohne Skripte und externe Ressourcen.",
+        "en": "HTML is isolated with scripts and external resources disabled.",
+    },
     "files.hint": {
         "de": "Nur Pfade merken. Kein Upload, kein Öffnen.",
         "en": "Paths only. No upload, no opening.",
@@ -456,9 +676,8 @@ CATALOG: dict[str, dict[str, str]] = {
     "gate.freeze#expert": {"de": "Einfrieren", "en": "Freeze"},
     "gate.hint": {
         "de": "Die Schranke verhindert nur, dass Dateien geschrieben werden. "
-              "Sie startet nie etwas.",
-        "en": "The gate only stops files from being written. It never starts "
-              "anything.",
+        "Sie startet nie etwas.",
+        "en": "The gate only stops files from being written. It never starts anything.",
     },
     "gate.hint#expert": {
         "de": "Sperrt nur Pakete. Startet nichts.",
@@ -517,19 +736,21 @@ CATALOG: dict[str, dict[str, str]] = {
     "packet.title#expert": {"de": "Paket", "en": "Packet"},
     "packet.hint": {
         "de": "Legt eine Datei an, die du einem Werkzeug weitergeben kannst. "
-              "ThreadDesk startet nichts davon selbst.",
+        "ThreadDesk startet nichts davon selbst.",
         "en": "Creates a file you can hand to another tool. ThreadDesk starts "
-              "none of them itself.",
+        "none of them itself.",
     },
     "packet.hint#expert": {
         "de": "Schreibt Dateien. Startet Grok und gnom-hub-v1 nicht.",
         "en": "Writes files. Does not start Grok or gnom-hub-v1.",
     },
     "packet.write_handoff": {
-        "de": "Übergabe-Datei schreiben", "en": "Write handover file",
+        "de": "Übergabe-Datei schreiben",
+        "en": "Write handover file",
     },
     "packet.write_handoff#expert": {
-        "de": "Handoff schreiben", "en": "Write handoff",
+        "de": "Handoff schreiben",
+        "en": "Write handoff",
     },
     "packet.gnom": {"de": "Gnom-Brainstorm", "en": "Gnom brainstorm"},
     "packet.grok": {"de": "Grok-Brainstorm", "en": "Grok brainstorm"},
@@ -556,8 +777,7 @@ CATALOG: dict[str, dict[str, str]] = {
     "snapshots.title": {"de": "Zwischenstände", "en": "Saved states"},
     "snapshots.title#expert": {"de": "Snapshots", "en": "Snapshots"},
     "snapshots.hint": {
-        "de": "Friert die Notizen von jetzt ein. Du kannst sie später "
-              "zurückholen.",
+        "de": "Friert die Notizen von jetzt ein. Du kannst sie später zurückholen.",
         "en": "Freezes the notes as they are now. You can bring them back later.",
     },
     "snapshots.hint#expert": {
@@ -571,7 +791,7 @@ CATALOG: dict[str, dict[str, str]] = {
     "snapshots.unnamed": {"de": "(ohne Label)", "en": "(unnamed)"},
     "snapshots.confirm_restore": {
         "de": "Zwischenstand zurückholen? Was jetzt in den Notizen steht, "
-              "geht dabei verloren.",
+        "geht dabei verloren.",
         "en": "Bring this state back? Whatever is in the notes now will be lost.",
     },
     "snapshots.confirm_restore#expert": {
@@ -590,10 +810,16 @@ CATALOG: dict[str, dict[str, str]] = {
     "detail.archive": {"de": "Archivieren", "en": "Archive"},
     "detail.status": {"de": "Status", "en": "Status"},
     "detail.description": {"de": "Beschreibung", "en": "Description"},
-    "detail.description_placeholder": {"de": "Worum geht es?", "en": "What is it about?"},
+    "detail.description_placeholder": {
+        "de": "Worum geht es?",
+        "en": "What is it about?",
+    },
     "detail.save": {"de": "Speichern", "en": "Save"},
     "detail.no_thread": {"de": "Kein aktiver Thread", "en": "No active thread"},
-    "detail.pick": {"de": "Wähle links einen Thread", "en": "Pick a thread on the left"},
+    "detail.pick": {
+        "de": "Wähle links einen Thread",
+        "en": "Pick a thread on the left",
+    },
     "detail.or_new": {
         "de": "Oder lege einen mit Neu an. Taste n.",
         "en": "Or create one with New. Key n.",
@@ -808,7 +1034,10 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "ThreadDesk — keep context, execute nothing.",
     },
     "cli.error": {"de": "fehler: {message}", "en": "error: {message}"},
-    "cli.field.description": {"de": "beschreibung: {value}", "en": "description: {value}"},
+    "cli.field.description": {
+        "de": "beschreibung: {value}",
+        "en": "description: {value}",
+    },
     "cli.field.status": {
         "de": "status: {status}  snap: {snapshot}",
         "en": "status: {status}  snap: {snapshot}",
@@ -854,12 +1083,14 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "state saved: {id}  {label}",
     },
     "cli.snap.saved#expert": {
-        "de": "snapshot: {id}  {label}", "en": "snapshot: {id}  {label}",
+        "de": "snapshot: {id}  {label}",
+        "en": "snapshot: {id}  {label}",
     },
     "cli.snap.no_label": {"de": "(ohne name)", "en": "(no name)"},
     "cli.snap.no_label#expert": {"de": "(ohne label)", "en": "(no label)"},
     "cli.snap.none": {
-        "de": "keine zwischenstände", "en": "no saved states",
+        "de": "keine zwischenstände",
+        "en": "no saved states",
     },
     "cli.snap.none#expert": {"de": "keine snapshots", "en": "no snapshots"},
     "cli.snap.restored": {
@@ -892,7 +1123,7 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "cli.packet.gnom": {
         "de": "datei geschrieben: {path}  (gnom wurde nicht gestartet, "
-              "nichts gesendet)",
+        "nichts gesendet)",
         "en": "file written: {path}  (gnom was not started, nothing sent)",
     },
     "cli.packet.gnom#expert": {
@@ -926,10 +1157,12 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "handoff today: {used}/{limit}  per thread: {per_thread}",
     },
     "cli.gate.cooldown": {
-        "de": "wartezeit: {seconds}s", "en": "wait time: {seconds}s",
+        "de": "wartezeit: {seconds}s",
+        "en": "wait time: {seconds}s",
     },
     "cli.gate.cooldown#expert": {
-        "de": "cooldown: {seconds}s", "en": "cooldown: {seconds}s",
+        "de": "cooldown: {seconds}s",
+        "en": "cooldown: {seconds}s",
     },
     "cli.gate.last": {
         "de": "zuletzt: {action}  {thread}  {at}",
@@ -937,10 +1170,12 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "cli.gate.allow": {"de": "ok  {action}", "en": "ok  {action}"},
     "cli.gate.block": {
-        "de": "gestoppt  {action}", "en": "stopped  {action}",
+        "de": "gestoppt  {action}",
+        "en": "stopped  {action}",
     },
     "cli.gate.block#expert": {
-        "de": "block  {action}", "en": "block  {action}",
+        "de": "block  {action}",
+        "en": "block  {action}",
     },
     "cli.gate.remaining": {
         "de": "übrig  thread={thread}  tag={day}",
@@ -956,8 +1191,8 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "browser opened (no agents)",
     },
     "cli.serve.missing": {
-        "de": "fehlende Abhängigkeit: pip install -e \".[ui]\"",
-        "en": "missing dependency: pip install -e \".[ui]\"",
+        "de": 'fehlende Abhängigkeit: pip install -e ".[ui]"',
+        "en": 'missing dependency: pip install -e ".[ui]"',
     },
     "cli.serve.running": {
         "de": "ThreadDesk UI  http://{host}:{port}  (führt nichts aus)",
@@ -1019,23 +1254,28 @@ CATALOG: dict[str, dict[str, str]] = {
     "cli.help.snap": {"de": "Zwischenstände", "en": "Saved states"},
     "cli.help.snap#expert": {"de": "Snapshots", "en": "Snapshots"},
     "cli.help.snap_save": {
-        "de": "Notizen von jetzt festhalten", "en": "Keep the notes as they are now",
+        "de": "Notizen von jetzt festhalten",
+        "en": "Keep the notes as they are now",
     },
     "cli.help.snap_save#expert": {
-        "de": "Snapshot speichern", "en": "Save a snapshot",
+        "de": "Snapshot speichern",
+        "en": "Save a snapshot",
     },
     "cli.help.snap_list": {
-        "de": "Zwischenstände listen", "en": "List saved states",
+        "de": "Zwischenstände listen",
+        "en": "List saved states",
     },
     "cli.help.snap_list#expert": {
-        "de": "Snapshots listen", "en": "List snapshots",
+        "de": "Snapshots listen",
+        "en": "List snapshots",
     },
     "cli.help.snap_load": {
         "de": "Zwischenstand zurückholen (überschreibt die Notizen)",
         "en": "Bring a saved state back (overwrites the notes)",
     },
     "cli.help.snap_load#expert": {
-        "de": "Snapshot laden", "en": "Load a snapshot",
+        "de": "Snapshot laden",
+        "en": "Load a snapshot",
     },
     "cli.help.prompt": {
         "de": "Text zum Kopieren aus dem Thread bauen (schickt ihn nirgendwo hin)",
@@ -1205,8 +1445,12 @@ def _entry(key: str, register: str) -> dict[str, str] | None:
     return CATALOG.get(key)
 
 
-def translate(key: str, language: str = DEFAULT_LANGUAGE,
-              register: str = DEFAULT_REGISTER, **values: object) -> str:
+def translate(
+    key: str,
+    language: str = DEFAULT_LANGUAGE,
+    register: str = DEFAULT_REGISTER,
+    **values: object,
+) -> str:
     """Uebersetzt einen Schluessel.
 
     Ein unbekannter Schluessel gibt den Schluessel selbst zurueck, damit die
@@ -1227,6 +1471,8 @@ def catalog_for(language: str, register: str = DEFAULT_REGISTER) -> dict[str, st
     """
     code = normalise(language)
     keys = (key for key in CATALOG if not key.endswith(EXPERT_SUFFIX))
-    return {key: (_entry(key, register) or CATALOG[key]).get(code)
-                 or CATALOG[key][DEFAULT_LANGUAGE]
-            for key in keys}
+    return {
+        key: (_entry(key, register) or CATALOG[key]).get(code)
+        or CATALOG[key][DEFAULT_LANGUAGE]
+        for key in keys
+    }

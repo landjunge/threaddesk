@@ -63,6 +63,48 @@ def test_complete_lifecycle_and_exact_repetition(bridge):
     assert not any(name in {"grok.packet", "gnom.packet", "handoff.written"} for name in events)
 
 
+def test_snapshot_is_idempotent_and_listed_for_thread(bridge):
+    thread = mutation(bridge, "snapshot-thread", "create", data={"title": "Snapshot"})["thread"]
+    first = mutation(bridge, "snapshot-before-edit", "snapshot", thread, {"label": "Before edit"})
+    duplicate = mutation(bridge, "snapshot-before-edit", "snapshot", thread, {"label": "Before edit"})
+
+    assert first["snapshot_id"] == duplicate["snapshot_id"]
+    assert duplicate["duplicate"] is True
+    listed = bridge.call("list_snapshots", {"id": thread["id"]})["result"]
+    assert [item["id"] for item in listed] == [first["snapshot_id"]]
+
+
+def test_graph_snapshot_restore_is_idempotent(bridge):
+    thread = mutation(bridge, "restore-thread", "create", data={"title": "Graph restore"})["thread"]
+    project = bridge.svc.create_node(
+        "project", "Before", metadata={"thread_id": thread["id"]}
+    )
+    snapshot = mutation(bridge, "save-graph-snapshot", "snapshot", thread)
+    project.title = "After"
+    project.revision += 1
+    bridge.svc.store.save_node(project)
+    current = bridge.svc.get(thread["id"])
+
+    restored = mutation(
+        bridge,
+        "restore-graph-snapshot",
+        "restore_snapshot",
+        current.to_dict(),
+        {"snapshot_id": snapshot["snapshot_id"]},
+    )
+    duplicate = mutation(
+        bridge,
+        "restore-graph-snapshot",
+        "restore_snapshot",
+        current.to_dict(),
+        {"snapshot_id": snapshot["snapshot_id"]},
+    )
+
+    assert bridge.svc.get_node(project.id).title == "Before"
+    assert duplicate["duplicate"] is True
+    assert restored["snapshot_id"] == snapshot["snapshot_id"]
+
+
 def test_stale_legacy_edit_and_operation_collision(bridge):
     first = mutation(bridge, "first", "create", data={"title": "Synthetic"})["thread"]
     bridge.svc.rename(first["id"], "From existing UI/CLI")

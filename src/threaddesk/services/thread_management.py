@@ -17,8 +17,16 @@ FIELDS = {
     "add_file": {"path"}, "remove_file": {"path"},
     "organize": {"project_id", "parent_thread_id", "related_thread_ids"},
     "archive": set(), "unarchive": set(), "delete": set(), "switch": set(),
+    "snapshot": {"label"},
+    "restore_snapshot": {"snapshot_id"},
 }
-REQUIRED = {"create": {"title"}, "set_note": {"text"}, "add_file": {"path"}, "remove_file": {"path"}}
+REQUIRED = {
+    "create": {"title"},
+    "set_note": {"text"},
+    "add_file": {"path"},
+    "remove_file": {"path"},
+    "restore_snapshot": {"snapshot_id"},
+}
 ID = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 
 
@@ -63,6 +71,9 @@ def validate(arguments: dict[str, Any]) -> dict[str, Any]:
         elif key in {"project_id", "parent_thread_id"}:
             if value is not None and (not isinstance(value, str) or not ID.fullmatch(value)):
                 _invalid("Zuordnung benötigt eine exakte ID oder null.")
+        elif key == "snapshot_id":
+            if not isinstance(value, str) or not ID.fullmatch(value):
+                _invalid("snapshot_id benötigt eine exakte lokale Kennung.")
         elif not isinstance(value, str) or len(value) > (100000 if key == "text" else 10000):
             _invalid("Textfeld fehlt, hat den falschen Typ oder ist zu lang.")
     reject_secrets(json.dumps(data, ensure_ascii=False))
@@ -130,11 +141,21 @@ def manage(svc, arguments: dict[str, Any]) -> dict[str, Any]:
                 thread = svc.remove_file(data["path"], thread.id)
             elif action == "organize":
                 thread = _organize(svc, thread.id, data)
+            elif action == "snapshot":
+                snapshot = svc.snapshot(data.get("label", ""), thread.id)
+                thread = store.get_thread(thread.id)
+            elif action == "restore_snapshot":
+                snapshot = store.get_snapshot(data["snapshot_id"])
+                if snapshot.thread_id != thread.id:
+                    raise ManagementError("scope_conflict", "Snapshot gehört zu einem anderen Thread.")
+                thread = svc.restore(snapshot.id)
             elif action in {"archive", "unarchive", "switch"}:
                 thread = getattr(svc, action)(thread.id)
             elif action == "delete":
                 svc.delete(thread.id)
             result = {"operation_id": args["operation_id"], "action": action, "duplicate": False, "thread_id": thread.id, "revision": thread.revision, "deleted": action == "delete", "thread": None if action == "delete" else thread.to_dict()}
+            if action in {"snapshot", "restore_snapshot"}:
+                result["snapshot_id"] = snapshot.id
             store.save_management_operation(args["operation_id"], {"request_hash": digest, "recorded_at": now_iso(), "result": result})
             return result
     except ManagementError:

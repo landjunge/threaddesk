@@ -404,6 +404,11 @@ class JsonStore:
     def save_relation(self, relation: Relation) -> None:
         self._write_json(self.relations_dir / f"{relation.id}.json", relation.to_dict())
 
+    def delete_relation(self, relation_id: str) -> None:
+        if not relation_id or relation_id != Path(relation_id).name:
+            raise InvalidState("relation_id")
+        self._delete_path(self.relations_dir / f"{relation_id}.json")
+
     def list_relations(self) -> list[Relation]:
         relations = [
             Relation.from_dict(self._read_json(path))

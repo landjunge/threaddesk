@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import tempfile
 from typing import Optional
+from urllib.parse import urlencode
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
@@ -17,7 +18,12 @@ from jinja2 import pass_context
 from threaddesk.api.service import ThreadService
 from threaddesk.core.errors import InvalidState, NotFound, ThreadDeskError
 from threaddesk.services.actors import ActorRegistry
-from threaddesk.services.hausmeister import SURFACE_KINDS, Hausmeister, live_snapshot, note_activity
+from threaddesk.services.hausmeister import (
+    SURFACE_KINDS,
+    Hausmeister,
+    live_snapshot,
+    note_activity,
+)
 from threaddesk.services.room_sync import RoomBook
 from threaddesk.services.ollama_local import OllamaError
 from threaddesk.core import i18n
@@ -29,7 +35,15 @@ from threaddesk.core.models import (
     STATUSES,
     Thread,
 )
-from threaddesk.storage.portable_backup import base_root, selected_profile, download_backup, restore_backup, LIMIT, profiles, activate_profile
+from threaddesk.storage.portable_backup import (
+    base_root,
+    selected_profile,
+    download_backup,
+    restore_backup,
+    LIMIT,
+    profiles,
+    activate_profile,
+)
 from threaddesk.storage.workspace_backup import BackupError
 from threaddesk.storage.json_store import JsonStore
 from threaddesk.storage.sqlite_store import SQLiteStore
@@ -58,6 +72,77 @@ _BOARD_FIELDS = {
     "external_key",
     "created_at",
 }
+_IMAGE_PREVIEW_TYPES = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".avif": "image/avif",
+    ".bmp": "image/bmp",
+}
+_CODE_LANGUAGES = {
+    ".py": "python",
+    ".pyi": "python",
+    ".js": "javascript",
+    ".mjs": "javascript",
+    ".cjs": "javascript",
+    ".jsx": "jsx",
+    ".ts": "typescript",
+    ".tsx": "tsx",
+    ".html": "html",
+    ".htm": "html",
+    ".css": "css",
+    ".scss": "scss",
+    ".json": "json",
+    ".ipynb": "json",
+    ".xml": "xml",
+    ".svg": "xml",
+    ".md": "markdown",
+    ".markdown": "markdown",
+    ".rst": "rst",
+    ".txt": "text",
+    ".log": "text",
+    ".csv": "csv",
+    ".tsv": "text",
+    ".yaml": "yaml",
+    ".yml": "yaml",
+    ".toml": "toml",
+    ".ini": "ini",
+    ".cfg": "ini",
+    ".sh": "bash",
+    ".bash": "bash",
+    ".zsh": "bash",
+    ".sql": "sql",
+    ".java": "java",
+    ".kt": "kotlin",
+    ".go": "go",
+    ".rs": "rust",
+    ".c": "c",
+    ".h": "c",
+    ".cpp": "cpp",
+    ".hpp": "cpp",
+    ".swift": "swift",
+    ".rb": "ruby",
+    ".php": "php",
+    ".vue": "vue",
+    ".svelte": "svelte",
+}
+_TEXT_PREVIEW_LIMIT = 1_000_000
+_BINARY_PREVIEW_LIMIT = 12_000_000
+
+
+def _attached_file(svc: ThreadService, thread_id: str, reference: str) -> Path:
+    thread = svc.get(thread_id)
+    if not isinstance(reference, str) or reference not in thread.context.files:
+        raise HTTPException(status_code=404, detail="attached_file_not_found")
+    try:
+        path = Path(reference).expanduser().resolve(strict=True)
+        if not path.is_file():
+            raise HTTPException(status_code=404, detail="attached_file_not_found")
+        return path
+    except (OSError, RuntimeError, ValueError):
+        raise HTTPException(status_code=404, detail="attached_file_not_found") from None
 
 
 def _svc() -> ThreadService:
@@ -144,14 +229,20 @@ def _linked_nodes(svc: ThreadService, thread: Thread | None) -> list:
     if thread is None:
         return []
     return [
-        node for node in svc.list_nodes()
-        if isinstance(node.metadata, dict) and node.metadata.get("thread_id") == thread.id
+        node
+        for node in svc.list_nodes()
+        if isinstance(node.metadata, dict)
+        and node.metadata.get("thread_id") == thread.id
     ]
 
 
 def _return_review_states(svc, current, entries):
     """Project current-thread decision labels only; never render another return."""
-    refs = {entry.metadata.get("return_id") for entry in entries if isinstance(entry.metadata.get("return_id"), str)}
+    refs = {
+        entry.metadata.get("return_id")
+        for entry in entries
+        if isinstance(entry.metadata.get("return_id"), str)
+    }
     if current is None or not refs:
         return {}
     states = {}
@@ -162,7 +253,13 @@ def _return_review_states(svc, current, entries):
             continue
         decision = item.get("decision") or {}
         choice = decision.get("choice")
-        states[identity] = choice if choice in {"accepted", "rejected", "rework"} else "unverified" if not decision else "unknown"
+        states[identity] = (
+            choice
+            if choice in {"accepted", "rejected", "rework"}
+            else "unverified"
+            if not decision
+            else "unknown"
+        )
     return states
 
 
@@ -209,12 +306,16 @@ def _ctx(request: Request, extra: dict | None = None) -> dict:
 def create_app() -> FastAPI:
     app = FastAPI(title="ThreadDesk", docs_url=None, redoc_url=None)
     templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
     # Kein sichtbarer Text gehoert direkt ins Template — nur Schluessel.
     @pass_context
     def _t(context, key: str, **values: object) -> str:
-        return i18n.translate(key, context.get("lang") or i18n.DEFAULT_LANGUAGE,
-                              context.get("register") or i18n.DEFAULT_REGISTER,
-                              **values)
+        return i18n.translate(
+            key,
+            context.get("lang") or i18n.DEFAULT_LANGUAGE,
+            context.get("register") or i18n.DEFAULT_REGISTER,
+            **values,
+        )
 
     templates.env.globals["t"] = _t
     templates.env.globals["languages"] = i18n.LANGUAGES
@@ -256,10 +357,19 @@ def create_app() -> FastAPI:
 
     def data_page(request: Request, **extra) -> HTMLResponse:
         active, _ = selected_profile(base_root())
-        return templates.TemplateResponse(request, "data.html", _ctx(request, {
-            "restored_profile": active != base_root(), "profiles": profiles(base_root()),
-            "active_profile": active.name, **extra,
-        }))
+        return templates.TemplateResponse(
+            request,
+            "data.html",
+            _ctx(
+                request,
+                {
+                    "restored_profile": active != base_root(),
+                    "profiles": profiles(base_root()),
+                    "active_profile": active.name,
+                    **extra,
+                },
+            ),
+        )
 
     @app.get("/data", response_class=HTMLResponse)
     def data_view(request: Request) -> HTMLResponse:
@@ -270,12 +380,18 @@ def create_app() -> FastAPI:
         store = _svc().store
         try:
             body = download_backup(store)
-            return Response(body, media_type="application/zip", headers={
-                "Content-Disposition": 'attachment;filename="ThreadDesk-backup.zip"',
-                "Cache-Control": "no-store",
-            })
+            return Response(
+                body,
+                media_type="application/zip",
+                headers={
+                    "Content-Disposition": 'attachment;filename="ThreadDesk-backup.zip"',
+                    "Cache-Control": "no-store",
+                },
+            )
         except BackupError:
-            response = data_page(request, error=i18n.translate("data.backup_error", _language(request)))
+            response = data_page(
+                request, error=i18n.translate("data.backup_error", _language(request))
+            )
             response.status_code = 400
             return response
         finally:
@@ -283,8 +399,9 @@ def create_app() -> FastAPI:
                 store.connection.close()
 
     @app.post("/data/restore", response_class=HTMLResponse)
-    async def data_restore(request: Request, backup: UploadFile = File(...),
-                           confirm: str = Form("")) -> Response:
+    async def data_restore(
+        request: Request, backup: UploadFile = File(...), confirm: str = Form("")
+    ) -> Response:
         try:
             if confirm != "yes":
                 raise BackupError("backup_confirmation")
@@ -292,7 +409,9 @@ def create_app() -> FastAPI:
             restore_backup(body, base_root())
             return RedirectResponse("/?restored=1", status_code=303)
         except BackupError:
-            response = data_page(request, error=i18n.translate("data.restore_error", _language(request)))
+            response = data_page(
+                request, error=i18n.translate("data.restore_error", _language(request))
+            )
             response.status_code = 400
             return response
         finally:
@@ -304,7 +423,9 @@ def create_app() -> FastAPI:
             activate_profile(base_root(), name)
             return RedirectResponse("/", status_code=303)
         except BackupError:
-            response = data_page(request, error=i18n.translate("data.restore_error", _language(request)))
+            response = data_page(
+                request, error=i18n.translate("data.restore_error", _language(request))
+            )
             response.status_code = 400
             return response
 
@@ -319,8 +440,10 @@ def create_app() -> FastAPI:
         target = request.headers.get("referer") or "/"
         response = RedirectResponse(target, status_code=303)
         response.set_cookie(
-            LANGUAGE_COOKIE, i18n.normalise(code),
-            max_age=60 * 60 * 24 * 365, samesite="lax",
+            LANGUAGE_COOKIE,
+            i18n.normalise(code),
+            max_age=60 * 60 * 24 * 365,
+            samesite="lax",
         )
         return response
 
@@ -330,8 +453,10 @@ def create_app() -> FastAPI:
         target = request.headers.get("referer") or "/"
         response = RedirectResponse(target, status_code=303)
         response.set_cookie(
-            REGISTER_COOKIE, i18n.normalise_register(value),
-            max_age=60 * 60 * 24 * 365, samesite="lax",
+            REGISTER_COOKIE,
+            i18n.normalise_register(value),
+            max_age=60 * 60 * 24 * 365,
+            samesite="lax",
         )
         return response
 
@@ -374,25 +499,37 @@ def create_app() -> FastAPI:
     def map_view(request: Request) -> HTMLResponse:
         lang = _language(request)
         register = _register(request)
-        return templates.TemplateResponse(request, "map.html", {
-            "request": request,
-            "lang": lang,
-            "register": register,
-            "browser_strings": _browser_strings(lang, register),
-            "map_strings": json.dumps(
-                i18n.catalog_for(lang, register), ensure_ascii=False),
-            "actor_marks_json": json.dumps(
-                ActorRegistry(_svc().store).marks(), ensure_ascii=False),
-        })
+        return templates.TemplateResponse(
+            request,
+            "map.html",
+            {
+                "request": request,
+                "lang": lang,
+                "register": register,
+                "browser_strings": _browser_strings(lang, register),
+                "map_strings": json.dumps(
+                    i18n.catalog_for(lang, register), ensure_ascii=False
+                ),
+                "actor_marks_json": json.dumps(
+                    ActorRegistry(_svc().store).marks(), ensure_ascii=False
+                ),
+            },
+        )
 
     @app.get("/migration", response_class=HTMLResponse)
     def migration(request: Request) -> HTMLResponse:
         lang = _language(request)
         register = _register(request)
-        return templates.TemplateResponse(request, "migration.html", {
-            "request": request, "lang": lang, "register": register,
-            "browser_strings": _browser_strings(lang, register),
-        })
+        return templates.TemplateResponse(
+            request,
+            "migration.html",
+            {
+                "request": request,
+                "lang": lang,
+                "register": register,
+                "browser_strings": _browser_strings(lang, register),
+            },
+        )
 
     @app.post("/api/migration/dry-run", response_class=JSONResponse)
     async def migration_dry_run(bundle: UploadFile = File(...)) -> dict:
@@ -406,15 +543,22 @@ def create_app() -> FastAPI:
                 while chunk := await bundle.read(1024 * 1024):
                     size += len(chunk)
                     if size > 128 * 1024 * 1024:
-                        raise HTTPException(status_code=413, detail="bundle_upload_size")
+                        raise HTTPException(
+                            status_code=413, detail="bundle_upload_size"
+                        )
                     output.write(chunk)
             try:
                 store = _svc().store
                 if isinstance(store, SQLiteStore):
                     return MigrationReviewService(store).stage(path)
                 result = MigrationPreviewService(store).inspect(path)
-                return {**result, "can_confirm_import": False,
-                    "blockers": sorted(set(result["blockers"]) | {"sqlite_storage_not_active"})}
+                return {
+                    **result,
+                    "can_confirm_import": False,
+                    "blockers": sorted(
+                        set(result["blockers"]) | {"sqlite_storage_not_active"}
+                    ),
+                }
             except BundleValidationError as exc:
                 raise HTTPException(status_code=400, detail=exc.code) from exc
             finally:
@@ -440,11 +584,18 @@ def create_app() -> FastAPI:
         except json.JSONDecodeError as exc:
             raise HTTPException(status_code=400, detail="resolution_format") from exc
         except (BundleValidationError, ImportBlocked, ValueError) as exc:
-            raise HTTPException(status_code=400, detail=str(exc).split(":", 1)[0]) from exc
+            raise HTTPException(
+                status_code=400, detail=str(exc).split(":", 1)[0]
+            ) from exc
         except ImportOutcomeUncertain as exc:
-            return JSONResponse(status_code=202, content={"status": "uncertain", "batch_id": exc.batch_id})
+            return JSONResponse(
+                status_code=202,
+                content={"status": "uncertain", "batch_id": exc.batch_id},
+            )
         except AtomicImportError as exc:
-            raise HTTPException(status_code=400, detail=str(exc).split(":", 1)[0]) from exc
+            raise HTTPException(
+                status_code=400, detail=str(exc).split(":", 1)[0]
+            ) from exc
 
     @app.post("/api/migration/recover", response_class=JSONResponse)
     async def migration_recover(batch_id: str = Form(...)) -> dict:
@@ -456,7 +607,9 @@ def create_app() -> FastAPI:
             path = MigrationReviewService(store).recover(batch_id)
             return {"status": "recovered_copy", "batch_id": batch_id, "path": str(path)}
         except AtomicImportError as exc:
-            raise HTTPException(status_code=400, detail=str(exc).split(":", 1)[0]) from exc
+            raise HTTPException(
+                status_code=400, detail=str(exc).split(":", 1)[0]
+            ) from exc
 
     @app.get("/knowledge", response_class=HTMLResponse)
     def knowledge(
@@ -468,9 +621,7 @@ def create_app() -> FastAPI:
         nodes = [node for node in svc.list_nodes() if node.id in node_ids]
         relation_ids = {relation["id"] for relation in graph_data["relations"]}
         relations = [
-            relation
-            for relation in svc.list_relations()
-            if relation.id in relation_ids
+            relation for relation in svc.list_relations() if relation.id in relation_ids
         ]
         lang = _language(request)
         register = _register(request)
@@ -495,6 +646,82 @@ def create_app() -> FastAPI:
             },
         )
 
+    @app.get("/tasks", response_class=HTMLResponse)
+    def tasks_view(
+        request: Request,
+        status: Optional[str] = None,
+        thread_id: Optional[str] = None,
+    ) -> HTMLResponse:
+        svc = _svc()
+        if status and status not in NODE_STATUSES:
+            raise HTTPException(status_code=400, detail="invalid_task_status")
+        threads = svc.list(include_archived=False)
+        thread_ids = {thread.id for thread in threads}
+        if thread_id and thread_id not in thread_ids:
+            raise HTTPException(status_code=400, detail="invalid_thread_id")
+        tasks = [
+            node
+            for node in svc.list_nodes()
+            if node.kind == "task"
+            and node.status != "archived"
+            and (status is None or node.status == status)
+            and (thread_id is None or node.metadata.get("thread_id") == thread_id)
+        ]
+        tasks.sort(key=lambda node: (node.updated_at, node.id), reverse=True)
+        lang = _language(request)
+        register = _register(request)
+        return templates.TemplateResponse(
+            request,
+            "tasks.html",
+            {
+                "request": request,
+                "lang": lang,
+                "register": register,
+                "browser_strings": _browser_strings(lang, register),
+                "tasks": tasks,
+                "threads": threads,
+                "current": svc.current(),
+                "thread_titles": {thread.id: thread.title for thread in threads},
+                "transitions_by_task": {
+                    task.id: svc.allowed_node_transitions(task.id) for task in tasks
+                },
+                "task_statuses": NODE_STATUSES,
+                "active_status": status or "",
+                "active_thread": thread_id or "",
+            },
+        )
+
+    @app.post("/tasks", response_class=RedirectResponse)
+    def create_task(
+        title: str = Form(...),
+        details: str = Form(""),
+        thread_id: str = Form(...),
+    ) -> RedirectResponse:
+        svc = _svc()
+        thread = svc.get(thread_id)
+        metadata = {"thread_id": thread.id}
+        svc.create_node(
+            "task",
+            title,
+            status="ready",
+            details=details,
+            source="ThreadDesk-Aufgabenmodul",
+            metadata=metadata,
+        )
+        return RedirectResponse("/tasks", status_code=303)
+
+    @app.post("/tasks/{node_id}/transition", response_class=RedirectResponse)
+    def transition_task(
+        node_id: str,
+        status: str = Form(...),
+        expected_revision: int = Form(...),
+    ) -> RedirectResponse:
+        node = _svc().get_node(node_id)
+        if node.kind != "task":
+            raise HTTPException(status_code=404, detail="task_not_found")
+        _svc().transition_node(node_id, status, expected_revision=expected_revision)
+        return RedirectResponse("/tasks", status_code=303)
+
     @app.post("/knowledge/nodes", response_class=RedirectResponse)
     def create_knowledge_node(
         kind: str = Form(...),
@@ -514,17 +741,13 @@ def create_app() -> FastAPI:
         _svc().connect(source_id, target_id, kind)
         return RedirectResponse("/knowledge", status_code=303)
 
-    @app.post(
-        "/knowledge/nodes/{node_id}/transition", response_class=RedirectResponse
-    )
+    @app.post("/knowledge/nodes/{node_id}/transition", response_class=RedirectResponse)
     def transition_knowledge_node(
         node_id: str,
         status: str = Form(...),
         expected_revision: int = Form(...),
     ) -> RedirectResponse:
-        _svc().transition_node(
-            node_id, status, expected_revision=expected_revision
-        )
+        _svc().transition_node(node_id, status, expected_revision=expected_revision)
         return RedirectResponse("/knowledge", status_code=303)
 
     @app.get("/partials/threads", response_class=HTMLResponse)
@@ -550,7 +773,14 @@ def create_app() -> FastAPI:
         description: str = Form(""),
     ) -> HTMLResponse:
         thread = _svc().create(title, description)
-        return workspace(request, {"notice": i18n.translate("ui.created", _language(request), title=thread.title)})
+        return workspace(
+            request,
+            {
+                "notice": i18n.translate(
+                    "ui.created", _language(request), title=thread.title
+                )
+            },
+        )
 
     @app.post("/threads/{thread_id}/switch", response_class=HTMLResponse)
     def switch_thread(thread_id: str, request: Request) -> HTMLResponse:
@@ -565,7 +795,9 @@ def create_app() -> FastAPI:
         append: str = Form(""),
     ) -> HTMLResponse:
         _svc().set_note(text, thread_id, append=bool(append))
-        return workspace(request, {"notice": i18n.translate("ui.note_saved", _language(request))})
+        return workspace(
+            request, {"notice": i18n.translate("ui.note_saved", _language(request))}
+        )
 
     @app.post("/threads/{thread_id}/whiteboard", response_class=HTMLResponse)
     def append_whiteboard_form(
@@ -641,13 +873,22 @@ def create_app() -> FastAPI:
                 result = home.enqueue(thread_id, order)
                 if not result["ok"]:
                     return _hausmeister_notice(request, result["error"])
-                return workspace(request, {"notice": i18n.translate("hausmeister.queued", _language(request))})
+                return workspace(
+                    request,
+                    {
+                        "notice": i18n.translate(
+                            "hausmeister.queued", _language(request)
+                        )
+                    },
+                )
             result = home.run_now(thread_id, order)
         except ThreadDeskError as exc:
             return _hausmeister_notice(request, str(exc))
         if not result["ok"]:
             return _hausmeister_notice(request, result["error"])
-        return workspace(request, {"notice": i18n.translate("hausmeister.done", _language(request))})
+        return workspace(
+            request, {"notice": i18n.translate("hausmeister.done", _language(request))}
+        )
 
     @app.post("/hausmeister/activity")
     async def hausmeister_activity(request: Request) -> JSONResponse:
@@ -666,10 +907,14 @@ def create_app() -> FastAPI:
         return JSONResponse({"ok": True, "recorded": recorded})
 
     def _room_page(request: Request, key: str, **values: object) -> HTMLResponse:
-        return workspace(request, {"notice": i18n.translate(key, _language(request), **values)})
+        return workspace(
+            request, {"notice": i18n.translate(key, _language(request), **values)}
+        )
 
     def _room_error(request: Request) -> HTMLResponse:
-        page = workspace(request, {"error": i18n.translate("room.failed", _language(request))})
+        page = workspace(
+            request, {"error": i18n.translate("room.failed", _language(request))}
+        )
         page.status_code = 400
         return page
 
@@ -777,7 +1022,10 @@ def create_app() -> FastAPI:
         text: str = Form(""),
     ) -> HTMLResponse:
         _svc().set_description(text, thread_id)
-        return workspace(request, {"notice": i18n.translate("ui.description_saved", _language(request))})
+        return workspace(
+            request,
+            {"notice": i18n.translate("ui.description_saved", _language(request))},
+        )
 
     @app.post("/threads/{thread_id}/status", response_class=HTMLResponse)
     def set_status(
@@ -786,7 +1034,14 @@ def create_app() -> FastAPI:
         status: str = Form(...),
     ) -> HTMLResponse:
         thread = _svc().set_status(status, thread_id)
-        return workspace(request, {"notice": i18n.translate("ui.status_saved", _language(request), status=thread.status)})
+        return workspace(
+            request,
+            {
+                "notice": i18n.translate(
+                    "ui.status_saved", _language(request), status=thread.status
+                )
+            },
+        )
 
     @app.post("/threads/{thread_id}/snapshot", response_class=HTMLResponse)
     def save_snapshot(
@@ -795,7 +1050,14 @@ def create_app() -> FastAPI:
         label: str = Form(""),
     ) -> HTMLResponse:
         snap = _svc().snapshot(label, thread_id)
-        return workspace(request, {"notice": i18n.translate("ui.snapshot_saved", _language(request), id=snap.id)})
+        return workspace(
+            request,
+            {
+                "notice": i18n.translate(
+                    "ui.snapshot_saved", _language(request), id=snap.id
+                )
+            },
+        )
 
     @app.post("/threads/{thread_id}/rename", response_class=HTMLResponse)
     def rename_thread(
@@ -804,7 +1066,14 @@ def create_app() -> FastAPI:
         title: str = Form(...),
     ) -> HTMLResponse:
         thread = _svc().rename(thread_id, title)
-        return workspace(request, {"notice": i18n.translate("ui.renamed", _language(request), title=thread.title)})
+        return workspace(
+            request,
+            {
+                "notice": i18n.translate(
+                    "ui.renamed", _language(request), title=thread.title
+                )
+            },
+        )
 
     @app.post("/threads/{thread_id}/files", response_class=HTMLResponse)
     def add_file(
@@ -813,7 +1082,14 @@ def create_app() -> FastAPI:
         path: str = Form(...),
     ) -> HTMLResponse:
         _svc().add_file(path, thread_id)
-        return workspace(request, {"notice": i18n.translate("ui.file_added", _language(request), path=path.strip())})
+        return workspace(
+            request,
+            {
+                "notice": i18n.translate(
+                    "ui.file_added", _language(request), path=path.strip()
+                )
+            },
+        )
 
     @app.post("/threads/{thread_id}/files/remove", response_class=HTMLResponse)
     def remove_file(
@@ -822,7 +1098,99 @@ def create_app() -> FastAPI:
         path: str = Form(...),
     ) -> HTMLResponse:
         _svc().remove_file(path, thread_id)
-        return workspace(request, {"notice": i18n.translate("ui.file_removed", _language(request))})
+        return workspace(
+            request, {"notice": i18n.translate("ui.file_removed", _language(request))}
+        )
+
+    @app.get("/threads/{thread_id}/files/preview", response_class=JSONResponse)
+    def preview_file(thread_id: str, request: Request, path: str) -> JSONResponse:
+        file_path = _attached_file(_svc(), thread_id, path)
+        suffix = file_path.suffix.lower()
+        try:
+            size = file_path.stat().st_size
+        except OSError:
+            raise HTTPException(
+                status_code=404, detail="attached_file_not_found"
+            ) from None
+        if suffix in _IMAGE_PREVIEW_TYPES or suffix == ".pdf":
+            if size > _BINARY_PREVIEW_LIMIT:
+                raise HTTPException(status_code=413, detail="preview_file_too_large")
+            content_url = (
+                f"/threads/{thread_id}/files/content?{urlencode({'path': path})}"
+            )
+            return JSONResponse(
+                {
+                    "kind": "image" if suffix in _IMAGE_PREVIEW_TYPES else "pdf",
+                    "name": file_path.name,
+                    "content_url": content_url,
+                },
+                headers={"Cache-Control": "no-store"},
+            )
+        if size > _TEXT_PREVIEW_LIMIT:
+            return JSONResponse(
+                {
+                    "kind": "unsupported",
+                    "name": file_path.name,
+                    "message": i18n.translate(
+                        "files.preview_unsupported", _language(request)
+                    ),
+                }
+            )
+        try:
+            with file_path.open("rb") as handle:
+                content = handle.read(_TEXT_PREVIEW_LIMIT + 1)
+            if len(content) > _TEXT_PREVIEW_LIMIT:
+                raise HTTPException(status_code=413, detail="preview_file_too_large")
+            source = content.decode("utf-8")
+        except UnicodeDecodeError:
+            return JSONResponse({"kind": "unsupported", "name": file_path.name})
+        except OSError:
+            raise HTTPException(
+                status_code=404, detail="attached_file_not_found"
+            ) from None
+        language = _CODE_LANGUAGES.get(suffix)
+        if language is None:
+            return JSONResponse({"kind": "unsupported", "name": file_path.name})
+        return JSONResponse(
+            {
+                "kind": "html" if suffix in {".html", ".htm"} else "code",
+                "name": file_path.name,
+                "language": language,
+                "source": source,
+            },
+            headers={"Cache-Control": "no-store"},
+        )
+
+    @app.get("/threads/{thread_id}/files/content")
+    def preview_file_content(thread_id: str, path: str) -> Response:
+        file_path = _attached_file(_svc(), thread_id, path)
+        suffix = file_path.suffix.lower()
+        content_type = _IMAGE_PREVIEW_TYPES.get(
+            suffix, "application/pdf" if suffix == ".pdf" else None
+        )
+        if content_type is None:
+            raise HTTPException(status_code=415, detail="preview_type_not_supported")
+        try:
+            with file_path.open("rb") as handle:
+                content = handle.read(_BINARY_PREVIEW_LIMIT + 1)
+        except OSError:
+            raise HTTPException(
+                status_code=404, detail="attached_file_not_found"
+            ) from None
+        if len(content) > _BINARY_PREVIEW_LIMIT:
+            raise HTTPException(status_code=413, detail="preview_file_too_large")
+        return Response(
+            content,
+            media_type=content_type,
+            headers={
+                "Cache-Control": "no-store",
+                "X-Content-Type-Options": "nosniff",
+                "Content-Security-Policy": " ".join(
+                    ("default-src", "'none';", "sandbox")
+                ),
+                "Content-Disposition": "inline",
+            },
+        )
 
     @app.post("/threads/{thread_id}/prompt", response_class=HTMLResponse)
     def preview_prompt(
@@ -841,14 +1209,24 @@ def create_app() -> FastAPI:
     @app.post("/threads/{thread_id}/archive", response_class=HTMLResponse)
     def archive_thread(thread_id: str, request: Request) -> HTMLResponse:
         thread = _svc().archive(thread_id)
-        return workspace(request, {"notice": i18n.translate("ui.archived", _language(request), title=thread.title)})
+        return workspace(
+            request,
+            {
+                "notice": i18n.translate(
+                    "ui.archived", _language(request), title=thread.title
+                )
+            },
+        )
 
     @app.post("/threads/{thread_id}/handoff", response_class=HTMLResponse)
     def write_handoff(thread_id: str, request: Request) -> HTMLResponse:
         payload = _svc().handoff(thread_id)
         return workspace(
             request,
-            {"notice": i18n.translate("ui.handoff_written", _language(request)), "packet": payload},
+            {
+                "notice": i18n.translate("ui.handoff_written", _language(request)),
+                "packet": payload,
+            },
         )
 
     @app.post("/threads/{thread_id}/gnom", response_class=HTMLResponse)
@@ -856,7 +1234,10 @@ def create_app() -> FastAPI:
         packet = _svc().gnom("brainstorm", "detailed", thread_id)
         return workspace(
             request,
-            {"notice": i18n.translate("ui.gnom_written", _language(request)), "packet": packet},
+            {
+                "notice": i18n.translate("ui.gnom_written", _language(request)),
+                "packet": packet,
+            },
         )
 
     @app.post("/threads/{thread_id}/grok", response_class=HTMLResponse)
@@ -864,13 +1245,25 @@ def create_app() -> FastAPI:
         packet = _svc().grok("brainstorm", "detailed", thread_id)
         return workspace(
             request,
-            {"notice": i18n.translate("ui.grok_written", _language(request)), "packet": packet},
+            {
+                "notice": i18n.translate("ui.grok_written", _language(request)),
+                "packet": packet,
+            },
         )
 
     @app.post("/snapshots/{snap_id}/restore", response_class=HTMLResponse)
     def restore_snapshot(snap_id: str, request: Request) -> HTMLResponse:
         thread = _svc().restore(snap_id)
-        return workspace(request, {"notice": i18n.translate("ui.snapshot_loaded", _language(request), id=thread.current_snapshot_id)})
+        return workspace(
+            request,
+            {
+                "notice": i18n.translate(
+                    "ui.snapshot_loaded",
+                    _language(request),
+                    id=thread.current_snapshot_id,
+                )
+            },
+        )
 
     @app.post("/gate/freeze", response_class=HTMLResponse)
     def freeze_gate(request: Request, frozen: str = Form(...)) -> HTMLResponse:

@@ -8,7 +8,7 @@ from pathlib import Path
 import sqlite3
 from typing import Any, Iterator, Mapping
 
-from threaddesk.core.errors import InvalidState, ManagementError, NotFound
+from threaddesk.core.errors import ManagementError, NotFound
 from threaddesk.core.models import (
     GraphEvent,
     KnowledgeNode,
@@ -248,6 +248,10 @@ class SQLiteStore:
             "INSERT OR REPLACE INTO relations(id,source_id,target_id,kind,created_at,payload) VALUES (?,?,?,?,?,?)",
             (relation.id, relation.source_id, relation.target_id, relation.kind, relation.created_at, self._dump(relation.to_dict())),
         )
+        self._commit()
+
+    def delete_relation(self, relation_id: str) -> None:
+        self.connection.execute("DELETE FROM relations WHERE id = ?", (relation_id,))
         self._commit()
 
     def list_relations(self) -> list[Relation]:

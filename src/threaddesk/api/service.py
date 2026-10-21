@@ -415,12 +415,26 @@ class ThreadService:
         thread = self.get(key) if key else self.current()
         if thread is None:
             raise InvalidState("Kein aktiver Thread.")
+        knowledge_nodes = [
+            node
+            for node in self.store.list_nodes()
+            if node.metadata.get("thread_id") == thread.id
+        ]
+        knowledge_node_ids = {node.id for node in knowledge_nodes}
+        knowledge_relations = [
+            relation
+            for relation in self.store.list_relations()
+            if relation.source_id in knowledge_node_ids
+            and relation.target_id in knowledge_node_ids
+        ]
         snap = Snapshot(
             id=new_id(),
             thread_id=thread.id,
             created_at=now_iso(),
             label=label.strip(),
             context=ThreadContext.from_dict(thread.context.to_dict()),
+            knowledge_nodes=[node.to_dict() for node in knowledge_nodes],
+            knowledge_relations=[relation.to_dict() for relation in knowledge_relations],
         )
         self.store.save_snapshot(snap)
         thread.current_snapshot_id = snap.id
@@ -729,6 +743,7 @@ class ThreadService:
     def restore(self, snap_id: str) -> Thread:
         snap = self.store.get_snapshot(snap_id)
         thread = self.store.get_thread(snap.thread_id)
+        self._restore_snapshot_graph(snap)
         thread.context = ThreadContext.from_dict(snap.context.to_dict())
         thread.current_snapshot_id = snap.id
         thread.updated_at = now_iso()
@@ -737,6 +752,90 @@ class ThreadService:
         self.bus.emit("snapshot.loaded", {"id": snap.id, "thread_id": thread.id})
         self.bus.emit("thread.switched", {"id": thread.id})
         return thread
+
+    def _restore_snapshot_graph(self, snap: Snapshot) -> None:
+        """Restore a thread's graph while retaining post-snapshot nodes in trash."""
+        saved_nodes = [KnowledgeNode.from_dict(item) for item in snap.knowledge_nodes]
+        if any(node.metadata.get("thread_id") != snap.thread_id for node in saved_nodes):
+            raise InvalidState("snapshot_graph_scope")
+        saved_by_id = {node.id: node for node in saved_nodes}
+        saved_ids = set(saved_by_id)
+        all_nodes = {node.id: node for node in self.store.list_nodes()}
+        current_nodes = {
+            node.id: node
+            for node in all_nodes.values()
+            if node.metadata.get("thread_id") == snap.thread_id
+        }
+        current_ids = set(current_nodes)
+        scope_ids = current_ids | saved_ids
+        current_relations = [
+            relation
+            for relation in self.store.list_relations()
+            if relation.source_id in scope_ids and relation.target_id in scope_ids
+        ]
+        current_relation_ids = {relation.id for relation in current_relations}
+
+        for node_id in current_ids - saved_ids:
+            node = current_nodes[node_id]
+            preserved = [
+                relation.to_dict()
+                for relation in current_relations
+                if node_id in (relation.source_id, relation.target_id)
+            ]
+            previous = node.metadata.get("snapshot_archived_relations", [])
+            by_id = {
+                item["id"]: item
+                for item in [*previous, *preserved]
+                if isinstance(item, dict) and isinstance(item.get("id"), str)
+            }
+            node.metadata["snapshot_archived_relations"] = list(by_id.values())
+            if node.status != "archived":
+                node.metadata["archived_from"] = node.status
+                node.status = "archived"
+            node.metadata["snapshot_restore_id"] = snap.id
+            node.revision += 1
+            node.updated_at = now_iso()
+            self.store.save_node(node)
+            self._record_graph_event(
+                "knowledge.snapshot_archived", node.id, node.kind, node.revision
+            )
+
+        for relation in current_relations:
+            self.store.delete_relation(relation.id)
+            self._record_graph_event(
+                "relation.snapshot_removed",
+                relation.id,
+                "relation",
+                relation.revision + 1,
+            )
+
+        for node_id, saved in saved_by_id.items():
+            current = all_nodes.get(node_id)
+            if current and current.metadata.get("thread_id") != snap.thread_id:
+                raise InvalidState("snapshot_graph_scope")
+            restored = KnowledgeNode.from_dict(saved.to_dict())
+            restored.revision = (current.revision if current else saved.revision) + 1
+            restored.updated_at = now_iso()
+            self.store.save_node(restored)
+            self._record_graph_event(
+                "knowledge.snapshot_restored",
+                restored.id,
+                restored.kind,
+                restored.revision,
+            )
+
+        saved_relations = [Relation.from_dict(item) for item in snap.knowledge_relations]
+        for relation in saved_relations:
+            if relation.source_id not in saved_ids or relation.target_id not in saved_ids:
+                raise InvalidState("snapshot_graph_relation_scope")
+            relation.revision += 1 if relation.id in current_relation_ids else 0
+            self.store.save_relation(relation)
+            self._record_graph_event(
+                "relation.snapshot_restored",
+                relation.id,
+                "relation",
+                relation.revision,
+            )
 
     def _resolve(self, key: str) -> str:
         key = (key or "").strip()
