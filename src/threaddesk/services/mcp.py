@@ -242,6 +242,29 @@ TOOLS = [
 ]
 
 
+# Explicit, source-owned capability metadata. Unannotated future tools remain
+# unexposed by dynamic read proxies until their actual effects are reviewed.
+_READ_ONLY_TOOLS = frozenset({
+    "get_reentry",
+    "get_issued_handoff",
+    "thread_operation_status",
+    "list_threads",
+    "get_thread",
+    "current_thread",
+    "list_snapshots",
+    "list_gnom_jobs",
+    "check_gate",
+})
+for _tool in TOOLS:
+    if _tool["name"] in _READ_ONLY_TOOLS:
+        _tool["annotations"] = {
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "openWorldHint": False,
+        }
+
+
+
 def wrap_untrusted(label: str, text: str) -> str:
     body = (text or "").replace("</untrusted>", "</ untrusted>")
     return f"<untrusted source=\"threaddesk.{label}\">\n{body}\n</untrusted>"
