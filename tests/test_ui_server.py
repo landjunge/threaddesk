@@ -26,6 +26,7 @@ def test_index_lists_threads(home: Path) -> None:
     res = client.get("/")
     assert res.status_code == 200
     assert "ThreadDesk" in res.text
+    assert 'src="/static/brand-mark.svg"' in res.text
     assert "Gnom-Hub Switcher" in res.text
     assert "erster Gedanke" in res.text
 

@@ -90,8 +90,8 @@ button:not(:disabled),
 }
 
 .brand-mark {
-  width: var(--control-sm);
-  height: var(--control-sm);
+  width: 48px;
+  height: 48px;
   display: block;
   flex-shrink: 0;
 }
