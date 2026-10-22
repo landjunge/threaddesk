@@ -57,7 +57,8 @@ def running_server(listener):
     thread.start()
     url = f"http://127.0.0.1:{port}"
     try:
-        wait_until_ready(url + "/", thread=thread)
+        # Readiness must not render a potentially large workspace home page.
+        wait_until_ready(url + "/static/style.css", thread=thread)
         yield url
     finally:
         server.should_exit = True
