@@ -37,10 +37,15 @@ jobs:
       - name: Build Linux image; verify TLS, replicas, restart and complete restore
         shell: bash
         run: python packaging/server/check_acceptance.py 2>&1 | tee server-sync-acceptance.log
+      - name: Shipping Caddy route limits, verified TLS and real large requests
+        shell: bash
+        run: python packaging/server/check_proxy_acceptance.py --skip-build 2>&1 | tee server-sync-proxy-acceptance.log
       - name: Acceptance evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: server-sync-linux-tls-restore
-          path: server-sync-acceptance.log
+          path: |
+            server-sync-acceptance.log
+            server-sync-proxy-acceptance.log
           if-no-files-found: error

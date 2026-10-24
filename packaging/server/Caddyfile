@@ -1,9 +1,31 @@
 {$THREADDESK_DOMAIN} {
     encode zstd gzip
-    request_body {
-        max_size 2MB
+    @manifest {
+        method POST
+        path /api/projects/*/manifest
     }
-    reverse_proxy app:8766
+    @metadata {
+        method POST
+        path /api/projects/*/metadata/*
+    }
+    handle @manifest {
+        request_body {
+            max_size 96MiB
+        }
+        reverse_proxy app:8766
+    }
+    handle @metadata {
+        request_body {
+            max_size 4MiB
+        }
+        reverse_proxy app:8766
+    }
+    handle {
+        request_body {
+            max_size 512KiB
+        }
+        reverse_proxy app:8766
+    }
     header {
         Strict-Transport-Security "max-age=31536000"
         X-Content-Type-Options nosniff

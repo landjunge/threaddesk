@@ -14,6 +14,7 @@ from fastapi import HTTPException, Request
 
 from threaddesk.core.errors import InvalidState
 from threaddesk.server_sync.store import SyncError, _id
+from threaddesk.server_sync.identity import recover_binding_device_id, recover_binding_bases
 
 _BOOK_LOCK = threading.RLock()
 _RUN_LOCKS = {}
@@ -137,10 +138,24 @@ class BindingBook:
                 raise InvalidState('Invalid access token')
             if project_id:
                 _id(project_id)
+            if not project_id and old.get('url') == origin and old.get('token') == token:
+                binding_id = hashlib.sha256((str(self.workspace)+'\0'+thread_id).encode()).hexdigest()
+                auto_pid = hashlib.sha256(binding_id.encode()).hexdigest()[:24]
+                if old.get('project_id') == auto_pid:
+                    # Replaying the original automatic configure form is the
+                    # same binding, even after its server ID was filled in.
+                    project_id = auto_pid
+            same_binding = (old.get('url') == origin and old.get('project_id') == project_id
+                            and old.get('token') == token)
+            device_id = recover_binding_device_id(self.root, thread_id, old if same_binding else {})
+            initial_bases = old.get('initial_bases', []) if same_binding else []
+            if same_binding and old.get('root') != str(selected):
+                initial_bases = recover_binding_bases(self.root, thread_id, old) or initial_bases
             config = {'config_id':secrets.token_hex(16), 'thread_id':thread_id,
                       'url':origin, 'project_id':project_id, 'root':str(selected),
                       'token':token, 'approved_roots':approved, 'automatic':bool(automatic),
                       'owner_references':list(dict.fromkeys(owner_references)),
+                      'device_id':device_id, 'initial_bases':initial_bases,
                       'offline_enabled':bool(offline_enabled), 'offline_pending':True}
             _write(self.root / (thread_id+'.json'), config)
             return config
@@ -236,6 +251,9 @@ class DesktopSyncManager:
             return {'state':'syncing'}
         replica = client = None
         try:
+            if not config.get('device_id'):
+                config['device_id'] = recover_binding_device_id(book.root, thread_id, config)
+                book.update(thread_id, {'device_id':config['device_id']}, config_id=config['config_id'])
             book.record(thread_id,config['config_id'],{'state':'syncing'})
             # Owner grants are separate from the mutable replicated context.
             references = list(config.get('owner_references',[]))
@@ -266,9 +284,10 @@ class DesktopSyncManager:
                 client = SyncClient(config['url'],config['token'],pid,Path(config['root']),state_dir=file_state,
                                     transport=http,allow_insecure_loopback=os.environ.get('THREADDESK_SYNC_ALLOW_HTTP')=='1',
                                     metadata_replica=replica,local_references=references,approved_roots=config['approved_roots'],
-                                    required_references=requirements)
+                                    required_references=requirements,device_id=config['device_id'],
+                                    initial_bases=config.get('initial_bases',[]))
                 result = client.sync_once()
-                book.update(thread_id, {'bootstrap_document':None}, config_id=config['config_id'])
+                book.update(thread_id, {'bootstrap_document':None,'initial_bases':[]}, config_id=config['config_id'])
                 book.update(thread_id, {'offline_enabled':result['offline_enabled']}, config_id=config['config_id'])
                 book.record(thread_id,config['config_id'],result)
                 return result

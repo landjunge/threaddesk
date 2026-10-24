@@ -1,5 +1,5 @@
 {
-  "source_content_sha256": "81820eb1a6e1e2cd725f0a6692bd796b8353d1c070789e0e0d48cb854aea4da9",
+  "source_content_sha256": "0f007a555b6504f22faa986db86fc748e0812b6e4267471f946ee6045fddf349",
   "files": [
     {
       "path": "LICENSE",
@@ -8,6 +8,10 @@
     {
       "path": "README.md",
       "sha256": "9a3cfe7d925eea0f8e0a8d2ef4f240df5c8cbec385599b7a68b303f2c36b303c"
+    },
+    {
+      "path": "packaging/server/Caddyfile",
+      "sha256": "30feee4e4d42887a3f31090c2b9fc7c139fae298814f4023f22059c5fea5ef35"
     },
     {
       "path": "packaging/server/Dockerfile",
@@ -103,15 +107,19 @@
     },
     {
       "path": "src/threaddesk/server_sync/client.py",
-      "sha256": "5390f213b4528a872d995deb73d7deda559dbe38e8ba19b7596e3073cb15ef05"
+      "sha256": "06765fe6d0f5c1ebb209d0f36ff11b228478f85bed5a19842bb9968a84445c80"
     },
     {
       "path": "src/threaddesk/server_sync/desktop.py",
-      "sha256": "2db75e948685a92e7fe703fc4e4441e5c582f543b953d9b0a875f0f310b561ad"
+      "sha256": "7a11284267c4cb94d7d97aae8c2a51d07535a4e8b68b72cebe1283235e71472f"
     },
     {
       "path": "src/threaddesk/server_sync/discovery.py",
       "sha256": "4b982143e3b486f9ffd77af29f744d9ed856d0cbb501d73969d7ffe33f12d66a"
+    },
+    {
+      "path": "src/threaddesk/server_sync/identity.py",
+      "sha256": "fcfaacc6773720a187a4afa48feb88c892ecfeb85045e52aa62597c418a368c4"
     },
     {
       "path": "src/threaddesk/server_sync/metadata.py",
@@ -127,7 +135,7 @@
     },
     {
       "path": "src/threaddesk/server_sync/web/app.js",
-      "sha256": "6d8a18ae8188c1ccf8e248699f5dd2bc0203a9db0ccb4611d9e4bbd8503a0567"
+      "sha256": "1c55c0d84469f9bb1987fd5d9a10b0859c8fd5f98219637cda86d12200460ccf"
     },
     {
       "path": "src/threaddesk/server_sync/web/index.html",

@@ -104,6 +104,27 @@ manifests, stream-limit rejection and unchanged upload limits. These overlap
 earlier results. The correction image was rebuilt and accepted again; its source
 fingerprints below include both fixes. Required CI must validate the new head.
 
+Head `9210dab` also passed every required CI gate, including the complete suite
+twice. Three later review findings were corrected before merge: the shipping
+Caddy proxy now matches the application's endpoint bounds; the browser durably
+replaces a confirmed aborted transfer ID with at most two begin attempts; and a
+Desktop binding retains its reporting identity across root-specific checkpoints.
+Only verified committed common revisions seed a pristine relocated checkpoint;
+pending uploads and source authority never migrate. Different credentials or
+projects do not inherit bases. Real manager tests cover edits before/after the
+first relocated sync, concurrent server changes, retained originals/history,
+hashed/legacy identity migration and one remaining manifest reporter. A real
+browser reload also exposed replay of the original blank-project configure POST;
+its deterministic automatic binding now retains the same project/device safely.
+The targeted identity/client run passed **23 tests**; the final combined
+identity/client/Desktop run passed **27 tests**, overlapping earlier counts.
+The final real Chromium/Desktop acceptance passed, including aborted browser
+upload retry, retained cancellation receipt and automatic bidirectional metadata.
+The shipping Caddy acceptance additionally sends 19000-file manifests with both
+Content-Length and chunked transfer, a Unicode metadata pair above the old proxy
+cap, and checks that ordinary transfer bounds still reject oversized requests.
+Required CI must still pass on the final correction head.
+
 During integration an earlier affected run had 138 passing / 3 new i18n failures.
 Labels, placeholder and dynamic-state catalog coverage were corrected and the
 failed checks passed. The guard for unsafe POST routes now includes the new
@@ -147,10 +168,10 @@ no global context switch or foreign container stop. A development OrbStack start
 was also issued during initial runtime discovery; neither runtime was stopped.
 Only the harness's own containers were cleaned up.
 
-Image: `sha256:8ddb68445dee7a612f1c0e7150a3bd2b0b6a175ecd6e4f70cbe34e886c797f23`.
+Image: `sha256:b53efef6f6059740f7b0fc2cb4a0dbe3861a7352fcff31eeede67e6de7188479`.
 Production input content SHA256:
-`81820eb1a6e1e2cd725f0a6692bd796b8353d1c070789e0e0d48cb854aea4da9`.
-The 148 input fingerprints were compared after acceptance; none changed.
+`0f007a555b6504f22faa986db86fc748e0812b6e4267471f946ee6045fddf349`.
+The 150 input fingerprints (including the shipping Caddyfile) were compared after acceptance; none changed.
 [Source manifest](source-manifest.json), [Linux receipt](linux.json),
 [complete build/acceptance log](linux-acceptance.log).
 
@@ -174,8 +195,15 @@ python packaging/server/check_acceptance.py --docker-context colima
 ```
 
 The new `Server Sync Linux TLS Restore` workflow repeats this acceptance on a
-fresh PR image. Deployment to a public domain, public-CA/Caddy operation and
-restore on another CPU architecture are not claimed by the isolated proof.
+fresh PR image, followed by the actual shipping Caddy proxy acceptance.
+The latter passed with the same fresh app image and official Caddy image,
+CA-verified TLS, app unpublished, and only a random Caddy port on host loopback.
+Both 3,705,052-byte/19000-file manifest wire modes returned 200; the
+2,400,600-byte metadata pair returned 200 without truncation; oversized ordinary
+requests returned 413 in both modes. [Proxy receipt](proxy.json) and
+[complete proxy log](proxy-acceptance.log) record the immutable image IDs and
+shipping configuration hash. Deployment to a public domain, public-CA issuance
+and restore on another CPU architecture are not claimed by these proofs.
 
 ## Merge gates and retained boundaries
 

@@ -6,6 +6,8 @@ An existing Chromium executable can be selected without downloading a browser.
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
 from copy import deepcopy
 import json
 import os
@@ -184,6 +186,26 @@ def main():
                 page.locator('#entry-form button').click()
                 page.get_by_text('Nach Wiederverbindung abgleichen.', exact=True).wait_for()
                 pid = page.locator('#project-id').inner_text()
+                cancelled = b'Browser retry preserves the original cancellation receipt.'
+                digest = hashlib.sha256(cancelled).hexdigest()
+                transfer = 'browser-cancelled-transfer'
+                uri = '/api/projects/'+pid+'/uploads/'+transfer
+                with httpx.Client(base_url=origin, headers={'Authorization':'Bearer '+token}) as client:
+                    response = client.post(uri,json={'path':'cancelled.md','size':len(cancelled),'sha256':digest,'base_revision':None})
+                    response.raise_for_status()
+                    client.patch(uri,json={'offset':0,'data_base64':base64.b64encode(cancelled[:7]).decode()}).raise_for_status()
+                    client.post(uri+'/abort').raise_for_status()
+                key = f'td-transfer:{pid}:cancelled.md:{digest}:'
+                page.evaluate('([key,value]) => sessionStorage.setItem(key,value)',[key,transfer])
+                page.locator('#file-path').fill('cancelled.md')
+                page.locator('#file-upload').set_input_files({'name':'cancelled.md','mimeType':'text/markdown','buffer':cancelled})
+                page.locator('#upload-form button').click()
+                expect(page.locator('#message')).to_have_text('Datei geprüft und versioniert gespeichert.')
+                with httpx.Client(base_url=origin,headers={'Authorization':'Bearer '+token}) as client:
+                    assert client.get(uri).json()['state'] == 'aborted'
+                    retained = client.get('/api/projects/'+pid+'/history',params={'path':'cancelled.md'}).json()['versions']
+                    assert len(retained) == 1 and retained[0]['sha256'] == digest
+                assert page.evaluate('key => sessionStorage.getItem(key)',key) is None
                 page.screenshot(path=str(args.output_dir/'browser.png'), full_page=True)
                 with httpx.Client(base_url=origin, headers={'Authorization':'Bearer '+token}) as client:
                     versions = client.get('/api/projects/'+pid+'/history', params={'path':'docs/plan.md'}).json()['versions']
@@ -204,6 +226,7 @@ def main():
                 'checks':['real CLI loopback HTTP (explicit development mode)',
                           'login/session reload/logout', 'project + Auch offline',
                           'verified upload + ready', 'edit + retained history',
+                          'cancelled upload retry replaces confirmed aborted ID and retains its receipt',
                           'shared-core notes + append-only task', 'no JavaScript errors']+desktop_checks,
                 'versions_retained':len(versions),
                 'production_tls_linux':'not tested',

@@ -121,12 +121,21 @@ async function upload(path,bytes,base,pid=selected.id) {
   // Persist identity before transfer; a repeated click resumes the same manifest.
   const key=`td-transfer:${pid}:${path}:${hash}:${base || ''}`;
   let transfer=sessionStorage.getItem(key); if(!transfer) {transfer=crypto.randomUUID().replaceAll('-','');sessionStorage.setItem(key,transfer);}
-  const uri='/api/projects/'+pid+'/uploads/'+transfer;
-  let progress=await api(uri,'POST',{path,size:bytes.byteLength,sha256:hash,base_revision:base});
+  let uri,progress;
+  for(let attempt=0;attempt<2;attempt++) {
+    uri='/api/projects/'+pid+'/uploads/'+transfer;
+    progress=await api(uri,'POST',{path,size:bytes.byteLength,sha256:hash,base_revision:base});
+    if(progress.state!=='aborted') break;
+    if(attempt===1) throw Error('Übertragung wurde erneut abgebrochen. Bitte erneut versuchen.');
+    transfer=crypto.randomUUID().replaceAll('-','');sessionStorage.setItem(key,transfer);
+  }
+  if(!['receiving','committed'].includes(progress.state)||!Number.isInteger(progress.next_offset)||progress.next_offset<0||progress.next_offset>bytes.byteLength) throw Error('Ungültiger Übertragungsstatus.');
   for(let offset=progress.next_offset;offset<bytes.byteLength;) {
     const chunk=new Uint8Array(bytes.slice(offset,offset+262144)); let binary='';
     for(let i=0;i<chunk.length;i+=8192) binary+=String.fromCharCode(...chunk.subarray(i,i+8192));
-    progress=await api(uri,'PATCH',{offset,data_base64:btoa(binary)}); offset=progress.next_offset;
+    progress=await api(uri,'PATCH',{offset,data_base64:btoa(binary)});
+    if(progress.next_offset!==offset+chunk.length) throw Error('Ungültige Empfangsbestätigung.');
+    offset=progress.next_offset;
     message(`Übertragen: ${offset} / ${bytes.byteLength} Bytes`);
   }
   await api(uri+'/commit','POST');sessionStorage.removeItem(key);await declareBrowser(pid);if(selected?.id===pid)await refresh();message('Datei geprüft und versioniert gespeichert.');

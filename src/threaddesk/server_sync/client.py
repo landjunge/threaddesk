@@ -24,6 +24,7 @@ import httpx
 
 from threaddesk.server_sync.store import SyncError, validate_path
 from threaddesk.server_sync.discovery import DiscoveryError, DiscoveryPlan, SourceFile, discover_project
+from threaddesk.server_sync.identity import validate_device_id, validate_initial_bases
 from threaddesk.core.errors import ThreadDeskError
 
 CHUNK_BYTES = 256 * 1024
@@ -102,7 +103,11 @@ def scan_project(root: Path, references=()) -> tuple[list[dict], list[str]]:
 class SyncClient:
     def __init__(self, base_url, token, project_id, root, *, state_dir=None,
                  transport=None, allow_insecure_loopback=False, metadata_replica=None,
-                 local_references=(), approved_roots=(), required_references=()):
+                 local_references=(), approved_roots=(), required_references=(), device_id=None,
+                 initial_bases=None):
+        if device_id is not None:
+            validate_device_id(device_id)
+        seeds = validate_initial_bases(initial_bases)
         parsed = urlsplit(base_url)
         loopback = parsed.hostname in {"localhost", "127.0.0.1", "::1"}
         if (parsed.scheme != "https" and not (allow_insecure_loopback and loopback and parsed.scheme == "http")):
@@ -145,17 +150,40 @@ class SyncClient:
         CREATE TABLE IF NOT EXISTS base (path TEXT PRIMARY KEY,revision TEXT NOT NULL,sha256 TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS uploads (path TEXT PRIMARY KEY,sha256 TEXT NOT NULL,base TEXT,transfer TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS device (id TEXT NOT NULL);
-        CREATE TABLE IF NOT EXISTS sources (path TEXT PRIMARY KEY,root TEXT NOT NULL,relative TEXT NOT NULL);""")
+        CREATE TABLE IF NOT EXISTS sources (path TEXT PRIMARY KEY,root TEXT NOT NULL,relative TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS initialization (id INTEGER PRIMARY KEY CHECK(id=1));""")
         existing = self.db.execute("SELECT value FROM identity").fetchone()
         if existing and existing[0] != identity:
             self.db.close()
             raise ClientError("Checkpoint belongs to a different server, account, project or directory")
         if not existing:
             self.db.execute("INSERT INTO identity VALUES (?)", (identity,))
-        device = self.db.execute("SELECT id FROM device").fetchone()
-        if not device:
-            self.db.execute("INSERT INTO device VALUES (?)", (uuid.uuid4().hex,))
+        devices = self.db.execute("SELECT id FROM device").fetchall()
+        if len(devices) > 1:
+            self.db.close()
+            raise ClientError("Checkpoint has ambiguous device identities")
+        if devices:
+            try:
+                saved_device = validate_device_id(devices[0][0])
+            except ValueError:
+                self.db.close()
+                raise ClientError("Checkpoint contains an invalid device identity")
+            if device_id is not None and saved_device != device_id:
+                self.db.close()
+                raise ClientError("Checkpoint belongs to a different synchronization device")
+        else:
+            self.db.execute("INSERT INTO device VALUES (?)", (device_id or uuid.uuid4().hex,))
         self.device_id = self.db.execute("SELECT id FROM device").fetchone()[0]
+        initialized = self.db.execute("SELECT id FROM initialization WHERE id=1").fetchone()
+        if not initialized:
+            # Root relocation may explicitly carry only the binding's committed
+            # common revisions into a pristine ROOT-BOUND file checkpoint.
+            # Existing/pending state is never reset by a replayed configuration.
+            pristine = existing is None and not any(self.db.execute("SELECT 1 FROM " + table + " LIMIT 1").fetchone()
+                                                  for table in ('base', 'uploads', 'sources'))
+            if pristine and seeds:
+                self.db.executemany("INSERT INTO base VALUES (?,?,?)", ((v['path'], v['revision'], v['sha256']) for v in seeds))
+            self.db.execute("INSERT INTO initialization VALUES (1)")
         self.db.commit()
         self.http = transport or httpx.Client(base_url=self.base_url, headers={"Authorization": "Bearer " + token},
                                              timeout=30, follow_redirects=False)

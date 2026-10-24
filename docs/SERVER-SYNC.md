@@ -48,6 +48,11 @@ Host veröffentlicht. Zertifikate und App-Daten liegen in getrennten dauerhaften
 Volumes. Der App-Container läuft ohne Root-Rechte und erhält seine Zugangsdaten
 erst bei der Initialisierung; sie werden nicht ins Image eingebaut.
 
+Die mitgelieferte Caddy-Konfiguration begrenzt Anfragen passend zur Anwendung:
+96 MiB für Projekt-Manifeste, 4 MiB für Metadaten-Abgleich und Konfliktauflösung
+und 512 KiB für übrige Anfragen. Die größeren Endpunkte erlauben keine größeren
+Dateiblöcke; deren Grenze bleibt bei 256 KiB dekodierten Bytes.
+
 Das interne Compose-Netz verwendet `172.30.87.0/24`. Nur aus diesem konfigurierten
 Proxy-Netz akzeptiert die App weitergereichte Angaben zum HTTPS-Transport.
 Falls das Subnetz mit einem vorhandenen Netz kollidiert, ändern Sie sowohl
@@ -139,6 +144,18 @@ Freigabeliste übernehmen keine unbekannten Quellen automatisch. Normale Pfade
 bleiben wörtlich, einschließlich Prozentzeichen; nur ausdrückliche `file:`-URIs
 werden dekodiert. Beim Wechsel des Projektordners bleibt die Metadatenverbindung
 erhalten, während ein eigener Datei-Checkpoint für den neuen Ort angelegt wird.
+Für dieselbe Verbindung aus Server und Projekt bleibt auch die Gerätekennung
+der Bestandsmeldung erhalten. Der neue Ordner meldet dadurch unter derselben
+Kennung; der Wechsel erzeugt keinen zusätzlichen veralteten Gerätestand.
+
+In den neuen Datei-Checkpoint werden ausschließlich geprüfte Datensätze bereits
+bestätigter gemeinsamer Versionen übernommen. Der alte Checkpoint muss zu genau
+der gespeicherten Verbindung gehören und privat lesbar sein. Unfertige Transfers,
+Quellzuordnungen und zusätzliche Dateirechte werden nicht übernommen; bestehende
+Checkpoints werden nicht zurückgesetzt. Quellen benötigen weiterhin eine aktuelle
+lokale Freigabe. Ohne bekannte gemeinsame Version oder bei Änderungen auf beiden
+Seiten bleiben abweichende Fassungen als Konflikt erhalten, statt still eine
+Seite zu ersetzen.
 
 Unterstützte statische Verweise umfassen Markdown/HTML/CSS, Python-Importe und
 literale Dateiöffnungen, JavaScript-/TypeScript-Importe sowie Asset-Manifeste.
@@ -176,7 +193,11 @@ klärt der Client erst dessen gespeicherten Zustand und beginnt danach neu.
 Wird ein Teiltransfer serverseitig ausdrücklich abgebrochen, verwendet der Client
 nach bestätigtem Abbruch eine dauerhaft gespeicherte neue Transferkennung.
 Unklare Antworten behalten ihre Kennung; Wiederanlauf erzeugt keine doppelten
-fertigen Versionen. Für größere Bestände unterstützt der Manifest-Endpunkt bis
+fertigen Versionen. Auch der Browser speichert die neue Kennung vor dem nächsten
+Startversuch in seiner Sitzung. Pro Upload-Aktion erfolgen höchstens zwei
+Startversuche; ein erneut bestätigter Abbruch beendet die Aktion mit einer
+verständlichen Fehlermeldung. Ein Timeout gilt niemals als bestätigter Abbruch.
+Für größere Bestände unterstützt der Manifest-Endpunkt bis
 zu 20000 Dateien mit einer eigenen begrenzten Anfragengröße von 96 MiB. Die
 Grenzen der Datei-Transferblöcke werden dadurch nicht angehoben.
 

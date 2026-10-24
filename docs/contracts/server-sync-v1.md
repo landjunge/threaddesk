@@ -99,6 +99,22 @@ They are never passed as source grants. Exact already-inventoried physical names
 can satisfy validation without reinterpreting URI escapes.
 File checkpoint directories include the selected root; metadata checkpoints keep
 their existing workspace/thread/server scope when the project directory moves.
+For the same Desktop server/project binding, the persisted manifest reporter
+`device_id` survives root changes. Legacy bindings recover that identity only
+from a private checkpoint whose URL/project/saved-root/credential identity
+matches exactly; an ambiguous or invalid checkpoint is refused, not rebound.
+The new root therefore updates the same reporter instead of leaving another
+stale manifest solely because the directory changed.
+
+`SyncClient(..., device_id=None, initial_bases=None)` accepts explicitly validated
+binding identity and committed common-base records `{path,revision,sha256}`.
+Root relocation reads those base records from the validated old checkpoint in
+SQLite read-only mode. Only a pristine new root-bound checkpoint may seed them;
+existing checkpoints and pending operations are never reset. Pending uploads,
+source mappings and source grants are NEVER migrated. Original checkpoints stay
+untouched, and current explicit local grants still determine every destination.
+A migrated base preserves ancestry, not permission to overwrite: unknown bases,
+stale bases and concurrent remote changes retain the normal conflict protection.
 SourceFile mappings returned by discover_project determine descriptor-bound reads
 AND original write destinations. Revoked grants, unknown external namespaces and
 exact-file siblings cannot become write targets. Recovery stays on the target's
@@ -140,6 +156,9 @@ Manifest requests have a separate 96 MiB UTF-8/JSON bound for the declared
 20000-file inventory (2048-byte paths, escaping and bounded issues); both header
 and streamed-body checks use the same endpoint limit. Upload blocks keep the
 original 512 KiB HTTP / 256 KiB decoded-byte limits.
+The production Caddy template applies matching request limits before proxying:
+POST project manifests 96 MiB, POST metadata subroutes 4 MiB, all other requests
+512 KiB. Metadata/manifest capacity does not increase ordinary upload limits.
 When local metadata equals the last common base and no uncertain operation is
 pending, authenticated conditional GET/ETag proves an unchanged server without
 writing another receipt, snapshot or checkpoint. Pending operations still replay
@@ -148,6 +167,10 @@ the immutable metadata journal with repeated copies of the same document.
 A positively confirmed server-aborted file upload gets a newly persisted
 replacement transfer ID, with at most two begins per sync run. Uncertain replies
 retain the current checkpoint; committed receipts and old versions stay intact.
+The browser follows the same bounded rule per upload action: only an explicit
+`aborted` state permits replacement, and the replacement ID is written to
+`sessionStorage` before another begin. A second confirmed abort stops the action;
+timeouts and unknown replies never imply cancellation or success.
 
 ## Complete server backup
 

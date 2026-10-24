@@ -1,13 +1,17 @@
 {
-  "platform": "Linux",
   "architecture": "x86_64",
-  "image": "sha256:8ddb68445dee7a612f1c0e7150a3bd2b0b6a175ecd6e4f70cbe34e886c797f23",
-  "source_content_sha256": "81820eb1a6e1e2cd725f0a6692bd796b8353d1c070789e0e0d48cb854aea4da9",
-  "log_sha256": "6072ad8ec1f7f0dc633a688549dec0da1ac1ffadd3b5c64c2345bc3906440d68",
-  "source_changed_after_run": [],
+  "platform": "Linux",
+  "replicas": 2,
+  "restart": "passed",
+  "restore": "credentials/core/snapshots/whiteboard/history/conflicts/chunks/receipts verified",
   "result": "passed",
-  "runtime": "existing Colima; explicit Docker context",
   "tls": "private CA verified; default trust and plaintext refused",
+  "image": "sha256:b53efef6f6059740f7b0fc2cb4a0dbe3861a7352fcff31eeede67e6de7188479",
+  "source_content_sha256": "0f007a555b6504f22faa986db86fc748e0812b6e4267471f946ee6045fddf349",
+  "log_sha256": "1f2398d5e7b78c0a24074de8340c55b7969fa61d9ff5935a708ec3273a1db28b",
+  "source_changed_after_run": [],
+  "runtime": "existing Colima; explicit Docker context",
+  "production_deployment": false,
   "checks": [
     "fresh install/image build as non-root Linux user",
     "two replicas, bidirectional files and conflict preservation",
@@ -16,9 +20,6 @@
     "complete cold backup and restore to new directory",
     "credentials, metadata snapshots, whiteboards, file histories, conflicts, chunks and durable receipts",
     "stable portable metadata namespace/origins and exact metadata receipt replay after restore",
-    "latest metadata idle-journal and live Desktop status source included",
-    "PR review grant provenance, project scope and required-reference corrections included",
-    "bounded large manifests and confirmed-cancellation replacement-ID fixes included"
-  ],
-  "production_deployment": false
+    "current review corrections and device/browser source included"
+  ]
 }
