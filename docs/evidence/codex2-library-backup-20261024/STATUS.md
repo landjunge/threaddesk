@@ -103,3 +103,12 @@ zero-byte write before flushing; it reproduced the original OSError locally.
 After the change, all 101 affected library/receiver cases passed, including the
 31 final library cases. Native Windows acceptance must still be recorded for
 the new head; the failed run is not relabelled or skipped.
+
+The subsequent Linux complete suite and all native package jobs passed, but the
+Windows backup check on `1e82866` was cancelled at its unchanged 10-minute job
+limit (annotation on check120935415018). Its REST job metadata returned repeated
+502/timeouts and its log archive returned BlobNotFound, so no specific hung
+line was inferred from the missing output. A Windows-only 90-second per-library
+test watchdog now emits a traceback and exits the child before the runner's
+hard cancellation; native pytest uses uncaptured verbose output. This is a
+bounded diagnostic, not a longer timeout, skipped test or claimed Windows pass.

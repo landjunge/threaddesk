@@ -1,5 +1,6 @@
 """Library copies, receipts and pending bytes survive real backup restoration."""
 import base64
+import faulthandler
 import hashlib
 import io
 import json
@@ -20,6 +21,18 @@ from threaddesk.storage.json_store import JsonStore
 from threaddesk.storage.sqlite_store import SQLiteStore
 from threaddesk.storage.portable_backup import download_backup, restore_backup
 from threaddesk.storage.workspace_backup import BackupError, WorkspaceBackup
+
+
+@pytest.fixture(autouse=True)
+def windows_library_watchdog():
+    """Keep a hung native case diagnosable before the runner's hard timeout."""
+    if os.name == "nt":
+        faulthandler.dump_traceback_later(90, file=sys.__stderr__, exit=True)
+    try:
+        yield
+    finally:
+        if os.name == "nt":
+            faulthandler.cancel_dump_traceback_later()
 
 
 def receive(bridge, action, transfer_id="pending", **fields):
