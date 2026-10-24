@@ -8,11 +8,11 @@
     "verified upload + ready",
     "edit + retained history",
     "cancelled upload retry replaces confirmed aborted ID and retains its receipt",
-    "browser/server file edit then automatic desktop edit reaches ready with retained history",
     "shared-core notes + append-only task",
     "no JavaScript errors",
     "protected desktop project binding form",
     "automatic bidirectional notes/tasks/whiteboard",
+    "browser/server file edit then automatic desktop edit reaches ready with retained history",
     "explicit attachment mapping and original preservation",
     "metadata conflict choice in server browser"
   ],

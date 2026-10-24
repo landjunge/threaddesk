@@ -177,3 +177,25 @@ def test_file_uris_and_html_asset_encoding_work_without_server_traversal_aliases
     assert len(blocked.files) == len(safe.files)
     write(root, 'nested/page.html', '<img src="%252e%252e/image%20one.png">')
     assert any('Encoded traversal' in issue for issue in discover_project(root).issues)
+
+
+def test_exact_file_capacity_allows_filtered_entries_directories_and_duplicate_grants(tmp_path,monkeypatch):
+    from threaddesk.server_sync import discovery
+    monkeypatch.setattr(discovery,'MAX_FILES',4)
+    root=tmp_path/'project';root.mkdir()
+    first=write(root,'one.txt','one')
+    write(root,'two.txt','two')
+    write(root,'nested/three.txt','three')
+    write(root,'nested/four.txt','four')
+    (root/'empty').mkdir()
+    write(root,'.git/config','ignored VCS')
+    write(root,'.threaddesk-sync-conflicts/remote/old.copy','ignored recovery')
+    write(root,'.td-sync-'+'a'*32,'ignored unpublished download')
+    exact=discover_project(root,local_references=[first])
+    assert len(exact.files)==4
+    assert exact.issues==[]
+    assert {f['path'] for f in exact.files}=={'one.txt','two.txt','nested/three.txt','nested/four.txt'}
+    write(root,'additional.txt','one genuine file beyond capacity')
+    overflow=discover_project(root,local_references=[first])
+    assert len(overflow.files)==4
+    assert any('exceeds inventory file limit' in issue for issue in overflow.issues)

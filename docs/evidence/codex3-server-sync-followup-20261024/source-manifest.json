@@ -1,5 +1,5 @@
 {
-  "source_content_sha256": "ebc422363b54e91696e452f4ed1c735345b6a4a9c4dcdb5fba4ae4f998b69d80",
+  "source_content_sha256": "a59afdc6752ac58b63f0a9f992ebe1cbcc4ec98fdcfd31d27e94f272282ce7d2",
   "files": [
     {
       "path": "LICENSE",
@@ -115,7 +115,7 @@
     },
     {
       "path": "src/threaddesk/server_sync/discovery.py",
-      "sha256": "4b982143e3b486f9ffd77af29f744d9ed856d0cbb501d73969d7ffe33f12d66a"
+      "sha256": "a40836da7f403131970e320eb9d818deef4107d8e4b2469e6a3ed84af995c09f"
     },
     {
       "path": "src/threaddesk/server_sync/identity.py",
@@ -135,7 +135,7 @@
     },
     {
       "path": "src/threaddesk/server_sync/web/app.js",
-      "sha256": "7e643c220967efe64753bffa7f2ad91362a2870d26e5e595cafa5ad36b2d9960"
+      "sha256": "e79fb2a2a8e96b05bd1ba661da77312c60e3dc46425b2e341752320543e8bd05"
     },
     {
       "path": "src/threaddesk/server_sync/web/index.html",

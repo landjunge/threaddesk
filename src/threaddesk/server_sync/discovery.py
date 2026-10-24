@@ -233,6 +233,7 @@ class _Inventory:
         self.physical = {}
         self.total = 0
         self.directories = 0
+        self.file_limit_exceeded = False
         self.path_aliases = {}
         self.file_keys = set()
         self.directory_keys = set()
@@ -287,9 +288,6 @@ class _Inventory:
         return None
 
     def add_file(self, grant, relative):
-        if len(self.plan.files) >= MAX_FILES:
-            self.issue('Project exceeds inventory file limit')
-            return
         logical = grant.prefix + '/' + relative if grant.prefix else relative
         if not _safe(relative) or not _safe(logical):
             self.issue('Unsafe or secret-bearing source omitted', logical)
@@ -313,6 +311,12 @@ class _Inventory:
                 return
         if keys[-1] in self.directory_keys:
             self.issue('File/directory path collision; omitted', logical)
+            return
+        if len(self.plan.files) >= MAX_FILES:
+            # Reaching the capacity is valid. Only another distinct eligible
+            # source proves that inventory would omit a file.
+            self.file_limit_exceeded = True
+            self.issue('Project exceeds inventory file limit')
             return
         source = SourceFile(grant.root, relative)
         try:
@@ -340,6 +344,8 @@ class _Inventory:
         for grant in self.grants:
             if not grant.directory:
                 self.add_file(grant, grant.path.name)
+                if self.file_limit_exceeded:
+                    return
                 continue
             for parent, directories, names in os.walk(grant.path, followlinks=False,
                     onerror=lambda exc: self.issue('Unreadable approved directory')):
@@ -363,8 +369,7 @@ class _Inventory:
                     if re.fullmatch(r'\.td-sync-[a-f0-9]{32}', name):
                         continue
                     self.add_file(grant, (prefix / name).as_posix())
-                    if len(self.plan.files) >= MAX_FILES:
-                        self.issue('Project exceeds inventory file limit')
+                    if self.file_limit_exceeded:
                         return
 
     def reference(self, value, logical, *, base=None, required_remote=False, js=False, web=False):

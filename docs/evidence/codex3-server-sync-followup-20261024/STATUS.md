@@ -141,6 +141,19 @@ acceptance are repeated for these source corrections; the live Browser/Desktop
 sequence passed with original recovery and all three file versions retained.
 Final-head CI still applies.
 
+The subsequent review exposed a deferred Browser project-response race and
+an exact inventory-capacity boundary error. Selection generations now guard
+thread reads, save replies and collections; metadata controls stay disabled while
+loading, and a stale reply cannot overwrite another project or its revision.
+A deterministic test executes the actual JS with deferred reads/saves, equal
+initial revisions, loading submission and an A/B/A selection sequence. Discovery
+now reports overflow only for an additional eligible distinct source beyond
+MAX_FILES, not for exactly MAX_FILES. Nested/empty directories, filtered entries
+and duplicate grants have boundary coverage. **11 directly affected checks**
+passed, and the complete real Browser/Desktop acceptance passed again. The fresh
+Linux/Proxy receipts below cover these final sources. Final-head CI remains
+mandatory before merge.
+
 During integration an earlier affected run had 138 passing / 3 new i18n failures.
 Labels, placeholder and dynamic-state catalog coverage were corrected and the
 failed checks passed. The guard for unsafe POST routes now includes the new
@@ -184,9 +197,9 @@ no global context switch or foreign container stop. A development OrbStack start
 was also issued during initial runtime discovery; neither runtime was stopped.
 Only the harness's own containers were cleaned up.
 
-Image: `sha256:4c363df6c2caef1530d94a80474c8ea3921599623e5fada33ee0d2540f976444`.
+Image: `sha256:4025ea3685545f7c8bfd191a2bdee8d9303de9387f293b228bd5578be9bcb087`.
 Production input content SHA256:
-`ebc422363b54e91696e452f4ed1c735345b6a4a9c4dcdb5fba4ae4f998b69d80`.
+`a59afdc6752ac58b63f0a9f992ebe1cbcc4ec98fdcfd31d27e94f272282ce7d2`.
 The 150 input fingerprints (including the shipping Caddyfile) were compared after acceptance; none changed.
 [Source manifest](source-manifest.json), [Linux receipt](linux.json),
 [complete build/acceptance log](linux-acceptance.log).

@@ -210,3 +210,11 @@ its current local size/hash only after re-reading the source. This records a
 confirmed local publication without resolving heads. A later explicit browser
 resolution can replace those unchanged bytes with a preserved recovery copy;
 a genuinely new local edit still creates/retains its own competing version.
+
+Browser project selection uses a generation counter. Late thread reads, saves,
+status and collection responses cannot update another selection, including a
+return to the same project. Metadata submission remains disabled until that
+selection has loaded; mutation requests retain their captured project scope.
+Discovery accepts exactly MAX_FILES eligible distinct files; filtered entries,
+directories and duplicate grants do not cause a false overflow. Only an
+additional eligible distinct source reports an incomplete inventory.
