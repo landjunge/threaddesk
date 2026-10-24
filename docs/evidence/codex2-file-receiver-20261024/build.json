@@ -1,0 +1,49 @@
+{
+  "source_commit": "34b9ea6ad76fd350f898f5068058b4a726880e91",
+  "base_commit": "64353be01082251b6af72d0096ce0a57d66c5501",
+  "branch": "feat/codex2-file-receiver-20261024",
+  "platform": "Darwin x86_64",
+  "candidate": "/Users/landjunge/threaddesk-worktrees/codex2-file-receiver-20261024/packaging/tauri/src-tauri/target/release/bundle/macos/ThreadDesk.app",
+  "artifacts": [
+    {
+      "path": "packaging/tauri/src-tauri/target/release/bundle/macos/ThreadDesk.app/Contents/MacOS/threaddesk-tauri",
+      "bytes": 14440512,
+      "sha256": "1ef6f5538d56a75c017b0fc1cef189579fa2689331521aec0e683692dcc8ea58"
+    },
+    {
+      "path": "packaging/tauri/src-tauri/target/release/bundle/macos/ThreadDesk.app/Contents/Resources/bin/ThreadDeskServer",
+      "bytes": 15874032,
+      "sha256": "80a2ba3cbd5712b5bee9a31401123865623f9337f44ddfe6019791fdb113de5b"
+    },
+    {
+      "path": "packaging/tauri/src-tauri/target/release/bundle/macos/ThreadDesk.app/Contents/Info.plist",
+      "bytes": 990,
+      "sha256": "3e7844a5ca9393370efd541097db401aa172aff3682ca7702abed6ba326d9762"
+    }
+  ],
+  "backend_self_test": "passed before and from bundle",
+  "signature": "local ad-hoc; codesign --verify --deep --strict passed",
+  "gui_acceptance": "not run; wrapper selects the existing home workspace",
+  "release": "not published; not notarized; no PR or merge",
+  "tests": {
+    "targeted_run": 105,
+    "additional_final_guard_and_catalog_run": 6,
+    "counts_overlap": true,
+    "warning": "Starlette httpx deprecation",
+    "full_suite": "not run; no merge/release attempted"
+  },
+  "source_release_input_scan": {
+    "committed_files": 346,
+    "result": "passed"
+  },
+  "merge_readiness": {
+    "main_is_ancestor_of_source": true,
+    "main_branch_protection": "GitHub API 404: Branch not protected",
+    "ci_and_independent_review": "not performed for this branch"
+  },
+  "known_open_items": [
+    "KiraBridge authenticated streaming adapter and end-to-end acceptance",
+    "portable backup omits library-files",
+    "native desktop GUI acceptance; Windows/Apple Silicon artifacts"
+  ]
+}
