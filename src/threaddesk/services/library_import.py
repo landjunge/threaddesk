@@ -13,6 +13,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
+import stat
 import tempfile
 import zipfile
 
@@ -30,6 +31,7 @@ MAX_TEXT_SCAN = 2 * 1024 * 1024
 UNASSIGNED_TITLE = "Nicht zugeordnet"
 _RECORD_ID = re.compile(r"^[0-9a-f]{12}$")
 _DIGEST = re.compile(r"^[0-9a-f]{64}$")
+_PUBLICATION_PARTIAL = re.compile(r"^\.([0-9a-f]{64})\.[a-z0-9_]{8}$")
 _SKIP_DIRS = {
     ".git", ".ssh", ".aws", ".gnupg", ".threaddesk", "node_modules",
     "__pycache__", "keychains",
@@ -201,7 +203,7 @@ def _zip_members(package: Path) -> list[tuple[str, bytes]]:
 class LibraryImporter:
     def __init__(self, store) -> None:
         self.store = store
-        self.workspace = Path(store.root)
+        self.workspace = Path(store.workspace_path)
         self.root = self.workspace / "library-files"
         self.blobs = self.root / "blobs"
         self.records = self.root / "records"
@@ -495,6 +497,43 @@ class LibraryImporter:
             thread_id=thread.id, thread_title=thread.title,
             filename=PurePosixPath(relative).name, format=kind,
         ), created
+
+    def recover_blob_publications(self, *, cleanup: bool = False) -> set[Path]:
+        """Recognize a completed internal link pair after a process crash.
+
+        Read callers only validate the pair. Explicit writes may unlink its
+        private temporary name, preserving the published blob. Any unknown or
+        external hardlink still fails the receiver's normal guard.
+        """
+        recognized: set[Path] = set()
+        pairs: list[tuple[Path, Path]] = []
+        if not self.blobs.is_dir():
+            return recognized
+        for partial in self.blobs.iterdir():
+            match = _PUBLICATION_PARTIAL.fullmatch(partial.name)
+            if not match:
+                continue
+            target = self.blobs / match[1]
+            try:
+                left, right = partial.lstat(), target.lstat()
+            except FileNotFoundError:
+                continue
+            if (not stat.S_ISREG(left.st_mode) or not stat.S_ISREG(right.st_mode)
+                    or left.st_nlink != 2 or right.st_nlink != 2
+                    or (left.st_dev, left.st_ino) != (right.st_dev, right.st_ino)):
+                continue
+            if _hash_file(target)[0] != match[1]:
+                continue
+            recognized.update((partial, target))
+            pairs.append((partial, target))
+        if cleanup:
+            for partial, target in pairs:
+                # Recheck identities before removing only the internal name.
+                left, right = partial.lstat(), target.lstat()
+                if (left.st_dev, left.st_ino, left.st_nlink) != (right.st_dev, right.st_ino, 2):
+                    raise LibraryImportError("integrity")
+                partial.unlink()
+        return recognized
 
     def _publish_blob(self, source: Path, digest: str, size: int) -> bool:
         self.blobs.mkdir(parents=True, exist_ok=True, mode=0o700)

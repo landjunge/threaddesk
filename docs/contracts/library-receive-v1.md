@@ -17,7 +17,8 @@ tool through a read-only dynamic proxy. The three explicitly annotated read
 tools are eligible only under the bridge's normal opt-in/authorization rules.
 Owner-local storage is trusted against concurrent malicious OS-level replacement;
 the receiver rejects pre-existing symlinks, hardlinked control files and special
-files, but is not an OS filesystem sandbox or a multi-tenant access-control layer.
+files, except the verified internal publication pair described below. It is not
+an OS filesystem sandbox or a multi-tenant access-control layer.
 
 ## Transfer protocol
 
@@ -67,6 +68,11 @@ synchronous mode. Commit flushes published bytes/record before the receipt.
 If publication is interrupted, the preallocated record ID allows a commit retry
 to repair its thread link without creating another record. A failed commit
 keeps blocks available; it may already have published a verified copy and record.
+If a process exits immediately after exclusive hardlink publication, read-only
+status validates the internal temporary-name/blob pair without changing it.
+The next explicit write removes only the temporary name after verifying both
+regular-file identities, an exact link count of two and the digest. Unknown,
+external or mismatched hardlinks are still refused without deleting anything.
 Read status and retry the same ID. Do not start a replacement transfer blindly.
 Concurrent legacy local imports retain their existing owner-local behavior;
 there is no general transaction spanning all library files and thread storage.

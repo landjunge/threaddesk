@@ -91,3 +91,34 @@ uses 0.1.1rc1 and needs release-version alignment before distribution.
 The authorized source branch was committed and pushed. No speech module was
 added or made mandatory. The integration contract is the next input for Codex 1;
 this session does not implement the KiraBridge side.
+
+## PR88 follow-up after explicit push/merge authorization
+
+The user subsequently authorized PR and merge. [PR88](https://github.com/landjunge/threaddesk/pull/88)
+was opened from the pushed branch. Its first full CI run
+[40107639959](https://github.com/landjunge/threaddesk/actions/runs/40107639959)
+reported **1031 passed, 2 failed**: the characterization fixture lacked the four
+new MCP tools, and the receiver guard used the private store root instead of the
+public workspace interface. Both are corrected without weakening either check.
+The native Windows backup job passed. All three native desktop build/package
+self-test jobs in [40107639974](https://github.com/landjunge/threaddesk/actions/runs/40107639974)
+passed. These CI artifacts are separate from the earlier local Tauri candidate.
+
+Automated review also identified a genuine crash window after exclusive
+hardlink publication and before temporary-name cleanup. The receiver now
+recognizes only a complete internal pair with the expected private name,
+matching regular-file identities, exactly two links and the expected digest.
+Status validates this pair without modifying files. An explicit mutation
+cleans up only the internal temporary name; the verified blob survives.
+Unknown/external links or incorrect content still fail closed and are preserved.
+
+The added regression exits a real subprocess immediately after successful
+`os.link`, then checks read-only status and successful commit or abort recovery
+with both JSON and SQLite. Negative cases preserve unrecognized and external
+hardlinks. The directly affected receiver/import/index, characterization,
+storage-contract and MCP-catalog tests passed **102 tests** with one existing
+Starlette warning. No broad local rerun was performed; full acceptance must
+pass in the new PR CI run before merge. The earlier local candidate in
+`build.json` still identifies its original source and is not relabelled as this
+follow-up build. Final CI/merge outcome belongs in the shared coordination
+whiteboard; no gate is waived by the user's merge authorization.

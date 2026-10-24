@@ -234,3 +234,53 @@ def test_symlink_journal_cannot_touch_external_file(desk, tmp_path, name):
     (Path(svc.store.root) / "library-files" / name).symlink_to(outside)
     assert call(svc, **append())["code"] == "unsafe_store"
     assert outside.read_bytes() == b"preserve"
+
+
+@pytest.mark.parametrize("action", ["commit", "abort"])
+def test_process_exit_after_link_recovers_without_mutating_status(desk, action):
+    svc, tid = desk
+    call(svc, **begin(tid))
+    call(svc, **append())
+    env = {**os.environ, "THREADDESK_HOME": str(svc.store.workspace_path),
+           "THREADDESK_STORAGE": "sqlite" if isinstance(svc.store, SQLiteStore) else "json"}
+    script = '''
+import os
+from threaddesk.api.service import ThreadService
+from threaddesk.services.mcp import McpBridge
+original = os.link
+def crash_after_link(source, target):
+    original(source, target)
+    os._exit(73)
+os.link = crash_after_link
+McpBridge(ThreadService()).call("library_receive", {"action":"commit", "transfer_id":"test-upload-1"})
+'''
+    process = subprocess.run([sys.executable, "-c", script], env=env,
+                             capture_output=True, text=True, timeout=20)
+    assert process.returncode == 73, process.stderr
+    importer = LibraryImporter(svc.store)
+    blob = importer.blobs / begin(tid)["sha256"]
+    partials = list(importer.blobs.glob(".*"))
+    assert len(partials) == 1 and blob.stat().st_nlink == 2
+    status = McpBridge(svc).call("library_receive_status", {"transfer_id": "test-upload-1"})
+    assert status["ok"] and status["result"]["state"] == "receiving"
+    assert partials[0].exists() and blob.stat().st_nlink == 2  # Status remains read-only.
+    result = call(svc, action=action, transfer_id="test-upload-1")
+    assert result["ok"] and result["result"]["state"] == ("committed" if action == "commit" else "aborted")
+    assert not partials[0].exists() and blob.stat().st_nlink == 1
+    assert blob.read_bytes() == b"Hallo Bruecke\n"
+    assert call(svc, **begin(tid, transfer_id="unrelated"))["ok"]
+
+
+@pytest.mark.parametrize("internal_name", [False, True])
+def test_recovery_refuses_unrecognized_or_external_hardlinks(desk, tmp_path, internal_name):
+    svc, tid = desk
+    call(svc, **begin(tid))
+    importer = LibraryImporter(svc.store)
+    importer.blobs.mkdir()
+    blob = importer.blobs / begin(tid)["sha256"]
+    blob.write_bytes(b"wrong" if internal_name else b"Hallo Bruecke\n")
+    extra = importer.blobs / f".{blob.name}.abcdefgh" if internal_name else tmp_path / "external"
+    os.link(blob, extra)
+    assert call(svc, action="status", transfer_id="test-upload-1")["code"] == "unsafe_store"
+    assert call(svc, action="abort", transfer_id="test-upload-1")["code"] == "unsafe_store"
+    assert extra.exists() and blob.stat().st_nlink == 2

@@ -96,10 +96,10 @@ class LibraryReceiver:
         self.root = self.importer.root
         self.db = self.root / "receive.sqlite3"
 
-    def _guard(self):
+    def _guard(self, *, recover=False):
         # This is an owner-local workspace, not a sandbox against hostile
         # concurrent filesystem replacement. Refuse existing links/special files.
-        for path in (Path(self.store.root), self.root, self.importer.records, self.importer.blobs):
+        for path in (self.importer.workspace, self.root, self.importer.records, self.importer.blobs):
             for parent in (path, *path.parents):
                 if parent.is_symlink():
                     fail("unsafe_store")
@@ -114,16 +114,20 @@ class LibraryReceiver:
                 info = path.stat()
                 if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
                     fail("unsafe_store")
+        internal_links = self.importer.recover_blob_publications(cleanup=False)
         for folder in (self.importer.records, self.importer.blobs):
             if folder.is_dir():
                 for path in folder.iterdir():
                     info = path.lstat()
-                    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                    if (not stat.S_ISREG(info.st_mode)
+                            or info.st_nlink != 1 and path not in internal_links):
                         fail("unsafe_store")
+        if recover and internal_links:
+            self.importer.recover_blob_publications(cleanup=True)
 
     @contextmanager
     def _connect(self, *, readonly=False):
-        self._guard()
+        self._guard(recover=not readonly)
         if readonly:
             conn = sqlite3.connect(self.db.absolute().as_uri() + "?mode=ro", uri=True, timeout=10)
         else:
