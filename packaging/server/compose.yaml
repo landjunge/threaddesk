@@ -1,0 +1,50 @@
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: packaging/server/Dockerfile
+    command:
+      - serve
+      - --data-dir
+      - /data
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8766"
+      - --public-origin
+      - https://${THREADDESK_DOMAIN:?Set THREADDESK_DOMAIN to your public DNS name}
+      - --trusted-proxy
+      - 172.30.87.0/24
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:mode=1777,size=32m
+    volumes:
+      - app-data:/data
+    networks: [backend]
+  caddy:
+    image: caddy:2
+    environment:
+      THREADDESK_DOMAIN: ${THREADDESK_DOMAIN:?Set THREADDESK_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    restart: unless-stopped
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [backend]
+networks:
+  backend:
+    ipam:
+      config:
+        - subnet: 172.30.87.0/24
+volumes:
+  app-data:
+  caddy-data:
+  caddy-config:

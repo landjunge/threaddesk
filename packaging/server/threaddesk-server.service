@@ -1,0 +1,21 @@
+# Example USER unit. Replace /home/alice and server.example.org before use.
+# ~/.config/systemd/user/threaddesk-server.service
+[Unit]
+Description=ThreadDesk Server & Sync
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+UMask=0077
+ExecStart=/home/alice/.local/share/threaddesk-server/venv/bin/threaddesk-server serve --data-dir /home/alice/.local/share/threaddesk-server/data --host 127.0.0.1 --port 8766 --public-origin https://server.example.org
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/alice/.local/share/threaddesk-server/data
+
+[Install]
+WantedBy=default.target
