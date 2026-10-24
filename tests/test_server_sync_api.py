@@ -127,6 +127,14 @@ def test_shared_core_notes_cas_and_append_only_whiteboard(server):
     assert result.status_code == 200, result.text
     assert http.post(api+'/whiteboard',headers=headers,json=entry).json()['duplicate']
     assert len(http.get(api+'/whiteboard',headers=headers).json()['entries']) == 1
+    # Valid existing 100000-character Unicode notes pass the actual bounded HTTP boundary.
+    from copy import deepcopy
+    baseline=http.get(api+'/metadata',headers=headers).json()['document']
+    incoming=deepcopy(baseline);incoming['thread']['notes']='😀'*100000
+    synced=http.post(api+'/metadata/sync',headers=headers,json={
+        'operation_id':'unicode-http','base':baseline,'document':incoming})
+    assert synced.status_code==200,synced.text[:200]
+    assert http.get(api+'/thread',headers=headers).json()['context']['notes']=='😀'*100000
 
 
 def test_actual_two_clients_new_files_reconnect_conflict_and_originals(server,tmp_path):

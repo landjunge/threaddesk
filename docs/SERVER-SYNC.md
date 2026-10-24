@@ -6,10 +6,12 @@ ThreadDesk-Kern für Projekt-Threads und Whiteboards. Er benötigt keinen Mac un
 keine laufende KiraBridge. Der vorhandene Desktop-Server und dessen lokale
 Zugriffsregeln bleiben getrennt.
 
-Die Installationsdateien sind Vorlagen für eine eigene Installation. Ein
-erfolgreicher nativer Linux-Betrieb, eine fertige Desktop-Anbindung und eine
-Produktivfreigabe werden damit noch nicht behauptet. Den genauen Prüfstand
-nennt der Entwicklungsbericht. Es gibt keinen automatischen Merge oder Release.
+Desktop-Anbindung, Linux-Installation, zertifikatsgeprüftes TLS und vollständige
+Wiederherstellung sind im isolierten Abnahmelauf geprüft. Der Linux-Nachweis
+verwendet ein frisch gebautes Linux/amd64-Image; der Browsernachweis umfasst
+die echte Desktop-Bedienung und den automatischen Abgleich. Das ist keine
+Installation auf einem öffentlichen Produktionsserver. Quellstände, Grenzen
+und Prüfbelege stehen im [Folgebericht](evidence/codex3-server-sync-followup-20261024/STATUS.md).
 
 ## Installation mit Docker und HTTPS
 
@@ -32,9 +34,14 @@ anderen Nutzernamen ausführen. Jeder Nutzer erhält einen eigenen Datenbereich.
 Dateien, Projektkennungen und Transferkennungen erlauben keinen Wechsel in einen
 anderen Nutzerbereich.
 
-Der laufende Server lädt die Nutzerliste beim Start. Nach dem Anlegen weiterer
-Nutzer den App-Dienst neu starten, damit neue Zugangsdaten verfügbar werden:
-`docker compose -f packaging/server/compose.yaml restart app`.
+Für weitere Nutzer zuerst den App-Dienst anhalten, dann initialisieren und
+starten. Der Lebenszyklusschutz verweigert Änderungen während des Betriebs:
+
+```sh
+docker compose -f packaging/server/compose.yaml stop app
+docker compose -f packaging/server/compose.yaml run --rm --no-deps app init --data-dir /data --user bob
+docker compose -f packaging/server/compose.yaml up -d app
+```
 
 Caddy stellt HTTPS bereit. Der App-Port wird durch die Compose-Datei nicht am
 Host veröffentlicht. Zertifikate und App-Daten liegen in getrennten dauerhaften
@@ -74,6 +81,24 @@ Konfiguration für entfernte Browser oder einen öffentlichen Server.
 
 ## Projekte und „Auch offline“
 
+Im Desktop den bestehenden Thread öffnen und **Server und Abgleich** wählen.
+Server-Adresse, Zugangsschlüssel und lokalen Projektordner eintragen. Ohne
+Server-Projektkennung wird ein wiederauffindbarer Eintrag automatisch angelegt;
+Wiederholungen nach einer unterbrochenen Antwort erzeugen keinen neuen Eintrag.
+Eine bestehende Kennung verbindet beide vorhandenen Stände unter Konfliktschutz.
+
+**Auch offline** stellt geprüfte Kopien bereit. Der automatische Abgleich läuft
+während ThreadDesk geöffnet ist und versucht es nach Verbindungsunterbrechung
+erneut. **Jetzt abgleichen** ist zusätzlich verfügbar. Notizen, Beschreibung,
+Titel, Status, Prompts, zugehörige Projekt-/Aufgabenknoten und Whiteboards gehen
+in beide Richtungen. Historische Whiteboard-Einträge bleiben unveränderlich;
+die Replikation startet keine Agenten oder Aufgaben.
+
+Zugangsschlüssel liegen ausschließlich im privaten Unterordner
+`server-sync-private` des ausgewählten Desktop-Arbeitsbereichs, mit privaten
+Dateirechten. Sie werden weder als Thread-Metadaten noch an einen anderen Server
+übertragen. Eine neue Server-Adresse benötigt einen neuen expliziten Schlüssel.
+
 Erstellen Sie nach der Anmeldung ein Projekt. Ohne „Auch offline“ speichert der
 Server Projektstruktur, Metadaten und Whiteboard, jedoch keine neu übertragenen
 Dateiinhalte. Aktivieren Sie die Option gezielt für Projekte, deren Dateien auch
@@ -100,13 +125,25 @@ Ein aktivierter Schalter allein ist kein vollständiger Offline-Stand. Ist der
 Hauptrechner ausgeschaltet, stehen nur bereits bestätigte Dateien zur Verfügung;
 neue dortige Änderungen können erst nach Wiederverbindung erscheinen.
 
-Die Erkennung ist auf den ausgewählten Projektbaum begrenzt. Symbolische Links,
-fehlende Dateien und Verweise aus dem freigegebenen Baum heraus werden nicht
-heimlich verfolgt. Gemeldete fehlende oder gesperrte Abhängigkeiten müssen Sie
-im Projektbaum verfügbar machen oder ausdrücklich anders zuordnen. Beliebige
-Abhängigkeiten fremder Programme, zur Laufzeit geladene Dateien oder externe
-Dienste können nicht automatisch vollständig bewiesen werden. Geheimnisdateien
-wie `.env`, private Schlüssel und VCS-Interna werden nicht übertragen.
+Die Erkennung erfasst den ganzen Projektbaum bei jedem Durchlauf sowie die
+ausdrücklich im lokalen Thread zugeordneten Dateien und Ordner. Weitere erlaubte
+Abhängigkeitsordner können im Desktop eingetragen werden. Externe Dateien
+bekommen stabile logische Namen unter `_external/`; Änderungen gehen auf den
+ursprünglich freigegebenen lokalen Pfad zurück, ohne doppelte Kopie im Hauptbaum.
+Die Freigabe einer einzelnen Datei erlaubt keinen Zugriff auf ihre Nachbarn.
+Entfernte Quellenfreigaben werden vor jedem Durchlauf erneut geprüft.
+
+Unterstützte statische Verweise umfassen Markdown/HTML/CSS, Python-Importe und
+literale Dateiöffnungen, JavaScript-/TypeScript-Importe sowie Asset-Manifeste.
+Neue Dateien innerhalb freigegebener Ordner werden automatisch erfasst.
+Serververweise können niemals zusätzliche lokale Leserechte erzeugen.
+Symlinks, fehlende Quellen und nicht auflösbare dynamische Abhängigkeiten
+verhindern eine Bereitschaftsbestätigung. Laufzeitgenerierte Namen und fremde
+Dienste lassen sich durch statische Analyse nicht vollständig beweisen; sie
+müssen als Quellen verfügbar gemacht oder ausdrücklich geklärt werden.
+Projektcode wird dafür nicht ausgeführt. `.env`, private Schlüssel, private
+Sync-Konfiguration und VCS-Interna werden nicht übertragen; normale Quellmodule
+wie `secrets.py` sind keine Schlüsselcontainer allein aufgrund ihres Namens.
 
 ## Versionen, Konflikte und Speicher
 
@@ -131,7 +168,7 @@ bleiben erhalten. Ändert sich eine lokale Datei während eines Teiltransfers,
 klärt der Client erst dessen gespeicherten Zustand und beginnt danach neu.
 
 Verdrängte lokale Dateien und zusätzliche Konfliktfassungen liegen im
-Projektordner unter `.threaddesk-sync-conflicts/`. Neben jeder Kopie beschreibt
+jeweiligen Quellordner unter `.threaddesk-sync-conflicts/`. Neben jeder Kopie beschreibt
 eine private JSON-Datei Originalpfad, Hash und bekannte Version. Dateien dort
 nicht ungeprüft entfernen. Die Browser-Auswahl einer Fassung überschreibt keine
 noch abweichende lokale Datei; diese muss anschließend bewusst abgeglichen
@@ -147,25 +184,49 @@ freigegeben werden; V1 hat keine automatische Versionslöschung.
 ## Betrieb und Sicherung
 
 Der Datenordner muss dauerhaft und nur für den Dienstnutzer zugänglich bleiben.
-Sichern Sie den gesamten Server-Datenbereich bei angehaltenem Server sowie die
-privat verwahrten Zugangsdaten. Eine Kopie einzelner laufender SQLite-Dateien
-ist kein zugesagtes konsistentes Backup. Vor Aktualisierungen zuerst sichern,
-danach in einem neuen Installationspräfix installieren und den Dienstpfad nach
-Prüfung umstellen. Keine Datenverzeichnisse oder Docker-Volumes beim Update
-löschen.
+Nach dem Anhalten des Servers eine vollständige Kalt-Sicherung erzeugen:
+
+```sh
+threaddesk-server backup --data-dir /privater/server-datenordner --output /privater/sicherungsordner/server.tar
+threaddesk-server restore --archive /privater/sicherungsordner/server.tar --data-dir /privater/neuer-server-datenordner
+```
+
+Das Ausgabearchiv muss neu sein und außerhalb des Datenordners liegen. Auch der
+Restore-Zielordner darf noch nicht existieren; bestehende Daten werden niemals
+zusammengeführt oder überschrieben. Für Docker dieselben CLI-Befehle mit dem
+angehaltenen Datenvolume in einem Wartungscontainer und einem privaten,
+beschreibbaren Sicherungsziel ausführen. Das Quellvolume behalten.
+
+Die Sicherung enthält Zugangskonfiguration, Threads, Notizen-Momentaufnahmen,
+Aufgaben, Whiteboards, Dateiversionen, Konfliktjournal, Transferblöcke und Receipts.
+Dateihashes, SQLite-Struktur, Versionen und Teiltransfergrenzen werden geprüft.
+Restore prüft zuerst vollständig in einem privaten Zwischenordner und
+veröffentlicht erst danach das neue Ziel. Ein laufender Server hält eine
+Lebenszyklussperre; Backup und zusätzliche Serverstarts werden dann abgewiesen.
+ASGI ohne aktivierten Lebenszyklus darf keine API-Anfragen bedienen.
+
+Grenzen: 4 GiB Sicherungsinhalt, 100000 Einträge und 16 MiB Manifest; ein
+überschrittener Umfang wird abgewiesen, nie still gekürzt. Ausreichender freier
+Platz für Archiv und vollständige Prüf-/Restore-Kopie wird vorab geprüft.
+Vor Aktualisierungen zuerst sichern, dann in einem neuen Installationspräfix
+installieren und den Dienstpfad nach Prüfung umstellen. Keine Datenverzeichnisse
+oder Docker-Volumes beim Update löschen.
 
 Die vorhandene portable Desktop-Sicherung enthält nach Codex 2s geprüftem Stand
 `library-files` noch nicht. Dieser neue Serverstand behebt diese separate
-Desktop-Sicherungslücke nicht. Produktionsfreigabe benötigt zusätzlich eine
-tatsächliche Linux-/TLS-/Wiederherstellungsabnahme und die Integration des
-Clients in die gewünschte Desktop-Bedienung.
+Desktop-Sicherungslücke nicht. Die vollständige Server-Sicherung ist davon
+unabhängig. Desktop-Zugangsdaten und Sync-Checkpoints liegen im privaten
+Arbeitsbereich; die bisherige portable Desktop-Sicherung übernimmt diese
+Verbindungskonfiguration nicht automatisch.
 
-Der Client gleicht derzeit Projektdateien ab. Bestehende Desktop-Threads,
-Aufgaben und Whiteboards werden noch nicht zwischen Desktop und Server
-zusammengeführt. Die Browserseite speichert diese Daten bereits mit dem
-gemeinsamen ThreadDesk-Kern und schützt Notizänderungen per Revision und
-vorheriger Momentaufnahme. Die fehlende Desktop-Metadatenanbindung ist eine
-offene Integration, kein vollständig erfüllter Gesamtplan.
+Metadatenkonflikte sind sowohl im Desktop als auch im Server-Browser auflösbar.
+Jede Auswahl ist an den gelesenen Stand gebunden und erhält vorherige Fassungen
+in Momentaufnahmen und Journal. Eine dauerhafte Arbeitsbereichsidentität
+verhindert doppelte Aufgaben oder Whiteboard-Einträge nach einem Restore in
+einen anderen Ordner. Metadatendokumente sind auf 1 MiB begrenzt; größere Stände
+werden mit einem eindeutigen Fehler abgewiesen, nicht abgeschnitten. Der
+Datei-CLI kann ohne Desktop verwendet werden; die vorhandenen Desktop-Threads
+werden durch die eingerichtete Desktop-Verbindung abgeglichen.
 
 Schnittstellen und technische Grenzen:
 [server-sync-v1.md](contracts/server-sync-v1.md).

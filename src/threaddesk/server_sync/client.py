@@ -23,12 +23,13 @@ from urllib.parse import unquote, urlsplit
 import httpx
 
 from threaddesk.server_sync.store import SyncError, validate_path
+from threaddesk.server_sync.discovery import DiscoveryError, DiscoveryPlan, SourceFile, discover_project
+from threaddesk.core.errors import ThreadDeskError
 
 CHUNK_BYTES = 256 * 1024
 MAX_BYTES = 64 * 1024 * 1024
 STATE_DIR = ".threaddesk-sync-conflicts"
-VCS_NAMES = {".git", ".hg", ".svn"}
-REFS = re.compile(r'''(?:!?\[[^\]]*\]\(\s*<?([^\s)>]+)|(?:src|href)\s*=\s*["']([^"']+)|url\(\s*["']?([^\s'"\)]+))''', re.I)
+
 
 
 class ClientError(RuntimeError):
@@ -93,60 +94,15 @@ def _read(root: Path, relative: str) -> bytes:
 
 
 def scan_project(root: Path, references=()) -> tuple[list[dict], list[str]]:
-    """Enumerate the selected tree without following links; discover known links."""
-    root = Path(root).absolute()
-    if root.is_symlink() or not root.is_dir():
-        raise ClientError("Selected project directory is unavailable or a symbolic link")
-    files, issues, links = [], [], []
-    for parent, dirs, names in os.walk(root, followlinks=False,
-                                       onerror=lambda exc: issues.append("Unreadable project directory: " + type(exc).__name__)):
-        prefix = Path(parent).relative_to(root)
-        for name in list(dirs):
-            relative = (prefix / name).as_posix()
-            if name == STATE_DIR or (name.casefold() in VCS_NAMES and not (Path(parent) / name).is_symlink()):
-                dirs.remove(name)
-                continue
-            if not safe_path(relative) or (Path(parent) / name).is_symlink():
-                dirs.remove(name)
-                issues.append("Excluded unsafe directory: " + relative)
-        for name in names:
-            if name.casefold() in VCS_NAMES and not (Path(parent) / name).is_symlink():
-                continue  # Worktree pointers and VCS internals are outside project content.
-            if re.fullmatch(r"\.td-sync-[a-f0-9]{32}", name):
-                continue  # Reserved unpublished download; never a user project file.
-            relative = (prefix / name).as_posix()
-            try:
-                data = _read(root, relative)
-                files.append({"path": relative, "sha256": digest(data), "size": len(data)})
-                if Path(name).suffix.lower() in {".md", ".markdown", ".html", ".htm", ".css"}:
-                    text = data.decode("utf-8", errors="replace")
-                    links.extend((Path(parent), next(x for x in match.groups() if x)) for match in REFS.finditer(text))
-            except (ClientError, OSError) as exc:
-                issues.append("Unavailable file: " + relative + " (" + type(exc).__name__ + ")")
-    links.extend((root, item) for item in references if isinstance(item, str))
-    for parent, value in links:
-        parsed = urlsplit(value)
-        if parsed.scheme in {"http", "https", "mailto", "data", "tel"} or not parsed.path:
-            continue
-        if parsed.scheme and parsed.scheme != "file":
-            issues.append("Unsupported dependency scheme: " + parsed.scheme)
-            continue
-        candidate = Path(unquote(parsed.path))
-        target = candidate if candidate.is_absolute() else parent / candidate
-        try:
-            resolved = target.resolve()
-            relative = resolved.relative_to(root).as_posix()
-            if not safe_path(relative) or not target.exists() or target.is_symlink():
-                raise ValueError("unsafe or missing")
-        except (OSError, ValueError):
-            # Do not disclose outside host paths in a remote manifest.
-            issues.append("Missing, unsafe or external dependency referenced by " + parent.relative_to(root).as_posix())
-    return sorted(files, key=lambda x: x["path"]), sorted(set(issues))
+    """Compatibility projection; supplied remote references never add read grants."""
+    plan = discover_project(root, server_references=references)
+    return plan.files, plan.issues
 
 
 class SyncClient:
     def __init__(self, base_url, token, project_id, root, *, state_dir=None,
-                 transport=None, allow_insecure_loopback=False):
+                 transport=None, allow_insecure_loopback=False, metadata_replica=None,
+                 local_references=(), approved_roots=()):
         parsed = urlsplit(base_url)
         loopback = parsed.hostname in {"localhost", "127.0.0.1", "::1"}
         if (parsed.scheme != "https" and not (allow_insecure_loopback and loopback and parsed.scheme == "http")):
@@ -163,12 +119,20 @@ class SyncClient:
         self.root_identity = (root_stat.st_dev, root_stat.st_ino)
         self.base_url = base_url.rstrip("/")
         self.project_id = project_id
+        self.metadata_replica = metadata_replica
+        # These owner-local grants are captured BEFORE any server metadata merge.
+        self.local_references = tuple(local_references)
+        self.approved_roots = dict(approved_roots) if isinstance(approved_roots, dict) else tuple(approved_roots)
+        self.inventory = DiscoveryPlan()
+        self.source_map = {}
         self.api = "/api/projects/" + project_id
         identity = digest((self.base_url + "\0" + project_id + "\0" + str(self.root) + "\0" + digest(token.encode())).encode())
         directory = Path(state_dir).expanduser() if state_dir else Path.home() / ".local/state/threaddesk-sync" / identity
         directory = directory.absolute()
         if directory.is_relative_to(self.root) or directory.is_symlink():
             raise ClientError("Checkpoint directory must be private and outside the project tree")
+        if self._trusted_target(directory):
+            raise ClientError("Checkpoint directory must be outside all approved source roots")
         directory.mkdir(parents=True, exist_ok=True, mode=0o700)
         os.chmod(directory, 0o700)
         dbpath = directory / "checkpoint.sqlite3"
@@ -180,7 +144,8 @@ class SyncClient:
         self.db.executescript("""CREATE TABLE IF NOT EXISTS identity (value TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS base (path TEXT PRIMARY KEY,revision TEXT NOT NULL,sha256 TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS uploads (path TEXT PRIMARY KEY,sha256 TEXT NOT NULL,base TEXT,transfer TEXT NOT NULL);
-        CREATE TABLE IF NOT EXISTS device (id TEXT NOT NULL);""")
+        CREATE TABLE IF NOT EXISTS device (id TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS sources (path TEXT PRIMARY KEY,root TEXT NOT NULL,relative TEXT NOT NULL);""")
         existing = self.db.execute("SELECT value FROM identity").fetchone()
         if existing and existing[0] != identity:
             self.db.close()
@@ -221,9 +186,76 @@ class SyncClient:
             self.db.execute("INSERT OR REPLACE INTO base VALUES (?,?,?)", (path, head["revision"], head["sha256"]))
             self.db.execute("DELETE FROM uploads WHERE path=?", (path,))
 
+    def _trusted_target(self, target):
+        """Cached paths are hints; only CURRENT explicit grants grant authority."""
+        target = Path(os.path.abspath(target))
+        if target.is_relative_to(self.root):
+            return True
+        roots = self.approved_roots.values() if isinstance(self.approved_roots, dict) else self.approved_roots
+        for value in tuple(roots) + self.local_references:
+            if not isinstance(value, (str, Path)):
+                continue
+            parsed = urlsplit(str(value))
+            if parsed.scheme not in {'', 'file'} or parsed.netloc:
+                continue
+            grant = Path(unquote(parsed.path)).expanduser()
+            if not grant.is_absolute():
+                grant = self.root / grant
+            grant = Path(os.path.abspath(grant))
+            if target == grant or (grant.is_dir() and not grant.is_symlink() and target.is_relative_to(grant)):
+                return True
+        return False
+
+    def _source(self, logical, *, allow_new=False):
+        if not safe_path(logical):
+            raise ClientError("Unsafe project path")
+        source = self.source_map.get(logical)
+        if source is not None:
+            return source
+        cached = self.db.execute("SELECT root,relative FROM sources WHERE path=?", (logical,)).fetchone()
+        if cached:
+            candidate = SourceFile(Path(cached[0]), cached[1])
+            if self._trusted_target(candidate.path) and safe_path(candidate.relative):
+                self.source_map[logical] = candidate
+                return candidate
+        if logical.split('/')[0] == '_external':
+            # New files may use an already-known directory namespace only while
+            # the corresponding directory remains an explicit current grant.
+            # An exact file grant never grants any sibling path.
+            parts = logical.split('/')
+            if len(parts) >= 3:
+                prefix = '/'.join(parts[:2]) + '/'
+                known = list(self.source_map.items())
+                known.extend((row[0], SourceFile(Path(row[1]), row[2])) for row in
+                             self.db.execute("SELECT path,root,relative FROM sources WHERE path LIKE ?", (prefix + '%',)))
+                for known_logical, known_source in known:
+                    if not known_logical.startswith(prefix) or known_source.relative != known_logical[len(prefix):]:
+                        continue
+                    candidate = SourceFile(known_source.root, '/'.join(parts[2:]))
+                    if safe_path(candidate.relative) and self._trusted_target(candidate.path):
+                        self.source_map[logical] = candidate
+                        return candidate
+            raise ClientError("External server file lacks an approved original destination: " + logical)
+        if allow_new:
+            return SourceFile(self.root, logical)
+        raise ClientError("File is absent from the approved inventory: " + logical)
+
+    def _read_source(self, logical):
+        return self._source(logical, allow_new=True).read_bytes()
+
+    def _discover(self, server_references):
+        plan = discover_project(self.root, local_references=self.local_references,
+                                approved_roots=self.approved_roots, server_references=server_references)
+        self.inventory = plan
+        self.source_map = dict(plan.sources)
+        with self.db:
+            for logical, source in plan.sources.items():
+                self.db.execute("INSERT OR REPLACE INTO sources VALUES (?,?,?)", (logical, str(source.root), source.relative))
+        return plan
+
     def _upload(self, item, base):
         relative, sha = item["path"], item["sha256"]
-        data = _read(self.root, relative)
+        data = self._read_source(relative)
         if digest(data) != sha:
             raise ClientError("File changed before upload: " + relative)
         row = self.db.execute("SELECT sha256,base,transfer FROM uploads WHERE path=?", (relative,)).fetchone()
@@ -291,7 +323,8 @@ class SyncClient:
 
     def _install(self, relative, data, expected_sha):
         """Retain displaced inode, publish exclusively through bound directory fds."""
-        parent, name = _parent_fd(self.root, relative, create=True)
+        source = self._source(relative, allow_new=True)
+        parent, name = _parent_fd(source.root, source.relative, create=True)
         backup_parent = None
         backup = None
         temporary = ".td-sync-" + uuid.uuid4().hex
@@ -309,7 +342,9 @@ class SyncClient:
                 stream.flush()
                 os.fsync(stream.fileno())
             if current is not None:
-                backup_parent, backup = _parent_fd(self.root, STATE_DIR + "/previous/" + uuid.uuid4().hex + ".copy",
+                recovery_parent = Path(source.relative).parent.as_posix()
+                recovery_prefix = '' if recovery_parent == '.' else recovery_parent + '/'
+                backup_parent, backup = _parent_fd(source.root, recovery_prefix + STATE_DIR + "/previous/" + uuid.uuid4().hex + ".copy",
                                                   create=True, managed=True)
                 os.rename(name, backup, src_dir_fd=parent, dst_dir_fd=backup_parent)
                 os.fsync(backup_parent)
@@ -342,8 +377,11 @@ class SyncClient:
 
     def _conflict_copy(self, relative, head):
         data = self._download(head)
-        path = STATE_DIR + "/remote/" + digest(relative.encode()) + "-" + head["revision"] + ".copy"
-        parent, name = _parent_fd(self.root, path, create=True, managed=True)
+        source = self._source(relative, allow_new=True)
+        recovery_parent = Path(source.relative).parent.as_posix()
+        recovery_prefix = '' if recovery_parent == '.' else recovery_parent + '/'
+        path = recovery_prefix + STATE_DIR + "/remote/" + digest(relative.encode()) + "-" + head["revision"] + ".copy"
+        parent, name = _parent_fd(source.root, path, create=True, managed=True)
         try:
             try:
                 fd = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=parent)
@@ -367,20 +405,51 @@ class SyncClient:
         value = self._json("GET", self.api + "/files")
         return value["files"] if isinstance(value, dict) else value
 
+    def _final_status(self, issues, local_metadata=None):
+        status = self._json("GET", self.api + "/status")
+        local_metadata = local_metadata or {}
+        local_count = local_metadata.get('metadata_conflict_count', 0)
+        status['local_metadata_conflict_count'] = local_count
+        status['remote_metadata_conflict_count'] = status.get('metadata_conflict_count', 0)
+        status['metadata_conflict_count'] = status.get('metadata_conflict_count', 0) + local_count
+        if status['metadata_conflict_count']:
+            status['state'] = 'conflict'
+        return dict(status, local_issues=sorted(set(issues)), selected_root=str(self.root),
+                    inventory_file_count=len(self.inventory.files),
+                    external_file_count=sum(path.startswith('_external/') for path in self.inventory.sources),
+                    discovery_limitations=list(self.inventory.limitations))
+
     def sync_once(self):
         root_stat = os.stat(self.root, follow_symlinks=False)
         if not stat.S_ISDIR(root_stat.st_mode) or (root_stat.st_dev, root_stat.st_ino) != self.root_identity:
             raise ClientError("Selected project directory was replaced; reselect it explicitly")
         issues = []
-        # Existing core files are references, never authority to read outside root.
+        local_metadata = {}
+        if self.metadata_replica is not None:
+            try:
+                result = self.metadata_replica.sync_once(self.http, self.project_id, self.token)
+                if result.get('state') == 'conflict':
+                    issues.append('Metadata contains concurrent edits; all alternatives retained')
+                from threaddesk.server_sync.metadata import metadata_status
+                local_metadata = metadata_status(self.metadata_replica.core, self.metadata_replica.thread_id)
+                if local_metadata.get('metadata_conflict_count'):
+                    issues.append('Unresolved local metadata conflicts require an explicit choice')
+            except (SyncError, ThreadDeskError, DiscoveryError) as exc:
+                issues.append('Metadata synchronization blocked: ' + type(exc).__name__)
+        # Server metadata is inspected only after merge and cannot expand grants.
         thread = self._json("GET", self.api + "/thread")
         context = thread.get("context", {})
         references = context.get("files", []) if isinstance(context, dict) else []
-        files, scan_issues = scan_project(self.root, references=references)
-        issues.extend(scan_issues)
-        status = self._json("POST", self.api + "/manifest", json={"files": files, "issues": issues, "device_id": self.device_id})
+        try:
+            plan = self._discover(references)
+        except (DiscoveryError, OSError) as exc:
+            self.inventory = DiscoveryPlan(issues=['Project discovery failed: ' + type(exc).__name__])
+            plan = self.inventory
+        files = plan.files
+        issues.extend(plan.issues)
+        status = self._json("POST", self.api + "/manifest", json={"files": files, "issues": issues[:2000], "device_id": self.device_id})
         if not status["offline_enabled"]:
-            return dict(status, local_issues=issues, selected_root=str(self.root))
+            return self._final_status(issues, local_metadata)
         remote = {item["path"]: item["heads"] for item in self._files()}
         for item in files:
             relative = item["path"]
@@ -391,7 +460,7 @@ class SyncClient:
             if base is None or item["sha256"] != base["sha256"] or not heads:
                 try:
                     self._upload(item, base["revision"] if base else None)
-                except (ClientError, OSError) as exc:
+                except (ClientError, DiscoveryError, OSError) as exc:
                     issues.append(str(exc))
         remote = self._files()
         local = {item["path"]: item for item in files}
@@ -402,10 +471,12 @@ class SyncClient:
                 continue
             local_item, base = local.get(relative), self._base(relative)
             try:
+                # Resolve authority before downloading even one remote byte.
+                self._source(relative, allow_new=True)
                 if len(heads) == 1:
                     head = heads[0]
                     if local_item and local_item["sha256"] == head["sha256"]:
-                        if digest(_read(self.root, relative)) == head["sha256"]:
+                        if digest(self._read_source(relative)) == head["sha256"]:
                             self._remember(relative, head)
                         else:
                             issues.append("Local file changed after upload: " + relative)
@@ -420,12 +491,17 @@ class SyncClient:
                         if local_item is None or local_item["sha256"] != head["sha256"]:
                             self._conflict_copy(relative, head)
                     issues.append("Unresolved version conflict: " + relative)
-            except (ClientError, OSError) as exc:
+            except (ClientError, DiscoveryError, OSError) as exc:
                 issues.append(str(exc))
-        files, final_issues = scan_project(self.root, references=references)
-        issues = sorted(set(issues + final_issues))
-        status = self._json("POST", self.api + "/manifest", json={"files": files, "issues": issues, "device_id": self.device_id})
-        return dict(status, local_issues=issues, selected_root=str(self.root))
+        try:
+            final_plan = self._discover(references)
+            files = final_plan.files
+            issues.extend(final_plan.issues)
+        except (DiscoveryError, OSError) as exc:
+            issues.append('Final project inventory failed: ' + type(exc).__name__)
+        issues = sorted(set(value.encode('utf-8', errors='backslashreplace').decode('utf-8')[:1900] for value in issues))
+        self._json("POST", self.api + "/manifest", json={"files": files, "issues": issues[:2000], "device_id": self.device_id})
+        return self._final_status(issues, local_metadata)
 
     def watch(self, interval=5, stop_event=None, on_status=None):
         stop = stop_event or threading.Event()
@@ -434,7 +510,7 @@ class SyncClient:
             try:
                 status = self.sync_once()
                 delay = max(1, interval)
-            except (httpx.HTTPError, ClientError, OSError) as exc:
+            except (httpx.HTTPError, ClientError, DiscoveryError, OSError) as exc:
                 status = {"state": "disconnected", "error": type(exc).__name__, "message": str(exc)}
                 delay = min(max(delay * 2, 1), 60)
             if on_status:

@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from threaddesk.server_sync.auth import provision
+from threaddesk.server_sync.backup import backup, restore, server_lock
 
 
 def main(argv=None):
@@ -15,6 +16,12 @@ def main(argv=None):
     init = commands.add_parser("init", help="Create user; print access token once")
     init.add_argument("--data-dir", type=Path, required=True)
     init.add_argument("--user", required=True)
+    backup_cmd = commands.add_parser('backup',help='Create complete cold server snapshot')
+    backup_cmd.add_argument('--data-dir',type=Path,required=True)
+    backup_cmd.add_argument('--output',type=Path,required=True)
+    restore_cmd = commands.add_parser('restore',help='Validate and restore into a NEW directory')
+    restore_cmd.add_argument('--archive',type=Path,required=True)
+    restore_cmd.add_argument('--data-dir',type=Path,required=True)
     serve = commands.add_parser("serve", help="Run private server behind TLS proxy")
     serve.add_argument("--data-dir", type=Path, required=True)
     serve.add_argument("--host", default="127.0.0.1")
@@ -25,7 +32,16 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         if args.command == "init":
-            print(provision(args.data_dir, args.user))
+            with server_lock(args.data_dir):
+                print(provision(args.data_dir, args.user))
+            return 0
+        if args.command == 'backup':
+            import json
+            print(json.dumps(backup(args.data_dir,args.output)))
+            return 0
+        if args.command == 'restore':
+            import json
+            print(json.dumps(restore(args.archive,args.data_dir)))
             return 0
         ipaddress.ip_network(args.trusted_proxy, strict=False)
         if args.allow_http_loopback and args.host not in {"127.0.0.1", "::1", "localhost"}:
@@ -34,7 +50,7 @@ def main(argv=None):
         import uvicorn
         app = create_app(args.data_dir, public_origin=args.public_origin, allow_http_loopback=args.allow_http_loopback)
         uvicorn.run(app, host=args.host, port=args.port, workers=1, proxy_headers=True,
-                    forwarded_allow_ips=args.trusted_proxy, access_log=False)
+                    forwarded_allow_ips=args.trusted_proxy, access_log=False, timeout_graceful_shutdown=10)
         return 0
     except (OSError, ValueError) as exc:
         print(str(exc), file=sys.stderr)

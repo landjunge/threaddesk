@@ -104,6 +104,9 @@ def test_manifest_fail_closed_and_cross_project_transfer_isolation(tmp_path):
         with pytest.raises(SyncError):
             store.declare_manifest(project, [{'path':path,'size':0,'sha256':digest(b'')}], [], 'mac')
     assert store.status(project)['state'] == 'pending'
+    store.declare_manifest(project,[{'path':'core/secrets.py','size':0,'sha256':digest(b'')}],[], 'source')
+    with pytest.raises(SyncError):
+        store.declare_manifest(project,[{'path':'server-sync-private/a.json','size':0,'sha256':digest(b'')}],[],'source')
     other = store.create_project('Other', 'other')['id']
     revision = upload(store, project, 'private', b'private')
     with pytest.raises(SyncError):

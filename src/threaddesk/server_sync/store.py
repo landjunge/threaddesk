@@ -19,6 +19,8 @@ MAX_RESERVED_BYTES = 512 * 1024 * 1024
 _ID = re.compile(r"[A-Za-z0-9_-]{1,128}\Z")
 _HASH = re.compile(r"[0-9a-f]{64}\Z")
 _SECRET = re.compile(r"(?i)(^|[._-])(credentials?|secrets?|id_rsa|id_dsa|id_ecdsa|id_ed25519|cookies)($|[._-])|\.(pem|key|p12|pfx|kdbx)$")
+_SOURCE_NAMES = {'secrets','secret','credentials','credential','cookies'}
+_SOURCE_EXTENSIONS = {'.py','.pyi','.js','.mjs','.cjs','.ts','.tsx','.jsx','.go','.rs','.java','.c','.h','.swift'}
 
 
 class SyncError(Exception):
@@ -44,9 +46,10 @@ def _path(value):
     except UnicodeEncodeError as exc:
         raise SyncError('Unsafe project path', 'unsafe_path') from exc
     parts = value.split('/')
-    if any(p in {'', '.', '..'} or p.casefold() in {'.git', '.svn', '.hg', '.ssh', '.aws', '.gnupg', '.netrc', '.npmrc', '.pypirc', '.threaddesk-sync-conflicts'}
+    if any(p in {'', '.', '..'} or p.casefold() in {'.git', '.svn', '.hg', '.ssh', '.aws', '.gnupg', '.netrc', '.npmrc', '.pypirc', '.threaddesk-sync-conflicts','server-sync-private'}
            or p.casefold().startswith('.td-sync-')
-           or p.casefold() == '.env' or p.casefold().startswith('.env.') or _SECRET.search(p) for p in parts):
+           or p.casefold() == '.env' or p.casefold().startswith('.env.') or (_SECRET.search(p)
+               and not (Path(p).stem.casefold() in _SOURCE_NAMES and Path(p).suffix.casefold() in _SOURCE_EXTENSIONS)) for p in parts):
         raise SyncError('Unsafe project path', 'unsafe_path')
     return value
 
@@ -72,6 +75,26 @@ def _size_hash(size, digest):
         raise SyncError('Invalid file size')
     if not isinstance(digest, str) or not _HASH.fullmatch(digest):
         raise SyncError('Invalid SHA-256')
+
+
+def _check_manifest_paths(paths):
+    aliases, files, directories = {}, set(), set()
+    for path in paths:
+        parts = path.split('/')
+        for index in range(1,len(parts)+1):
+            prefix = '/'.join(parts[:index])
+            key = unicodedata.normalize('NFC',prefix).casefold()
+            if key in aliases and aliases[key] != prefix:
+                raise SyncError('Ambiguous project path')
+            if index < len(parts) and key in files or index == len(parts) and key in directories:
+                raise SyncError('File and directory paths conflict')
+            aliases[key] = prefix
+            if index < len(parts):
+                directories.add(key)
+            else:
+                if key in files:
+                    raise SyncError('Duplicate manifest path')
+                files.add(key)
 
 
 class SyncStore:
@@ -162,11 +185,10 @@ class SyncStore:
             portable = unicodedata.normalize('NFC', path).casefold()
             if path in seen or portable in folded:
                 raise SyncError('Duplicate or ambiguous manifest path')
-            if any(_path_collision(path, previous) for previous in seen):
-                raise SyncError('File and directory paths conflict')
             seen.add(path)
             folded.add(portable)
             clean.append(dict(f))
+        _check_manifest_paths(seen)
         with self._db() as db:
             self._project(db, project_id)
             db.execute('INSERT OR REPLACE INTO manifests(project,device,files,issues,updated_at) VALUES (?,?,?,?,?)',

@@ -34,12 +34,33 @@ async function status() {
   if(selected?.id !== pid) return;
   $('offline').checked=value.offline_enabled;
   $('sync').replaceChildren(el('strong',states[value.state] || value.state));
-  $('sync').append(el('p',`Noch benötigt: ${(value.required_bytes/1048576).toFixed(2)} MiB · Gespeichert: ${(value.stored_bytes/1048576).toFixed(2)} MiB · Konflikte: ${value.conflict_count}`));
+  $('sync').append(el('p',`Noch benötigt: ${(value.required_bytes/1048576).toFixed(2)} MiB · Gespeichert: ${(value.stored_bytes/1048576).toFixed(2)} MiB · Konflikte: ${value.conflict_count+(value.metadata_conflict_count||0)}`));
   if(value.last_sync_at)$('sync').append(el('p','Letzter gemeldeter Abgleich: '+new Date(value.last_sync_at).toLocaleString()));
   if(value.missing_files.length) $('sync').append(el('p','Fehlend: '+value.missing_files.join(', ')));
   for(const issue of value.issues) $('sync').append(el('p',issue));
 }
-async function refresh() {await status(); await showFiles(); await showEntries();}
+async function refresh() {await status(); await showFiles(); await showEntries(); await showMetadataConflicts();}
+async function showMetadataConflicts() {
+  const pid=selected.id,prefix='/api/projects/'+pid;
+  const {conflicts}=await api(prefix+'/metadata/conflicts');if(selected?.id!==pid)return;
+  $('metadata-conflicts').hidden=!conflicts.length;$('metadata-conflict-list').replaceChildren();
+  if(!conflicts.length)return;
+  const {document:doc}=await api(prefix+'/metadata');if(selected?.id!==pid)return;
+  for(const conflict of conflicts) {
+    const row=el('div');row.className='file';row.append(el('strong',conflict.path));
+    const parts=conflict.path.split('/');let current=doc;
+    for(const part of parts)current=current && Object.hasOwn(current,part)?current[part]:{'$missing':true};
+    for(const [label,value] of [['Eingehende Fassung verwenden',conflict.incoming],['Gespeicherte Server-Fassung verwenden',conflict.current]]) {
+      const detail=el('details');detail.append(el('summary',label),el('pre',JSON.stringify(value,null,2)));row.append(detail);
+      if(value && value.$missing === true)continue;
+      row.append(button(label,async()=>{
+        await api(prefix+'/metadata/resolve','POST',{conflict_id:conflict.id,expected_current:current,chosen_value:value,operation_id:crypto.randomUUID().replaceAll('-','')});
+        if(selected?.id===pid)await select(selected);message('Metadatenkonflikt aufgelöst. Vorherige Fassungen bleiben in Momentaufnahmen und Konfliktjournal erhalten.');
+      }));
+    }
+    $('metadata-conflict-list').append(row);
+  }
+}
 async function showFiles() {
   const pid=selected.id, prefix='/api/projects/'+pid;
   const {files}=await api(prefix+'/files'); if(selected?.id!==pid)return; $('files').replaceChildren();

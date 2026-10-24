@@ -86,15 +86,69 @@ Remote removals are metadata only; no automatic local/server deletion or GC.
 Displaced local inodes and remote conflict copies have private JSON sidecars
 mapping each generated recovery copy to its original path and known revision.
 Known VCS internals are omitted; explicit references to them block readiness.
-The CLI synchronizes file content, not existing desktop metadata/whiteboards.
-Server browser metadata uses the shared core with revision CAS and snapshots;
-an existing desktop workspace adapter remains a separate integration boundary.
+The standalone file CLI synchronizes file content. DesktopSyncManager binds an
+explicit existing local ThreadService/workspace/thread, captures its local file
+grants before merging remote metadata, and passes MetadataReplica to SyncClient.
+SourceFile mappings returned by discover_project determine descriptor-bound reads
+AND original write destinations. Revoked grants, unknown external namespaces and
+exact-file siblings cannot become write targets. Recovery stays on the target's
+filesystem. Static Python/JS/TS/HTML/CSS/Markdown/manifests are inspected without
+executing code; unresolved dynamic dependencies prevent readiness.
+
+## Desktop and metadata additions
+
+Desktop has one protected POST /threads/{id}/server-sync action boundary,
+read-only configuration/status views, private 0700/0600 bindings and automatic
+reconnect while the application runs. Policy-generation CAS prevents an old
+in-flight result from undoing a newer offline toggle. Tokens never enter
+replicated core metadata or views; changed server origins require new credentials.
+
+POST /api/projects/bind {binding_id,title} creates a deterministic scoped project
+with durable bootstrap receipt. Replays return that receipt. A pre-existing
+thread without its binding receipt is not silently adopted as pristine.
+MetadataReplica.seed_base only seeds an unused checkpoint, never pending work.
+
+- GET /api/projects/{id}/metadata -> {document}.
+- POST .../metadata/sync {operation_id,base,document} -> merged document/conflicts.
+- GET .../metadata/conflicts -> unresolved historical conflicts.
+- POST .../metadata/resolve {conflict_id,expected_current,chosen_value,operation_id}.
+
+Document format threaddesk.metadata.v1 includes thread fields, portable project/
+task nodes and relations, and append-only whiteboards. Portable project origins
+map to existing/local IDs, including organization.project_id and owned tasks.
+Absolute file references remain local; incoming safe relative refs are inert and
+never grant access outside an existing source grant. Agent state is not exported.
+Three-way field merges, atomic core receipts and previous snapshots protect
+concurrent values and uncertain responses. Replication never dispatches tasks.
+Opaque namespace identity is journaled durably, surviving path changes and full
+backup/restore. Documents are bounded to 1 MiB each, metadata HTTP bodies 4 MiB;
+other request bodies retain the 512 KiB transfer bound. No silent truncation.
+When local metadata equals the last common base and no uncertain operation is
+pending, authenticated conditional GET/ETag proves an unchanged server without
+writing another receipt, snapshot or checkpoint. Pending operations still replay
+their original durable request. Idle automatic polling therefore does not grow
+the immutable metadata journal with repeated copies of the same document.
+
+## Complete server backup
+
+backup(data_dir,output) and restore(archive,new_data_dir) use format
+threaddesk.server.backup.v1. Server ASGI lifespan and account initialization hold
+the same exclusive lifecycle lock; API without startup is refused. Cold backups
+include every regular file/empty directory except that transient lifecycle lock,
+including credentials, core, snapshots, immutable versions, pending chunks,
+conflicts and receipts. Output/restore targets are NEW, never overwritten.
+SHA256 manifests, SQLite quick_check, version hashes and chunk offsets are checked
+before atomic restore publication. Reject symlinks/hardlinks, traversal, duplicate
+archive paths, unsupported tar extensions and insufficient space. Bounds are
+4 GiB content, 100000 entries and 16 MiB manifest. Arbitrary external filesystem
+writers outside the lifecycle contract remain an operator trust boundary.
 
 ## Delivery gates
 
-Targeted data-loss/restart/authorization/integrity checks only. No merge or
-publication. Completeness of arbitrary out-of-tree dependencies cannot be
-guaranteed: report the selected root and unresolved references explicitly.
-Docker/systemd examples use TLS reverse proxy and private persistent volume;
-native Linux installation and live Desktop/KiraBridge integration require actual
-acceptance evidence and must not be represented as already verified.
+Targeted checks during development; repository-required complete CI applies before
+the authorized PR/merge. Codex 2 PR88 is incorporated through committed main.
+Actual isolated Linux/amd64 build, verified private-CA TLS, restart, complete
+restore and Desktop/browser integration evidence is in the follow-up report.
+No public deployment or release is implied. KiraBridge's independent contract
+remains unchanged. Arbitrary runtime dependency completeness cannot be proved;
+reported unresolved dependencies fail closed rather than claim readiness.

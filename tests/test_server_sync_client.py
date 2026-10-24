@@ -24,7 +24,9 @@ class Wire:
         assert request.headers["authorization"] == "Bearer test-access-token"
         path = request.url.path.split("/")[4:]
         payload = json.loads(request.content) if request.content else {}
-        if path == ["thread"]:
+        if path == ["status"]:
+            value = self.store.status(self.project)
+        elif path == ["thread"]:
             value = {"context": {"files": []}}
         elif path == ["manifest"]:
             value = self.store.declare_manifest(self.project, **payload)

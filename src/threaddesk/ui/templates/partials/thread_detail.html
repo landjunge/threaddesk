@@ -10,6 +10,7 @@
       <span class="status status-{{ current.status }}">{{ current.status }}</span>
     </div>
     <p class="thread-description">{{ current.description or t('detail.description_placeholder') }}</p>
+    <a class="btn btn-ghost btn-compact" href="/threads/{{ current.id }}/server-sync">{{ t('sync.title') }}</a>
     <details class="np-disclosure thread-edit" data-disclosure="thread-edit">
       <summary>{{ t('ui.edit_thread') }}</summary>
         <form

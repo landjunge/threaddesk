@@ -4,11 +4,13 @@ from __future__ import annotations
 import base64
 import binascii
 import hmac
+import hashlib
 import ipaddress
 import json
 import threading
 import time
 from copy import deepcopy
+from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -18,9 +20,10 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from threaddesk.api.service import ThreadService
 from threaddesk.core.errors import InvalidState, ManagementError, NotFound, SecretRejected
-from threaddesk.core.models import Snapshot, new_id, now_iso
+from threaddesk.core.models import Snapshot, new_id, new_thread, now_iso
 from threaddesk.core.secrets import reject_secrets
 from threaddesk.server_sync.auth import Credentials, SESSION_SECONDS
+from threaddesk.server_sync.backup import server_lock
 from threaddesk.server_sync.store import SyncError, SyncStore
 from threaddesk.storage.json_store import JsonStore
 
@@ -32,10 +35,11 @@ async def body(request: Request, required: set[str], optional: set[str] | None =
     if request.headers.get("content-type", "").split(";")[0].strip() != "application/json":
         raise HTTPException(415, "application/json required")
     data = bytearray()
+    limit = 4 * 1024 * 1024 if '/metadata/' in request.url.path else MAX_BODY
     async for part in request.stream():
         data.extend(part)
-        if len(data) > MAX_BODY:
-            raise HTTPException(413, "Request exceeds 512 KiB")
+        if len(data) > limit:
+            raise HTTPException(413, "Request exceeds endpoint body limit")
     try:
         value = json.loads(data)
     except (ValueError, UnicodeError):
@@ -60,7 +64,16 @@ def create_app(data_dir: Path, *, public_origin: str, allow_http_loopback: bool 
         raise ValueError("HTTPS required; explicit loopback mode is development only")
     public_origin = public_origin.rstrip("/")
     creds = Credentials(data_dir)
-    app = FastAPI(title="ThreadDesk Server & Sync", docs_url=None, redoc_url=None, openapi_url=None)
+    @asynccontextmanager
+    async def lifespan(app):
+        with server_lock(data_dir):
+            app.state.server_locked = True
+            try:
+                yield
+            finally:
+                app.state.server_locked = False
+
+    app = FastAPI(title="ThreadDesk Server & Sync", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=[origin.hostname])
     cache = {}
     cache_lock = threading.RLock()
@@ -110,11 +123,14 @@ def create_app(data_dir: Path, *, public_origin: str, allow_http_loopback: bool 
             return JSONResponse({"error": "foreign_origin"}, 403)
         if request.headers.get("content-length"):
             try:
-                if int(request.headers["content-length"]) > MAX_BODY:
+                limit = 4 * 1024 * 1024 if '/metadata/' in request.url.path else MAX_BODY
+                if int(request.headers["content-length"]) > limit:
                     return JSONResponse({"error": "body_too_large"}, 413)
             except ValueError:
                 return JSONResponse({"error": "invalid_length"}, 400)
         if request.url.path.startswith("/api/"):
+            if not getattr(app.state,'server_locked',False):
+                return JSONResponse({'error':'server_lifecycle_required'},503)
             auth = request.headers.get("authorization", "")
             session = request.cookies.get(COOKIE, "")
             user = creds.authenticate(auth[7:]) if auth.startswith("Bearer ") else creds.session_user(session)
@@ -185,6 +201,45 @@ def create_app(data_dir: Path, *, public_origin: str, allow_http_loopback: bool 
         sync.project(pid)
         return sync, core, lock
 
+    from threaddesk.server_sync.metadata import export_document, metadata_status
+    from threaddesk.server_sync.metadata_routes import install_routes
+    install_routes(app, project, body)
+
+    @app.post('/api/projects/bind')
+    async def bind_project(request: Request):
+        value = await body(request, {'binding_id','title'})
+        from threaddesk.server_sync.store import _id
+        binding = _id(value['binding_id'])
+        title = reject_secrets(text(value['title'],200)).strip()
+        if not title:
+            raise HTTPException(400,'Project title required')
+        pid = hashlib.sha256(binding.encode()).hexdigest()[:24]
+        key = 'serverbind_'+pid
+        sync,core,lock = stores(request.state.user)
+        with lock, core.store.transaction():
+            saved = core.store.get_management_operation(key)
+            if saved:
+                sync.project(pid)
+                return saved['result']
+            try:
+                core.get(pid)
+            except NotFound:
+                thread = new_thread(title)
+                thread.id = pid
+                core.store.save_thread(thread)
+            else:
+                raise HTTPException(409,'Existing project has no binding receipt; select its ID explicitly')
+            try:
+                sync.project(pid)
+            except SyncError as exc:
+                if exc.status != 404:
+                    raise
+                sync.create_project(title,project_id=pid)
+            result = {**sync.project(pid),'bootstrap_document':export_document(core,pid),'operation_id':key}
+            core.store.save_management_operation(key,{'request_hash':hashlib.sha256(binding.encode()).hexdigest(),
+                'recorded_at':now_iso(),'result':result})
+            return result
+
     @app.get("/api/projects")
     def projects(request: Request):
         sync, _, _ = stores(request.state.user)
@@ -201,8 +256,13 @@ def create_app(data_dir: Path, *, public_origin: str, allow_http_loopback: bool 
 
     @app.get("/api/projects/{pid}/status")
     def status(pid: str, request: Request):
-        sync, _, _ = project(request, pid)
-        return sync.status(pid)
+        sync, core, lock = project(request, pid)
+        with lock, core.store.transaction():
+            meta = metadata_status(core,pid)
+        result = {**sync.status(pid), **meta}
+        if meta['metadata_conflict_count']:
+            result['state'] = 'conflict'
+        return result
 
     @app.put("/api/projects/{pid}/offline")
     async def offline(pid: str, request: Request):

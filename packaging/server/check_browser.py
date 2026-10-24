@@ -6,7 +6,9 @@ An existing Chromium executable can be selected without downloading a browser.
 from __future__ import annotations
 
 import argparse
+from copy import deepcopy
 import json
+import os
 import socket
 import subprocess
 import sys
@@ -20,13 +22,110 @@ from playwright.sync_api import expect, sync_playwright
 from threaddesk.server_sync.auth import provision
 
 
+def desktop_acceptance(browser, server_origin, token, directory, output_dir):
+    """Exercise the actual protected desktop form and its automatic worker."""
+    from threaddesk.api.service import ThreadService
+    from threaddesk.storage.json_store import JsonStore
+    workspace=Path(directory)/'desktop-workspace'
+    files=Path(directory)/'desktop-project';files.mkdir()
+    (files/'notes.md').write_text('Original project file',encoding='utf-8')
+    attachment=Path(directory)/'attached-context.txt';attachment.write_text('Explicit attached file',encoding='utf-8')
+    core=ThreadService(JsonStore(workspace));thread=core.create('Desktop binding project','Existing desktop description')
+    core.set_note('Existing desktop note',thread.id)
+    core.add_file(str(attachment),thread.id)
+    core.create_node('task','Existing desktop task',metadata={'thread_id':thread.id})
+    core.append_whiteboard(thread.id,actor='Owner',actor_type='human',entry_type='note',content='Desktop whiteboard entry')
+    with socket.socket() as listener:
+        listener.bind(('127.0.0.1',0));port=listener.getsockname()[1]
+    origin=f'http://127.0.0.1:{port}'
+    env={**os.environ,'THREADDESK_HOME':str(workspace),'THREADDESK_STORAGE':'json','THREADDESK_SYNC_ALLOW_HTTP':'1'}
+    command='import sys,uvicorn;from threaddesk.ui.server import create_app;uvicorn.run(create_app(),host="127.0.0.1",port=int(sys.argv[1]),log_level="error",proxy_headers=False)'
+    process=subprocess.Popen([sys.executable,'-c',command,str(port)],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+    try:
+        for _ in range(100):
+            if process.poll() is not None:raise RuntimeError(process.communicate()[1])
+            try:
+                if httpx.get(origin,timeout=1).status_code==200:break
+            except httpx.HTTPError:pass
+            time.sleep(.1)
+        else:raise RuntimeError('Desktop startup timeout')
+        page=browser.new_page(viewport={'width':1280,'height':1000})
+        errors=[];page.on('pageerror',lambda error:errors.append(str(error)))
+        page.goto(origin+'/?thread='+thread.id)
+        page.get_by_role('link',name='Server und Abgleich',exact=True).click()
+        configure=page.locator('form:has(input[name="action"][value="configure"])')
+        configure.locator('[name="url"]').fill(server_origin)
+        configure.locator('[name="token"]').fill(token)
+        configure.locator('[name="root"]').fill(str(files))
+        configure.locator('[name="offline"]').check()
+        configure.get_by_role('button',name='Verbinden und abgleichen',exact=True).click()
+        expect(page.get_by_text('Gemeldeter Projektbestand geprüft und offline bereit',exact=True)).to_be_visible(timeout=20000)
+        binding=page.request.get(origin+'/api/threads/'+thread.id+'/server-sync').json()
+        assert binding['configured'] and 'token' not in binding
+        pid=binding['project_id'];prefix='/api/projects/'+pid
+        with httpx.Client(base_url=server_origin,headers={'Authorization':'Bearer '+token}) as remote:
+            document=remote.get(prefix+'/metadata').json()['document']
+            assert document['thread']['notes']=='Existing desktop note'
+            assert any(n['title']=='Existing desktop task' for n in document['nodes'].values())
+            assert any(e['content']=='Desktop whiteboard entry' for e in document['whiteboard'].values())
+            inventory=remote.get(prefix+'/files').json()['files']
+            assert any(f['path'].startswith('_external/') for f in inventory)
+            value=remote.get(prefix+'/thread').json()
+            response=remote.put(prefix+'/thread',json={'revision':value['revision'],'description':value['description'],'notes':'Remote browser note'})
+            response.raise_for_status()
+            for _ in range(100):
+                if core.get(thread.id).context.notes=='Remote browser note':break
+                time.sleep(.1)
+            else:raise AssertionError('Automatic server-to-desktop metadata sync did not finish')
+            core.set_note('Desktop follow-up note',thread.id)
+            for _ in range(100):
+                if remote.get(prefix+'/thread').json()['context']['notes']=='Desktop follow-up note':break
+                time.sleep(.1)
+            else:raise AssertionError('Automatic desktop-to-server metadata sync did not finish')
+            page.reload()
+            configure=page.locator('form:has(input[name="action"][value="configure"])')
+            configure.locator('[name="automatic"]').uncheck()
+            configure.get_by_role('button',name='Verbinden und abgleichen',exact=True).click()
+            expect(page.get_by_text('Gemeldeter Projektbestand geprüft und offline bereit',exact=True)).to_be_visible()
+            page.screenshot(path=str(output_dir/'desktop.png'),full_page=True)
+            # A real concurrent metadata conflict, then selection through browser UI.
+            baseline=remote.get(prefix+'/metadata').json()['document']
+            incoming=deepcopy(baseline);incoming['thread']['notes']='Incoming conflict note'
+            value=remote.get(prefix+'/thread').json()
+            remote.put(prefix+'/thread',json={'revision':value['revision'],'description':value['description'],'notes':'Saved conflict note'}).raise_for_status()
+            result=remote.post(prefix+'/metadata/sync',json={'operation_id':'browser-conflict','base':baseline,'document':incoming})
+            result.raise_for_status();assert result.json()['conflicts']
+        remote_page=browser.new_page(viewport={'width':1280,'height':1000})
+        remote_page.goto(server_origin)
+        if remote_page.locator('#login').is_visible():
+            remote_page.locator('#token').fill(token);remote_page.locator('#login-form button').click()
+        expect(remote_page.locator('#desk')).to_be_visible()
+        remote_page.get_by_role('button',name='Desktop binding project',exact=True).click()
+        remote_page.get_by_role('button',name='Eingehende Fassung verwenden',exact=True).click()
+        expect(remote_page.locator('#notes')).to_have_value('Incoming conflict note')
+        assert str(attachment) in core.get(thread.id).context.files
+        assert attachment.read_text()=='Explicit attached file' and (files/'notes.md').read_text()=='Original project file'
+        assert not errors,errors
+        page.close();remote_page.close()
+        return ['protected desktop project binding form','automatic bidirectional notes/tasks/whiteboard',
+                'explicit attachment mapping and original preservation','metadata conflict choice in server browser']
+    finally:
+        process.terminate()
+        try:process.communicate(timeout=15)
+        except subprocess.TimeoutExpired:process.kill();process.communicate()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--browser-binary')
+    parser.add_argument('--with-desktop',action='store_true')
     parser.add_argument('--output-dir', required=True, type=Path)
     args = parser.parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='td-server-browser-') as directory:
+        # macOS commonly exposes its temp directory through /var -> /private/var.
+        # Resolve only this newly created harness directory, not a user source.
+        directory=str(Path(directory).resolve())
         token = provision(Path(directory)/'data', 'browser')
         with socket.socket() as listener:
             listener.bind(('127.0.0.1', 0))
@@ -98,13 +197,14 @@ def main():
                 expect(page.locator('#notes')).to_have_value('Diese Notiz bleibt erhalten.')
                 page.locator('#logout').click()
                 page.locator('#login').wait_for(state='visible')
+                desktop_checks=desktop_acceptance(browser,origin,token,directory,args.output_dir) if args.with_desktop else []
                 browser.close()
             report = {
                 'browser':'Chromium', 'platform':sys.platform,
                 'checks':['real CLI loopback HTTP (explicit development mode)',
                           'login/session reload/logout', 'project + Auch offline',
                           'verified upload + ready', 'edit + retained history',
-                          'shared-core notes + append-only task', 'no JavaScript errors'],
+                          'shared-core notes + append-only task', 'no JavaScript errors']+desktop_checks,
                 'versions_retained':len(versions),
                 'production_tls_linux':'not tested',
                 'data':'synthetic temporary workspace only',
