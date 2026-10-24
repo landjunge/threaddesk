@@ -1,0 +1,13 @@
+{% if library_files %}
+<section class="block" id="library-files">
+  <h3>{{ t("library.thread_heading") }}</h3>
+  <ul class="file-list">
+    {% for item in library_files %}
+    <li class="file-item">
+      <a href="/library-import/files/{{ item.id }}">{{ item.filename }}</a>
+      <span class="muted">{{ item.format }} · {{ item.size_label }} · {{ t("library.verified") if item.integrity == "verified" else t("library.integrity_failed") }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}

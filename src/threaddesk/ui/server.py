@@ -12,7 +12,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from threaddesk.ui.http_access import LocalHTTPAccess, require_ui_csrf, safe_return_path
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
@@ -36,6 +36,7 @@ from threaddesk.storage.portable_backup import base_root, selected_profile, down
 from threaddesk.storage.workspace_backup import BackupError
 from threaddesk.storage.json_store import JsonStore
 from threaddesk.storage.sqlite_store import SQLiteStore
+from threaddesk.services.library_import import LibraryImportError, LibraryImporter
 from threaddesk.services.migration import (
     AtomicImportError,
     BundleValidationError,
@@ -224,6 +225,7 @@ def _ctx(request: Request, extra: dict | None = None) -> dict:
             str(svc.store.artifact_path("hausmeister.json"))
         )),
         "room": RoomBook(svc.store).view(),
+        "library_files": LibraryImporter(svc.store).for_thread(current.id) if current else [],
     }
     if current is not None:
         chosen = request.query_params.get("node") or ""
@@ -360,6 +362,115 @@ def create_app() -> FastAPI:
             response = data_page(request, error=i18n.translate("data.restore_error", _language(request)))
             response.status_code = 400
             return response
+
+    def library_page(request: Request, **extra) -> HTMLResponse:
+        catalog = LibraryImporter(_svc().store).catalog()
+        return templates.TemplateResponse(
+            request, "library_import.html", _ctx(request, {"library": catalog, **extra}),
+        )
+
+    @app.get("/library-import", response_class=HTMLResponse)
+    def library_view(request: Request) -> HTMLResponse:
+        return library_page(request)
+
+    def _library_summary(request: Request, summary: dict) -> HTMLResponse:
+        notice = i18n.translate(
+            "library.summary", _language(request),
+            stored=summary["stored"], duplicate=summary["duplicate"], failed=summary["failed"],
+        )
+        return library_page(request, notice=notice)
+
+    def _library_failure(request: Request, exc: LibraryImportError) -> HTMLResponse:
+        key = f"library.error.{exc.code}"
+        message = i18n.translate(key, _language(request))
+        if message == key:
+            message = i18n.translate("ui.error", _language(request))
+        response = library_page(request, error=message)
+        response.status_code = 400
+        return response
+
+    @app.post("/library-import/folder", response_class=HTMLResponse)
+    def library_folder(request: Request, source: str = Form(...)) -> HTMLResponse:
+        try:
+            summary = LibraryImporter(_svc().store).import_tree(Path(source))
+        except LibraryImportError as exc:
+            return _library_failure(request, exc)
+        return _library_summary(request, summary)
+
+    @app.post("/library-import/files", response_class=HTMLResponse)
+    async def library_files(request: Request, files: list[UploadFile] = File(...)) -> HTMLResponse:
+        saved: list[tuple[str, Path]] = []
+        with tempfile.TemporaryDirectory(prefix="threaddesk-library-upload-") as folder:
+            root = Path(folder)
+            try:
+                for upload in files:
+                    relative = upload.filename or ""
+                    target = root / f"upload-{len(saved)}"
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    size = 0
+                    with target.open("wb") as handle:
+                        while True:
+                            chunk = await upload.read(1024 * 1024)
+                            if not chunk:
+                                break
+                            size += len(chunk)
+                            if size > 256 * 1024 * 1024:
+                                raise LibraryImportError("file_too_large")
+                            handle.write(chunk)
+                    saved.append((relative, target))
+                summary = LibraryImporter(_svc().store).import_files(saved)
+            except LibraryImportError as exc:
+                return _library_failure(request, exc)
+            finally:
+                for upload in files:
+                    await upload.close()
+        return _library_summary(request, summary)
+
+    @app.post("/library-import/package", response_class=HTMLResponse)
+    async def library_package(request: Request, package: UploadFile = File(...)) -> HTMLResponse:
+        with tempfile.TemporaryDirectory(prefix="threaddesk-library-zip-") as folder:
+            target = Path(folder) / "package.zip"
+            try:
+                size = 0
+                with target.open("wb") as handle:
+                    while True:
+                        chunk = await package.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        size += len(chunk)
+                        if size > 256 * 1024 * 1024:
+                            raise LibraryImportError("file_too_large")
+                        handle.write(chunk)
+                summary = LibraryImporter(_svc().store).import_zip_package(target)
+            except LibraryImportError as exc:
+                return _library_failure(request, exc)
+            finally:
+                await package.close()
+        return _library_summary(request, summary)
+
+    @app.post("/library-import/resume", response_class=HTMLResponse)
+    def library_resume(request: Request) -> HTMLResponse:
+        try:
+            summary = LibraryImporter(_svc().store).resume()
+        except LibraryImportError as exc:
+            return _library_failure(request, exc)
+        return _library_summary(request, summary)
+
+    @app.get("/library-import/files/{record_id}")
+    def library_open(record_id: str) -> FileResponse:
+        try:
+            path, record = LibraryImporter(_svc().store).open_record(record_id)
+        except NotFound as exc:
+            raise HTTPException(status_code=404, detail="not_found") from exc
+        except LibraryImportError as exc:
+            raise HTTPException(status_code=409, detail=exc.code) from exc
+        filename = str(record.get("filename") or "file").replace('"', "").replace("\r", "").replace("\n", "")
+        return FileResponse(
+            path,
+            media_type=str(record.get("media_type") or "application/octet-stream"),
+            filename=filename,
+            content_disposition_type="attachment",
+        )
 
     @app.post("/data/original")
     def data_original() -> Response:

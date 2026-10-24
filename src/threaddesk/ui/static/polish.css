@@ -737,3 +737,7 @@ html, body { overflow: auto; }
 .return-review { font-size: var(--text-base); color: var(--warn); margin: var(--space-2) 0; }
 .request-state { flex-shrink: 0; margin: var(--space-2) var(--space-4); font-size: var(--text-base); }
 .request-state[data-state="unknown"] { color: var(--risk); }
+
+.library-import form { display: grid; gap: var(--space-3); margin-top: var(--space-4); max-width: 42rem; }
+.library-table { width: 100%; border-collapse: collapse; margin-top: var(--space-3); }
+.library-table th, .library-table td { text-align: left; padding: var(--space-2); border-bottom: 1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; }
