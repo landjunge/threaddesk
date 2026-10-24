@@ -98,6 +98,12 @@ default with an optional library capture limit used by portable backups.
 Tests use synthetic JSON and SQLite workspaces and preserve original files.
 Acceptance covers ordinary restore, persisted receipts, resumed chunks, committed
 WAL frames, hot rollback recovery confined to private staging, source changes,
-semantic tampering, path/link rejection and legacy format reading. The native
-Windows backup job includes the new library cases; local macOS results alone
-must not be reported as Windows evidence. Mandatory PR/merge CI remains intact.
+semantic tampering, path/link rejection and legacy format reading.
+
+On 24 October 2026 the user temporarily removed Windows from active development.
+The native Windows backup job is parked and Windows is removed from the build
+matrix. Linux acceptance and both native macOS builds remain required. Existing
+Windows code/downloads remain intact; the unresolved native timeout is not a
+Windows acceptance result. Automatic historical three-platform release
+publication is paused because its verifier still requires a Windows artifact.
+No partial release replaces existing downloads. Other PR/merge gates remain.

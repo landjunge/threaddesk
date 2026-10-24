@@ -166,6 +166,11 @@ ein eigener, noch abzunehmender Ausbau.
 
 ### Deine Daten sichern
 
+Aktive Entwicklung und Abnahme laufen derzeit für Linux und macOS. Windows ist
+auf Nutzerentscheidung vorübergehend pausiert; vorhandene Windows-Downloads
+bleiben erhalten. Die automatische Veröffentlichung einer neuen gemeinsamen
+Drei-Plattform-Ausgabe ist solange ausgesetzt.
+
 Oben **Daten** öffnen und **Sicherung herunterladen** wählen. Die ZIP-Datei enthält
 Threads, Notizen, Zwischenstände, Wissenskarte, Whiteboards und lokal gespeicherte
 Übergaben für JSON oder SQLite. Auch importierte Bibliotheksdateien,

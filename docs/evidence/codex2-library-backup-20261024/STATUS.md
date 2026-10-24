@@ -112,3 +112,15 @@ line was inferred from the missing output. A Windows-only 90-second per-library
 test watchdog now emits a traceback and exits the child before the runner's
 hard cancellation; native pytest uses uncaptured verbose output. This is a
 bounded diagnostic, not a longer timeout, skipped test or claimed Windows pass.
+
+## User platform correction
+
+The user then explicitly removed Windows from development for now. Native
+Windows backup CI is parked, the Windows build matrix entry is removed and the
+temporary watchdog/verbose diagnostics are withdrawn. No further Windows
+diagnostic run is requested. Product code and previous Windows downloads remain
+intact; the native timeout remains unaccepted, rather than being called fixed.
+Linux complete/no-skips/browser checks and both native macOS builds still gate
+merge. Automatic historical three-platform publication is temporarily parked:
+its verifier requires all three artifacts, so it cannot publish a partial
+candidate under the previous guarantee. Existing releases are not changed.
