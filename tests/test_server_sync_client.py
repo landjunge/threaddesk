@@ -16,6 +16,8 @@ class Wire:
         self.transfers = []
         self.lose_ack = False
         self.fail_abort = False
+        self.lose_abort_ack = False
+        self.abort_calls = []
         self.lose_commit_ack = False
         self.lose_begin_ack = False
         self.abort_on_begin = False
@@ -44,10 +46,16 @@ class Wire:
                 if self.lose_begin_ack and value['state'] == 'receiving':
                     self.lose_begin_ack = False
                     raise httpx.ReadError("Injected lost begin acknowledgement", request=request)
+            elif request.method == "GET":
+                value = self.store.upload_status(self.project, transfer)
             elif path[-1] == "abort":
+                self.abort_calls.append(transfer)
                 if self.fail_abort:
                     return httpx.Response(503, json={"error": "injected_abort_failure"})
                 value = self.store.abort_upload(self.project, transfer)
+                if self.lose_abort_ack:
+                    self.lose_abort_ack = False
+                    raise httpx.ReadError("Injected lost abort acknowledgement", request=request)
             elif request.method == "PATCH":
                 value = self.store.append_chunk(self.project, transfer, payload["offset"], base64.b64decode(payload["data_base64"]))
                 if self.lose_ack:
@@ -424,3 +432,79 @@ def test_browser_resolution_of_other_head_adopts_only_unchanged_acknowledged_loc
                 assert restarted._base('note.txt')['revision']==remote_revision
         finally:
             restarted.close()
+
+
+@pytest.mark.parametrize('removed',[False,True],ids=['reverted-to-current-head','removed-unpublished-file'])
+def test_unpublished_transfer_is_closed_before_reverted_or_removed_checkpoint_is_forgotten(tmp_path,removed):
+    root,store,project,wire,client=fixture(tmp_path)
+    path=root/'large.bin'
+    path.write_bytes(b'original')
+    assert client.sync_once()['state']=='ready'
+    original=store.list_files(project)[0]['heads'][0]
+    path.write_bytes(b'changed'*(256*1024//7+100))
+    wire.lose_ack=True
+    with pytest.raises(httpx.ReadError):
+        client.sync_once()
+    transfer=wire.transfers[-1]
+    assert store.status(project)['active_transfers']==1
+    if removed:
+        path.unlink()
+    else:
+        path.write_bytes(b'original')
+    assert client.sync_once()['state']=='ready'
+    assert store.upload_status(project,transfer)['state']=='aborted'
+    assert store.status(project)['active_transfers']==0
+    assert client.db.execute('SELECT COUNT(*) FROM uploads').fetchone()[0]==0
+    assert path.read_bytes()==b'original'
+    assert store.read_revision(project,original['revision'])==b'original'
+    assert len(store.history(project,'large.bin'))==1
+    client.close()
+
+
+def test_uncertain_abort_of_reverted_transfer_keeps_checkpoint_until_terminal_proof(tmp_path):
+    root,store,project,wire,client=fixture(tmp_path)
+    path=root/'large.bin';path.write_bytes(b'original')
+    client.sync_once()
+    path.write_bytes(b'changed'*(256*1024//7+100));wire.lose_ack=True
+    with pytest.raises(httpx.ReadError):
+        client.sync_once()
+    transfer=wire.transfers[-1];path.write_bytes(b'original')
+    wire.fail_abort=True
+    with pytest.raises(httpx.HTTPStatusError):
+        client.sync_once()
+    assert client.db.execute('SELECT transfer FROM uploads').fetchone()[0]==transfer
+    assert store.status(project)['active_transfers']==1
+    assert path.read_bytes()==b'original'
+    wire.fail_abort=False;wire.lose_abort_ack=True
+    with pytest.raises(httpx.ReadError):
+        client.sync_once()
+    assert client.db.execute('SELECT transfer FROM uploads').fetchone()[0]==transfer
+    assert store.upload_status(project,transfer)['state']=='aborted'
+    client.close()
+    restarted=SyncClient('https://sync.example','test-access-token',project,root,
+                         state_dir=tmp_path/'checkpoint',transport=wire.client)
+    try:
+        assert restarted.sync_once()['state']=='ready'
+        assert restarted.db.execute('SELECT COUNT(*) FROM uploads').fetchone()[0]==0
+        assert store.status(project)['active_transfers']==0
+        assert path.read_bytes()==b'original'
+    finally:
+        restarted.close()
+
+
+def test_committed_pending_receipt_is_acknowledged_without_aborting_published_version(tmp_path):
+    root,store,project,wire,client=fixture(tmp_path)
+    path=root/'note.md';path.write_bytes(b'original');client.sync_once()
+    path.write_bytes(b'published new version');wire.lose_commit_ack=True
+    with pytest.raises(httpx.ReadError):
+        client.sync_once()
+    transfer=wire.transfers[-1]
+    assert store.upload_status(project,transfer)['state']=='committed'
+    before=list(wire.abort_calls)
+    assert client.sync_once()['state']=='ready'
+    assert wire.abort_calls==before
+    assert client.db.execute('SELECT COUNT(*) FROM uploads').fetchone()[0]==0
+    assert store.upload_status(project,transfer)['state']=='committed'
+    assert path.read_bytes()==b'published new version'
+    assert len(store.history(project,'note.md'))==2
+    client.close()

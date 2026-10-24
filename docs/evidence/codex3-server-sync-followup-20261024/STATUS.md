@@ -11,8 +11,13 @@ coordination whiteboards contain progress and review findings with readback.
 Codex 2 PR88 was inspected before development. Its committed fixes `f4070aa`
 and `55aa6d8` were integrated after code comparison; its active worktree was
 preserved. After Codex 2 merged PR88, main merge `80453ff` was incorporated
-through local integration `58dc966`. There were no textual conflicts. The
-receiver/library contract was not reimplemented or changed by this follow-up.
+through local integration `58dc966`. Before final merge Codex 2 also merged
+PR90 (`c338f0e`); local integration `37fb4b9` incorporates its complete library
+backup, receiver durability correction and canonical CI platform policy. Neither
+integration had textual conflicts. The receiver/library work was reused, not
+reimplemented. **44 targeted library/server-backup tests passed** together after
+this integration. PR90 passed both macOS builds and the complete suite twice;
+its user-requested Windows pause and paused release publication are retained.
 
 Native subagents worked in disjoint modules: inventory/metadata, discovery/client,
 and backup/Linux acceptance. Root built the Desktop adapter, integration, UI and
@@ -154,6 +159,19 @@ passed, and the complete real Browser/Desktop acceptance passed again. The fresh
 Linux/Proxy receipts below cover these final sources. Final-head CI remains
 mandatory before merge.
 
+The final transfer-lifecycle review found that reverting an interrupted source
+to already-synced bytes could forget a still-reserved upload. Every checkpoint
+deletion/replacement now requires terminal-state proof: inspect status, abort
+receiving/absent uncertain IDs, validate committed receipts without aborting them,
+and preserve the checkpoint after unknown/failed responses. Reverted, removed
+and excluded sources are reconciled before normal upload selection. **19 client
+tests passed**, including lost chunk reply then revert/remove, failed abort,
+lost abort acknowledgement across restart, no extra versions, released storage
+reservation and committed lost-reply handling with no abort call. The merged
+PR90 backup integration also passed its 44 focused checks as recorded above.
+Fresh final integrated Linux/proxy and Browser/Desktop receipts follow below;
+only this integrated head may satisfy the final CI/merge gate.
+
 During integration an earlier affected run had 138 passing / 3 new i18n failures.
 Labels, placeholder and dynamic-state catalog coverage were corrected and the
 failed checks passed. The guard for unsafe POST routes now includes the new
@@ -197,10 +215,10 @@ no global context switch or foreign container stop. A development OrbStack start
 was also issued during initial runtime discovery; neither runtime was stopped.
 Only the harness's own containers were cleaned up.
 
-Image: `sha256:4025ea3685545f7c8bfd191a2bdee8d9303de9387f293b228bd5578be9bcb087`.
+Image: `sha256:13e6a8ec002b74b2f818a77d995d4834e83bcac1cc5d981591ede1138cd40de6`.
 Production input content SHA256:
-`a59afdc6752ac58b63f0a9f992ebe1cbcc4ec98fdcfd31d27e94f272282ce7d2`.
-The 150 input fingerprints (including the shipping Caddyfile) were compared after acceptance; none changed.
+`2a5c2ee19ce09c3dddeef26bdcd23099a3c7579dc100bdedbe42b6b8ed8378de`.
+The 151 input fingerprints (including the shipping Caddyfile) were compared after acceptance; none changed.
 [Source manifest](source-manifest.json), [Linux receipt](linux.json),
 [complete build/acceptance log](linux-acceptance.log).
 
@@ -245,6 +263,8 @@ No release assets or productive installation are requested by this change.
 Limits remain explicit: 64 MiB/file, 1 GiB logical retained contents/user plus
 metadata/journal overhead, 1 MiB metadata document, 4 GiB/100000-entry backup.
 Unresolved dependencies fail closed. New file destinations remain within current
-grants, and no automatic file/version garbage collection is introduced. The
-separate pre-existing portable Desktop library backup omission is unchanged;
-the complete server backup and Desktop metadata adapter do not conceal it.
+grants, and no automatic file/version garbage collection is introduced.
+Codex 2 PR90 separately fixes the prior portable Desktop library-backup omission
+and is incorporated through current main; the server cold-backup contract
+remains independent. Native Windows checks/builds are intentionally paused by
+that merged platform policy, with their earlier evidence retained as historical.

@@ -272,3 +272,9 @@ Anforderungen bleiben bestehen. Bei Dateikonflikten merkt sich der Desktop die
 bereits erfolgreich gespeicherte eigene Fassung; eine spätere ausdrückliche
 Browser-Auswahl wird übernommen, sofern lokal inzwischen nichts Neues geändert
 wurde. Die verdrängte lokale Fassung bleibt als Wiederherstellungskopie erhalten.
+
+Wird eine Datei während einer unterbrochenen Übertragung zurückgesetzt oder
+entfernt, klärt der Client zuerst den gespeicherten Transferzustand. Erst ein
+bestätigter Abschluss oder Abbruch erlaubt das Entfernen des Checkpoints.
+Unklare Antworten behalten Kennung und Wiederanlaufzustand. Bereits veröffentlichte
+Versionen werden dabei nicht abgebrochen oder gelöscht.

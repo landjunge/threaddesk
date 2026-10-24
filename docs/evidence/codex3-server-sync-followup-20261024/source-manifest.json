@@ -1,5 +1,5 @@
 {
-  "source_content_sha256": "a59afdc6752ac58b63f0a9f992ebe1cbcc4ec98fdcfd31d27e94f272282ce7d2",
+  "source_content_sha256": "2a5c2ee19ce09c3dddeef26bdcd23099a3c7579dc100bdedbe42b6b8ed8378de",
   "files": [
     {
       "path": "LICENSE",
@@ -7,7 +7,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "9a3cfe7d925eea0f8e0a8d2ef4f240df5c8cbec385599b7a68b303f2c36b303c"
+      "sha256": "0eb501b71ff1ee1b685521b8a6d009457c6e6cbc38def0c7917aaabb5e968cfd"
     },
     {
       "path": "packaging/server/Caddyfile",
@@ -107,7 +107,7 @@
     },
     {
       "path": "src/threaddesk/server_sync/client.py",
-      "sha256": "610789b29c507b3da1d58a144cdf8efda4e72fa5c3d8029176e9d783abd108e5"
+      "sha256": "c113488c401a25ce680fd425cf1264e5deb709259800514ccaea4767819d1b01"
     },
     {
       "path": "src/threaddesk/server_sync/desktop.py",
@@ -231,7 +231,7 @@
     },
     {
       "path": "src/threaddesk/services/library_receive.py",
-      "sha256": "99397938162489b9e8c386b1dcf69eb7825c4ede483fae4ef25b370bc9b318c2"
+      "sha256": "8345ac84df30c5cf98d1b78596c11f480f8e7fc8849c9ae3d765b58fd3d4e862"
     },
     {
       "path": "src/threaddesk/services/mcp.py",
@@ -338,8 +338,12 @@
       "sha256": "0e1f36794e05c21f49c6a5d10d609a29c956a9ea6665647b294bdc6b69d96e31"
     },
     {
+      "path": "src/threaddesk/storage/library_backup.py",
+      "sha256": "b977edeee57b24eeef79622182d6b14ed869156e8eccaba2e01049ccfca2ce7e"
+    },
+    {
       "path": "src/threaddesk/storage/portable_backup.py",
-      "sha256": "19591bf19dcdd9d9ce650ee44ea4f6bd2f48241669c90c2877fb7aeac1e1933f"
+      "sha256": "8f102ce2e83600bbe5aebc20b5b7c1a789616c73a54ad5b3177fcce444bd1c13"
     },
     {
       "path": "src/threaddesk/storage/protocols.py",
@@ -367,7 +371,7 @@
     },
     {
       "path": "src/threaddesk/storage/workspace_backup.py",
-      "sha256": "18b3fba3965a073c25262181346aa0915405e01483087a1ac86e16ce9368135e"
+      "sha256": "f34b0f3e55d6df31a98c5d21816d290679bc5296e430d3da85fb23c2695e4aa2"
     },
     {
       "path": "src/threaddesk/ui/__init__.py",

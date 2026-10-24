@@ -218,3 +218,9 @@ selection has loaded; mutation requests retain their captured project scope.
 Discovery accepts exactly MAX_FILES eligible distinct files; filtered entries,
 directories and duplicate grants do not cause a false overflow. Only an
 additional eligible distinct source reports an incomplete inventory.
+
+Pending transfer identities may be forgotten only after verified terminal server
+state. Status is inspected first; receiving or absent uncertain identities are
+explicitly aborted, while a committed receipt is validated and never aborted.
+Failed/uncertain status or abort keeps the checkpoint for retry. Reverted, removed
+and excluded sources are reconciled even when no normal upload branch runs.

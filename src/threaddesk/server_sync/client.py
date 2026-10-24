@@ -210,10 +210,55 @@ class SyncClient:
         row = self.db.execute("SELECT revision,sha256 FROM base WHERE path=?", (path,)).fetchone()
         return {"revision": row[0], "sha256": row[1]} if row else None
 
+    def _terminal_transfer(self, path, pending):
+        """Return terminal proof before forgetting any durable pending identity."""
+        endpoint = self.api + "/uploads/" + pending[2]
+        try:
+            state = self._json("GET", endpoint)
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code != 404:
+                raise
+            # An uncertain begin may still arrive later. Abort is also the
+            # server's durable barrier for an as-yet-absent transfer identity.
+            state = self._json("POST", endpoint + "/abort")
+        if state.get("state") == "receiving":
+            state = self._json("POST", endpoint + "/abort")
+        if state.get("state") == "committed":
+            receipt = state.get("receipt") or {}
+            if (receipt.get("sha256") != pending[0] or receipt.get("path") != path
+                    or receipt.get("transfer_id") != pending[2]
+                    or receipt.get("project_id") != self.project_id
+                    or not isinstance(receipt.get("revision"), str)
+                    or not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", receipt["revision"])):
+                raise ClientError("Invalid committed transfer receipt")
+        elif state.get("state") != "aborted":
+            raise ClientError("Previous transfer closure is unconfirmed")
+        return state
+
     def _remember(self, path, head):
+        pending = self.db.execute("SELECT sha256,base,transfer FROM uploads WHERE path=?", (path,)).fetchone()
+        if pending:
+            self._terminal_transfer(path, pending)
         with self.db:
             self.db.execute("INSERT OR REPLACE INTO base VALUES (?,?,?)", (path, head["revision"], head["sha256"]))
-            self.db.execute("DELETE FROM uploads WHERE path=?", (path,))
+            if pending:
+                self.db.execute("DELETE FROM uploads WHERE path=? AND transfer=?", (path, pending[2]))
+
+    def _reconcile_pending(self, files):
+        """Reverted, removed or excluded sources must not orphan reservations."""
+        current = {item['path']: item for item in files}
+        for path, sha, base, transfer in self.db.execute("SELECT path,sha256,base,transfer FROM uploads").fetchall():
+            item = current.get(path)
+            if item is not None and item['sha256'] == sha:
+                continue  # Unchanged bytes resume through their existing identity.
+            terminal = self._terminal_transfer(path, (sha, base, transfer))
+            if terminal['state'] == 'committed':
+                # A genuinely new local edit is based on the version already
+                # published, including a commit whose acknowledgement was lost.
+                self._remember(path, terminal['receipt'])
+            else:
+                with self.db:
+                    self.db.execute("DELETE FROM uploads WHERE path=? AND transfer=?", (path, transfer))
 
     def _trusted_target(self, target):
         """Cached paths are hints; only CURRENT explicit grants grant authority."""
@@ -308,7 +353,7 @@ class SyncClient:
                 # Do not leak a permanent reservation when the selected local file
                 # changes during a disconnected transfer. Keep the checkpoint until
                 # a definitive abort/commit answer; failed calls never allocate anew.
-                previous = self._json("POST", self.api + "/uploads/" + row[2] + "/abort")
+                previous = self._terminal_transfer(relative, row)
                 if previous.get("state") == "committed":
                     receipt = previous.get("receipt") or {}
                     if receipt.get("sha256") != row[0] or receipt.get("path") != relative or not receipt.get("revision"):
@@ -504,6 +549,7 @@ class SyncClient:
             plan = self.inventory
         files = plan.files
         issues.extend(plan.issues)
+        self._reconcile_pending(files)
         status = self._json("POST", self.api + "/manifest", json={"files": files, "issues": issues[:2000], "device_id": self.device_id})
         if not status["offline_enabled"]:
             return self._final_status(issues, local_metadata)

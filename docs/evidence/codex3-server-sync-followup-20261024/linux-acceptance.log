@@ -1,4 +1,4 @@
-source_content_sha256=a59afdc6752ac58b63f0a9f992ebe1cbcc4ec98fdcfd31d27e94f272282ce7d2
+source_content_sha256=2a5c2ee19ce09c3dddeef26bdcd23099a3c7579dc100bdedbe42b6b8ed8378de
 linux/x86_64
 #0 building with "colima" instance using docker driver
 
@@ -21,8 +21,8 @@ linux/x86_64
 #5 DONE 0.1s
 
 #4 [internal] load build context
-#4 transferring context: 114.33kB 0.0s done
-#4 DONE 0.0s
+#4 transferring context: 340.02kB 0.1s done
+#4 DONE 0.1s
 
 #6 [2/6] RUN groupadd --gid 10001 threaddesk     && useradd --uid 10001 --gid threaddesk --create-home threaddesk     && install -d -m 0700 -o threaddesk -g threaddesk /data
 #6 CACHED
@@ -31,92 +31,92 @@ linux/x86_64
 #7 CACHED
 
 #8 [4/6] COPY pyproject.toml README.md LICENSE ./
-#8 CACHED
+#8 DONE 0.1s
 
 #9 [5/6] COPY src ./src
-#9 DONE 0.1s
+#9 DONE 0.2s
 
 #10 [6/6] RUN python -m pip install --no-cache-dir '.[server]'
-#10 2.024 Processing /opt/threaddesk
-#10 2.029   Installing build dependencies: started
-#10 8.643   Installing build dependencies: finished with status 'done'
-#10 8.644   Getting requirements to build wheel: started
-#10 9.539   Getting requirements to build wheel: finished with status 'done'
-#10 9.542   Preparing metadata (pyproject.toml): started
-#10 10.39   Preparing metadata (pyproject.toml): finished with status 'done'
-#10 10.87 Collecting fastapi>=0.110 (from threaddesk==0.1.1rc1)
-#10 11.14   Downloading fastapi-0.162.0-py3-none-any.whl.metadata (26 kB)
-#10 11.35 Collecting uvicorn>=0.54 (from threaddesk==0.1.1rc1)
-#10 11.45   Downloading uvicorn-0.54.0-py3-none-any.whl.metadata (6.6 kB)
-#10 11.60 Collecting httpx>=0.27 (from threaddesk==0.1.1rc1)
-#10 11.72   Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
-#10 12.01 Collecting starlette>=0.46.0 (from fastapi>=0.110->threaddesk==0.1.1rc1)
-#10 12.07   Downloading starlette-1.10.0-py3-none-any.whl.metadata (6.6 kB)
-#10 12.86 Collecting pydantic>=2.9.0 (from fastapi>=0.110->threaddesk==0.1.1rc1)
-#10 13.05   Downloading pydantic-2.14.1-py3-none-any.whl.metadata (133 kB)
-#10 13.87 Collecting typing-extensions>=4.8.0 (from fastapi>=0.110->threaddesk==0.1.1rc1)
-#10 13.96   Downloading typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
-#10 14.06 Collecting typing-inspection>=0.4.2 (from fastapi>=0.110->threaddesk==0.1.1rc1)
-#10 14.12   Downloading typing_inspection-0.4.4-py3-none-any.whl.metadata (2.6 kB)
-#10 14.22 Collecting annotated-doc>=0.0.2 (from fastapi>=0.110->threaddesk==0.1.1rc1)
-#10 14.26   Downloading annotated_doc-0.0.5-py3-none-any.whl.metadata (6.5 kB)
-#10 14.39 Collecting opentelemetry-api>=1.44.0 (from fastapi>=0.110->threaddesk==0.1.1rc1)
-#10 14.47   Downloading opentelemetry_api-1.45.1-py3-none-any.whl.metadata (1.4 kB)
-#10 14.60 Collecting anyio (from httpx>=0.27->threaddesk==0.1.1rc1)
-#10 14.66   Downloading anyio-4.15.1-py3-none-any.whl.metadata (4.7 kB)
-#10 14.78 Collecting certifi (from httpx>=0.27->threaddesk==0.1.1rc1)
-#10 14.85   Downloading certifi-2026.10.23-py3-none-any.whl.metadata (2.5 kB)
-#10 15.06 Collecting httpcore==1.* (from httpx>=0.27->threaddesk==0.1.1rc1)
-#10 15.14   Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
-#10 15.27 Collecting idna (from httpx>=0.27->threaddesk==0.1.1rc1)
-#10 15.37   Downloading idna-3.20-py3-none-any.whl.metadata (7.2 kB)
-#10 15.46 Collecting h11>=0.16 (from httpcore==1.*->httpx>=0.27->threaddesk==0.1.1rc1)
-#10 15.51   Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
-#10 15.67 Collecting click>=7.0 (from uvicorn>=0.54->threaddesk==0.1.1rc1)
-#10 15.75   Downloading click-8.5.0-py3-none-any.whl.metadata (2.6 kB)
-#10 15.82 Collecting annotated-types>=0.6.0 (from pydantic>=2.9.0->fastapi>=0.110->threaddesk==0.1.1rc1)
-#10 15.90   Downloading annotated_types-0.8.0-py3-none-any.whl.metadata (15 kB)
-#10 18.94 Collecting pydantic-core==2.50.1 (from pydantic>=2.9.0->fastapi>=0.110->threaddesk==0.1.1rc1)
-#10 19.01   Downloading pydantic_core-2.50.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.5 kB)
-#10 19.13 Downloading fastapi-0.162.0-py3-none-any.whl (148 kB)
-#10 19.48 Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
-#10 19.69 Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
-#10 19.87 Downloading uvicorn-0.54.0-py3-none-any.whl (87 kB)
-#10 20.03 Downloading annotated_doc-0.0.5-py3-none-any.whl (5.3 kB)
-#10 20.11 Downloading click-8.5.0-py3-none-any.whl (125 kB)
-#10 20.35 Downloading h11-0.16.0-py3-none-any.whl (37 kB)
-#10 20.50 Downloading opentelemetry_api-1.45.1-py3-none-any.whl (60 kB)
-#10 20.62 Downloading pydantic-2.14.1-py3-none-any.whl (488 kB)
-#10 21.49 Downloading pydantic_core-2.50.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.2 MB)
-#10 26.08    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.2/2.2 MB 449.8 kB/s eta 0:00:00
-#10 26.17 Downloading starlette-1.10.0-py3-none-any.whl (80 kB)
-#10 26.32 Downloading anyio-4.15.1-py3-none-any.whl (132 kB)
-#10 26.61 Downloading idna-3.20-py3-none-any.whl (69 kB)
-#10 26.79 Downloading typing_extensions-4.16.0-py3-none-any.whl (45 kB)
-#10 26.90 Downloading typing_inspection-0.4.4-py3-none-any.whl (14 kB)
-#10 26.99 Downloading certifi-2026.10.23-py3-none-any.whl (135 kB)
-#10 27.26 Downloading annotated_types-0.8.0-py3-none-any.whl (13 kB)
-#10 27.34 Building wheels for collected packages: threaddesk
-#10 27.34   Building wheel for threaddesk (pyproject.toml): started
-#10 29.07   Building wheel for threaddesk (pyproject.toml): finished with status 'done'
-#10 29.07   Created wheel for threaddesk: filename=threaddesk-0.1.1rc1-py3-none-any.whl size=394112 sha256=447cbc491314f75a3e7fd35957d49e6e57614581da9e23ffa34cd7a6658dabf0
-#10 29.08   Stored in directory: /tmp/pip-ephem-wheel-cache-yjuz_zuw/wheels/a8/ed/18/afc215c23408630b4a6764a0c248eebfd7522f0963a70b9f99
-#10 29.08 Successfully built threaddesk
-#10 29.15 Installing collected packages: typing-extensions, threaddesk, idna, h11, click, certifi, annotated-types, annotated-doc, uvicorn, typing-inspection, pydantic-core, opentelemetry-api, httpcore, anyio, starlette, pydantic, httpx, fastapi
-#10 31.21 Successfully installed annotated-doc-0.0.5 annotated-types-0.8.0 anyio-4.15.1 certifi-2026.10.23 click-8.5.0 fastapi-0.162.0 h11-0.16.0 httpcore-1.0.9 httpx-0.28.1 idna-3.20 opentelemetry-api-1.45.1 pydantic-2.14.1 pydantic-core-2.50.1 starlette-1.10.0 threaddesk-0.1.1rc1 typing-extensions-4.16.0 typing-inspection-0.4.4 uvicorn-0.54.0
-#10 31.21 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
-#10 DONE 31.5s
+#10 4.681 Processing /opt/threaddesk
+#10 4.686   Installing build dependencies: started
+#10 11.34   Installing build dependencies: finished with status 'done'
+#10 11.35   Getting requirements to build wheel: started
+#10 13.08   Getting requirements to build wheel: finished with status 'done'
+#10 13.09   Preparing metadata (pyproject.toml): started
+#10 14.35   Preparing metadata (pyproject.toml): finished with status 'done'
+#10 14.86 Collecting fastapi>=0.110 (from threaddesk==0.1.1rc1)
+#10 15.13   Downloading fastapi-0.162.0-py3-none-any.whl.metadata (26 kB)
+#10 15.36 Collecting uvicorn>=0.54 (from threaddesk==0.1.1rc1)
+#10 15.43   Downloading uvicorn-0.54.0-py3-none-any.whl.metadata (6.6 kB)
+#10 15.55 Collecting httpx>=0.27 (from threaddesk==0.1.1rc1)
+#10 15.61   Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+#10 15.89 Collecting starlette>=0.46.0 (from fastapi>=0.110->threaddesk==0.1.1rc1)
+#10 15.96   Downloading starlette-1.10.0-py3-none-any.whl.metadata (6.6 kB)
+#10 16.84 Collecting pydantic>=2.9.0 (from fastapi>=0.110->threaddesk==0.1.1rc1)
+#10 16.93   Downloading pydantic-2.14.1-py3-none-any.whl.metadata (133 kB)
+#10 17.19 Collecting typing-extensions>=4.8.0 (from fastapi>=0.110->threaddesk==0.1.1rc1)
+#10 17.26   Downloading typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+#10 17.35 Collecting typing-inspection>=0.4.2 (from fastapi>=0.110->threaddesk==0.1.1rc1)
+#10 17.44   Downloading typing_inspection-0.4.4-py3-none-any.whl.metadata (2.6 kB)
+#10 17.53 Collecting annotated-doc>=0.0.2 (from fastapi>=0.110->threaddesk==0.1.1rc1)
+#10 17.63   Downloading annotated_doc-0.0.5-py3-none-any.whl.metadata (6.5 kB)
+#10 17.73 Collecting opentelemetry-api>=1.44.0 (from fastapi>=0.110->threaddesk==0.1.1rc1)
+#10 17.79   Downloading opentelemetry_api-1.45.1-py3-none-any.whl.metadata (1.4 kB)
+#10 17.96 Collecting anyio (from httpx>=0.27->threaddesk==0.1.1rc1)
+#10 18.05   Downloading anyio-4.15.1-py3-none-any.whl.metadata (4.7 kB)
+#10 18.15 Collecting certifi (from httpx>=0.27->threaddesk==0.1.1rc1)
+#10 18.21   Downloading certifi-2026.10.23-py3-none-any.whl.metadata (2.5 kB)
+#10 18.38 Collecting httpcore==1.* (from httpx>=0.27->threaddesk==0.1.1rc1)
+#10 18.45   Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+#10 18.54 Collecting idna (from httpx>=0.27->threaddesk==0.1.1rc1)
+#10 18.60   Downloading idna-3.20-py3-none-any.whl.metadata (7.2 kB)
+#10 18.72 Collecting h11>=0.16 (from httpcore==1.*->httpx>=0.27->threaddesk==0.1.1rc1)
+#10 18.80   Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+#10 18.92 Collecting click>=7.0 (from uvicorn>=0.54->threaddesk==0.1.1rc1)
+#10 19.00   Downloading click-8.5.0-py3-none-any.whl.metadata (2.6 kB)
+#10 19.08 Collecting annotated-types>=0.6.0 (from pydantic>=2.9.0->fastapi>=0.110->threaddesk==0.1.1rc1)
+#10 19.13   Downloading annotated_types-0.8.0-py3-none-any.whl.metadata (15 kB)
+#10 22.42 Collecting pydantic-core==2.50.1 (from pydantic>=2.9.0->fastapi>=0.110->threaddesk==0.1.1rc1)
+#10 22.49   Downloading pydantic_core-2.50.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.5 kB)
+#10 22.73 Downloading fastapi-0.162.0-py3-none-any.whl (148 kB)
+#10 22.92 Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+#10 23.05 Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+#10 23.18 Downloading uvicorn-0.54.0-py3-none-any.whl (87 kB)
+#10 23.34 Downloading annotated_doc-0.0.5-py3-none-any.whl (5.3 kB)
+#10 23.41 Downloading click-8.5.0-py3-none-any.whl (125 kB)
+#10 23.64 Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+#10 23.76 Downloading opentelemetry_api-1.45.1-py3-none-any.whl (60 kB)
+#10 23.85 Downloading pydantic-2.14.1-py3-none-any.whl (488 kB)
+#10 24.35 Downloading pydantic_core-2.50.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.2 MB)
+#10 26.63    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.2/2.2 MB 952.3 kB/s eta 0:00:00
+#10 26.76 Downloading starlette-1.10.0-py3-none-any.whl (80 kB)
+#10 26.96 Downloading anyio-4.15.1-py3-none-any.whl (132 kB)
+#10 27.21 Downloading idna-3.20-py3-none-any.whl (69 kB)
+#10 27.37 Downloading typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+#10 27.56 Downloading typing_inspection-0.4.4-py3-none-any.whl (14 kB)
+#10 27.69 Downloading certifi-2026.10.23-py3-none-any.whl (135 kB)
+#10 28.00 Downloading annotated_types-0.8.0-py3-none-any.whl (13 kB)
+#10 28.44 Building wheels for collected packages: threaddesk
+#10 28.45   Building wheel for threaddesk (pyproject.toml): started
+#10 32.42   Building wheel for threaddesk (pyproject.toml): finished with status 'done'
+#10 32.43   Created wheel for threaddesk: filename=threaddesk-0.1.1rc1-py3-none-any.whl size=399465 sha256=72685a7930673befe7d203834c3978f49d7112ccc9a053617fa0a8750f0f5afb
+#10 32.43   Stored in directory: /tmp/pip-ephem-wheel-cache-r8lg7os8/wheels/a8/ed/18/afc215c23408630b4a6764a0c248eebfd7522f0963a70b9f99
+#10 32.44 Successfully built threaddesk
+#10 32.51 Installing collected packages: typing-extensions, threaddesk, idna, h11, click, certifi, annotated-types, annotated-doc, uvicorn, typing-inspection, pydantic-core, opentelemetry-api, httpcore, anyio, starlette, pydantic, httpx, fastapi
+#10 36.12 Successfully installed annotated-doc-0.0.5 annotated-types-0.8.0 anyio-4.15.1 certifi-2026.10.23 click-8.5.0 fastapi-0.162.0 h11-0.16.0 httpcore-1.0.9 httpx-0.28.1 idna-3.20 opentelemetry-api-1.45.1 pydantic-2.14.1 pydantic-core-2.50.1 starlette-1.10.0 threaddesk-0.1.1rc1 typing-extensions-4.16.0 typing-inspection-0.4.4 uvicorn-0.54.0
+#10 36.13 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+#10 DONE 37.0s
 
 #11 exporting to image
 #11 exporting layers
-#11 exporting layers 1.6s done
-#11 exporting manifest sha256:58238bc4c7a050bd0490eaade149e759233c470175dc6627230eddc708c706dc 0.0s done
-#11 exporting config sha256:e7c7c557b9ebcc7decc802da61fac310f48358efb35e7fbd9b3848d674e98acf 0.0s done
-#11 exporting attestation manifest sha256:b8b530ffaa26bb16d525295c3e791049309aeb0e6baed212c955fedd50d15883 0.0s done
-#11 exporting manifest list sha256:4025ea3685545f7c8bfd191a2bdee8d9303de9387f293b228bd5578be9bcb087
-#11 exporting manifest list sha256:4025ea3685545f7c8bfd191a2bdee8d9303de9387f293b228bd5578be9bcb087 0.0s done
+#11 exporting layers 3.9s done
+#11 exporting manifest sha256:c96ef8345d8791ba2cbccfca39aff8ccaa70c593edcbf7121e6aab7704b1c9d0 0.0s done
+#11 exporting config sha256:8e160bbb68e999a8e4530275b3d0aa9e52ca7ea16dad82a98bb8bf79812325a7 0.0s done
+#11 exporting attestation manifest sha256:446db30d28f812298e0540e86e769488dcb45f94be11b6d685d0435acf7dae22 0.0s done
+#11 exporting manifest list sha256:13e6a8ec002b74b2f818a77d995d4834e83bcac1cc5d981591ede1138cd40de6
+#11 exporting manifest list sha256:13e6a8ec002b74b2f818a77d995d4834e83bcac1cc5d981591ede1138cd40de6 0.0s done
 #11 naming to docker.io/library/td-codex3-server-sync-acceptance:local done
 #11 unpacking to docker.io/library/td-codex3-server-sync-acceptance:local
-#11 unpacking to docker.io/library/td-codex3-server-sync-acceptance:local 1.1s done
-#11 DONE 2.9s
+#11 unpacking to docker.io/library/td-codex3-server-sync-acceptance:local 2.0s done
+#11 DONE 6.1s
 {"architecture": "x86_64", "platform": "Linux", "replicas": 2, "restart": "passed", "restore": "credentials/core/snapshots/whiteboard/history/conflicts/chunks/receipts verified", "result": "passed", "tls": "private CA verified; default trust and plaintext refused"}
