@@ -116,11 +116,11 @@ controls. Check its explicit thread binding before offering the download.
 Missing records are refused; damaged records/blobs, path escapes and symlinks
 fail closed. Search text and filenames remain untrusted user data.
 
-The existing portable backup allowlist currently omits `library-files`, including
-stored copies and receive receipts. A portable thread backup therefore does not
-back up this library. Library-aware backup/restore and concurrent snapshot rules
-are a separate open requirement; do not delete originals or a workspace on the
-assumption that a portable backup contains received files.
+Current library-aware backups include `library-files`, stored copies, receive
+receipts and pending chunks through a self-contained database snapshot.
+[Backup formats, limits and concurrent capture rules](library-backup-v1.md)
+define this extension. Historical portable v1 and workspace v1/v2 backups omit
+the library; their existence is not proof that received files were backed up.
 
 KiraBridge integration must discover and explicitly authorize these tools,
 stream bounded blocks, retain transfer IDs/offsets, read back the final receipt

@@ -257,7 +257,9 @@ class LibraryReceiver:
             # Flush published bytes/record before a durable success receipt.
             for saved in (self.importer.blobs / manifest["sha256"],
                           self.importer.records / f"{row['record_id']}.json"):
-                with saved.open("rb") as handle:
+                # Windows FlushFileBuffers requires a write-capable handle.
+                # r+b neither truncates nor changes the already verified bytes.
+                with saved.open("r+b") as handle:
                     os.fsync(handle.fileno())
             if os.name != "nt":
                 for directory in (self.importer.blobs, self.importer.records, self.root):

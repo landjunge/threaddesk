@@ -21,7 +21,7 @@ from threaddesk.storage.workspace_backup import (
 LIMIT = 128 * 1024 * 1024
 DATA_DIRS = {'threads', 'snapshots', 'nodes', 'relations', 'graph-events',
              'source-records', 'whiteboard', 'artifacts', 'imports',
-             'management-operations', 'thread-revisions', 'issued-handoffs'}
+             'management-operations', 'thread-revisions', 'issued-handoffs', 'library-files'}
 RUNTIME_FILES = {'desktop-port.json', 'desktop.lock', 'active-profile.json'}
 
 
@@ -59,6 +59,9 @@ def _allowed(name: str, backend: str, *, strict: bool = False) -> bool:
         return False
     if any(p.startswith('.') for p in path.parts):
         return False
+    if path.parts[0] == 'library-files':
+        from threaddesk.storage.library_backup import allowed
+        return allowed(name)
     if len(path.parts) == 1:
         if name.casefold() in RUNTIME_FILES:
             if strict and name not in RUNTIME_FILES:
@@ -85,15 +88,22 @@ def download_backup(store) -> bytes:
 def _download_backup(store) -> bytes:
     backend = 'sqlite' if isinstance(store, SQLiteStore) else 'json'
     with tempfile.TemporaryDirectory(prefix='threaddesk-backup-') as temp:
-        source = store.root
+        source = store.workspace_path
         if backend == 'sqlite':
-            backup = WorkspaceBackup(Path(temp)).create(store)
+            backup = WorkspaceBackup(Path(temp)).create(store, library_limit=LIMIT)
             source = Path(temp) / 'profile'
             WorkspaceBackup(Path(temp)).restore_verified(backup, source)
         files = {}
         bodies = {}
-        allowed = lambda name: _allowed(name, backend, strict=True)
-        descend = lambda name: PurePosixPath(name).parts[0] in DATA_DIRS
+        def allowed(name):
+            return ((backend == 'sqlite' or not name.startswith('library-files/'))
+                    and _allowed(name, backend, strict=True))
+
+        def descend(name):
+            folders = DATA_DIRS - ({'library-files'} if backend == 'json' else set())
+            return PurePosixPath(name).parts[0] in folders
+        stage = Path(temp) / 'library-capture'
+        has_library = False
         with _SourceTree(source) as tree:
             inventory = tree.scan(allowed, descend)
             total = 0
@@ -102,20 +112,37 @@ def _download_backup(store) -> bytes:
                 total += len(body)
                 bodies[name] = body
                 files[name] = {'size': len(body), 'sha256': hashlib.sha256(body).hexdigest()}
+            if backend == 'json':
+                from threaddesk.storage.library_backup import capture
+                has_library = capture(store.workspace_path, stage, limit=LIMIT - total, source_tree=tree)
             # JSON has no database snapshot: both reads must use the same
             # descriptor-bound names/inodes, including this comparison read.
             if (tree.scan(allowed, descend) != inventory or backend == 'json' and any(
                     tree.read(name, inventory[name], limit=LIMIT) != body
                     for name, body in bodies.items())):
                 raise BackupError('Workspace changed during backup. Please try again.')
+        if has_library:
+            from threaddesk.storage.library_backup import allowed as library_allowed, descend as library_descend
+            with _SourceTree(stage) as library:
+                for name, expected in library.scan(library_allowed, library_descend).items():
+                    body = library.read(name, expected, limit=LIMIT - total)
+                    total += len(body)
+                    bodies[name] = body
+                    files[name] = {'size': len(body), 'sha256': hashlib.sha256(body).hexdigest()}
         output = io.BytesIO()
+        manifest_body = json.dumps({
+            'kind': 'threaddesk.portable-backup', 'version': 2,
+            'backend': backend, 'files': files}, sort_keys=True).encode('utf-8')
+        if sum(len(body) for body in bodies.values()) + len(manifest_body) > LIMIT or len(files) + 1 > 20000:
+            raise BackupError('Backup exceeds the size limit or file limit.')
         with zipfile.ZipFile(output, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
-            archive.writestr('manifest.json', json.dumps({
-                'kind': 'threaddesk.portable-backup', 'version': 1,
-                'backend': backend, 'files': files}, sort_keys=True))
+            archive.writestr('manifest.json', manifest_body)
             for name, body in bodies.items():
                 archive.writestr('workspace/' + name, body)
-        return output.getvalue()
+        body = output.getvalue()
+        if len(body) > LIMIT:
+            raise BackupError('Backup exceeds the size limit.')
+        return body
 
 
 def restore_backup(body: bytes, root: Path) -> Path:
@@ -140,9 +167,11 @@ def restore_backup(body: bytes, root: Path) -> Path:
             manifest = json.loads(archive.read('manifest.json'))
             backend = manifest.get('backend')
             files = manifest.get('files')
-            if (manifest.get('kind') != 'threaddesk.portable-backup' or manifest.get('version') != 1
+            if (manifest.get('kind') != 'threaddesk.portable-backup' or manifest.get('version') not in {1, 2}
                     or backend not in {'json', 'sqlite'} or not isinstance(files, dict)):
                 raise BackupError('Unknown backup format.')
+            if manifest['version'] < 2 and any(n.startswith('library-files/') for n in files):
+                raise BackupError('Library files require portable backup version 2.')
             if set(names) != {'manifest.json'} | {'workspace/' + n for n in files}:
                 raise BackupError('Unexpected backup files.')
             if any(not _allowed(n, backend) for n in files):
@@ -178,6 +207,8 @@ def restore_backup(body: bytes, root: Path) -> Path:
         finally:
             if backend == 'sqlite':
                 store.connection.close()
+        from threaddesk.storage.library_backup import validate
+        validate(target / 'library-files')
         # Preserve this installation's listening port, never import another
         # machine's port. Housekeeper remains off until explicitly enabled.
         active, _ = selected_profile(root)

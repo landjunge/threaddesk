@@ -193,6 +193,13 @@ bytes; they do not authenticate the backup author. Cooperative JSON writer locks
 and the SQLite backup API remain in use. These guards do not isolate the process
 from an actor with unrestricted access to the same user account.
 
+Library-aware portable v2 and workspace v3 snapshots also include stored file
+copies, import state, receipts and pending receive chunks. Receiver SQLite/WAL
+recovery runs only against a private descriptor-captured copy; the archive
+contains a self-contained database, never a raw foreign WAL. Historical formats
+remain readable and retain their original scope. See
+[library backup contract](contracts/library-backup-v1.md).
+
 The fixed JSON lock/journal and WAL replay also use bound roots/parents,
 exclusive temporary files and guarded publication. Journal hardlinks are refused
 before content reads. Direct general data writes outside WAL replay retain
