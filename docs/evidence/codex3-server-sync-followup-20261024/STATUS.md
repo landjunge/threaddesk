@@ -172,6 +172,19 @@ PR90 backup integration also passed its 44 focused checks as recorded above.
 Fresh final integrated Linux/proxy and Browser/Desktop receipts follow below;
 only this integrated head may satisfy the final CI/merge gate.
 
+Two further integration findings were corrected before merge: manual Desktop
+actions now run their complete synchronous service/inventory/HTTP/view lifecycle
+in a worker after async form parsing. The adapter-owned SQLite connection is
+created, used and closed in that worker, including failures. **12 affected
+Desktop tests passed**, including eight JSON/SQLite configure/offline/manual/error
+cases proving unrelated requests and binding status remain responsive. Existing
+renderer-internal global UI services are not claimed as explicitly owned by the
+adapter. Server project-list titles now read synchronized core records under the
+project lock. **One actual metadata API regression passed**, proving a Desktop
+rename appears in repeated project listings and tenant scope remains intact.
+The complete live Browser/Desktop and fresh integrated Linux/Caddy proof are
+repeated below; required checks still apply to the final head.
+
 During integration an earlier affected run had 138 passing / 3 new i18n failures.
 Labels, placeholder and dynamic-state catalog coverage were corrected and the
 failed checks passed. The guard for unsafe POST routes now includes the new
@@ -215,9 +228,9 @@ no global context switch or foreign container stop. A development OrbStack start
 was also issued during initial runtime discovery; neither runtime was stopped.
 Only the harness's own containers were cleaned up.
 
-Image: `sha256:13e6a8ec002b74b2f818a77d995d4834e83bcac1cc5d981591ede1138cd40de6`.
+Image: `sha256:314e80feb767a8c3cb0902455e15e76062fb2dcd197e0f9f719826dcb12b8c8d`.
 Production input content SHA256:
-`2a5c2ee19ce09c3dddeef26bdcd23099a3c7579dc100bdedbe42b6b8ed8378de`.
+`dcf772b1376a205f2fdbb8030265c4493a1ae42d4bbb3f8377f4ab6a8b1c52a4`.
 The 151 input fingerprints (including the shipping Caddyfile) were compared after acceptance; none changed.
 [Source manifest](source-manifest.json), [Linux receipt](linux.json),
 [complete build/acceptance log](linux-acceptance.log).

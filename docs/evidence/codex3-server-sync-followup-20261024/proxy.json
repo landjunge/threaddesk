@@ -20,13 +20,13 @@
   "ordinary_chunk": "verified",
   "result": "passed",
   "tls": "private CA verified, actual shipping Caddy reverse proxy",
-  "app_image_id": "sha256:13e6a8ec002b74b2f818a77d995d4834e83bcac1cc5d981591ede1138cd40de6",
+  "app_image_id": "sha256:314e80feb767a8c3cb0902455e15e76062fb2dcd197e0f9f719826dcb12b8c8d",
   "caddy_image": "caddy:2",
   "caddy_image_id": "sha256:504a44d7d74bd2bc28a66afc4774912fc21223ca8a67734af1c54ab2f999b489",
   "published_only": [
     {
       "HostIp": "127.0.0.1",
-      "HostPort": "32772"
+      "HostPort": "32773"
     }
   ],
   "route_limits": [
@@ -37,9 +37,9 @@
   "shipping_caddyfile_sha256": "30feee4e4d42887a3f31090c2b9fc7c139fae298814f4023f22059c5fea5ef35",
   "test_config_sha256": "970f9c9061352ca97d84b98361936c01e8a5908588f06c970bc456f0dfd22f20",
   "trusted_proxy": "172.29.64.0/24",
-  "source_content_sha256": "2a5c2ee19ce09c3dddeef26bdcd23099a3c7579dc100bdedbe42b6b8ed8378de",
+  "source_content_sha256": "dcf772b1376a205f2fdbb8030265c4493a1ae42d4bbb3f8377f4ab6a8b1c52a4",
   "source_changed_after_run": [],
-  "log_sha256": "373948c666da1200423c0849120a72f1046999e5c81ed6e39d2d61b05bcce557",
+  "log_sha256": "a9edf4e90169c325bf93436fb11506e8dd7cd52a9c812b7f7ddd7e0d4cc09836",
   "harness_sha256": "fb2364be04e9d41d221a864c2aec6c90d6b222324eaf1e4d00e0943f01ed7d6a",
   "runtime": "existing Colima; isolated private Docker bridge; loopback published Caddy only",
   "production_deployment": false

@@ -250,8 +250,10 @@ def create_app(data_dir: Path, *, public_origin: str, allow_http_loopback: bool 
 
     @app.get("/api/projects")
     def projects(request: Request):
-        sync, _, _ = stores(request.state.user)
-        return {"projects": sync.projects()}
+        sync, core, lock = stores(request.state.user)
+        with lock:
+            return {"projects": [{**value, 'title':core.get(value['id']).title}
+                                 for value in sync.projects()]}
 
     @app.post("/api/projects")
     async def create(request: Request):

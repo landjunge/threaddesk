@@ -224,3 +224,10 @@ state. Status is inspected first; receiving or absent uncertain identities are
 explicitly aborted, while a committed receipt is validated and never aborted.
 Failed/uncertain status or abort keeps the checkpoint for retry. Reverted, removed
 and excluded sources are reconciled even when no normal upload branch runs.
+
+Manual Desktop configuration/sync/offline actions parse their form on the event
+loop, then execute validation, inventory, HTTP, detached view and rendering in
+a worker. The sync adapter creates/uses/closes its owned SQLite service in that
+worker, including error paths. Unrelated requests and status polling remain
+responsive. Project-list titles derive from synchronized core thread records
+rather than the sync store creation label.

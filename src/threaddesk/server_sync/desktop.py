@@ -1,6 +1,7 @@
 """Explicit local project bindings; remote metadata never grants host file access."""
 from __future__ import annotations
 
+from contextlib import contextmanager
 import hashlib
 import json
 import os
@@ -11,6 +12,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from fastapi import HTTPException, Request
+from starlette.concurrency import run_in_threadpool
 
 from threaddesk.core.errors import InvalidState
 from threaddesk.server_sync.store import SyncError, _id
@@ -318,47 +320,65 @@ def install_routes(app, service_factory, render):
     manager = DesktopSyncManager(service_factory)
     app.state.server_sync_manager = manager
 
+    @contextmanager
+    def worker_service():
+        # SQLite connections are created, used and closed on this SAME worker.
+        # The async request handler must never construct a core on the event loop
+        # and then hand that thread-bound connection to the pool.
+        core = service_factory()
+        try:
+            yield core
+        finally:
+            connection = getattr(core.store, 'connection', None)
+            if connection is not None:
+                connection.close()
+
     @app.get('/threads/{thread_id}/server-sync')
     def sync_page(thread_id: str, request: Request):
-        core = service_factory()
-        core.get(thread_id)
-        return render(request, {'sync_binding':BindingBook(core).view(thread_id)})
+        with worker_service() as core:
+            core.get(thread_id)
+            return render(request, {'sync_binding':BindingBook(core).view(thread_id)})
 
     @app.get('/api/threads/{thread_id}/server-sync')
     def sync_status(thread_id: str):
-        core = service_factory()
-        core.get(thread_id)
-        return BindingBook(core).view(thread_id)
+        with worker_service() as core:
+            core.get(thread_id)
+            return BindingBook(core).view(thread_id)
+
+    def perform_action(thread_id, request, form):
+        with worker_service() as core:
+            core.get(thread_id)
+            book = BindingBook(core)
+            action = form.get('action')
+            if action == 'configure':
+                book.save(thread_id,url=str(form.get('url','')),project_id=str(form.get('project_id','')).strip(),
+                          root=str(form.get('root','')),token=str(form.get('token','')),
+                          approved_roots=[s.strip() for s in str(form.get('approved_roots','')).splitlines() if s.strip()],
+                          owner_references=[s.strip() for s in str(form.get('owner_references','')).splitlines() if s.strip()],
+                          automatic=form.get('automatic')=='on',offline_enabled=form.get('offline')=='on')
+                manager.run_once(core,thread_id)
+            elif action == 'sync':
+                manager.run_once(core,thread_id)
+            elif action == 'offline':
+                if not book.load(thread_id):
+                    raise HTTPException(409,'Configure project first')
+                book.update(thread_id, {'offline_enabled':form.get('offline')=='on','offline_pending':True})
+                manager.run_once(core,thread_id)
+            elif action == 'resolve_local':
+                from threaddesk.server_sync.metadata import resolve_conflict
+                try:
+                    expected = json.loads(str(form.get('expected_current','')))
+                    chosen = json.loads(str(form.get('chosen_value','')))
+                except ValueError as exc:
+                    raise HTTPException(400,'Invalid conflict value') from exc
+                resolve_conflict(core,thread_id,str(form.get('conflict_id','')),expected,chosen,str(form.get('operation_id','')))
+            else:
+                raise HTTPException(400,'Unsupported sync action')
+            return render(request, {'sync_binding':book.view(thread_id)})
 
     @app.post('/threads/{thread_id}/server-sync')
     async def sync_action(thread_id: str, request: Request):
         form = await request.form()
-        core = service_factory()
-        core.get(thread_id)
-        book = BindingBook(core)
-        action = form.get('action')
-        if action == 'configure':
-            book.save(thread_id,url=str(form.get('url','')),project_id=str(form.get('project_id','')).strip(),
-                      root=str(form.get('root','')),token=str(form.get('token','')),
-                      approved_roots=[s.strip() for s in str(form.get('approved_roots','')).splitlines() if s.strip()],
-                      owner_references=[s.strip() for s in str(form.get('owner_references','')).splitlines() if s.strip()],
-                      automatic=form.get('automatic')=='on',offline_enabled=form.get('offline')=='on')
-            manager.run_once(core,thread_id)
-        elif action == 'sync':
-            manager.run_once(core,thread_id)
-        elif action == 'offline':
-            if not book.load(thread_id):
-                raise HTTPException(409,'Configure project first')
-            book.update(thread_id, {'offline_enabled':form.get('offline')=='on','offline_pending':True})
-            manager.run_once(core,thread_id)
-        elif action == 'resolve_local':
-            from threaddesk.server_sync.metadata import resolve_conflict
-            try:
-                expected = json.loads(str(form.get('expected_current','')))
-                chosen = json.loads(str(form.get('chosen_value','')))
-            except ValueError as exc:
-                raise HTTPException(400,'Invalid conflict value') from exc
-            resolve_conflict(core,thread_id,str(form.get('conflict_id','')),expected,chosen,str(form.get('operation_id','')))
-        else:
-            raise HTTPException(400,'Unsupported sync action')
-        return render(request, {'sync_binding':book.view(thread_id)})
+        # Inventory hashing, SQLite and remote HTTP all belong to the worker;
+        # unrelated desktop requests must keep their event loop available.
+        return await run_in_threadpool(perform_action, thread_id, request, dict(form))

@@ -31,6 +31,24 @@ def new_project(http, token):
     return response.json()['id']
 
 
+def test_project_list_uses_the_title_synchronized_through_metadata(server):
+    from copy import deepcopy
+    _, tokens, http = server
+    headers = auth(tokens['alice'])
+    pid = new_project(http, tokens['alice'])
+    base = http.get(f'/api/projects/{pid}/metadata',headers=headers).json()['document']
+    incoming = deepcopy(base)
+    incoming['thread']['title'] = 'Renamed from the desktop'
+    response = http.post(f'/api/projects/{pid}/metadata/sync',headers=headers,
+                         json={'operation_id':'rename-from-desktop','base':base,'document':incoming})
+    assert response.status_code == 200, response.text
+    assert response.json()['document']['thread']['title'] == incoming['thread']['title']
+    for _ in range(2):
+        listed = http.get('/api/projects',headers=headers).json()['projects']
+        assert next(value for value in listed if value['id']==pid)['title'] == incoming['thread']['title']
+    assert http.get('/api/projects',headers=auth(tokens['bob'])).json()['projects'] == []
+
+
 def upload(http, token, pid, transfer, content, base=None, path='note.md'):
     endpoint = f'/api/projects/{pid}/uploads/{transfer}'
     headers = auth(token)
