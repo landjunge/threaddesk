@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block body %}
+<main class="panel migration-center library-import" tabindex="0" aria-label="{{ t('library.title') }}" data-testid="library-import">
+  <h1>{{ t("library.title") }}</h1>
+  <p>{{ t("library.intro") }}</p>
+  <p class="muted">{{ t("library.no_api") }}</p>
+  <p class="muted">{{ t("library.limits", files=library.limits.files, file_mib=(library.limits.file_bytes // 1048576), batch_gib=(library.limits.batch_bytes // 1073741824)) }}</p>
+  {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+  {% if notice %}<p role="status">{{ notice }}</p>{% endif %}
+  <p role="status">{{ t("library.complete") if library.complete else t("library.incomplete") }}</p>
+  <p>{{ t("library.stored") }} {{ library.counts.stored }} · {{ t("library.failed") }} {{ library.counts.failed }} · {{ t("library.pending") }} {{ library.counts.pending }} · {{ t("library.outstanding") }} {{ library.counts.outstanding }}</p>
+
+  <form method="post" action="/library/folder">
+    <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
+    <label for="library-folder">{{ t("library.folder") }}</label>
+    <input id="library-folder" name="source" type="text" required maxlength="1024" value="{{ library.source }}" />
+    <button class="btn btn-primary" type="submit">{{ t("library.folder_submit") }}</button>
+  </form>
+
+  <form method="post" action="/library/files" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
+    <label for="library-files">{{ t("library.files") }}</label>
+    <input id="library-files" name="files" type="file" multiple required />
+    <button class="btn btn-primary" type="submit">{{ t("library.files_submit") }}</button>
+  </form>
+
+  <form method="post" action="/library/package" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
+    <label for="library-package">{{ t("library.package") }}</label>
+    <input id="library-package" name="package" type="file" accept=".zip,application/zip" required />
+    <button class="btn btn-primary" type="submit">{{ t("library.package_submit") }}</button>
+  </form>
+
+  <form method="post" action="/library/resume">
+    <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
+    <button class="btn btn-ghost" type="submit">{{ t("library.resume") }}</button>
+  </form>
+
+  <h2>{{ t("library.stored") }}</h2>
+  {% if library.records %}
+  <table class="library-table">
+    <thead>
+      <tr>
+        <th>{{ t("library.column_file") }}</th>
+        <th>{{ t("library.column_format") }}</th>
+        <th>{{ t("library.column_size") }}</th>
+        <th>{{ t("library.column_project") }}</th>
+        <th>{{ t("library.column_origin") }}</th>
+        <th>{{ t("library.column_integrity") }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in library.records %}
+      <tr>
+        <td><a href="/library/files/{{ item.id }}">{{ item.filename }}</a></td>
+        <td>{{ item.format }}</td>
+        <td>{{ item.size_label }}</td>
+        <td>{{ item.thread_title }}</td>
+        <td><code>{{ item.origin_path }}</code></td>
+        <td>{{ t("library.verified") if item.integrity == "verified" else t("library.integrity_failed") }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">{{ t("library.empty") }}</p>
+  {% endif %}
+
+  {% if library.failures %}
+  <h2>{{ t("library.failed") }}</h2>
+  <ul>
+    {% for item in library.failures %}
+    <li><code>{{ item.relative_path }}</code> — {{ item.error }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if library.outstanding %}
+  <h2>{{ t("library.outstanding") }}</h2>
+  <ul>
+    {% for item in library.outstanding %}
+    <li><code>{{ item.relative_path }}</code></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</main>
+{% endblock %}
