@@ -125,7 +125,10 @@ def test_api_integrity_metadata_default_and_retained_versions(server):
     absent=api+'/uploads/delayed-begin'
     assert http.post(absent+'/abort',headers=headers).json()['state']=='aborted'
     http.put(api+'/offline',headers=headers,json={'enabled':True})
-    assert http.post(absent,headers=headers,json={'path':'late.md','size':0,'sha256':hashlib.sha256(b'').hexdigest()}).status_code==409
+    delayed=http.post(absent,headers=headers,json={'path':'late.md','size':0,'sha256':hashlib.sha256(b'').hexdigest()})
+    assert delayed.status_code==200 and delayed.json()['state']=='aborted'
+    assert http.post(absent+'/commit',headers=headers).status_code==409
+    assert http.get(api+'/status',headers=headers).json()['active_transfers']==0
 
 
 def test_shared_core_notes_cas_and_append_only_whiteboard(server):

@@ -307,6 +307,12 @@ class SyncStore:
             project = self._project(db, project_id)
             old = db.execute('SELECT * FROM uploads WHERE project=? AND transfer=?', (project_id, transfer_id)).fetchone()
             if old:
+                # Abort is a terminal barrier even when begin never arrived and
+                # its tombstone therefore has no original file manifest. Return
+                # positive closure proof so clients can allocate a NEW identity;
+                # this identifier must never resume or reserve bytes again.
+                if old['state'] == 'aborted':
+                    return self._upload_dict(old)
                 if (old['path'],old['size'],old['sha256'],old['base']) != (path,size,sha256,base_revision):
                     raise SyncError('Transfer manifest changed', 'transfer_conflict', 409)
                 return self._upload_dict(old)

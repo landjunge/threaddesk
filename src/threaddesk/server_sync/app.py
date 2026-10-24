@@ -14,6 +14,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from starlette.concurrency import run_in_threadpool
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -172,27 +173,29 @@ def create_app(data_dir: Path, *, public_origin: str, allow_http_loopback: bool 
     @app.post("/auth/login")
     async def login(request: Request):
         value = await body(request, {"token"})
-        token = text(value["token"], 256)
-        peer = request.client.host if request.client else "unknown"
-        with cache_lock:
-            # Bounded worker-local throttle; reverse proxy should also limit login.
-            now = time.monotonic()
-            for key in list(failures):
-                if now - failures[key][0] > 60:
-                    del failures[key]
-            if len(failures) >= 4096 or failures.get(peer, (now, 0))[1] >= 10:
-                raise HTTPException(429, "Try again in one minute")
-            user = creds.authenticate(token)
-            if not user:
-                stamp, count = failures.get(peer, (now, 0))
-                failures[peer] = (stamp, count + 1)
-                raise HTTPException(401, "Invalid login")
-            failures.pop(peer, None)
-        session = creds.session(user)
-        response = JSONResponse({"user": user, "csrf": creds.csrf(session)})
-        response.set_cookie(COOKIE, session, max_age=SESSION_SECONDS, httponly=True,
-                            secure=origin.scheme == "https", samesite="strict", path="/")
-        return response
+        def operation():
+            token = text(value["token"], 256)
+            peer = request.client.host if request.client else "unknown"
+            with cache_lock:
+                # Bounded worker-local throttle; reverse proxy should also limit login.
+                now = time.monotonic()
+                for key in list(failures):
+                    if now - failures[key][0] > 60:
+                        del failures[key]
+                if len(failures) >= 4096 or failures.get(peer, (now, 0))[1] >= 10:
+                    raise HTTPException(429, "Try again in one minute")
+                user = creds.authenticate(token)
+                if not user:
+                    stamp, count = failures.get(peer, (now, 0))
+                    failures[peer] = (stamp, count + 1)
+                    raise HTTPException(401, "Invalid login")
+                failures.pop(peer, None)
+            session = creds.session(user)
+            response = JSONResponse({"user": user, "csrf": creds.csrf(session)})
+            response.set_cookie(COOKIE, session, max_age=SESSION_SECONDS, httponly=True,
+                                secure=origin.scheme == "https", samesite="strict", path="/")
+            return response
+        return await run_in_threadpool(operation)
 
     @app.get("/api/session")
     def session(request: Request):
@@ -216,37 +219,39 @@ def create_app(data_dir: Path, *, public_origin: str, allow_http_loopback: bool 
     @app.post('/api/projects/bind')
     async def bind_project(request: Request):
         value = await body(request, {'binding_id','title'})
-        from threaddesk.server_sync.store import _id
-        binding = _id(value['binding_id'])
-        title = reject_secrets(text(value['title'],200)).strip()
-        if not title:
-            raise HTTPException(400,'Project title required')
-        pid = hashlib.sha256(binding.encode()).hexdigest()[:24]
-        key = 'serverbind_'+pid
-        sync,core,lock = stores(request.state.user)
-        with lock, core.store.transaction():
-            saved = core.store.get_management_operation(key)
-            if saved:
-                sync.project(pid)
-                return saved['result']
-            try:
-                core.get(pid)
-            except NotFound:
-                thread = new_thread(title)
-                thread.id = pid
-                core.store.save_thread(thread)
-            else:
-                raise HTTPException(409,'Existing project has no binding receipt; select its ID explicitly')
-            try:
-                sync.project(pid)
-            except SyncError as exc:
-                if exc.status != 404:
-                    raise
-                sync.create_project(title,project_id=pid)
-            result = {**sync.project(pid),'bootstrap_document':export_document(core,pid),'operation_id':key}
-            core.store.save_management_operation(key,{'request_hash':hashlib.sha256(binding.encode()).hexdigest(),
-                'recorded_at':now_iso(),'result':result})
-            return result
+        def operation():
+            from threaddesk.server_sync.store import _id
+            binding = _id(value['binding_id'])
+            title = reject_secrets(text(value['title'],200)).strip()
+            if not title:
+                raise HTTPException(400,'Project title required')
+            pid = hashlib.sha256(binding.encode()).hexdigest()[:24]
+            key = 'serverbind_'+pid
+            sync,core,lock = stores(request.state.user)
+            with lock, core.store.transaction():
+                saved = core.store.get_management_operation(key)
+                if saved:
+                    sync.project(pid)
+                    return saved['result']
+                try:
+                    core.get(pid)
+                except NotFound:
+                    thread = new_thread(title)
+                    thread.id = pid
+                    core.store.save_thread(thread)
+                else:
+                    raise HTTPException(409,'Existing project has no binding receipt; select its ID explicitly')
+                try:
+                    sync.project(pid)
+                except SyncError as exc:
+                    if exc.status != 404:
+                        raise
+                    sync.create_project(title,project_id=pid)
+                result = {**sync.project(pid),'bootstrap_document':export_document(core,pid),'operation_id':key}
+                core.store.save_management_operation(key,{'request_hash':hashlib.sha256(binding.encode()).hexdigest(),
+                    'recorded_at':now_iso(),'result':result})
+                return result
+        return await run_in_threadpool(operation)
 
     @app.get("/api/projects")
     def projects(request: Request):
@@ -258,11 +263,13 @@ def create_app(data_dir: Path, *, public_origin: str, allow_http_loopback: bool 
     @app.post("/api/projects")
     async def create(request: Request):
         value = await body(request, {"title"})
-        title = text(value["title"], 200).strip()
-        sync, core, lock = stores(request.state.user)
-        with lock:
-            thread = core.create(title)
-            return sync.create_project(title, project_id=thread.id)
+        def operation():
+            title = text(value["title"], 200).strip()
+            sync, core, lock = stores(request.state.user)
+            with lock:
+                thread = core.create(title)
+                return sync.create_project(title, project_id=thread.id)
+        return await run_in_threadpool(operation)
 
     @app.get("/api/projects/{pid}/status")
     def status(pid: str, request: Request):
@@ -277,16 +284,20 @@ def create_app(data_dir: Path, *, public_origin: str, allow_http_loopback: bool 
     @app.put("/api/projects/{pid}/offline")
     async def offline(pid: str, request: Request):
         value = await body(request, {"enabled"})
-        if type(value["enabled"]) is not bool:
-            raise HTTPException(400, "enabled must be boolean")
-        sync, _, _ = project(request, pid)
-        return sync.set_offline(pid, value["enabled"])
+        def operation():
+            if type(value["enabled"]) is not bool:
+                raise HTTPException(400, "enabled must be boolean")
+            sync, _, _ = project(request, pid)
+            return sync.set_offline(pid, value["enabled"])
+        return await run_in_threadpool(operation)
 
     @app.post("/api/projects/{pid}/manifest")
     async def manifest(pid: str, request: Request):
         value = await body(request, {"files", "issues", "device_id"})
-        sync, _, _ = project(request, pid)
-        return sync.declare_manifest(pid, **value)
+        def operation():
+            sync, _, _ = project(request, pid)
+            return sync.declare_manifest(pid, **value)
+        return await run_in_threadpool(operation)
 
     @app.get("/api/projects/{pid}/files")
     def files(pid: str, request: Request):
@@ -301,8 +312,10 @@ def create_app(data_dir: Path, *, public_origin: str, allow_http_loopback: bool 
     @app.post("/api/projects/{pid}/uploads/{transfer}")
     async def begin(pid: str, transfer: str, request: Request):
         value = await body(request, {"path", "size", "sha256"}, {"base_revision"})
-        sync, _, _ = project(request, pid)
-        return sync.start_upload(pid, transfer, **value)
+        def operation():
+            sync, _, _ = project(request, pid)
+            return sync.start_upload(pid, transfer, **value)
+        return await run_in_threadpool(operation)
 
     @app.get("/api/projects/{pid}/uploads")
     def pending_uploads(pid: str, request: Request):
@@ -317,12 +330,14 @@ def create_app(data_dir: Path, *, public_origin: str, allow_http_loopback: bool 
     @app.patch("/api/projects/{pid}/uploads/{transfer}")
     async def chunk(pid: str, transfer: str, request: Request):
         value = await body(request, {"offset", "data_base64"})
-        try:
-            data = base64.b64decode(text(value["data_base64"], 350000), validate=True)
-        except (ValueError, binascii.Error):
-            raise HTTPException(400, "Invalid base64")
-        sync, _, _ = project(request, pid)
-        return sync.append_chunk(pid, transfer, value["offset"], data)
+        def operation():
+            try:
+                data = base64.b64decode(text(value["data_base64"], 350000), validate=True)
+            except (ValueError, binascii.Error):
+                raise HTTPException(400, "Invalid base64")
+            sync, _, _ = project(request, pid)
+            return sync.append_chunk(pid, transfer, value["offset"], data)
+        return await run_in_threadpool(operation)
 
     @app.post("/api/projects/{pid}/uploads/{transfer}/commit")
     def commit(pid: str, transfer: str, request: Request):
@@ -343,8 +358,10 @@ def create_app(data_dir: Path, *, public_origin: str, allow_http_loopback: bool 
     @app.post("/api/projects/{pid}/resolve")
     async def resolve(pid: str, request: Request):
         value = await body(request, {"path", "expected_heads", "chosen_revision"})
-        sync, _, _ = project(request, pid)
-        return sync.resolve(pid, **value)
+        def operation():
+            sync, _, _ = project(request, pid)
+            return sync.resolve(pid, **value)
+        return await run_in_threadpool(operation)
 
     @app.get("/api/projects/{pid}/thread")
     def get_thread(pid: str, request: Request):
@@ -355,23 +372,25 @@ def create_app(data_dir: Path, *, public_origin: str, allow_http_loopback: bool 
     @app.put("/api/projects/{pid}/thread")
     async def put_thread(pid: str, request: Request):
         value = await body(request, {"revision", "description", "notes"})
-        if type(value["revision"]) is not int:
-            raise HTTPException(400, "revision must be integer")
-        _, core, lock = project(request, pid)
-        with lock, core.store.transaction():
-            thread = core.get(pid)
-            if thread.revision != value["revision"]:
-                raise HTTPException(409, "Thread changed; reload before saving")
-            previous = deepcopy(thread.context)
-            previous.extra["server_previous_description"] = thread.description
-            core.store.save_snapshot(Snapshot(
-                id=new_id(), thread_id=pid, created_at=now_iso(),
-                label="Before server metadata edit", context=previous))
-            thread.description = reject_secrets(text(value["description"], 100000))
-            thread.context.notes = reject_secrets(text(value["notes"], 100000))
-            thread.updated_at = now_iso()
-            core.store.save_thread(thread)
-            return thread.to_dict()
+        def operation():
+            if type(value["revision"]) is not int:
+                raise HTTPException(400, "revision must be integer")
+            _, core, lock = project(request, pid)
+            with lock, core.store.transaction():
+                thread = core.get(pid)
+                if thread.revision != value["revision"]:
+                    raise HTTPException(409, "Thread changed; reload before saving")
+                previous = deepcopy(thread.context)
+                previous.extra["server_previous_description"] = thread.description
+                core.store.save_snapshot(Snapshot(
+                    id=new_id(), thread_id=pid, created_at=now_iso(),
+                    label="Before server metadata edit", context=previous))
+                thread.description = reject_secrets(text(value["description"], 100000))
+                thread.context.notes = reject_secrets(text(value["notes"], 100000))
+                thread.updated_at = now_iso()
+                core.store.save_thread(thread)
+                return thread.to_dict()
+        return await run_in_threadpool(operation)
 
     @app.get("/api/projects/{pid}/whiteboard")
     def whiteboard(pid: str, request: Request):
@@ -382,10 +401,12 @@ def create_app(data_dir: Path, *, public_origin: str, allow_http_loopback: bool 
     @app.post("/api/projects/{pid}/whiteboard")
     async def append_whiteboard(pid: str, request: Request):
         value = await body(request, {"content", "entry_type", "external_key"})
-        _, core, lock = project(request, pid)
-        with lock, core.store.transaction():
-            return core.append_whiteboard(pid, actor=request.state.user, actor_type="human",
-                                          content=text(value["content"]), entry_type=text(value["entry_type"], 32),
-                                          external_key=text(value["external_key"], 128))
+        def operation():
+            _, core, lock = project(request, pid)
+            with lock, core.store.transaction():
+                return core.append_whiteboard(pid, actor=request.state.user, actor_type="human",
+                                              content=text(value["content"]), entry_type=text(value["entry_type"], 32),
+                                              external_key=text(value["external_key"], 128))
+        return await run_in_threadpool(operation)
 
     return app

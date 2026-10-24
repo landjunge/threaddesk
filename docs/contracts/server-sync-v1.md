@@ -247,3 +247,14 @@ the displaced original descriptor, masks special bits, and applies the mode via
 the still-open replacement descriptor before exclusive publication. The renamed
 original retains its inode metadata in the private recovery directory. New
 files and generated remote recovery copies remain 0600.
+
+Aborted transfer IDs, including absent-ID cancellation tombstones, return
+terminal aborted proof before comparing prior manifest contents. This never
+reopens them; valid retries allocate a new persisted ID. Receiving/committed
+IDs still require identical manifests.
+
+Async API mutation routes retain async bounded body parsing and authorization,
+then dispatch complete tenant/project resolution, store/core operations, hashing
+and lock/transaction waits to workers. Metadata sync/resolve and the login
+shared-cache/throttle section follow the same rule. Other users can be serviced
+while one manifest operation is waiting.

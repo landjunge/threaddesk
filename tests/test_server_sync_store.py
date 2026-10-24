@@ -122,3 +122,25 @@ def test_manifest_fail_closed_and_cross_project_transfer_isolation(tmp_path):
         store.read_revision(other, revision)
     with pytest.raises(SyncError):
         store.upload_status(other, 'private')
+
+
+def test_aborted_tombstones_return_terminal_proof_before_manifest_comparison(tmp_path):
+    store,project=setup(tmp_path)
+    absent=store.abort_upload(project,'never-delivered')
+    assert absent['state']=='aborted'
+    assert store.start_upload(project,'never-delivered','note.txt',3,digest(b'new'))==absent
+    store.start_upload(project,'partial','note.txt',3,digest(b'old'))
+    store.append_chunk(project,'partial',0,b'o')
+    partial=store.abort_upload(project,'partial')
+    assert store.start_upload(project,'partial','different.txt',0,digest(b''),'syntactically-valid-base')==partial
+    assert store.status(project)['active_transfers']==0
+    assert store.list_files(project)==[]
+    with pytest.raises(SyncError,match='committed|aborted'):
+        store.append_chunk(project,'never-delivered',0,b'n')
+    with pytest.raises(SyncError,match='aborted'):
+        store.finish_upload(project,'partial')
+    revision=upload(store,project,'committed',b'old')
+    with pytest.raises(SyncError) as error:
+        store.start_upload(project,'committed','note.txt',3,digest(b'new'))
+    assert error.value.status==409 and error.value.code=='transfer_conflict'
+    assert store.read_revision(project,revision)==b'old'

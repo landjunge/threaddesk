@@ -612,3 +612,65 @@ def test_retired_committed_receipt_cannot_replace_a_newer_base(tmp_path):
     assert store.upload_status(project,transfer)['state']=='committed'
     assert len(store.history(project,'note.md'))==3
     client.close()
+
+
+def test_lost_absent_begin_and_abort_reply_tombstone_can_restart_original_bytes(tmp_path):
+    import sqlite3
+    from fastapi.testclient import TestClient
+    from threaddesk.server_sync.app import create_app
+    from threaddesk.server_sync.auth import provision
+
+    root=tmp_path/'project';root.mkdir();path=root/'note.txt';original=b'original pending bytes';path.write_bytes(original)
+    state=tmp_path/'checkpoint'
+    token=provision(tmp_path/'server','alice');headers={'Authorization':'Bearer '+token}
+    app=create_app(tmp_path/'server',public_origin='https://testserver')
+    with TestClient(app,base_url='https://testserver') as http:
+        pid=http.post('/api/projects',headers=headers,json={'title':'Project'}).json()['id'];api='/api/projects/'+pid
+        assert http.put(api+'/offline',headers=headers,json={'enabled':True}).status_code==200
+
+        class InterruptedHTTP:
+            def __init__(self):
+                self.lose_before_delivery=True
+                self.lose_abort_reply=False
+                self.begins=[]
+            def request(self,method,url,**kwargs):
+                if method=='POST' and '/uploads/' in url and url.count('/')==5:
+                    transfer=url.rsplit('/',1)[1]
+                    # A second SQLite connection observes the identity BEFORE
+                    # this request is delivered; persistence is not just memory.
+                    with sqlite3.connect((state/'checkpoint.sqlite3').as_uri()+'?mode=ro',uri=True) as db:
+                        assert db.execute('SELECT transfer FROM uploads').fetchone()[0]==transfer
+                    self.begins.append(transfer)
+                    if self.lose_before_delivery:
+                        self.lose_before_delivery=False
+                        raise httpx.ReadError('Injected begin lost before delivery',request=httpx.Request(method,'https://testserver'+url))
+                response=http.request(method,url,**kwargs)
+                if method=='POST' and url.endswith('/abort') and self.lose_abort_reply:
+                    self.lose_abort_reply=False
+                    assert response.status_code==200 and response.json()['state']=='aborted'
+                    raise httpx.ReadError('Injected absent abort acknowledgement lost',request=response.request)
+                return response
+
+        wire=InterruptedHTTP()
+        client=SyncClient('https://testserver',token,pid,root,state_dir=state,transport=wire)
+        with pytest.raises(httpx.ReadError,match='before delivery'):client.sync_once()
+        old_id=wire.begins[0]
+        assert http.get(api+'/uploads/'+old_id,headers=headers).status_code==404
+        path.write_bytes(b'changed while delivery unknown');wire.lose_abort_reply=True
+        with pytest.raises(httpx.ReadError,match='abort acknowledgement'):client.sync_once()
+        assert client.db.execute('SELECT transfer FROM uploads').fetchone()[0]==old_id
+        assert http.get(api+'/uploads/'+old_id,headers=headers).json()['state']=='aborted'
+        path.write_bytes(original);client.close()
+        restarted=SyncClient('https://testserver',token,pid,root,state_dir=state,transport=wire)
+        try:
+            result=restarted.sync_once()
+            assert result['state']=='ready' and result['active_transfers']==0,result
+            assert wire.begins[-1]!=old_id and set(wire.begins)=={old_id,wire.begins[-1]}
+            assert http.get(api+'/uploads/'+old_id,headers=headers).json()['state']=='aborted'
+            assert http.get(api+'/uploads/'+wire.begins[-1],headers=headers).json()['state']=='committed'
+            history=http.get(api+'/history',headers=headers,params={'path':'note.txt'}).json()['versions']
+            assert len(history)==1
+            assert http.get(api+'/revisions/'+history[0]['revision'],headers=headers).content==original
+            assert restarted.db.execute('SELECT COUNT(*) FROM uploads').fetchone()[0]==0
+            assert path.read_bytes()==original
+        finally:restarted.close()

@@ -1,4 +1,5 @@
 """Authenticated metadata routes, installed in the existing server boundary."""
+from starlette.concurrency import run_in_threadpool
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from threaddesk.server_sync.metadata import document_etag, export_document, synchronize, list_conflicts, resolve_conflict
@@ -18,9 +19,11 @@ def install_routes(app,project_resolver,read_body):
     @app.post('/api/projects/{pid}/metadata/sync')
     async def sync(pid:str,request:Request):
         value=await read_body(request,{'operation_id','base','document'})
-        _,core,lock=project_resolver(request,pid)
-        with lock:
-            return synchronize(core,pid,**value)
+        def operation():
+            _,core,lock=project_resolver(request,pid)
+            with lock:
+                return synchronize(core,pid,**value)
+        return await run_in_threadpool(operation)
 
     @app.get('/api/projects/{pid}/metadata/conflicts')
     def conflicts(pid:str,request:Request):
@@ -31,6 +34,8 @@ def install_routes(app,project_resolver,read_body):
     @app.post('/api/projects/{pid}/metadata/resolve')
     async def resolve(pid:str,request:Request):
         value=await read_body(request,{'conflict_id','expected_current','chosen_value','operation_id'})
-        _,core,lock=project_resolver(request,pid)
-        with lock:
-            return resolve_conflict(core,pid,**value)
+        def operation():
+            _,core,lock=project_resolver(request,pid)
+            with lock:
+                return resolve_conflict(core,pid,**value)
+        return await run_in_threadpool(operation)

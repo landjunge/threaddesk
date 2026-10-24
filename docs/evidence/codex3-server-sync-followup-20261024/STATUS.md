@@ -208,6 +208,24 @@ identity/client run passed **40 tests**; after descriptor retention the25 client
 tests passed again. These counts overlap. Final fresh image receipts below cover
 this source; the real Browser/Desktop flow also passed for the shipped UI.
 
+Two final server findings are corrected in the final CI-bound source: aborted
+tombstones now return terminal proof before manifest comparison, while receiving
+and committed IDs still reject mismatched manifests. The actual HTTP regression
+loses begin before delivery, changes bytes, loses the absent-ID abort reply,
+restores pending bytes and restarts; it verifies a replacement ID is committed
+locally before network delivery, exactly one version and no active reservation.
+**32 store/client checks passed**. Synchronous API work, including tenant/project
+resolution, hashing and database/core locks, now executes in workers after
+bounded async parsing. Adjacent mutation routes, metadata sync/resolve and the
+shared login lock follow the same rule. **Eight targeted API checks passed**,
+including two deliberately blocked manifest resolution/integrity cases in which
+another tenant responds before release, large header/stream manifests, auth,
+CAS, metadata and JSON/SQLite Desktop integration. Counts overlap prior results.
+The existing local image receipt below is historical evidence for `658707a`;
+the mandatory CI builds a fresh image for this final source and records its
+Linux/TLS/restore/Caddy result and exact head in GitHub and both whiteboards.
+It is not replaced by the earlier image and is not duplicated locally.
+
 During integration an earlier affected run had 138 passing / 3 new i18n failures.
 Labels, placeholder and dynamic-state catalog coverage were corrected and the
 failed checks passed. The guard for unsafe POST routes now includes the new
@@ -242,9 +260,10 @@ temporary harness directory was canonicalized. Product path guards were retained
 Native Tauri distribution builds are checked separately by repository CI; this
 browser proof is not a claim of GUI testing on every native platform.
 
-## Actual Linux, verified TLS and complete restore
+## Local Linux receipt and final CI acceptance
 
-The mandatory final image build and acceptance passed on **Linux x86_64**,
+The last local image build and acceptance, for source head `658707a` before the
+final server worker/tombstone corrections, passed on **Linux x86_64**,
 unprivileged/read-only root filesystem, isolated network and synthetic private
 data. Docker used the already running Colima runtime through an explicit context;
 no global context switch or foreign container stop. A development OrbStack start
@@ -252,7 +271,7 @@ was also issued during initial runtime discovery; neither runtime was stopped.
 Only the harness's own containers were cleaned up.
 
 Image: `sha256:4ad89294fd374465ece4631ceb7837fd119171f0d8844174c10f4a933da355dc`.
-Production input content SHA256:
+Historical local input content SHA256:
 `269826388224106085fe5a5719a3ffb848b44e8cc6cae168cf6f54cdd2f4c199`.
 The 151 input fingerprints (including the shipping Caddyfile) were compared after acceptance; none changed.
 [Source manifest](source-manifest.json), [Linux receipt](linux.json),
@@ -270,8 +289,9 @@ Early setup attempts exposed Colima bind-mount and read-only-copy restrictions;
 the harness now streams only its synthetic script/certificates to tmpfs. An
 arbitrary 10-second harness stop ceiling was corrected after observing uvicorn
 idle TLS shutdown. Final app/harness use a finite graceful shutdown timeout.
-The final successful run rebuilt the image; the earlier diagnostic pass was not
-substituted for it. Command (Docker daemon required):
+That successful local run rebuilt the image; the earlier diagnostic pass was
+not substituted for it. Final server changes require the fresh CI image; this
+historical receipt is not presented as their acceptance. Command (Docker daemon required):
 
 ```sh
 python packaging/server/check_acceptance.py --docker-context colima
