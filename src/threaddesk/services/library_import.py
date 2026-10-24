@@ -19,6 +19,7 @@ import zipfile
 from threaddesk.core.errors import InvalidState, NotFound, SecretRejected
 from threaddesk.core.models import new_id, new_thread
 from threaddesk.core.secrets import reject_secrets
+from threaddesk.services.library_index import LibraryIndex
 
 MAX_FILE_BYTES = 256 * 1024 * 1024
 MAX_BATCH_BYTES = 2 * 1024 * 1024 * 1024
@@ -232,6 +233,7 @@ class LibraryImporter:
                 "batch_bytes": MAX_BATCH_BYTES,
                 "files": MAX_FILES,
             },
+            "index": LibraryIndex(self.root).status(),
         }
 
     def for_thread(self, thread_id: str) -> list[dict]:
@@ -265,6 +267,7 @@ class LibraryImporter:
         self._write_json(self.journal_path, journal)
         summary = self._summary(results)
         summary["verified"] = self._verify_stored()
+        summary["index"] = self.rebuild_index()
         return summary
 
     def import_files(self, named: list[tuple[str, Path]]) -> dict:
@@ -286,6 +289,48 @@ class LibraryImporter:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(payload)
             return self.import_tree(root)
+
+    def rebuild_index(self) -> dict:
+        try:
+            return LibraryIndex(self.root).rebuild(self._read_records(), self.blobs)
+        except OSError:
+            return {"status": "failed", "documents": 0, "failed": 0, "error": "index_store"}
+
+    def reassign(self, record_id: str, thread_title: str) -> dict:
+        if not _RECORD_ID.fullmatch(record_id or ""):
+            raise NotFound(record_id)
+        record = self._record_by_id(record_id)
+        if record is None or record.get("status") != "stored":
+            raise NotFound(record_id)
+        from threaddesk.api.service import ThreadService
+        title = _norm(thread_title)
+        match = None
+        for thread in ThreadService(store=self.store).list(include_archived=True):
+            if _norm(thread.title) == title:
+                match = thread
+                break
+        if match is None:
+            raise LookupError(thread_title)
+        if record.get("thread_id") != match.id:
+            self._unlink_thread(record.get("thread_id"), record_id)
+            record["thread_id"] = match.id
+            record["thread_title"] = match.title
+            record["assignment"] = "unassigned" if _norm(match.title) == _norm(UNASSIGNED_TITLE) else "matched"
+            self._write_json(self.records / f"{record_id}.json", record)
+            self._link_thread(match, record_id)
+        self.rebuild_index()
+        return self._public_record(record)
+
+    def _unlink_thread(self, thread_id: str | None, record_id: str) -> None:
+        if not thread_id:
+            return
+        try:
+            current = self.store.get_thread(thread_id)
+        except NotFound:
+            return
+        ids = [item for item in list(current.context.extra.get("library_files") or []) if item != record_id]
+        current.context.extra["library_files"] = ids
+        self.store.save_thread(current)
 
     def resume(self) -> dict:
         source = self._read_journal().get("source") or ""

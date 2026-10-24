@@ -82,7 +82,7 @@ def test_all_unsafe_ui_routes_enforce_boundary_before_body_or_side_effect(desk):
     client = raw(app)
     csrf = bootstrap(client)
     routes = [route for route in app.routes if "POST" in (getattr(route, "methods", set()) or set())]
-    assert len(routes) == 46  # Forty-two existing routes plus four library copy routes.
+    assert len(routes) == 47  # Forty-two existing routes plus five library routes.
     for route in routes:
         if route.path in MACHINE_PATHS:
             continue

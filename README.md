@@ -29,7 +29,13 @@ Die Entwicklerinstallation benötigt Python 3.9+. Neue Quellfunktionen sind nich
 
 **English:** Data includes “Import a library”. ThreadDesk then copies complete files from a folder on this Mac, a file selection, or a ZIP export. ChatGPT does not offer this application a library API. Originals are only read and stay unchanged. Copies live in `library-files/` inside the local ThreadDesk directory (`THREADDESK_HOME`, otherwise `~/.threaddesk`): content is addressed by SHA-256 under `blobs/`, and origin metadata under `records/`. A folder name that matches an existing thread title assigns the file to that thread. Otherwise the thread “Nicht zugeordnet” is used. The same checksum is not stored twice. A later different checksum for the same origin path becomes another version; the older one remains. Secret-like filenames and keys inside text files are not stored. ZIP paths containing `..` are rejected. Limits on this machine: 2000 files, 256 MiB each, 2 GiB per run. A file counts as stored only after a second checksum succeeds. The same folder resumes an interrupted run. The file can then be opened inside ThreadDesk.
 
-Supported formats / Unterstützte Formate: Markdown, text, CSV, JSON, YAML, HTML, XML, PDF, Word, Excel, PowerPoint, OpenDocument, RTF, PNG, JPEG, GIF, WebP, HEIC, TIFF, BMP, SVG, ZIP, MP3, WAV, M4A, AAC, OGG, FLAC, AIFF, MP4, MOV, WebM, MKV. [Übergaben / Handoffs](docs/evidence/seven-tools-20261018/TD-C02.md) · [Fachmutationen / Managed changes](docs/evidence/seven-tools-20261018/TD-C01.md).
+Supported formats / Unterstützte Formate: Markdown, text, CSV, JSON, YAML, HTML, XML, PDF, Word, Excel, PowerPoint, OpenDocument, RTF, PNG, JPEG, GIF, WebP, HEIC, TIFF, BMP, SVG, ZIP, MP3, WAV, M4A, AAC, OGG, FLAC, AIFF, MP4, MOV, WebM, MKV.
+
+**Deutsch:** Nach der Übernahme baut ThreadDesk einen lokalen Index aus Metadaten und, bei Textformaten, einem Auszug. PDF, Office, Bilder, Audio und Video sind über Namen und Herkunft suchbar, nicht über den Binärinhalt. Aufträge heißen `finde`, `öffne` und `ordne … zu`. `öffne` öffnet die gespeicherte Kopie. Die Taste „Sprechen“ nutzt die Spracherkennung des Browsers, wenn er sie auf `http://127.0.0.1` anbietet. KiraBridge hat dafür keine eigene Operation und wird von diesem Modul nicht aufgerufen.
+
+**English:** After a copy, ThreadDesk builds a local index from metadata and, for text formats, an excerpt. PDF, Office, images, audio, and video are found by name and origin, not by binary content. Commands are `find`, `open`, and `organize … into`. `open` opens the stored copy. Speak uses the browser’s speech recognition when it is available on `http://127.0.0.1`. KiraBridge has no operation for this and is not called by the module.
+
+[Übergaben / Handoffs](docs/evidence/seven-tools-20261018/TD-C02.md) · [Fachmutationen / Managed changes](docs/evidence/seven-tools-20261018/TD-C01.md).
 
 
 ## Lizenz / License

@@ -482,6 +482,39 @@ CATALOG: dict[str, dict[str, str]] = {
     "library.error.zip_too_large": {"de": "Das ZIP ist entpackt zu groß.", "en": "The unpacked ZIP is too large."},
     "library.error.file_too_large": {"de": "Eine Datei überschreitet die Größengrenze.", "en": "A file exceeds the size limit."},
     "library.error.too_many_files": {"de": "Es sind zu viele Dateien.", "en": "There are too many files."},
+    "library.command": {"de": "Auftrag", "en": "Command"},
+    "library.command_submit": {"de": "Ausführen", "en": "Run"},
+    "library.speak": {"de": "Sprechen", "en": "Speak"},
+    "library.speech_unavailable": {
+        "de": "Dieser Browser hat keine Spracherkennung. Der Auftrag kann getippt werden.",
+        "en": "This browser has no speech recognition. Type the command instead.",
+    },
+    "library.speech_insecure": {
+        "de": "Spracherkennung braucht einen sicheren lokalen Kontext.",
+        "en": "Speech recognition needs a secure local context.",
+    },
+    "library.speech_denied": {
+        "de": "Das Mikrofon ist nicht freigegeben.",
+        "en": "The microphone is not allowed.",
+    },
+    "library.speech_silent": {
+        "de": "Es war nichts zu hören.",
+        "en": "Nothing was heard.",
+    },
+    "library.command_help": {
+        "de": "Beispiele: finde Plan · öffne note.md · ordne note.md zu 4AllPass",
+        "en": "Examples: find plan · open note.md · organize note.md into 4AllPass",
+    },
+    "library.command_error.empty": {"de": "Der Auftrag ist leer.", "en": "The command is empty."},
+    "library.command_error.not_found": {"de": "Keine passende Datei im Index.", "en": "No matching file in the index."},
+    "library.command_error.thread_missing": {"de": "Dieser Thread ist nicht da.", "en": "That thread is not there."},
+    "library.command_error.unknown_command": {
+        "de": "Der Auftrag ist unbekannt. Erlaubt sind finde, öffne und ordne.",
+        "en": "That command is unknown. find, open, and organize are allowed.",
+    },
+    "library.index_ready": {"de": "Index bereit · {documents}", "en": "Index ready · {documents}"},
+    "library.index_missing": {"de": "Index fehlt noch.", "en": "The index is not built yet."},
+    "library.index_failed": {"de": "Index unvollständig · {failed}", "en": "Index incomplete · {failed}"},
     "library.limits": {
         "de": "Grenze: {files} Dateien, {file_mib} MiB je Datei, {batch_gib} GiB je Lauf.",
         "en": "Limit: {files} files, {file_mib} MiB each, {batch_gib} GiB per run.",

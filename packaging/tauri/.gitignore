@@ -1,0 +1,10 @@
+node_modules/
+npm-install.log
+tauri-build*.log
+backend/build/
+backend/dist/
+backend/pyinstaller-build.log
+src-tauri/target/
+_dmg_stage/
+
+src-tauri/gen/

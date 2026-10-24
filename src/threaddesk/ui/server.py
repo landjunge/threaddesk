@@ -36,6 +36,8 @@ from threaddesk.storage.portable_backup import base_root, selected_profile, down
 from threaddesk.storage.workspace_backup import BackupError
 from threaddesk.storage.json_store import JsonStore
 from threaddesk.storage.sqlite_store import SQLiteStore
+from threaddesk.services.library_bridge import contract as library_bridge_contract
+from threaddesk.services.library_commands import execute as execute_library_command
 from threaddesk.services.library_import import LibraryImportError, LibraryImporter
 from threaddesk.services.migration import (
     AtomicImportError,
@@ -447,6 +449,37 @@ def create_app() -> FastAPI:
             finally:
                 await package.close()
         return _library_summary(request, summary)
+
+    @app.post("/library/command", response_class=HTMLResponse)
+    def library_command(request: Request, command: str = Form(...)) -> HTMLResponse:
+        importer = LibraryImporter(_svc().store)
+        from threaddesk.services.library_index import LibraryIndex
+        index = LibraryIndex(importer.root)
+        if index.status()["status"] in {"missing", "failed"}:
+            importer.rebuild_index()
+
+        def search(text: str):
+            return LibraryIndex(importer.root).search(text)
+
+        result = execute_library_command(command, search=search, reassign=importer.reassign)
+        record_id = str(result.get("record_id") or "")
+        if (
+            result.get("ok")
+            and result.get("action") == "open"
+            and len(record_id) == 12
+            and all(character in "0123456789abcdef" for character in record_id)
+        ):
+            return RedirectResponse(f"/library/files/{record_id}", status_code=303)
+        if not result.get("ok"):
+            code = str(result.get("error") or "unknown_command")
+            key = f"library.command_error.{code}"
+            message = i18n.translate(key, _language(request))
+            result = {**result, "error": message if message != key else i18n.translate("ui.error", _language(request))}
+        return library_page(request, command_result=result)
+
+    @app.get("/library/bridge")
+    def library_bridge() -> JSONResponse:
+        return JSONResponse(library_bridge_contract())
 
     @app.post("/library/resume", response_class=HTMLResponse)
     def library_resume(request: Request) -> HTMLResponse:
