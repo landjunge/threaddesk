@@ -168,11 +168,20 @@ ein eigener, noch abzunehmender Ausbau.
 
 Oben **Daten** öffnen und **Sicherung herunterladen** wählen. Die ZIP-Datei enthält
 Threads, Notizen, Zwischenstände, Wissenskarte, Whiteboards und lokal gespeicherte
-Übergaben für JSON oder SQLite. Verlinkte Dateien außerhalb von ThreadDesk bleiben
+Übergaben für JSON oder SQLite. Auch importierte Bibliotheksdateien,
+Empfangsbestätigungen und gespeicherte Teile angefangener Dateiübertragungen
+werden gesichert. Nach Wiederherstellung können diese Übertragungen mit ihrer
+bisherigen Kennung fortgesetzt werden. Verlinkte Dateien außerhalb von ThreadDesk bleiben
 an ihrem ursprünglichen Ort. Symbolische Links und Verzeichnisverknüpfungen im
 ausgewählten Sicherungsbestand werden mit einer Fehlermeldung abgewiesen;
 ihre Ziele werden nicht gelesen. Änderungen oder ein Austausch der Quelldateien
 während der Sicherung führen ebenfalls zum Abbruch.
+
+Die portable Sicherung ist auf 128 MiB und 20000 Archiveinträge begrenzt;
+Manifest und Archiv zählen mit. Eine zu große Bibliothek führt zu einer
+Fehlermeldung, nicht zu einer Sicherung mit ausgelassenen Dateien. Neue
+Bibliothekssicherungen benötigen eine aktuelle ThreadDesk-Version zum Öffnen;
+bestehende ältere Sicherungen bleiben lesbar.
 
 Zum Wiederherstellen die Sicherung auswählen, das Öffnen bestätigen und
 **Sicherung öffnen** wählen. ThreadDesk prüft die Dateien und öffnet einen eigenen

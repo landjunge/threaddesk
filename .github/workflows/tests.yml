@@ -31,7 +31,7 @@ jobs:
       - name: Install backup test dependencies
         run: python -m pip install -e '.[dev,ui]'
       - name: Test actual Windows handles, JSON and SQLite restore
-        run: python -m pytest tests/test_windows_backup_source.py tests/test_workspace_backup.py tests/test_portable_backup.py tests/test_json_control_paths.py tests/test_thread_management.py tests/test_atomic_import.py tests/test_json_migration.py tests/test_relative_json_workspace.py -q -ra --junitxml=test-results/windows-backup.xml
+        run: python -m pytest tests/test_windows_backup_source.py tests/test_workspace_backup.py tests/test_portable_backup.py tests/test_library_backup.py tests/test_json_control_paths.py tests/test_thread_management.py tests/test_atomic_import.py tests/test_json_migration.py tests/test_relative_json_workspace.py -q -ra --junitxml=test-results/windows-backup.xml
       - name: Reject missing or skipped Windows evidence
         run: |
           python -c "import xml.etree.ElementTree as E; s=list(E.parse('test-results/windows-backup.xml').getroot().iter('testsuite')); assert s and sum(int(x.get('tests',0)) for x in s)>0; assert all(sum(int(x.get(k,0)) for x in s)==0 for k in ('skipped','failures','errors'))"

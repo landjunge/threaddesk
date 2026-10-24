@@ -344,7 +344,7 @@ class WorkspaceBackup:
                     self.copy_file(captured, target)
             target.chmod(0o600)
 
-    def create(self, store: SQLiteStore) -> Path:
+    def create(self, store: SQLiteStore, *, library_limit: int | None = None) -> Path:
         self.backup_root.mkdir(parents=True, exist_ok=True)
         name = f"workspace-{uuid4().hex[:12]}"
         partial = self.backup_root / f"{name}.partial"
@@ -354,11 +354,14 @@ class WorkspaceBackup:
             partial.mkdir(mode=0o700)
             owned = _stamp(partial.lstat())[:2]
             database = partial / "threaddesk.sqlite3"
+            version_before = store.connection.execute("PRAGMA data_version").fetchone()[0]
+            changes_before = store.connection.total_changes
             with _SourceTree(store.root) as source:
                 inventory = source.scan(self._artifact_allowed, self._artifact_descend)
                 # SQLite reads its existing connection; this guard also refuses
                 # a linked/replaced pathname around the snapshot operation.
-                with source.open("threaddesk.sqlite3", source.info("threaddesk.sqlite3")):
+                database_identity = source.info("threaddesk.sqlite3")
+                with source.open("threaddesk.sqlite3", database_identity):
                     destination = sqlite3.connect(database)
                     try:
                         store.connection.backup(destination)
@@ -373,10 +376,21 @@ class WorkspaceBackup:
                     ) / relative
                     target.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
                     self._copy_source(source, relative, expected, target)
-                if source.scan(self._artifact_allowed, self._artifact_descend) != inventory:
+                from threaddesk.storage.library_backup import capture
+                has_library = capture(store.workspace_path, partial / "directories",
+                                      limit=library_limit, source_tree=source)
+                if (source.scan(self._artifact_allowed, self._artifact_descend) != inventory
+                        or source.info("threaddesk.sqlite3")[:2] != database_identity[:2]):
+                    raise BackupError("Workspace changed during backup. Please try again.")
+                if (store.connection.execute("PRAGMA data_version").fetchone()[0] != version_before
+                        or store.connection.total_changes != changes_before):
                     raise BackupError("Workspace changed during backup. Please try again.")
 
-            schema_version = store.connection.execute("SELECT version FROM schema_info").fetchone()[0]
+            captured = sqlite3.connect(database.absolute().as_uri() + "?mode=ro&immutable=1", uri=True)
+            try:
+                schema_version = captured.execute("SELECT version FROM schema_info").fetchone()[0]
+            finally:
+                captured.close()
             files = {
                 path.relative_to(partial).as_posix(): {
                     "sha256": self._hash(path),
@@ -387,7 +401,7 @@ class WorkspaceBackup:
             }
             manifest = {
                 "kind": "threaddesk.workspace-backup",
-                "version": 2,
+                "version": 3 if has_library else 2,
                 "app_version": __version__,
                 "schema_version": schema_version,
                 "design_reference": "desk-r2",
@@ -418,6 +432,11 @@ class WorkspaceBackup:
             return parts[1]
         if len(parts) >= 3 and parts[0] == "directories" and parts[1] in {"artifacts", "imports"}:
             return "/".join(parts[1:])
+        if len(parts) >= 3 and parts[:2] == ("directories", "library-files"):
+            from threaddesk.storage.library_backup import allowed
+            name = "/".join(parts[1:])
+            if allowed(name):
+                return name
         raise BackupError("Ungültiger Backup-Pfad.")
 
     def _verified_copy(self, backup: Path, temporary: Path) -> dict:
@@ -428,10 +447,12 @@ class WorkspaceBackup:
             manifest = json.loads(source.read("manifest.json", inventory["manifest.json"]))
             if (not isinstance(manifest, dict)
                     or manifest.get("kind") != "threaddesk.workspace-backup"
-                    or manifest.get("version") not in {1, 2}
+                    or manifest.get("version") not in {1, 2, 3}
                     or not isinstance(manifest.get("files"), dict)):
                 raise BackupError("Unbekanntes Backup-Format.")
             files = manifest["files"]
+            if manifest["version"] < 3 and any(name.startswith("directories/library-files/") for name in files):
+                raise BackupError("Library files require workspace backup version 3.")
             if "threaddesk.sqlite3" not in files:
                 raise BackupError("Workspace-Datenbank fehlt im Manifest.")
             if set(inventory) != {"manifest.json", *files}:
@@ -475,6 +496,8 @@ class WorkspaceBackup:
                     raise BackupError("Schema-Version stimmt nicht.")
             finally:
                 connection.close()
+            from threaddesk.storage.library_backup import validate
+            validate(temporary / "library-files")
             self._fault("after_restore_verification")
             if source.scan(lambda _: True, lambda _: True) != inventory:
                 raise BackupError("Backup-Quelle wurde während der Prüfung verändert.")
