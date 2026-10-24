@@ -3,7 +3,7 @@
 <main class="panel migration-center" tabindex="0" aria-label="{{ t('data.title') }}" data-testid="data-center">
   <h1>{{ t("data.title") }}</h1>
   <p>{{ t("data.intro") }}</p>
-  <p><a href="/library-import">{{ t("library.title") }}</a></p>
+  <p><a href="/library">{{ t("library.title") }}</a></p>
   {% if error %}<p role="alert">{{ error }}</p>{% endif %}
   {% if restored_profile %}
   <p role="status">{{ t("data.active") }}</p>

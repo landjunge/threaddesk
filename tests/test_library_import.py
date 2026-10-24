@@ -222,18 +222,18 @@ def test_ui_imports_opens_and_rejects_a_missing_record(tmp_path: Path, monkeypat
     (source / "note.md").write_text("# UI\n", encoding="utf-8")
     (source.parent / "picture.png").write_bytes(PNG)
     client = UIClient(create_app())
-    page = client.get("/library-import")
+    page = client.get("/library")
     assert page.status_code == 200
     assert "Bibliothek importieren" in page.text
-    imported = client.post("/library-import/folder", data={"source": str(source.parent)})
+    imported = client.post("/library/folder", data={"source": str(source.parent)})
     assert imported.status_code == 200
     assert "note.md" in imported.text
     assert "4AllPass" in imported.text or "Nicht zugeordnet" in imported.text
-    record_id = imported.text.split("/library-import/files/")[1].split('"')[0]
-    downloaded = client.get(f"/library-import/files/{record_id}")
+    record_id = imported.text.split("/library/files/")[1].split('"')[0]
+    downloaded = client.get(f"/library/files/{record_id}")
     assert downloaded.status_code == 200
     assert downloaded.content in {b"# UI\n", PNG}
-    missing = client.get("/library-import/files/not-a-record")
+    missing = client.get("/library/files/not-a-record")
     assert missing.status_code == 404
     with pytest.raises(NotFound):
         LibraryImporter(JsonStore(tmp_path / "desk")).open_record("../secrets")
@@ -249,7 +249,7 @@ def test_upload_round_trip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setenv("THREADDESK_HOME", str(tmp_path / "desk"))
     client = UIClient(create_app())
     response = client.post(
-        "/library-import/files",
+        "/library/files",
         files=[("files", ("Alpha/note.md", b"# Hoch\n", "text/markdown"))],
     )
     assert response.status_code == 200
@@ -258,7 +258,7 @@ def test_upload_round_trip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> N
     with zipfile.ZipFile(package, "w") as archive:
         archive.writestr("Beta/sheet.csv", "a,b\n")
     packed = client.post(
-        "/library-import/package",
+        "/library/package",
         files={"package": ("export.zip", package.getvalue(), "application/zip")},
     )
     assert packed.status_code == 200

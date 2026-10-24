@@ -4,7 +4,7 @@
   <ul class="file-list">
     {% for item in library_files %}
     <li class="file-item">
-      <a href="/library-import/files/{{ item.id }}">{{ item.filename }}</a>
+      <a href="/library/files/{{ item.id }}">{{ item.filename }}</a>
       <span class="muted">{{ item.format }} · {{ item.size_label }} · {{ t("library.verified") if item.integrity == "verified" else t("library.integrity_failed") }}</span>
     </li>
     {% endfor %}

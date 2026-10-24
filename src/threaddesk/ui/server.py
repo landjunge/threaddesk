@@ -369,7 +369,7 @@ def create_app() -> FastAPI:
             request, "library_import.html", _ctx(request, {"library": catalog, **extra}),
         )
 
-    @app.get("/library-import", response_class=HTMLResponse)
+    @app.get("/library", response_class=HTMLResponse)
     def library_view(request: Request) -> HTMLResponse:
         return library_page(request)
 
@@ -389,7 +389,7 @@ def create_app() -> FastAPI:
         response.status_code = 400
         return response
 
-    @app.post("/library-import/folder", response_class=HTMLResponse)
+    @app.post("/library/folder", response_class=HTMLResponse)
     def library_folder(request: Request, source: str = Form(...)) -> HTMLResponse:
         try:
             summary = LibraryImporter(_svc().store).import_tree(Path(source))
@@ -397,7 +397,7 @@ def create_app() -> FastAPI:
             return _library_failure(request, exc)
         return _library_summary(request, summary)
 
-    @app.post("/library-import/files", response_class=HTMLResponse)
+    @app.post("/library/files", response_class=HTMLResponse)
     async def library_files(request: Request, files: list[UploadFile] = File(...)) -> HTMLResponse:
         saved: list[tuple[str, Path]] = []
         with tempfile.TemporaryDirectory(prefix="threaddesk-library-upload-") as folder:
@@ -426,7 +426,7 @@ def create_app() -> FastAPI:
                     await upload.close()
         return _library_summary(request, summary)
 
-    @app.post("/library-import/package", response_class=HTMLResponse)
+    @app.post("/library/package", response_class=HTMLResponse)
     async def library_package(request: Request, package: UploadFile = File(...)) -> HTMLResponse:
         with tempfile.TemporaryDirectory(prefix="threaddesk-library-zip-") as folder:
             target = Path(folder) / "package.zip"
@@ -448,7 +448,7 @@ def create_app() -> FastAPI:
                 await package.close()
         return _library_summary(request, summary)
 
-    @app.post("/library-import/resume", response_class=HTMLResponse)
+    @app.post("/library/resume", response_class=HTMLResponse)
     def library_resume(request: Request) -> HTMLResponse:
         try:
             summary = LibraryImporter(_svc().store).resume()
@@ -456,7 +456,7 @@ def create_app() -> FastAPI:
             return _library_failure(request, exc)
         return _library_summary(request, summary)
 
-    @app.get("/library-import/files/{record_id}")
+    @app.get("/library/files/{record_id}")
     def library_open(record_id: str) -> FileResponse:
         try:
             path, record = LibraryImporter(_svc().store).open_record(record_id)
