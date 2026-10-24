@@ -1,0 +1,609 @@
+{
+  "source_content_sha256": "269826388224106085fe5a5719a3ffb848b44e8cc6cae168cf6f54cdd2f4c199",
+  "files": [
+    {
+      "path": "LICENSE",
+      "sha256": "d1997afbff2adfb054ba75c722e674113ee4f4a909bdc27e929bd53ef2cc2fcd"
+    },
+    {
+      "path": "README.md",
+      "sha256": "0eb501b71ff1ee1b685521b8a6d009457c6e6cbc38def0c7917aaabb5e968cfd"
+    },
+    {
+      "path": "packaging/server/Caddyfile",
+      "sha256": "30feee4e4d42887a3f31090c2b9fc7c139fae298814f4023f22059c5fea5ef35"
+    },
+    {
+      "path": "packaging/server/Dockerfile",
+      "sha256": "7b5ad0bb28f15d9df6399d13dc3a9cfeca7420a30eeee3f993deedce1ee4bdc2"
+    },
+    {
+      "path": "pyproject.toml",
+      "sha256": "93069039fc3972849833f0ff0938a3bba87fefaee396deae330ab472dbefbb71"
+    },
+    {
+      "path": "src/threaddesk/__init__.py",
+      "sha256": "164dd4c6cb2546b6b28f69f9b0d7595e77b107de30334d025fbc9b78ad0ba3f7"
+    },
+    {
+      "path": "src/threaddesk/api/__init__.py",
+      "sha256": "708a131f7d7d575a4ca731522ce09fd14fa55291226f251297450b685b24b8de"
+    },
+    {
+      "path": "src/threaddesk/api/service.py",
+      "sha256": "c5a3e6fdc8e8a9a7f79e28b2d42312d9587229ae9c73d72bc20a6fe4123cc1ee"
+    },
+    {
+      "path": "src/threaddesk/core/__init__.py",
+      "sha256": "35f8a45f5ff6f79df286abc69bb8ddf50f545abc2c2249f21c531ac9fdbba59d"
+    },
+    {
+      "path": "src/threaddesk/core/authority_event.py",
+      "sha256": "2d434d9f86d0805d9bdd186f14c59ebd2fc6d1caaf354c4110811cbe381e894b"
+    },
+    {
+      "path": "src/threaddesk/core/errors.py",
+      "sha256": "4deeb61d756ba41dd21f8e8b9cb9cc6c1a771a725384457f0d5656b1c6980c88"
+    },
+    {
+      "path": "src/threaddesk/core/events.py",
+      "sha256": "cdc082cd5a6e5df492202b0153652d2411fb36d3e8d9a46697993624bdfae338"
+    },
+    {
+      "path": "src/threaddesk/core/i18n.py",
+      "sha256": "9754588bc57b1955bf4cd42f068ff44f7ac19c9a5d75c7daf56206ee02a674ae"
+    },
+    {
+      "path": "src/threaddesk/core/import_models.py",
+      "sha256": "f3d1358874cbab5cfe8c9a19da49a741f3035d17e15eeaa8b64b27d44d61da96"
+    },
+    {
+      "path": "src/threaddesk/core/models.py",
+      "sha256": "d974360cf3066b4aee9e5bdb0b2e0b315418eb30fb2f4f23173779906a33d92f"
+    },
+    {
+      "path": "src/threaddesk/core/provenance.py",
+      "sha256": "ad73ada384620f405181c5ab5948b1dcd2cebbe85daee22c691165858ee15ad1"
+    },
+    {
+      "path": "src/threaddesk/core/search.py",
+      "sha256": "bc2cfcfd36800b83aa0e6139728821d97aa9623b00eb13204bc95b0881ded919"
+    },
+    {
+      "path": "src/threaddesk/core/secrets.py",
+      "sha256": "c91f90d11ffd71e8253325c39a1dc0d9046bda3b51439deeed9f4ec6dab37a1d"
+    },
+    {
+      "path": "src/threaddesk/graph/__init__.py",
+      "sha256": "11cef87d83b480ec736f3964ccba901cff14de46ed7b74725268462d685d1094"
+    },
+    {
+      "path": "src/threaddesk/graph/model.py",
+      "sha256": "9699aa3e3486585e8b20dcb480a9e4c096e24fbb03ebdc9500b7e35458bca254"
+    },
+    {
+      "path": "src/threaddesk/graph/store.py",
+      "sha256": "e4539341416bbbf6bdf0f9e44fe12453c8bc4f6fda02ce7bfa17453b9394f2fc"
+    },
+    {
+      "path": "src/threaddesk/server_sync/__init__.py",
+      "sha256": "d09d6bc66fff93ed40977016f7bb5c3706ba17cfdd6b7098a9668144b8154757"
+    },
+    {
+      "path": "src/threaddesk/server_sync/app.py",
+      "sha256": "b55b5a0e34cfedcbe375961428a9649fb202f5ae04ea287486fe3cf11b54145f"
+    },
+    {
+      "path": "src/threaddesk/server_sync/auth.py",
+      "sha256": "cc8a5f034ed407edefc24b9a84e87d4f77e1981781bd8dddb5070c2089c60c36"
+    },
+    {
+      "path": "src/threaddesk/server_sync/backup.py",
+      "sha256": "24e79f3f1c53c6b6456403394b0d2d424182243ccb0c0c6de80251765c9e3293"
+    },
+    {
+      "path": "src/threaddesk/server_sync/cli.py",
+      "sha256": "9af38a3224d33554a8a988fa34435ef83273638dc37a1bae38913e207743d091"
+    },
+    {
+      "path": "src/threaddesk/server_sync/client.py",
+      "sha256": "d8b0fad019e97a0274a0fe0929576977144e0f8034d0d7652019c7577bf5080f"
+    },
+    {
+      "path": "src/threaddesk/server_sync/desktop.py",
+      "sha256": "255c6be09c5e21a8669603a2d4a2b6c7dd1462bbfc5372a456a1987c1fe16d57"
+    },
+    {
+      "path": "src/threaddesk/server_sync/discovery.py",
+      "sha256": "a40836da7f403131970e320eb9d818deef4107d8e4b2469e6a3ed84af995c09f"
+    },
+    {
+      "path": "src/threaddesk/server_sync/identity.py",
+      "sha256": "545719124e6d1a2ec66b960ee637e8d097bac6148e685bd5197cfafc5ce8d789"
+    },
+    {
+      "path": "src/threaddesk/server_sync/metadata.py",
+      "sha256": "e1bc419365cc32b096df9da0be654cb1bcded07f1bc4266d862f62fe1b89664b"
+    },
+    {
+      "path": "src/threaddesk/server_sync/metadata_routes.py",
+      "sha256": "e0aa8752775f7a44df3c54123e4454592098e6d84b65e684e5f9700bb7c38f09"
+    },
+    {
+      "path": "src/threaddesk/server_sync/store.py",
+      "sha256": "b83f4bd6855e598bdbaced24fe9d83ca7f391e0d11c7821d628b3e6707c7531f"
+    },
+    {
+      "path": "src/threaddesk/server_sync/web/app.js",
+      "sha256": "e79fb2a2a8e96b05bd1ba661da77312c60e3dc46425b2e341752320543e8bd05"
+    },
+    {
+      "path": "src/threaddesk/server_sync/web/index.html",
+      "sha256": "167cf99327d50db8330b074657a8e263682ccce79f88cd289f7cfb2944835f66"
+    },
+    {
+      "path": "src/threaddesk/server_sync/web/style.css",
+      "sha256": "b88e4d97a9636062db1a19d84700bf782908e5e33ec961c138cf334a6540dacf"
+    },
+    {
+      "path": "src/threaddesk/services/__init__.py",
+      "sha256": "1a2495dcc38d1f4e085ddca4c32df749d2b68e5b1709ed82a3b2b7d750a30db8"
+    },
+    {
+      "path": "src/threaddesk/services/actors.py",
+      "sha256": "5533add6aab50a7edbfd90651c1c33e4c305b31da0b3c8cf4bd0d01e69b45dc7"
+    },
+    {
+      "path": "src/threaddesk/services/contacts.py",
+      "sha256": "f8ec76fd90116bd7c3d3d80673a7b631ca64e7862f85eb9f5567ac10d024817e"
+    },
+    {
+      "path": "src/threaddesk/services/dashboard.py",
+      "sha256": "72b584e764ef10144f434c984593b355a93691d4126d41310e73d05944c666f7"
+    },
+    {
+      "path": "src/threaddesk/services/desktop_runtime.py",
+      "sha256": "b50850abff249994d58496d59601b2bc4c905fd8dd6200e26a033483d4b8e126"
+    },
+    {
+      "path": "src/threaddesk/services/gnom_bridge.py",
+      "sha256": "eaeb29c37fa60e0f95f537dd3368984a7e6e98f9d5ea82ffe54b6a202cc6d0ba"
+    },
+    {
+      "path": "src/threaddesk/services/gnom_callback.py",
+      "sha256": "eebed65f4cdc1c55b4b826f187663210806361fbb75199ff54217db63aafa3ae"
+    },
+    {
+      "path": "src/threaddesk/services/gnom_jobs.py",
+      "sha256": "d4834ae0bf8a2d7a9dd67402495e936541b4b2b5179ea0b2c5131a6d1d8bf33d"
+    },
+    {
+      "path": "src/threaddesk/services/grok_bridge.py",
+      "sha256": "3f71665713d0d664b2f69f739ac6b8648980def7187ccd5f54677b60f87eb52c"
+    },
+    {
+      "path": "src/threaddesk/services/handoff_contract.py",
+      "sha256": "0452bc821a9a0b68cbcb2403ee28d1da69f9af8d12e2e1aa0882d81ba1d20ca2"
+    },
+    {
+      "path": "src/threaddesk/services/hausmeister.py",
+      "sha256": "d89967f6987a080dfbb55935f3c89ad4e62a0e484479b4828ddf0c2ef6154016"
+    },
+    {
+      "path": "src/threaddesk/services/issued_handoffs.py",
+      "sha256": "85f3ff119c152c07ee78b53f7e53abcb4706b274567151cda77752e798eeedf4"
+    },
+    {
+      "path": "src/threaddesk/services/knowledge.py",
+      "sha256": "f124f221995af2b497db1845f33d2a443b33ef54408ecf00d3bca1e57e28e31a"
+    },
+    {
+      "path": "src/threaddesk/services/knowledge_export.py",
+      "sha256": "acd940133702ce4ba308af8f8bf8e2e1bde4de49a66b308b34c6a791a420c8c2"
+    },
+    {
+      "path": "src/threaddesk/services/knowledge_memory.py",
+      "sha256": "e5a927bd3cf3c59e7259c195a2e555a514f348c7fd5b25bad6bf145bf920504e"
+    },
+    {
+      "path": "src/threaddesk/services/knowledge_package.py",
+      "sha256": "064269eccff762d7b2a350e625c8b8be7292e555f0c81be9f398dbc9384a4a56"
+    },
+    {
+      "path": "src/threaddesk/services/knowledge_visual_export.py",
+      "sha256": "31ddb21b023c49ae21c5b2b5050b6b19f937b4c732c8ec7cffbb47893084e552"
+    },
+    {
+      "path": "src/threaddesk/services/library_bridge.py",
+      "sha256": "e7be11c3856433372fb78562f372be7522521ca82215e75c8f96d8585eedafd8"
+    },
+    {
+      "path": "src/threaddesk/services/library_commands.py",
+      "sha256": "51816548cb6dc20df0edd311ea8e1cc792f20328a651fca8e10d65b3e59e143e"
+    },
+    {
+      "path": "src/threaddesk/services/library_import.py",
+      "sha256": "da2a4ecde3b0d01f58b32ce63339b1373869378fe1481f655c2cd92aba2a81a6"
+    },
+    {
+      "path": "src/threaddesk/services/library_index.py",
+      "sha256": "aaeb498a132331053e0ab03294af2136ada33886de405486c77c44fa2cbe21a3"
+    },
+    {
+      "path": "src/threaddesk/services/library_receive.py",
+      "sha256": "8345ac84df30c5cf98d1b78596c11f480f8e7fc8849c9ae3d765b58fd3d4e862"
+    },
+    {
+      "path": "src/threaddesk/services/mcp.py",
+      "sha256": "1ee6a12ac2509221883cf78e764d7ebe834f9ea9a24a4d02c86f3875cb2f67c9"
+    },
+    {
+      "path": "src/threaddesk/services/migration/__init__.py",
+      "sha256": "2a16c90d8995d6f48f1c30365fd3764496aa01bd59032acc6e34f83947194b6f"
+    },
+    {
+      "path": "src/threaddesk/services/migration/bundle.py",
+      "sha256": "7b0a950cabd83616d48cecb72b5b9a47f50465ef0f43faf66a2214a54e609875"
+    },
+    {
+      "path": "src/threaddesk/services/migration/conflicts.py",
+      "sha256": "0a5ee99266cbc83d7272c2c5c2f311bf25c129db38cc795856c5ff7ad6892d55"
+    },
+    {
+      "path": "src/threaddesk/services/migration/diff.py",
+      "sha256": "59bea7cff4de40ff5355e163a6d4552315884573f6aa1b96c326cdd6830868db"
+    },
+    {
+      "path": "src/threaddesk/services/migration/importer.py",
+      "sha256": "117c1f76e3d1324dc233995d593b8995aa6ea0f2c4592c4b0d563255a583eee0"
+    },
+    {
+      "path": "src/threaddesk/services/migration/mapper.py",
+      "sha256": "e0a41fc9fd2fa9ea773ca90d936e79c85a1ca0040f75117d25c83a379760de1a"
+    },
+    {
+      "path": "src/threaddesk/services/migration/preview.py",
+      "sha256": "48b48a7a60aa78b2d29ee4763ac74aaff513c9581a49214301187f498a43887a"
+    },
+    {
+      "path": "src/threaddesk/services/modules.py",
+      "sha256": "f9333c2964a3fb18ee6a82f50b3eef2f1ff75718f9efc0714450a1995adaac80"
+    },
+    {
+      "path": "src/threaddesk/services/ollama_local.py",
+      "sha256": "80ce7c7377256660e88645f954fb1bf4f88b1a4c23c0a59668975ce463c69e08"
+    },
+    {
+      "path": "src/threaddesk/services/prompt_generator.py",
+      "sha256": "3d63ced24c71027a2b0bb575fafcf2a6d9fcbe73ddca15aa50cb05b0b0e420b4"
+    },
+    {
+      "path": "src/threaddesk/services/return_contract.py",
+      "sha256": "84e09a614fa5e9abed8c75f0f0970b744e55d4528108790124653b55b940da44"
+    },
+    {
+      "path": "src/threaddesk/services/return_inbox.py",
+      "sha256": "b8f566e3b6ed986d8107567b33fb0895acc47bb7bc64df4a1331b7d98099bb4d"
+    },
+    {
+      "path": "src/threaddesk/services/room_sync.py",
+      "sha256": "5e71c048af6f704858da5b08feb59510487573f5992dcda4438243f955a1f8da"
+    },
+    {
+      "path": "src/threaddesk/services/search.py",
+      "sha256": "4876caa71ac6730e4e32781e1dfaa91ca2ff686881fbd72a60726b7f619b5f41"
+    },
+    {
+      "path": "src/threaddesk/services/thread_management.py",
+      "sha256": "74cff816c57f104dfab68945e658e62a7703c8712ea64ca3f987f2b733ac8432"
+    },
+    {
+      "path": "src/threaddesk/services/threads.py",
+      "sha256": "6949a3627950157584a3f525f8b83b2c0568735f08ee4e7845701bf6becf874a"
+    },
+    {
+      "path": "src/threaddesk/services/tollgate.py",
+      "sha256": "f8bd5ac04f9900b8ba3e7bb6735803f22cc8dd74857b25bc534e42970968f819"
+    },
+    {
+      "path": "src/threaddesk/services/whiteboard.py",
+      "sha256": "b59a217ae95ff61ce28694c4e0bf73a9e5e0488615bba715ed10301b78a10159"
+    },
+    {
+      "path": "src/threaddesk/services/whiteboard_merge.py",
+      "sha256": "4de6840a289c6af66f892a75f35088c92b369e0847b847353a5edf0490d249ff"
+    },
+    {
+      "path": "src/threaddesk/services/workshop_module.py",
+      "sha256": "b01e0c6a3fdbc320b1a8ad71669c2c14dc67d4e258f0c7b4b16b80fe2669c631"
+    },
+    {
+      "path": "src/threaddesk/storage/__init__.py",
+      "sha256": "88969d48f8469767aa39c7a5aa9bee989a01562770a10f48598108f4ab634987"
+    },
+    {
+      "path": "src/threaddesk/storage/artifacts.py",
+      "sha256": "ba7d1b1b03e71e5a6b609ff1822e1c3f4f9bcad7ccb3c71a571800965e1826e8"
+    },
+    {
+      "path": "src/threaddesk/storage/base.py",
+      "sha256": "8605a067a07cce21b5fe9da8eff118b424a9a8bf83a9c6146549f39da15a9904"
+    },
+    {
+      "path": "src/threaddesk/storage/json_migration.py",
+      "sha256": "a38076024321dd64c886a3d73b4b386677018d0204a0fa074ace5906d4489f69"
+    },
+    {
+      "path": "src/threaddesk/storage/json_store.py",
+      "sha256": "0e1f36794e05c21f49c6a5d10d609a29c956a9ea6665647b294bdc6b69d96e31"
+    },
+    {
+      "path": "src/threaddesk/storage/library_backup.py",
+      "sha256": "b977edeee57b24eeef79622182d6b14ed869156e8eccaba2e01049ccfca2ce7e"
+    },
+    {
+      "path": "src/threaddesk/storage/portable_backup.py",
+      "sha256": "8f102ce2e83600bbe5aebc20b5b7c1a789616c73a54ad5b3177fcce444bd1c13"
+    },
+    {
+      "path": "src/threaddesk/storage/protocols.py",
+      "sha256": "b1220612e95f0abd88cf8e7d997c475a6603e39996cc460c72247011be956cc4"
+    },
+    {
+      "path": "src/threaddesk/storage/schema.py",
+      "sha256": "f37207a975825d79d81a0e14a120c4cd55f388db446097c8f28986df65f6c569"
+    },
+    {
+      "path": "src/threaddesk/storage/search_source.py",
+      "sha256": "85adf763f1650ef9201b2e5c679f86023bf6d4d20fb8219e5969e5b1ead61c7a"
+    },
+    {
+      "path": "src/threaddesk/storage/search_sqlite.py",
+      "sha256": "9a55d53ecfc64f561aae988bcaa8b95cff0b30c0239f246a95b4a91c1cc5c77a"
+    },
+    {
+      "path": "src/threaddesk/storage/sqlite_store.py",
+      "sha256": "1cd33954227074aa342ac223048c923da94eebd100e17dbd93fbeb63cf98f33b"
+    },
+    {
+      "path": "src/threaddesk/storage/windows_backup_source.py",
+      "sha256": "362f3290f2159db2196fe235df78502b89f413b15e7180b6be9514f3264e2c87"
+    },
+    {
+      "path": "src/threaddesk/storage/workspace_backup.py",
+      "sha256": "f34b0f3e55d6df31a98c5d21816d290679bc5296e430d3da85fb23c2695e4aa2"
+    },
+    {
+      "path": "src/threaddesk/ui/__init__.py",
+      "sha256": "9fb782cc760a03937542edb7c839e18f2f86ef6a8fed9083cdc7e7e57c8c23a2"
+    },
+    {
+      "path": "src/threaddesk/ui/cli.py",
+      "sha256": "795a2eec301197abd2a6a306f26c9931739080b4c4a4bdb201e7c6af3b09dfae"
+    },
+    {
+      "path": "src/threaddesk/ui/http_access.py",
+      "sha256": "7d1fbb32d07c5de05143cdafd80e047063ba19de0af8d2dcb75a4673feee7672"
+    },
+    {
+      "path": "src/threaddesk/ui/mcp_stdio.py",
+      "sha256": "fcea0a60222ff288276deb4fcb3ebf37d0a035d47da969aef92322b4916aabbf"
+    },
+    {
+      "path": "src/threaddesk/ui/search_cli.py",
+      "sha256": "438e07f034c942c2a498d4dfd0eca9c52cb561342ab012391c83ee93df098b7d"
+    },
+    {
+      "path": "src/threaddesk/ui/server.py",
+      "sha256": "35f78a9a5d8fc41e75c118e58c00820cec4b6861bb55b049dd296577990ec796"
+    },
+    {
+      "path": "src/threaddesk/ui/static/UI-VENDOR-LICENSES.txt",
+      "sha256": "bc37b684810ff9b535eac76e00d6cdcbe4eacca6ad924e2b4bd4fafc063fa899"
+    },
+    {
+      "path": "src/threaddesk/ui/static/alpine.min.js",
+      "sha256": "b600e363d99d95444db54acbfb2deffec9ae792aa99a09229bcda078e5b55643"
+    },
+    {
+      "path": "src/threaddesk/ui/static/app.js",
+      "sha256": "d6e9ebf5952ecbbc75fc373409f01ccdc2c3738b260743f475fd2793cbc1155a"
+    },
+    {
+      "path": "src/threaddesk/ui/static/design-reference.html",
+      "sha256": "b4cd376ebe72042c5a87616e6a36fef009850b5c802c7a18d93e9c4d2c59802d"
+    },
+    {
+      "path": "src/threaddesk/ui/static/htmx.min.js",
+      "sha256": "e209dda5c8235479f3166defc7750e1dbcd5a5c1808b7792fc2e6733768fb447"
+    },
+    {
+      "path": "src/threaddesk/ui/static/library-command.js",
+      "sha256": "2d19fd1de9d5009a674bcdb13f3a8cc0d77f1a16c8ebc5e315e2903bdee30637"
+    },
+    {
+      "path": "src/threaddesk/ui/static/map.js",
+      "sha256": "b8487298dd3d842e6415d45a1d157023c8dc72fa641612889909602e87c4a535"
+    },
+    {
+      "path": "src/threaddesk/ui/static/migration.js",
+      "sha256": "bb20c936e460d1b27a880c9afd372fd68144662791bbd9afbb27d850b423ba4d"
+    },
+    {
+      "path": "src/threaddesk/ui/static/networkpunkt-appbar-SHA256SUMS",
+      "sha256": "a2a174ff869340edd65024824b45fe8fe228909dbb84aee29fb82fd474fdc67e"
+    },
+    {
+      "path": "src/threaddesk/ui/static/networkpunkt-appbar-assets.json",
+      "sha256": "e36c6bd46dbe6744efec07ce2ab73e1996208d99fdf63ed21879da2a4d2cc6ad"
+    },
+    {
+      "path": "src/threaddesk/ui/static/networkpunkt-appbar-bundle.json",
+      "sha256": "13862406a14a212fd6e0646616be04604e77b9bb3a6225e8d18b470dae44225b"
+    },
+    {
+      "path": "src/threaddesk/ui/static/networkpunkt-appbar-catalog.js",
+      "sha256": "2a266588a5d1da0fb0d1c8d77f671d10847e038029670c14b38ae8609ec76639"
+    },
+    {
+      "path": "src/threaddesk/ui/static/networkpunkt-appbar-state.js",
+      "sha256": "c97ef3d092a2df9687629a2d877672b133df8aeda8175f3bfdf2a7698758d7f8"
+    },
+    {
+      "path": "src/threaddesk/ui/static/networkpunkt-appbar.css",
+      "sha256": "b8626e2dc7d0f34a4065fc217e11cd0b52ce1d4dea0df802b4a642e7fec57b46"
+    },
+    {
+      "path": "src/threaddesk/ui/static/networkpunkt-appbar.js",
+      "sha256": "7a4ef4699cf5e07f84f57279f86f73b9dbd85e1e9272e4329a5e430b977ad60d"
+    },
+    {
+      "path": "src/threaddesk/ui/static/networkpunkt.css",
+      "sha256": "98371bd9edc96fb940a0e0de34933740fed1062b510aa516498fcb53e112591e"
+    },
+    {
+      "path": "src/threaddesk/ui/static/networkpunkt.js",
+      "sha256": "b35b5910234da6b61a0f358d2be85bceb3d2a5f58da68aa7125dc8a21e100bd7"
+    },
+    {
+      "path": "src/threaddesk/ui/static/np-appbar-4allpass-dark-48.png",
+      "sha256": "1074241a92275ae4b4a0d3ac00482ab9a253bcd5f60b569d96f84e95ae8ff336"
+    },
+    {
+      "path": "src/threaddesk/ui/static/np-appbar-threaddesk-dark-48.png",
+      "sha256": "6add7033bb8ec5f0efa0c09ddf136c892352f4536b14b774f1ae8dcd57ee9ba2"
+    },
+    {
+      "path": "src/threaddesk/ui/static/polish.css",
+      "sha256": "e4c7f4153b4ca31056c781b777540f546d6dde8eb6eb76c6c82e97fac54c8880"
+    },
+    {
+      "path": "src/threaddesk/ui/static/server-sync.js",
+      "sha256": "ef6e3999e7326b376277da7149de8309692adbd210ee32ba22e7f431d1faa0a9"
+    },
+    {
+      "path": "src/threaddesk/ui/static/style.css",
+      "sha256": "4e37bc1b5e0817b5506af406ab87d4766497957b1306ec5135da8fac959f9180"
+    },
+    {
+      "path": "src/threaddesk/ui/static/ui-vendor.json",
+      "sha256": "5f7832cb3e2cf3157c64c4734173f2d8865413997e37ec79ed3c3e46df75a3e6"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/base.html",
+      "sha256": "82fe4dba087041cede8717b61fdc8abd5465b3ce5fa213348cdfb4e7ddf72e78"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/data.html",
+      "sha256": "4abe109561e04d1bd169e996addc50438581e36f50ba5757656d37382a04722c"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/index.html",
+      "sha256": "5d34be8fbce02296c83e72d20974a7e5edfb512e86bc1cbca4216dca7e5fdf65"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/knowledge.html",
+      "sha256": "398d2f82be6f1b733d64f393b6d48013f57950af6c3e5b670b3196fc600752b1"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/library_import.html",
+      "sha256": "a98c74b9d24956f1b3e0c3098e87c478dd72fc1e68520c652a37289ddc77b8f5"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/map.html",
+      "sha256": "18c25975998ffd6dccd4aa18ec4785d8eef6574fad42c2228156044f690a4bbc"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/migration.html",
+      "sha256": "116cc6ed0eaffd85caf0f8bf706b8b0941c611ca8ca9e54e30f1d2bed4a296dd"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/partials/files.html",
+      "sha256": "efbdd57946c8e9ef69e85f5e91b7b9193db0a6847ae8bd037295a9fae71c2586"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/partials/gate.html",
+      "sha256": "5affa89ef2e176e175af3a3ec8c57277d7226273c29d0e2daac370b6adbd3f39"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/partials/graph_links.html",
+      "sha256": "51ba612eadb572051e24c71ab6a2a2a292ca44de436d435916c87ad9a3e48b56"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/partials/hausmeister.html",
+      "sha256": "9947aa57e58439e9dc8aece51a75e689c3148d55a10525524b2c9e20a9b28c66"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/partials/library_files.html",
+      "sha256": "99928c7a6322678f83a6299bb6d33bed1bf04e4902fa70c4b2cdc9a77b574388"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/partials/notes.html",
+      "sha256": "ab539300a76449b96360bd86df407fe5984d15444b33ba75c424053de91e09d2"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/partials/packet.html",
+      "sha256": "39dea74ec51482112f3972836c249e7a190bbf5ef1c7939b3717aa88b91aa901"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/partials/prompt.html",
+      "sha256": "82732270b120315fa0d71cfe606769818b7450993c55b8da9425b8edf81cbc5a"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/partials/room.html",
+      "sha256": "bdeeba9e36ced22b9eff21f4be1b48e042c770c24d434a99f9ec2dc0032806c6"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/partials/snapshots.html",
+      "sha256": "c1666b329b2ed72f287306de37851cc511109e367c95efe22fa302e67daa01bd"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/partials/thread_detail.html",
+      "sha256": "24ef6dd3d21d853155ec9bd4d84d6feed1eb80cb0b523da16cb0be063a1fb26e"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/partials/thread_list.html",
+      "sha256": "811fd75d690899e8d14a73c41504b7291859958151d4a235a632d66fb2c8467c"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/partials/whiteboard.html",
+      "sha256": "6a93e6efa0c586c461bfbb4329c8587dfaa86007399ffd621d78afc416a7139c"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/partials/whiteboard_stand.html",
+      "sha256": "1b8161e5eba524eb401de6bec4fefb4556daed420fdb46bc5c1c719d6c5ca918"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/partials/workspace.html",
+      "sha256": "e7693868dc02d45ab1837cd2f8f03a1a552fde97b5195bf1f39ae5b06c39a387"
+    },
+    {
+      "path": "src/threaddesk/ui/templates/server_sync.html",
+      "sha256": "f0f7286d399f2e33e4920dc6f8fdad2b59c3a509991501444209083a4da7af98"
+    },
+    {
+      "path": "src/threaddesk.egg-info/PKG-INFO",
+      "sha256": "ced088d297a646e2d139968c1278c3fb55ab98ce34a20f8d19d432b6a2c00f14"
+    },
+    {
+      "path": "src/threaddesk.egg-info/SOURCES.txt",
+      "sha256": "326371b82d8151b46f0c0e3b2ec1c08b12a347c95453d0a07a31984a97b458a6"
+    },
+    {
+      "path": "src/threaddesk.egg-info/dependency_links.txt",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "src/threaddesk.egg-info/entry_points.txt",
+      "sha256": "82890269a287a9ca4d9049154d4dd8a644bb6e8f94aca734a2bf41acc5ec4187"
+    },
+    {
+      "path": "src/threaddesk.egg-info/requires.txt",
+      "sha256": "95bce165ebba74563f5efcaefc0fe6d813c9f882c7ecd3aaeeea77923474817a"
+    },
+    {
+      "path": "src/threaddesk.egg-info/top_level.txt",
+      "sha256": "b6600cef9ec5850172c1ad5590a0c15d26f0e0496951a938033872b0b95d706b"
+    }
+  ]
+}

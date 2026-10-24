@@ -1,0 +1,46 @@
+{
+  "default_limit": 524288,
+  "default_oversize_status": 413,
+  "manifest": [
+    {
+      "bytes": 3705052,
+      "files": 19000,
+      "mode": "content-length",
+      "status": 200
+    },
+    {
+      "bytes": 3705052,
+      "files": 19000,
+      "mode": "chunked",
+      "status": 200
+    }
+  ],
+  "metadata_bytes": 2400600,
+  "metadata_status": 200,
+  "ordinary_chunk": "verified",
+  "result": "passed",
+  "tls": "private CA verified, actual shipping Caddy reverse proxy",
+  "app_image_id": "sha256:4ad89294fd374465ece4631ceb7837fd119171f0d8844174c10f4a933da355dc",
+  "caddy_image": "caddy:2",
+  "caddy_image_id": "sha256:504a44d7d74bd2bc28a66afc4774912fc21223ca8a67734af1c54ab2f999b489",
+  "published_only": [
+    {
+      "HostIp": "127.0.0.1",
+      "HostPort": "32774"
+    }
+  ],
+  "route_limits": [
+    524288,
+    4194304,
+    100663296
+  ],
+  "shipping_caddyfile_sha256": "30feee4e4d42887a3f31090c2b9fc7c139fae298814f4023f22059c5fea5ef35",
+  "test_config_sha256": "970f9c9061352ca97d84b98361936c01e8a5908588f06c970bc456f0dfd22f20",
+  "trusted_proxy": "172.29.64.0/24",
+  "source_content_sha256": "269826388224106085fe5a5719a3ffb848b44e8cc6cae168cf6f54cdd2f4c199",
+  "source_changed_after_run": [],
+  "log_sha256": "be722dc5b460d12fcc7a89a55868b84a13cd6c0c5c2947bc20b04c15ef2748ab",
+  "harness_sha256": "fb2364be04e9d41d221a864c2aec6c90d6b222324eaf1e4d00e0943f01ed7d6a",
+  "runtime": "existing Colima; isolated private Docker bridge; loopback published Caddy only",
+  "production_deployment": false
+}

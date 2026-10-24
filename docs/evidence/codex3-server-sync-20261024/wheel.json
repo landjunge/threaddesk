@@ -1,0 +1,6 @@
+{
+  "wheel": "threaddesk-0.1.1rc1-py3-none-any.whl",
+  "checked": "server modules, web assets, both console scripts and server extra",
+  "dependencies": "not freshly installed; wheel inspected only",
+  "platform": "darwin"
+}

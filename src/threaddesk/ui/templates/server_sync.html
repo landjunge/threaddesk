@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block body %}
+<main id="main" class="main">
+<article class="panel detail">
+<header class="panel-head"><h1>{{ t('sync.title') }}</h1><a class="btn btn-ghost" href="/?thread={{ current.id }}">{{ t('sync.back') }}</a></header>
+<h2>{{ current.title }}</h2><p class="muted">{{ t('sync.intro') }}</p>
+<section class="block" aria-live="polite"><h3>{{ t('sync.status') }}</h3>
+{% set state_labels = {} %}{% for state in ['unconfigured','pending','syncing','metadata_only','blocked','ready','conflict','disconnected'] %}{% set _ = state_labels.update({state:t('sync.state.' ~ state)}) %}{% endfor %}
+<p id="desktop-sync-status" data-status-url="/api/threads/{{ current.id }}/server-sync" data-state-labels="{{ state_labels|tojson|forceescape }}">{{ t('sync.state.' ~ sync_binding.status.state) }}</p>
+<p id="desktop-sync-error">{{ sync_binding.status.detail|default('') }}</p>
+<div id="desktop-sync-issues"></div><a class="btn btn-ghost" href="/threads/{{ current.id }}/server-sync">{{ t('sync.refresh') }}</a>
+{% if sync_binding.status.last_sync_at %}<p>{{ sync_binding.status.last_sync_at }}</p>{% endif %}
+{% if sync_binding.status.error %}<p role="alert">{{ sync_binding.status.error }} {{ sync_binding.status.http_status|default('') }}</p>{% endif %}
+{% for issue in sync_binding.status.issues|default([]) %}<p>{{ issue }}</p>{% endfor %}
+{% for path in sync_binding.status.missing_files|default([]) %}<p>{{ path }}</p>{% endfor %}
+{% if sync_binding.configured %}
+<form method="post" action="/threads/{{ current.id }}/server-sync"><input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}"><input type="hidden" name="action" value="offline">
+<label><input type="checkbox" name="offline"{% if sync_binding.offline_enabled %} checked{% endif %}> {{ t('sync.offline') }}</label>
+<button class="btn btn-primary">{{ t('sync.apply') }}</button></form>
+<form method="post" action="/threads/{{ current.id }}/server-sync"><input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}"><input type="hidden" name="action" value="sync"><button class="btn btn-ghost">{{ t('sync.now') }}</button></form>
+{% endif %}
+</section>
+{% if sync_binding.local_metadata_conflicts|default([]) %}
+<section class="block"><h3>{{ t('sync.local_conflicts') }}</h3>
+{% for conflict in sync_binding.local_metadata_conflicts %}
+<p>{{ conflict.path }}</p><form method="post" action="/threads/{{ current.id }}/server-sync">
+<input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}"><input type="hidden" name="action" value="resolve_local">
+<input type="hidden" name="conflict_id" value="{{ conflict.id }}"><input type="hidden" name="operation_id" value="{{ conflict.operation_id }}"><input type="hidden" name="expected_current" value="{{ conflict.expected_current|tojson|forceescape }}">
+<pre>{{ conflict.incoming|tojson(indent=2) }}</pre><button class="btn btn-primary" name="chosen_value" value="{{ conflict.incoming|tojson|forceescape }}">{{ t('sync.use_incoming') }}</button>
+<pre>{{ conflict.current|tojson(indent=2) }}</pre><button class="btn btn-ghost" name="chosen_value" value="{{ conflict.current|tojson|forceescape }}">{{ t('sync.use_saved') }}</button>
+</form>{% endfor %}</section>
+{% endif %}
+<section class="block"><h3>{{ t('sync.configure') }}</h3>
+<form class="stack" method="post" action="/threads/{{ current.id }}/server-sync">
+<input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}"><input type="hidden" name="action" value="configure">
+<label>{{ t('sync.url') }}<input type="url" name="url" value="{{ sync_binding.url|default('') }}" required></label>
+<label>{{ t('sync.token') }}<input type="password" name="token" autocomplete="new-password"{% if not sync_binding.token_configured %} required{% endif %}></label>
+<label>{{ t('sync.root') }}<input type="text" name="root" value="{{ sync_binding.root|default('') }}" required></label>
+<label>{{ t('sync.project_id') }}<input type="text" name="project_id" value="{{ sync_binding.project_id|default('') }}"></label>
+<p class="muted">{{ t('sync.binding_hint') }}</p>
+<label>{{ t('sync.owner_references') }}<textarea name="owner_references" rows="3">{{ sync_binding.owner_references_text|default('') }}</textarea></label>
+<p class="muted">{{ t('sync.owner_hint') }}</p>
+<label>{{ t('sync.approved_roots') }}<textarea name="approved_roots" rows="3">{{ sync_binding.approved_roots_text|default('') }}</textarea></label>
+<label><input type="checkbox" name="automatic"{% if sync_binding.automatic|default(true) %} checked{% endif %}> {{ t('sync.automatic') }}</label>
+<label><input type="checkbox" name="offline"{% if sync_binding.offline_enabled|default(false) %} checked{% endif %}> {{ t('sync.offline') }}</label>
+<button class="btn btn-primary">{{ t('sync.save') }}</button>
+</form></section><p class="muted">{{ t('sync.preserve') }}</p>
+</article></main>
+<script src="/static/server-sync.js" defer></script>
+{% endblock %}

@@ -1,0 +1,16 @@
+{
+  "browser": "Chromium",
+  "platform": "darwin",
+  "checks": [
+    "real CLI loopback HTTP (explicit development mode)",
+    "login/session reload/logout",
+    "project + Auch offline",
+    "verified upload + ready",
+    "edit + retained history",
+    "shared-core notes + append-only task",
+    "no JavaScript errors"
+  ],
+  "versions_retained": 2,
+  "production_tls_linux": "not tested",
+  "data": "synthetic temporary workspace only"
+}

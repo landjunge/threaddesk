@@ -1,0 +1,25 @@
+{
+  "architecture": "x86_64",
+  "platform": "Linux",
+  "replicas": 2,
+  "restart": "passed",
+  "restore": "credentials/core/snapshots/whiteboard/history/conflicts/chunks/receipts verified",
+  "result": "passed",
+  "tls": "private CA verified; default trust and plaintext refused",
+  "image": "sha256:4ad89294fd374465ece4631ceb7837fd119171f0d8844174c10f4a933da355dc",
+  "source_content_sha256": "269826388224106085fe5a5719a3ffb848b44e8cc6cae168cf6f54cdd2f4c199",
+  "log_sha256": "cc1d2eace9e01ee8cf0e32d6bf3ec8ac14a2792c207075c11a6b189febe3a168",
+  "source_changed_after_run": [],
+  "runtime": "existing Colima; explicit Docker context",
+  "production_deployment": false,
+  "checks": [
+    "fresh install/image build as non-root Linux user",
+    "two replicas, bidirectional files and conflict preservation",
+    "application lifespan lock prevents live backup",
+    "restart and partial transfer continuation",
+    "complete cold backup and restore to new directory",
+    "credentials, metadata snapshots, whiteboards, file histories, conflicts, chunks and durable receipts",
+    "stable portable metadata namespace/origins and exact metadata receipt replay after restore",
+    "current review corrections and device/browser source included"
+  ]
+}

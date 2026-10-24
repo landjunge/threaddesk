@@ -22,6 +22,8 @@ from threaddesk.core.errors import InvalidState, NotFound, ThreadDeskError
 from threaddesk.services.actors import ActorRegistry
 from threaddesk.services.hausmeister import SURFACE_KINDS, Hausmeister, live_snapshot, note_activity
 from threaddesk.services.room_sync import RoomBook
+from threaddesk.server_sync.desktop import install_routes as install_sync_routes, record_owner_reference
+from threaddesk.server_sync.store import SyncError
 from threaddesk.services.ollama_local import OllamaError
 from threaddesk.core import i18n
 from threaddesk.core.models import (
@@ -243,7 +245,11 @@ def create_app() -> FastAPI:
         # Startup is separate from HTTP GET. Restored/selected profiles are
         # refreshed by their protected POST actions, never by rendering a view.
         bootstrap_profile()
-        yield
+        app.state.server_sync_manager.start()
+        try:
+            yield
+        finally:
+            app.state.server_sync_manager.stop()
 
     app = FastAPI(title="ThreadDesk", docs_url=None, redoc_url=None,
                   dependencies=[Depends(require_ui_csrf)], lifespan=lifespan)
@@ -291,6 +297,12 @@ def create_app() -> FastAPI:
             request, "partials/workspace.html", _ctx(request, extra)
         )
 
+    def sync_page(request: Request, extra: dict) -> HTMLResponse:
+        selected = _svc().get(request.path_params['thread_id'])
+        return templates.TemplateResponse(request,'server_sync.html',_ctx(request,{**extra,'current':selected}))
+
+    install_sync_routes(app, lambda: _svc(), sync_page)
+
     @app.exception_handler(ThreadDeskError)
     async def _on_error(request: Request, exc: ThreadDeskError) -> Response:
         if request.url.path.startswith("/api/"):
@@ -304,6 +316,8 @@ def create_app() -> FastAPI:
         )
         html.status_code = 400
         return html
+
+    app.add_exception_handler(SyncError, _on_error)
 
     @app.get("/", response_class=HTMLResponse)
     def index(request: Request, thread: Optional[str] = None) -> HTMLResponse:
@@ -1013,7 +1027,9 @@ def create_app() -> FastAPI:
         request: Request,
         path: str = Form(...),
     ) -> HTMLResponse:
-        _svc().add_file(path, thread_id)
+        core = _svc()
+        core.add_file(path, thread_id)
+        record_owner_reference(core,thread_id,path)
         return workspace(request, {"notice": i18n.translate("ui.file_added", _language(request), path=path.strip())})
 
     @app.post("/threads/{thread_id}/files/remove", response_class=HTMLResponse)
@@ -1022,7 +1038,9 @@ def create_app() -> FastAPI:
         request: Request,
         path: str = Form(...),
     ) -> HTMLResponse:
-        _svc().remove_file(path, thread_id)
+        core = _svc()
+        core.remove_file(path, thread_id)
+        record_owner_reference(core,thread_id,path,allowed=False)
         return workspace(request, {"notice": i18n.translate("ui.file_removed", _language(request))})
 
     @app.post("/threads/{thread_id}/prompt", response_class=HTMLResponse)
