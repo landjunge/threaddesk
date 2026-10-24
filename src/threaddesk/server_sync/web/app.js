@@ -112,8 +112,8 @@ async function showFiles() {
   }
 }
 async function declareBrowser(pid=selected.id) {
-  const prefix='/api/projects/'+pid,{files}=await api(prefix+'/files');
-  return api(prefix+'/manifest','POST',{device_id:'browser-server',issues:[],files:files.filter(f=>f.heads.length===1).map(f=>({path:f.path,sha256:f.heads[0].sha256,size:f.heads[0].size}))});
+  // Reserved synthetic server view: heads are derived atomically by the server.
+  return api('/api/projects/'+pid+'/manifest','POST',{device_id:'browser-server',issues:[],files:[]});
 }
 async function upload(path,bytes,base,pid=selected.id) {
   if(bytes.byteLength>67108864) throw Error('Maximal 64 MiB pro Datei.');

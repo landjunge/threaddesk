@@ -191,9 +191,18 @@ class SyncStore:
         _check_manifest_paths(seen)
         with self._db() as db:
             self._project(db, project_id)
+            if device_id == 'browser-server':
+                # The browser has no independent filesystem replica. Its
+                # declaration describes this server, never a cached requirement.
+                clean = self._server_view(self._files(db, project_id))
             db.execute('INSERT OR REPLACE INTO manifests(project,device,files,issues,updated_at) VALUES (?,?,?,?,?)',
                        (project_id, device_id, json.dumps(clean), json.dumps(issues), datetime.now(timezone.utc).isoformat()))
             return self._status(db, project_id)
+
+    @staticmethod
+    def _server_view(files):
+        return [{'path':f['path'],'sha256':f['heads'][0]['sha256'],'size':f['heads'][0]['size']}
+                for f in files if len(f['heads']) == 1]
 
     def _files(self, db, project_id):
         rows = db.execute('SELECT h.path,v.revision,v.sha256,v.size FROM heads h JOIN versions v ON h.revision=v.revision WHERE h.project=? ORDER BY h.path,v.revision', (project_id,)).fetchall()
@@ -225,13 +234,15 @@ class SyncStore:
     def _status(self, db, project_id):
         project = self._project(db, project_id)
         manifests = db.execute('SELECT * FROM manifests WHERE project=?', (project_id,)).fetchall()
+        files = self._files(db, project_id)
         issues = []
         desired = {}
         for manifest in manifests:
             issues.extend(json.loads(manifest['issues']))
-            for f in json.loads(manifest['files']):
+            inventory = (self._server_view(files) if manifest['device'] == 'browser-server'
+                         else json.loads(manifest['files']))
+            for f in inventory:
                 desired.setdefault(f['path'], {})[(f['sha256'], f['size'])] = f
-        files = self._files(db, project_id)
         heads = {f['path']: f['heads'] for f in files}
         conflicts = sum(len(f['heads']) > 1 for f in files)
         missing = []

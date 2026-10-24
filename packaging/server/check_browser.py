@@ -84,6 +84,25 @@ def desktop_acceptance(browser, server_origin, token, directory, output_dir):
                 if remote.get(prefix+'/thread').json()['context']['notes']=='Desktop follow-up note':break
                 time.sleep(.1)
             else:raise AssertionError('Automatic desktop-to-server metadata sync did not finish')
+            head=next(f for f in remote.get(prefix+'/files').json()['files'] if f['path']=='notes.md')['heads'][0]
+            body=b'Browser file edit'
+            upload=prefix+'/uploads/browser-desktop-sequence'
+            remote.post(upload,json={'path':'notes.md','size':len(body),'sha256':hashlib.sha256(body).hexdigest(),'base_revision':head['revision']}).raise_for_status()
+            remote.patch(upload,json={'offset':0,'data_base64':base64.b64encode(body).decode()}).raise_for_status()
+            remote.post(upload+'/commit').raise_for_status()
+            remote.post(prefix+'/manifest',json={'device_id':'browser-server','files':[],'issues':[]}).raise_for_status()
+            for _ in range(150):
+                if (files/'notes.md').read_bytes()==body:break
+                time.sleep(.1)
+            else:raise AssertionError('Desktop did not adopt browser file edit')
+            edited=b'Desktop file edit after browser'
+            (files/'notes.md').write_bytes(edited)
+            for _ in range(150):
+                heads=next(f for f in remote.get(prefix+'/files').json()['files'] if f['path']=='notes.md')['heads']
+                if len(heads)==1 and heads[0]['sha256']==hashlib.sha256(edited).hexdigest() and remote.get(prefix+'/status').json()['state']=='ready':break
+                time.sleep(.1)
+            else:raise AssertionError('Stale browser declaration blocked subsequent desktop edit')
+            assert len(remote.get(prefix+'/history',params={'path':'notes.md'}).json()['versions'])==3
             page.reload()
             configure=page.locator('form:has(input[name="action"][value="configure"])')
             configure.locator('[name="automatic"]').uncheck()
@@ -106,10 +125,13 @@ def desktop_acceptance(browser, server_origin, token, directory, output_dir):
         remote_page.get_by_role('button',name='Eingehende Fassung verwenden',exact=True).click()
         expect(remote_page.locator('#notes')).to_have_value('Incoming conflict note')
         assert str(attachment) in core.get(thread.id).context.files
-        assert attachment.read_text()=='Explicit attached file' and (files/'notes.md').read_text()=='Original project file'
+        assert attachment.read_text()=='Explicit attached file' and (files/'notes.md').read_bytes()==edited
+        assert any(p.is_file() and p.suffix!='.json' and p.read_bytes()==b'Original project file'
+                   for p in (files/'.threaddesk-sync-conflicts/previous').iterdir())
         assert not errors,errors
         page.close();remote_page.close()
         return ['protected desktop project binding form','automatic bidirectional notes/tasks/whiteboard',
+                'browser/server file edit then automatic desktop edit reaches ready with retained history',
                 'explicit attachment mapping and original preservation','metadata conflict choice in server browser']
     finally:
         process.terminate()

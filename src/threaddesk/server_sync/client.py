@@ -544,6 +544,18 @@ class SyncClient:
                         self._conflict_copy(relative, head)
                         issues.append("Concurrent local edit retained: " + relative)
                 elif len(heads) > 1:
+                    acknowledged = next((head for head in heads if local_item
+                                         and head["sha256"] == local_item["sha256"]
+                                         and head["size"] == local_item["size"]), None)
+                    if acknowledged is not None:
+                        current = self._read_source(relative)
+                        if len(current) == acknowledged["size"] and digest(current) == acknowledged["sha256"]:
+                            # Publication is acknowledged even while other heads
+                            # remain. This is not conflict resolution: it records
+                            # which bytes the owner has already safely submitted.
+                            self._remember(relative, acknowledged)
+                        else:
+                            issues.append("Local file changed during conflict: " + relative)
                     for head in heads:
                         if local_item is None or local_item["sha256"] != head["sha256"]:
                             self._conflict_copy(relative, head)

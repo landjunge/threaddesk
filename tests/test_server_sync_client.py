@@ -366,3 +366,61 @@ def test_server_repeated_cancellation_is_bounded_and_later_recoverable(tmp_path)
     assert client.sync_once()['state'] == 'ready'
     assert (root/'note.md').read_bytes() == b'unchanged local original'
     client.close()
+
+
+@pytest.mark.parametrize('edited_after_resolution',[False,True],ids=['adopt-browser-choice','preserve-new-local-edit'])
+def test_browser_resolution_of_other_head_adopts_only_unchanged_acknowledged_local_bytes(tmp_path,edited_after_resolution):
+    from fastapi.testclient import TestClient
+    from threaddesk.server_sync.app import create_app
+    from threaddesk.server_sync.auth import provision
+
+    root=tmp_path/'project';root.mkdir();local=root/'note.txt';local.write_bytes(b'original')
+    token=provision(tmp_path/'server','alice')
+    headers={'Authorization':'Bearer '+token}
+    app=create_app(tmp_path/'server',public_origin='https://testserver')
+    with TestClient(app,base_url='https://testserver') as http:
+        pid=http.post('/api/projects',headers=headers,json={'title':'Project'}).json()['id']
+        api='/api/projects/'+pid
+        assert http.put(api+'/offline',headers=headers,json={'enabled':True}).status_code==200
+        client=SyncClient('https://testserver',token,pid,root,state_dir=tmp_path/'checkpoint',transport=http)
+        assert client.sync_once()['state']=='ready'
+        initial=http.get(api+'/files',headers=headers).json()['files'][0]['heads'][0]
+        local.write_bytes(b'local concurrent')
+        remote=b'browser concurrent'
+        uri=api+'/uploads/browser-edit'
+        assert http.post(uri,headers=headers,json={'path':'note.txt','size':len(remote),
+                        'sha256':digest(remote),'base_revision':initial['revision']}).status_code==200
+        assert http.patch(uri,headers=headers,json={'offset':0,'data_base64':base64.b64encode(remote).decode()}).status_code==200
+        remote_revision=http.post(uri+'/commit',headers=headers).json()['revision']
+        assert client.sync_once()['state']=='conflict'
+        assert client._base('note.txt')['sha256']==digest(b'local concurrent')
+        assert client.db.execute('SELECT COUNT(*) FROM uploads').fetchone()[0]==0
+        heads=http.get(api+'/files',headers=headers).json()['files'][0]['heads']
+        # This is the same protected endpoint used by the browser's explicit choice.
+        response=http.post(api+'/resolve',headers=headers,json={'path':'note.txt',
+                           'expected_heads':[head['revision'] for head in heads], 'chosen_revision':remote_revision})
+        assert response.status_code==200,response.text
+        client.close()
+        if edited_after_resolution:
+            local.write_bytes(b'genuinely newer local edit')
+        restarted=SyncClient('https://testserver',token,pid,root,state_dir=tmp_path/'checkpoint',transport=http)
+        try:
+            status=restarted.sync_once()
+            assert http.get(api+'/revisions/'+initial['revision'],headers=headers).content==b'original'
+            history=http.get(api+'/history',headers=headers,params={'path':'note.txt'}).json()['versions']
+            contents={http.get(api+'/revisions/'+version['revision'],headers=headers).content for version in history}
+            assert {b'original',b'local concurrent',remote}<=contents
+            if edited_after_resolution:
+                assert status['state']=='conflict'
+                assert local.read_bytes()==b'genuinely newer local edit'
+                current_heads=http.get(api+'/files',headers=headers).json()['files'][0]['heads']
+                assert len(current_heads)==2 and len(history)==4
+                assert {http.get(api+'/revisions/'+head['revision'],headers=headers).content for head in current_heads}=={
+                    remote,b'genuinely newer local edit'}
+            else:
+                assert status['state']=='ready',status
+                assert local.read_bytes()==remote and len(history)==3
+                assert any(copy.read_bytes()==b'local concurrent' for copy in (root/'.threaddesk-sync-conflicts/previous').glob('*.copy'))
+                assert restarted._base('note.txt')['revision']==remote_revision
+        finally:
+            restarted.close()

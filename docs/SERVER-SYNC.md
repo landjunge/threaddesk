@@ -264,3 +264,11 @@ werden durch die eingerichtete Desktop-Verbindung abgeglichen.
 
 Schnittstellen und technische Grenzen:
 [server-sync-v1.md](contracts/server-sync-v1.md).
+
+Die Dateimeldung `browser-server` ist eine reservierte aktuelle Sicht auf den
+Serverbestand. Sie hält keine veraltete Browserfassung gegen spätere
+Desktop-Änderungen fest. Meldungen echter Offline-Geräte und ihre offenen
+Anforderungen bleiben bestehen. Bei Dateikonflikten merkt sich der Desktop die
+bereits erfolgreich gespeicherte eigene Fassung; eine spätere ausdrückliche
+Browser-Auswahl wird übernommen, sofern lokal inzwischen nichts Neues geändert
+wurde. Die verdrängte lokale Fassung bleibt als Wiederherstellungskopie erhalten.

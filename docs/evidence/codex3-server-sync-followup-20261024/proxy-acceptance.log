@@ -1,17 +1,17 @@
-source_content_sha256=0f007a555b6504f22faa986db86fc748e0812b6e4267471f946ee6045fddf349
+source_content_sha256=ebc422363b54e91696e452f4ed1c735345b6a4a9c4dcdb5fba4ae4f998b69d80
 linux/x86_64
 2: Pulling from library/caddy
 Digest: sha256:504a44d7d74bd2bc28a66afc4774912fc21223ca8a67734af1c54ab2f999b489
 Status: Image is up to date for caddy:2
 docker.io/library/caddy:2
-{"level":"info","ts":1792864232.3405619,"msg":"using config from file","file":"/tmp/td-proxy/Caddyfile"}
-{"level":"info","ts":1792864232.3456123,"msg":"adapted config to JSON","adapter":"caddyfile"}
-{"level":"warn","ts":1792864232.345769,"msg":"Caddyfile input is not formatted; run 'caddy fmt --overwrite' to fix inconsistencies","adapter":"caddyfile","file":"/tmp/td-proxy/Caddyfile","line":2}
-{"level":"info","ts":1792864232.3476162,"logger":"tls.cache.maintenance","msg":"started background certificate maintenance","cache":"0x35613d508e80"}
-{"level":"info","ts":1792864232.3485937,"logger":"http.auto_https","msg":"skipping automatic certificate management because one or more matching certificates are already loaded","domain":"server.example.org","server_name":"srv0"}
-{"level":"info","ts":1792864232.348662,"logger":"http.auto_https","msg":"enabling automatic HTTP->HTTPS redirects","server_name":"srv0"}
-{"level":"info","ts":1792864232.3499959,"logger":"tls.cache.maintenance","msg":"stopped background certificate maintenance","cache":"0x35613d508e80"}
-{"level":"info","ts":1792864232.3501709,"logger":"http","msg":"servers shutting down with eternal grace period"}
+{"level":"info","ts":1792864683.1316025,"msg":"using config from file","file":"/tmp/td-proxy/Caddyfile"}
+{"level":"info","ts":1792864683.1337867,"msg":"adapted config to JSON","adapter":"caddyfile"}
+{"level":"warn","ts":1792864683.1338553,"msg":"Caddyfile input is not formatted; run 'caddy fmt --overwrite' to fix inconsistencies","adapter":"caddyfile","file":"/tmp/td-proxy/Caddyfile","line":2}
+{"level":"info","ts":1792864683.135546,"logger":"tls.cache.maintenance","msg":"started background certificate maintenance","cache":"0x39a9ccf6db00"}
+{"level":"info","ts":1792864683.1358004,"logger":"http.auto_https","msg":"skipping automatic certificate management because one or more matching certificates are already loaded","domain":"server.example.org","server_name":"srv0"}
+{"level":"info","ts":1792864683.1367793,"logger":"http.auto_https","msg":"enabling automatic HTTP->HTTPS redirects","server_name":"srv0"}
+{"level":"info","ts":1792864683.1387682,"logger":"http","msg":"servers shutting down with eternal grace period"}
+{"level":"info","ts":1792864683.1390371,"logger":"tls.cache.maintenance","msg":"stopped background certificate maintenance","cache":"0x39a9ccf6db00"}
 Valid configuration
 {"default_limit": 524288, "default_oversize_status": 413, "manifest": [{"bytes": 3705052, "files": 19000, "mode": "content-length", "status": 200}, {"bytes": 3705052, "files": 19000, "mode": "chunked", "status": 200}], "metadata_bytes": 2400600, "metadata_status": 200, "ordinary_chunk": "verified", "result": "passed", "tls": "private CA verified, actual shipping Caddy reverse proxy"}
-{"app_image_id": "sha256:b53efef6f6059740f7b0fc2cb4a0dbe3861a7352fcff31eeede67e6de7188479", "caddy_image": "caddy:2", "caddy_image_id": "sha256:504a44d7d74bd2bc28a66afc4774912fc21223ca8a67734af1c54ab2f999b489", "published_only": [{"HostIp": "127.0.0.1", "HostPort": "32769"}], "result": "passed", "route_limits": [524288, 4194304, 100663296], "shipping_caddyfile_sha256": "30feee4e4d42887a3f31090c2b9fc7c139fae298814f4023f22059c5fea5ef35", "test_config_sha256": "970f9c9061352ca97d84b98361936c01e8a5908588f06c970bc456f0dfd22f20", "trusted_proxy": "172.29.64.0/24"}
+{"app_image_id": "sha256:4c363df6c2caef1530d94a80474c8ea3921599623e5fada33ee0d2540f976444", "caddy_image": "caddy:2", "caddy_image_id": "sha256:504a44d7d74bd2bc28a66afc4774912fc21223ca8a67734af1c54ab2f999b489", "published_only": [{"HostIp": "127.0.0.1", "HostPort": "32770"}], "result": "passed", "route_limits": [524288, 4194304, 100663296], "shipping_caddyfile_sha256": "30feee4e4d42887a3f31090c2b9fc7c139fae298814f4023f22059c5fea5ef35", "test_config_sha256": "970f9c9061352ca97d84b98361936c01e8a5908588f06c970bc456f0dfd22f20", "trusted_proxy": "172.29.64.0/24"}

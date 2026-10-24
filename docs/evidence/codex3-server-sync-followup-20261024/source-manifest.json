@@ -1,5 +1,5 @@
 {
-  "source_content_sha256": "0f007a555b6504f22faa986db86fc748e0812b6e4267471f946ee6045fddf349",
+  "source_content_sha256": "ebc422363b54e91696e452f4ed1c735345b6a4a9c4dcdb5fba4ae4f998b69d80",
   "files": [
     {
       "path": "LICENSE",
@@ -107,7 +107,7 @@
     },
     {
       "path": "src/threaddesk/server_sync/client.py",
-      "sha256": "06765fe6d0f5c1ebb209d0f36ff11b228478f85bed5a19842bb9968a84445c80"
+      "sha256": "610789b29c507b3da1d58a144cdf8efda4e72fa5c3d8029176e9d783abd108e5"
     },
     {
       "path": "src/threaddesk/server_sync/desktop.py",
@@ -131,11 +131,11 @@
     },
     {
       "path": "src/threaddesk/server_sync/store.py",
-      "sha256": "cd160fee21dff533c9c9d8c59e5b0fdc81a67404e9475a3c009d03118d5b94f1"
+      "sha256": "b83f4bd6855e598bdbaced24fe9d83ca7f391e0d11c7821d628b3e6707c7531f"
     },
     {
       "path": "src/threaddesk/server_sync/web/app.js",
-      "sha256": "1c55c0d84469f9bb1987fd5d9a10b0859c8fd5f98219637cda86d12200460ccf"
+      "sha256": "7e643c220967efe64753bffa7f2ad91362a2870d26e5e595cafa5ad36b2d9960"
     },
     {
       "path": "src/threaddesk/server_sync/web/index.html",

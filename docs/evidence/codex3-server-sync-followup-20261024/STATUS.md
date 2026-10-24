@@ -125,6 +125,22 @@ Content-Length and chunked transfer, a Unicode metadata pair above the old proxy
 cap, and checks that ordinary transfer bounds still reject oversized requests.
 Required CI must still pass on the final correction head.
 
+Two further concrete review cases were corrected before merge: competing file
+heads now acknowledge the verified local contribution, allowing a later explicit
+Browser resolution to replace unchanged local bytes safely. New local edits still
+form a conflict. The exact synthetic `browser-server` reporter is now a live
+server view, including interpretation of older persisted snapshots and stale
+in-flight posts; genuine replica requirements remain unchanged. Status adds no
+journal writes. Protected API regressions cover resolution followed by process
+restart, both unchanged and newly edited local files, recovery copies and full
+history; **15 client tests passed**. The combined client/store/server-view run passed **22 tests**. Dedicated
+server-view regressions check
+later Desktop writes, stale browser posts, idle journal stability, real replica
+disagreement, conflicts and integrity. Fresh Linux/Proxy and live Browser/Desktop
+acceptance are repeated for these source corrections; the live Browser/Desktop
+sequence passed with original recovery and all three file versions retained.
+Final-head CI still applies.
+
 During integration an earlier affected run had 138 passing / 3 new i18n failures.
 Labels, placeholder and dynamic-state catalog coverage were corrected and the
 failed checks passed. The guard for unsafe POST routes now includes the new
@@ -168,9 +184,9 @@ no global context switch or foreign container stop. A development OrbStack start
 was also issued during initial runtime discovery; neither runtime was stopped.
 Only the harness's own containers were cleaned up.
 
-Image: `sha256:b53efef6f6059740f7b0fc2cb4a0dbe3861a7352fcff31eeede67e6de7188479`.
+Image: `sha256:4c363df6c2caef1530d94a80474c8ea3921599623e5fada33ee0d2540f976444`.
 Production input content SHA256:
-`0f007a555b6504f22faa986db86fc748e0812b6e4267471f946ee6045fddf349`.
+`ebc422363b54e91696e452f4ed1c735345b6a4a9c4dcdb5fba4ae4f998b69d80`.
 The 150 input fingerprints (including the shipping Caddyfile) were compared after acceptance; none changed.
 [Source manifest](source-manifest.json), [Linux receipt](linux.json),
 [complete build/acceptance log](linux-acceptance.log).

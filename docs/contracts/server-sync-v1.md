@@ -195,3 +195,18 @@ restore and Desktop/browser integration evidence is in the follow-up report.
 No public deployment or release is implied. KiraBridge's independent contract
 remains unchanged. Arbitrary runtime dependency completeness cannot be proved;
 reported unresolved dependencies fail closed rather than claim readiness.
+
+## Browser view and confirmed conflict contributions
+
+The exact reporter ID `browser-server` is reserved for a derived server view,
+not an independent filesystem replica. Its declaration is built from current
+single heads inside the manifest transaction; status also derives it live so
+old persisted snapshots and stale in-flight browser posts cannot block newer
+Desktop writes. Status performs no journal writes. Other device requirements
+and issues remain authoritative; all-head integrity and conflict checks remain.
+
+While multiple file heads exist, the client may acknowledge the head matching
+its current local size/hash only after re-reading the source. This records a
+confirmed local publication without resolving heads. A later explicit browser
+resolution can replace those unchanged bytes with a preserved recovery copy;
+a genuinely new local edit still creates/retains its own competing version.
