@@ -16,7 +16,7 @@ from threaddesk.server_sync.auth import provision
 from threaddesk.server_sync.client import ClientError, SyncClient
 from threaddesk.server_sync.desktop import BindingBook, DesktopSyncManager
 from threaddesk.server_sync.identity import (IdentityError, recover_binding_bases,
-    recover_binding_device_id)
+    recover_binding_device_id,recover_binding_transfers,validate_retired_transfers)
 from threaddesk.storage.json_store import JsonStore
 
 
@@ -78,6 +78,8 @@ def test_existing_checkpoint_identity_recovery_is_readonly_and_scope_checked(tmp
     checkpoint=target/'checkpoint.sqlite3';before=hashlib.sha256(checkpoint.read_bytes()).hexdigest()
     assert recover_binding_device_id(private,'thread',config)=='existing-reporter'
     assert recover_binding_bases(private,'thread',config)==seed
+    assert recover_binding_transfers(private,'thread',config)==[
+        {'path':'note.txt','sha256':seed[0]['sha256'],'base':'committed-revision','transfer':'unpublished'}]
     assert hashlib.sha256(checkpoint.read_bytes()).hexdigest()==before
     assert set(recover_binding_bases(private,'thread',config)[0])=={'path','revision','sha256'}
     with sqlite3.connect(checkpoint) as db:
@@ -213,3 +215,128 @@ def test_blank_project_does_not_reuse_an_unrelated_manual_binding(tmp_path):
     assert automatic['project_id']=='',automatic
     assert automatic['device_id']!=manual['device_id']
     assert automatic['initial_bases']==[]
+
+
+@pytest.mark.parametrize('loss',['chunk','commit','abort'],ids=['lost-chunk-ack','lost-commit-ack','uncertain-abort'])
+def test_root_move_closes_retired_uploads_without_mutating_old_checkpoint(tmp_path,monkeypatch,loss):
+    data=tmp_path/'server';token=provision(data,'alice')
+    app=create_app(data,public_origin='https://server.example')
+    core=ThreadService(JsonStore(tmp_path/'desktop'));tid=core.create('Project').id
+    files=tmp_path/'files';files.mkdir();(files/'note.txt').write_bytes(b'previous')
+    book=BindingBook(core)
+    book.save(tid,url='https://server.example',project_id='',root=files,token=token,automatic=False,offline_enabled=True)
+    manager=DesktopSyncManager(lambda:core)
+    with TestClient(app,base_url='https://server.example') as server:
+        class InterruptedHTTP(BorrowedHTTP):
+            fail_kind=None
+            def request(self,method,path,**kwargs):
+                response=super().request(method,path,**kwargs)
+                should_fail=(self.fail_kind=='chunk' and method=='PATCH' or
+                             self.fail_kind=='commit' and path.endswith('/commit') or
+                             self.fail_kind=='abort' and path.endswith('/abort'))
+                if should_fail:
+                    InterruptedHTTP.fail_kind=None
+                    raise httpx.ReadError('Injected lost acknowledgement')
+                return response
+        monkeypatch.setattr('threaddesk.server_sync.desktop._http_client',lambda **kwargs:InterruptedHTTP(server,kwargs['headers']))
+        assert manager.run_once(core,tid)['state']=='ready'
+        initial=book.load(tid);pid=initial['project_id'];headers={'Authorization':'Bearer '+token}
+        original=server.get('/api/projects/'+pid+'/files',headers=headers).json()['files'][0]['heads'][0]
+        (files/'note.txt').write_bytes(b'current pending bytes')
+        InterruptedHTTP.fail_kind='commit' if loss=='commit' else 'chunk'
+        assert manager.run_once(core,tid)['state']=='disconnected'
+        old_config=book.load(tid)
+        state,_=state_paths(book.root,tid,old_config)
+        checkpoint=state/'checkpoint.sqlite3'
+        old_hash=hashlib.sha256(checkpoint.read_bytes()).hexdigest()
+        pending=recover_binding_transfers(book.root,tid,old_config)
+        assert len(pending)==1
+        moved=tmp_path/'moved';shutil.copytree(files,moved)
+        book.save(tid,url=old_config['url'],project_id=pid,root=moved,token='',automatic=False,offline_enabled=True)
+        assert book.load(tid)['retired_transfers']==pending
+        if loss=='abort':
+            InterruptedHTTP.fail_kind='abort'
+            assert manager.run_once(core,tid)['state']=='disconnected'
+            assert book.load(tid)['retired_transfers']==pending
+            # A second move must retain old closure records even when the new
+            # root has no local pending transfer to add.
+            newest=tmp_path/'newest';shutil.copytree(moved,newest)
+            book.save(tid,url=old_config['url'],project_id=pid,root=newest,token='',automatic=False,offline_enabled=True)
+            assert book.load(tid)['retired_transfers']==pending
+            moved=newest
+            manager=DesktopSyncManager(lambda:core)
+        result=manager.run_once(core,tid)
+        assert result['state']=='ready',result
+        assert result['active_transfers']==0
+        assert book.load(tid)['retired_transfers']==[]
+        assert hashlib.sha256(checkpoint.read_bytes()).hexdigest()==old_hash
+        assert (files/'note.txt').read_bytes()==(moved/'note.txt').read_bytes()==b'current pending bytes'
+        assert server.get('/api/projects/'+pid+'/revisions/'+original['revision'],headers=headers).content==b'previous'
+        versions=server.get('/api/projects/'+pid+'/history',headers=headers,params={'path':'note.txt'}).json()['versions']
+        assert len(versions)==2
+        assert all(server.get('/api/projects/'+pid+'/revisions/'+v['revision'],headers=headers).status_code==200 for v in versions)
+        terminal=server.get('/api/projects/'+pid+'/uploads/'+pending[0]['transfer'],headers=headers).json()
+        assert terminal['state']==('committed' if loss=='commit' else 'aborted')
+
+
+def test_retired_transfer_ledger_rejects_scope_conflicts_and_drops_on_account_switch(tmp_path):
+    record={'path':'note.txt','sha256':hashlib.sha256(b'bytes').hexdigest(),'base':None,'transfer':'old-transfer'}
+    assert validate_retired_transfers([record,dict(record)])==[record]
+    for bad in ({**record,'path':'../outside'}, {**record,'transfer':'../id'}, {**record,'sha256':'bad'},
+                {**record,'base':'../base'}, {**record,'source':'unauthorized-grant'}):
+        with pytest.raises(IdentityError):validate_retired_transfers([bad])
+    with pytest.raises(IdentityError):validate_retired_transfers([record,{**record,'path':'different.txt'}])
+    core=ThreadService(JsonStore(tmp_path/'desktop'));tid=core.create('Project').id
+    files=tmp_path/'files';files.mkdir();book=BindingBook(core)
+    config=book.save(tid,url='https://server.example',project_id='project',root=files,
+                     token='owner-token-value-with-enough-length',automatic=False)
+    book.update(tid,{'retired_transfers':[record]})
+    assert book.save(tid,url=config['url'],project_id='project',root=files,token='',automatic=False)['retired_transfers']==[record]
+    switched=book.save(tid,url=config['url'],project_id='project',root=files,
+                       token='different-token-value-with-enough-length',automatic=False)
+    assert switched['retired_transfers']==[]
+
+
+def test_root_move_busy_guard_and_waiting_pass_reload_configuration(tmp_path,monkeypatch):
+    from threaddesk.core.errors import InvalidState
+    from threaddesk.server_sync import desktop
+    data=tmp_path/'server';token=provision(data,'alice')
+    app=create_app(data,public_origin='https://server.example')
+    core=ThreadService(JsonStore(tmp_path/'desktop'));tid=core.create('Project').id
+    files=tmp_path/'files';files.mkdir();(files/'note.txt').write_bytes(b'old-root bytes')
+    book=BindingBook(core)
+    book.save(tid,url='https://server.example',project_id='',root=files,token=token,automatic=False,offline_enabled=True)
+    manager=DesktopSyncManager(lambda:core)
+    with TestClient(app,base_url='https://server.example') as server:
+        monkeypatch.setattr('threaddesk.server_sync.desktop._http_client',lambda **kwargs:BorrowedHTTP(server,kwargs['headers']))
+        assert manager.run_once(core,tid)['state']=='ready'
+        initial=book.load(tid)
+        moved=tmp_path/'moved';shutil.copytree(files,moved)
+        (moved/'note.txt').write_bytes(b'new-root bytes')
+        run_lock=desktop._RUN_LOCKS[(str(book.workspace),tid)]
+        run_lock.acquire()
+        try:
+            with pytest.raises(InvalidState,match='synchronization pass is active'):
+                book.save(tid,url=initial['url'],project_id=initial['project_id'],root=moved,token='',automatic=False,offline_enabled=True)
+            assert book.load(tid)==initial
+        finally:
+            run_lock.release()
+        original_load=BindingBook.load
+        injected=[False]
+        def load_then_migrate(self,thread_id):
+            old=original_load(self,thread_id)
+            if not injected[0] and self.workspace==book.workspace and thread_id==tid:
+                injected[0]=True
+                book.save(tid,url=initial['url'],project_id=initial['project_id'],root=moved,token='',automatic=False,offline_enabled=True)
+            return old
+        monkeypatch.setattr(BindingBook,'load',load_then_migrate)
+        # The pass first obtains the old configuration, but migration finishes
+        # before it acquires the run lock. Only a fresh under-lock read is safe.
+        result=manager.run_once(core,tid)
+        assert result['state']=='ready',result
+        assert result['selected_root']==str(moved)
+        assert (files/'note.txt').read_bytes()==b'old-root bytes'
+        assert (moved/'note.txt').read_bytes()==b'new-root bytes'
+        pid=book.load(tid)['project_id'];headers={'Authorization':'Bearer '+token}
+        head=server.get('/api/projects/'+pid+'/files',headers=headers).json()['files'][0]['heads'][0]
+        assert server.get('/api/projects/'+pid+'/revisions/'+head['revision'],headers=headers).content==b'new-root bytes'

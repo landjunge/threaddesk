@@ -231,3 +231,19 @@ a worker. The sync adapter creates/uses/closes its owned SQLite service in that
 worker, including error paths. Unrelated requests and status polling remain
 responsive. Project-list titles derive from synchronized core thread records
 rather than the sync store creation label.
+
+Explicit root relocation retains validated old pending transfer IDs in a private
+retirement ledger for the same URL/project/credential scope. These references
+permit terminal-state cleanup only; upload resumption, source mappings and
+grants are never copied. Every terminal proof must succeed before receipt bases
+advance or the ledger clears. Unknown replies retain the ledger across restart
+and another move; a newer established base is never reset. The old checkpoint
+is read-only. Root changes take a nonblocking binding lock through snapshot and
+configuration publication, and runs reload configuration after acquiring their
+lock, preventing later work from appearing in the retired scope.
+
+Replacing an existing local file preserves its ordinary permission bits from
+the displaced original descriptor, masks special bits, and applies the mode via
+the still-open replacement descriptor before exclusive publication. The renamed
+original retains its inode metadata in the private recovery directory. New
+files and generated remote recovery copies remain 0600.

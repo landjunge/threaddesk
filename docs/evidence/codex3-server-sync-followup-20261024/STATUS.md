@@ -185,6 +185,29 @@ rename appears in repeated project listings and tenant scope remains intact.
 The complete live Browser/Desktop and fresh integrated Linux/Caddy proof are
 repeated below; required checks still apply to the final head.
 
+Head `0757d23` passed all active CI gates: **1179 tests in each complete
+run**, no skipped acceptance tests/JS checks, both macOS builds and Linux/
+TLS/restore/Caddy. The later two findings below still required corrections, so
+that successful head was not merged and cannot substitute for their acceptance.
+
+The relocation-with-pending-transfer review found a remaining orphaned
+reservation in the abandoned old-root checkpoint. A validated same-scope private
+retirement ledger now survives retries, repeat moves and restart; it closes
+server identities without resuming uploads or granting file access. Old
+checkpoints remain unchanged. Receipt bases advance only after every terminal
+proof and cannot reset a newer base. Root migration takes a nonblocking binding
+lock; stale-loaded runs reload configuration after obtaining it. **15 identity
+tests passed**, including lost chunk/commit replies, ledger retention, repeat
+move/restart, old DB preservation and busy/stale-run guards. Remote replacement
+now preserves ordinary existing permission bits from the displaced original,
+strips special bits, and uses the original open temp descriptor for chmod.
+New files/generated remote copies stay0600; the renamed original retains its
+metadata inside private recovery directories. **25 client tests passed**,
+including0755/0640/06755 mode cases and conservative new downloads. The combined
+identity/client run passed **40 tests**; after descriptor retention the25 client
+tests passed again. These counts overlap. Final fresh image receipts below cover
+this source; the real Browser/Desktop flow also passed for the shipped UI.
+
 During integration an earlier affected run had 138 passing / 3 new i18n failures.
 Labels, placeholder and dynamic-state catalog coverage were corrected and the
 failed checks passed. The guard for unsafe POST routes now includes the new
@@ -228,9 +251,9 @@ no global context switch or foreign container stop. A development OrbStack start
 was also issued during initial runtime discovery; neither runtime was stopped.
 Only the harness's own containers were cleaned up.
 
-Image: `sha256:314e80feb767a8c3cb0902455e15e76062fb2dcd197e0f9f719826dcb12b8c8d`.
+Image: `sha256:4ad89294fd374465ece4631ceb7837fd119171f0d8844174c10f4a933da355dc`.
 Production input content SHA256:
-`dcf772b1376a205f2fdbb8030265c4493a1ae42d4bbb3f8377f4ab6a8b1c52a4`.
+`269826388224106085fe5a5719a3ffb848b44e8cc6cae168cf6f54cdd2f4c199`.
 The 151 input fingerprints (including the shipping Caddyfile) were compared after acceptance; none changed.
 [Source manifest](source-manifest.json), [Linux receipt](linux.json),
 [complete build/acceptance log](linux-acceptance.log).

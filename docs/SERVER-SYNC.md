@@ -278,3 +278,11 @@ entfernt, klärt der Client zuerst den gespeicherten Transferzustand. Erst ein
 bestätigter Abschluss oder Abbruch erlaubt das Entfernen des Checkpoints.
 Unklare Antworten behalten Kennung und Wiederanlaufzustand. Bereits veröffentlichte
 Versionen werden dabei nicht abgebrochen oder gelöscht.
+
+Bei einem Projektordnerwechsel bleiben offene alte Transferkennungen getrennt
+als Aufräumreferenzen erhalten, bis der Server Abschluss oder Abbruch bestätigt.
+Der alte Checkpoint wird nicht verändert und nicht für den neuen Ordner
+weiterverwendet. Während ein Abgleich läuft, wird der Ordnerwechsel mit einem
+Hinweis zum erneuten Versuch abgewiesen. Vorhandene normale Dateirechte, etwa
+das Ausführungsbit eines Skripts, bleiben bei Remote-Updates erhalten; besondere
+Berechtigungsbits werden nicht übernommen. Neue Dateien bleiben zunächst privat.

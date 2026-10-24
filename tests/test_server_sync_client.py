@@ -508,3 +508,107 @@ def test_committed_pending_receipt_is_acknowledged_without_aborting_published_ve
     assert path.read_bytes()==b'published new version'
     assert len(store.history(project,'note.md'))==2
     client.close()
+
+
+@pytest.mark.parametrize('mode',[0o755,0o640,0o6755],ids=['executable','restricted-group','strip-special-bits'])
+def test_remote_replacement_preserves_ordinary_mode_and_private_new_files(tmp_path,mode):
+    import stat
+    root,store,project,wire,client=fixture(tmp_path)
+    path=root/'tool.txt';path.write_bytes(b'original tool');path.chmod(mode)
+    original_mode=stat.S_IMODE(path.stat().st_mode)
+    assert client.sync_once()['state']=='ready'
+    original=store.list_files(project)[0]['heads'][0]
+    publish(store,project,b'remote tool update',original['revision'],path='tool.txt')
+    assert client.sync_once()['state']=='ready'
+    assert path.read_bytes()==b'remote tool update'
+    assert stat.S_IMODE(path.stat().st_mode)==original_mode & 0o777
+    previous=[copy for copy in (root/'.threaddesk-sync-conflicts/previous').glob('*.copy') if copy.read_bytes()==b'original tool']
+    assert len(previous)==1 and stat.S_IMODE(previous[0].stat().st_mode)==original_mode
+    assert stat.S_IMODE(previous[0].parent.stat().st_mode)==0o700
+    assert store.read_revision(project,original['revision'])==b'original tool'
+    publish(store,project,b'new remote file',path='new.txt',transfer='new-file')
+    assert client.sync_once()['state']=='ready'
+    assert (root/'new.txt').read_bytes()==b'new remote file'
+    assert stat.S_IMODE((root/'new.txt').stat().st_mode)==0o600
+    client.close()
+
+
+def test_retired_receiving_transfer_closes_without_importing_work_or_mutating_old_checkpoint(tmp_path):
+    import shutil
+    root,store,project,wire,client=fixture(tmp_path)
+    path=root/'note.md';path.write_bytes(b'original');client.sync_once()
+    original=client._base('note.md');reporter=client.device_id
+    data=b'changed'*(256*1024//7+100);path.write_bytes(data);wire.lose_ack=True
+    with pytest.raises(httpx.ReadError):client.sync_once()
+    sha,base,transfer=client.db.execute('SELECT sha256,base,transfer FROM uploads').fetchone()
+    records=[{'path':'note.md','sha256':sha,'base':base,'transfer':transfer}]
+    client.close()
+    old_db=tmp_path/'checkpoint/checkpoint.sqlite3';old_hash=digest(old_db.read_bytes())
+    moved=tmp_path/'moved';shutil.copytree(root,moved)
+    replacement=SyncClient('https://sync.example','test-access-token',project,moved,state_dir=tmp_path/'replacement',
+                           transport=wire.client,device_id=reporter,initial_bases=[{'path':'note.md',**original}])
+    try:
+        wire.fail_abort=True
+        with pytest.raises(httpx.HTTPStatusError):replacement.close_retired_transfers(records)
+        assert records[0]['transfer']==transfer
+        assert store.upload_status(project,transfer)['state']=='receiving'
+        wire.fail_abort=False
+        replacement.close_retired_transfers(records)
+        replacement.close_retired_transfers(records)
+        assert store.upload_status(project,transfer)['state']=='aborted'
+        assert store.status(project)['active_transfers']==0
+        assert replacement.db.execute('SELECT COUNT(*) FROM uploads').fetchone()[0]==0
+        assert replacement.db.execute('SELECT COUNT(*) FROM sources').fetchone()[0]==0
+        assert digest(old_db.read_bytes())==old_hash
+        assert replacement.sync_once()['state']=='ready'
+        assert path.read_bytes()==data and (moved/'note.md').read_bytes()==data
+    finally:replacement.close()
+
+
+def test_retired_ledger_gets_all_terminal_proofs_before_advancing_committed_base(tmp_path):
+    root,store,project,wire,client=fixture(tmp_path)
+    path=root/'note.md';path.write_bytes(b'original');client.sync_once()
+    original=client._base('note.md');reporter=client.device_id
+    path.write_bytes(b'committed update');wire.lose_commit_ack=True
+    with pytest.raises(httpx.ReadError):client.sync_once()
+    sha,base,transfer=client.db.execute('SELECT sha256,base,transfer FROM uploads').fetchone()
+    committed=store.upload_status(project,transfer)['receipt']
+    store.start_upload(project,'another-retired','other.bin',3,digest(b'new'),None)
+    records=[{'path':'note.md','sha256':sha,'base':base,'transfer':transfer},
+             {'path':'other.bin','sha256':digest(b'new'),'base':None,'transfer':'another-retired'}]
+    client.close()
+    moved=tmp_path/'moved';moved.mkdir();(moved/'note.md').write_bytes(b'committed update')
+    replacement=SyncClient('https://sync.example','test-access-token',project,moved,state_dir=tmp_path/'replacement',
+                           transport=wire.client,device_id=reporter,initial_bases=[{'path':'note.md',**original}])
+    try:
+        wire.fail_abort=True
+        with pytest.raises(httpx.HTTPStatusError):replacement.close_retired_transfers(records)
+        assert replacement._base('note.md')==original
+        assert transfer not in wire.abort_calls
+        wire.fail_abort=False
+        replacement.close_retired_transfers(records)
+        assert replacement._base('note.md')['revision']==committed['revision']
+        assert store.upload_status(project,transfer)['state']=='committed'
+        assert transfer not in wire.abort_calls
+        assert store.status(project)['active_transfers']==0
+        assert replacement.db.execute('SELECT COUNT(*) FROM uploads').fetchone()[0]==0
+        assert replacement.db.execute('SELECT COUNT(*) FROM sources').fetchone()[0]==0
+    finally:replacement.close()
+
+
+def test_retired_committed_receipt_cannot_replace_a_newer_base(tmp_path):
+    root,store,project,wire,client=fixture(tmp_path)
+    path=root/'note.md';path.write_bytes(b'original');client.sync_once()
+    path.write_bytes(b'committed update');wire.lose_commit_ack=True
+    with pytest.raises(httpx.ReadError):client.sync_once()
+    sha,base,transfer=client.db.execute('SELECT sha256,base,transfer FROM uploads').fetchone()
+    committed=store.upload_status(project,transfer)['receipt']
+    newer=publish(store,project,b'newer current version',committed['revision'])
+    client._remember('note.md',newer)
+    before=client._base('note.md')
+    client.close_retired_transfers([{'path':'note.md','sha256':sha,'base':base,'transfer':transfer}])
+    assert client._base('note.md')==before
+    assert transfer not in wire.abort_calls
+    assert store.upload_status(project,transfer)['state']=='committed'
+    assert len(store.history(project,'note.md'))==3
+    client.close()

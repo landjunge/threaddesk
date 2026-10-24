@@ -48,6 +48,34 @@ def validate_initial_bases(value):
     return clean
 
 
+def validate_retired_transfers(value):
+    """Closure references only: never transfer bytes, source mappings or grants."""
+    if value is None:
+        return []
+    if not isinstance(value,list) or len(value)>20000:
+        raise IdentityError('Invalid retired transfer ledger')
+    clean,seen=[],{}
+    for item in value:
+        if not isinstance(item,dict) or set(item)!={'path','sha256','base','transfer'}:
+            raise IdentityError('Invalid retired transfer record')
+        try:
+            path=validate_path(item['path'])
+            transfer=validate_device_id(item['transfer'])
+            base=validate_device_id(item['base']) if item['base'] is not None else None
+        except (SyncError,IdentityError,UnicodeError) as exc:
+            raise IdentityError('Invalid retired transfer scope') from exc
+        if not isinstance(item['sha256'],str) or not re.fullmatch(r'[0-9a-f]{64}',item['sha256']):
+            raise IdentityError('Invalid retired transfer hash')
+        record={'path':path,'sha256':item['sha256'],'base':base,'transfer':transfer}
+        if transfer in seen:
+            if seen[transfer]!=record:
+                raise IdentityError('Retired transfer identifier has conflicting scope')
+            continue
+        seen[transfer]=record
+        clean.append(record)
+    return clean
+
+
 def _old_checkpoint(private_root, thread_id, config):
     if not isinstance(thread_id, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,128}', thread_id):
         raise IdentityError('Invalid thread identifier')
@@ -96,7 +124,9 @@ def _read_checkpoint(private_root, thread_id, config):
                 raise IdentityError('Saved binding device differs from its checkpoint')
             bases = validate_initial_bases([dict(zip(('path', 'revision', 'sha256'), row)) for row in
                                            db.execute('SELECT path,revision,sha256 FROM base ORDER BY path')])
-            return {'device_id': device, 'bases': bases}
+            transfers=validate_retired_transfers([dict(zip(('path','sha256','base','transfer'),row)) for row in
+                                                db.execute('SELECT path,sha256,base,transfer FROM uploads ORDER BY path')])
+            return {'device_id': device, 'bases': bases,'transfers':transfers}
         finally:
             db.close()
     except sqlite3.Error as exc:
@@ -121,3 +151,9 @@ def recover_binding_bases(private_root, thread_id, old_config):
     """Read only committed common revisions; never copy uploads or source grants."""
     saved = _read_checkpoint(private_root, thread_id, old_config or {})
     return saved['bases'] if saved else []
+
+
+def recover_binding_transfers(private_root,thread_id,old_config):
+    """Read scoped pending IDs for closure without rebinding their old checkpoint."""
+    saved=_read_checkpoint(private_root,thread_id,old_config or {})
+    return saved['transfers'] if saved else []

@@ -1,7 +1,7 @@
 """Explicit local project bindings; remote metadata never grants host file access."""
 from __future__ import annotations
 
-from contextlib import contextmanager
+from contextlib import contextmanager, ExitStack
 import hashlib
 import json
 import os
@@ -16,7 +16,8 @@ from starlette.concurrency import run_in_threadpool
 
 from threaddesk.core.errors import InvalidState
 from threaddesk.server_sync.store import SyncError, _id
-from threaddesk.server_sync.identity import recover_binding_device_id, recover_binding_bases
+from threaddesk.server_sync.identity import (recover_binding_device_id, recover_binding_bases,
+    recover_binding_transfers, validate_retired_transfers)
 
 _BOOK_LOCK = threading.RLock()
 _RUN_LOCKS = {}
@@ -124,8 +125,13 @@ class BindingBook:
                     or self.workspace.is_relative_to(path) or path.is_relative_to(self.workspace)):
                 raise InvalidState('Do not grant the home, filesystem or ThreadDesk workspace as a dependency root')
             approved.append(str(path))
-        with _BOOK_LOCK:
+        with _BOOK_LOCK,ExitStack() as migration:
             old = self.load(thread_id) or {}
+            if old and old.get('root')!=str(selected):
+                run_lock=_RUN_LOCKS.setdefault((str(self.workspace),thread_id),threading.Lock())
+                if not run_lock.acquire(blocking=False):
+                    raise InvalidState('A synchronization pass is active; retry the project-directory change after it finishes')
+                migration.callback(run_lock.release)
             if owner_references is None:
                 # Never rebuild a configured binding's authority from replicated data.
                 owner_references = old.get('owner_references',[]) if old else list(self.core.get(thread_id).context.files)
@@ -151,13 +157,16 @@ class BindingBook:
                             and old.get('token') == token)
             device_id = recover_binding_device_id(self.root, thread_id, old if same_binding else {})
             initial_bases = old.get('initial_bases', []) if same_binding else []
+            retired_transfers=validate_retired_transfers(old.get('retired_transfers',[])) if same_binding else []
             if same_binding and old.get('root') != str(selected):
                 initial_bases = recover_binding_bases(self.root, thread_id, old) or initial_bases
+                retired_transfers=validate_retired_transfers(retired_transfers+recover_binding_transfers(self.root,thread_id,old))
             config = {'config_id':secrets.token_hex(16), 'thread_id':thread_id,
                       'url':origin, 'project_id':project_id, 'root':str(selected),
                       'token':token, 'approved_roots':approved, 'automatic':bool(automatic),
                       'owner_references':list(dict.fromkeys(owner_references)),
                       'device_id':device_id, 'initial_bases':initial_bases,
+                      'retired_transfers':retired_transfers,
                       'offline_enabled':bool(offline_enabled), 'offline_pending':True}
             _write(self.root / (thread_id+'.json'), config)
             return config
@@ -253,6 +262,12 @@ class DesktopSyncManager:
             return {'state':'syncing'}
         replica = client = None
         try:
+            # A directory/configuration may have changed after the optimistic
+            # first read but before this pass acquired its per-binding lock.
+            current_config=book.load(thread_id)
+            if not current_config:
+                return {'state':'unconfigured'}
+            config=current_config
             if not config.get('device_id'):
                 config['device_id'] = recover_binding_device_id(book.root, thread_id, config)
                 book.update(thread_id, {'device_id':config['device_id']}, config_id=config['config_id'])
@@ -288,6 +303,9 @@ class DesktopSyncManager:
                                     metadata_replica=replica,local_references=references,approved_roots=config['approved_roots'],
                                     required_references=requirements,device_id=config['device_id'],
                                     initial_bases=config.get('initial_bases',[]))
+                if config.get('retired_transfers'):
+                    client.close_retired_transfers(config['retired_transfers'])
+                    book.update(thread_id,{'retired_transfers':[]},config_id=config['config_id'])
                 result = client.sync_once()
                 book.update(thread_id, {'bootstrap_document':None,'initial_bases':[]}, config_id=config['config_id'])
                 book.update(thread_id, {'offline_enabled':result['offline_enabled']}, config_id=config['config_id'])

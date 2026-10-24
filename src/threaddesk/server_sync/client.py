@@ -235,6 +235,32 @@ class SyncClient:
             raise ClientError("Previous transfer closure is unconfirmed")
         return state
 
+    def close_retired_transfers(self, records):
+        """Close old-root identities without importing upload work or host grants.
+
+        The caller keeps its private retirement ledger until this entire method
+        succeeds. A lost/failed answer never proves closure, even if the server
+        may already have acted; idempotent retries obtain the terminal receipt.
+        """
+        from threaddesk.server_sync.identity import validate_retired_transfers
+        clean = validate_retired_transfers(records)
+        confirmed = []
+        for record in clean:
+            pending = (record['sha256'], record['base'], record['transfer'])
+            terminal = self._terminal_transfer(record['path'], pending)
+            confirmed.append((record, terminal))
+        # First obtain every terminal proof. Only then carry forward receipts;
+        # uncertainty does not partially rewrite the new root's common bases.
+        with self.db:
+            for record, terminal in confirmed:
+                if terminal['state'] != 'committed':
+                    continue
+                receipt = terminal['receipt']
+                current = self._base(record['path'])
+                if current is None or current['revision'] == record['base']:
+                    self.db.execute("INSERT OR REPLACE INTO base VALUES (?,?,?)",
+                                    (record['path'], receipt['revision'], receipt['sha256']))
+
     def _remember(self, path, head):
         pending = self.db.execute("SELECT sha256,base,transfer FROM uploads WHERE path=?", (path,)).fetchone()
         if pending:
@@ -428,6 +454,7 @@ class SyncClient:
         parent, name = _parent_fd(source.root, source.relative, create=True)
         backup_parent = None
         backup = None
+        replacement_fd = None
         temporary = ".td-sync-" + uuid.uuid4().hex
         try:
             try:
@@ -437,8 +464,8 @@ class SyncClient:
             if (current is None and expected_sha is not None) or (current is not None and
                     (expected_sha is None or digest(current) != expected_sha)):
                 raise ClientError("Local file changed; replacement refused: " + relative)
-            fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=parent)
-            with os.fdopen(fd, "wb") as stream:
+            replacement_fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=parent)
+            with os.fdopen(replacement_fd, "wb", closefd=False) as stream:
                 stream.write(data)
                 stream.flush()
                 os.fsync(stream.fileno())
@@ -455,12 +482,24 @@ class SyncClient:
                                         sha256=actual_sha, revision=previous["revision"] if previous and previous["sha256"] == actual_sha else None)
                 if actual_sha != expected_sha:
                     raise ClientError("Concurrent edit retained in recovery: " + relative)
+                original_fd = os.open(backup, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=backup_parent)
+                try:
+                    original_info = os.fstat(original_fd)
+                    if not stat.S_ISREG(original_info.st_mode):
+                        raise ClientError("Original destination is not a regular file")
+                    ordinary_mode = stat.S_IMODE(original_info.st_mode) & 0o777
+                finally:
+                    os.close(original_fd)
+                os.fchmod(replacement_fd, ordinary_mode)
+                os.fsync(replacement_fd)
             try:
                 os.link(temporary, name, src_dir_fd=parent, dst_dir_fd=parent, follow_symlinks=False)
             except FileExistsError:
                 raise ClientError("Concurrent file retained; download deferred: " + relative)
             os.fsync(parent)
         finally:
+            if replacement_fd is not None:
+                os.close(replacement_fd)
             try:
                 os.unlink(temporary, dir_fd=parent)
             except FileNotFoundError:
