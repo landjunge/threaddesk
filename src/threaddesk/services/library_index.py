@@ -60,7 +60,7 @@ class LibraryIndex:
         self._replace(payload)
         return self.status()
 
-    def search(self, text: str, *, limit: int = 20) -> list[dict]:
+    def search(self, text: str, *, limit: int = 20, thread_id: str | None = None) -> list[dict]:
         query = " ".join(text.casefold().split())
         if not query:
             return []
@@ -69,6 +69,8 @@ class LibraryIndex:
             return []
         hits = []
         for item in document.get("documents") or []:
+            if thread_id is not None and item.get("thread_id") != thread_id:
+                continue
             haystack = " ".join([
                 str(item.get("filename") or ""),
                 str(item.get("origin_path") or ""),
@@ -82,6 +84,7 @@ class LibraryIndex:
                     "filename": item.get("filename"),
                     "origin_path": item.get("origin_path"),
                     "thread_title": item.get("thread_title"),
+                    "thread_id": item.get("thread_id"),
                     "format": item.get("format"),
                 })
             if len(hits) >= limit:
@@ -116,7 +119,8 @@ class LibraryIndex:
         blob = (root / digest).resolve()
         if not blob.is_relative_to(root):
             raise OSError("blob escape")
-        return blob.read_bytes()[:MAX_EXCERPT].decode("utf-8", errors="replace")
+        with blob.open("rb") as handle:
+            return handle.read(MAX_EXCERPT).decode("utf-8", errors="replace")
 
     def _read(self) -> dict | None:
         if not self.path.is_file():

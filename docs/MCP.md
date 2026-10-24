@@ -209,6 +209,8 @@ overwrite fallback.
 | Existing MCP capability | Tools | Executes agents? |
 |---|---|---|
 | Context reads / Lesen | `list_threads`, `get_thread`, `current_thread` | No |
+| Library receive / Empfang | `library_receive`, read-only `library_receive_status` | No; explicit byte upload with durable receipt |
+| Library lookup / Dateisuche | `library_search`, `library_file_info` | No; saved index and verified local download route |
 | Safe administration / Verwaltung | `thread_manage`, read-only `thread_operation_status` | No |
 | Legacy context writes / Bestandsweg | `switch_thread`, `add_note`, `save_snapshot`, `restore_snapshot`, `list_snapshots` | No; legacy mutations lack operation receipts |
 | Local prompt / packet preparation | `generate_prompt`, `export_handoff`, `export_grok`, `export_gnom` | No |

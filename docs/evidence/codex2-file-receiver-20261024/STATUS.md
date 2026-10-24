@@ -1,0 +1,137 @@
+# Codex 2 / ThreadDesk — 24 October 2026
+
+Source: `34b9ea6ad76fd350f898f5068058b4a726880e91`, branch
+`feat/codex2-file-receiver-20261024`, based on upstream `64353be` (PR87).
+Only the ThreadDesk repository was changed. The dirty main checkout and dirty
+Tauri-RC2 worktree were preserved. No other agent was started or interrupted.
+The existing coordination thread is `188ce4729a62`; this report supplies evidence
+for its appended **Codex 2 / ThreadDesk** entries, not a second work queue.
+
+## Delivered source
+
+- Resumable MCP byte receiver with persisted offsets, exact repeat detection,
+  bounded chunks/reservations, explicit thread binding and durable receipts.
+- Idempotent record publication recovery after a failed thread-link step.
+- Thread-scoped MCP index search and verified local download metadata.
+- Existing open route refuses malformed records, missing/changed blobs, digest
+  path escapes, symlinks and altered record IDs through controlled errors.
+- Exclusive blob publication preserves existing copies; text indexing reads
+  only the bounded excerpt rather than loading the whole file first.
+- [Versioned integration contract](../../contracts/library-receive-v1.md) for
+  the separate KiraBridge adapter, including limits, authorization and failures.
+
+## Verification
+
+The final combined affected test run passed **105 tests**, with one Starlette
+httpx deprecation warning:
+
+```sh
+PYTHONPATH=src /Users/landjunge/threaddesk/.venv/bin/python -m pytest -q \
+ tests/test_library_receive.py tests/test_library_import.py \
+ tests/test_library_modules.py tests/test_http_access.py tests/test_mcp.py \
+ tests/test_mcp_capability_catalog.py tests/test_mcp_readonly_annotations.py \
+ tests/test_release_inputs.py
+```
+
+After the last index-temporary-file guard and schema root adjustment, the
+directly affected guard/catalog tests passed **6 tests**. These overlap the
+combined run; the counts are not additive. The two new guard variants replace
+the previous journal-only case. An earlier new-test run had two helper argument
+collisions; the helper invocation was corrected and the affected tests passed.
+No failing product test was skipped. Tests use synthetic temporary JSON and
+SQLite workspaces, including a freshly started real stdio MCP process, receipt
+readback and the actual protected UI download route. Original-file preservation
+remains covered by the existing import tests.
+
+`git diff --check` and the staged input scan passed. After the code commit,
+`scripts/check_release_inputs.py` inspected **346 committed files**, clean.
+After fetching origin, `origin/main` remained `64353be` and was verified as an
+ancestor of the source commit, so this branch had no base divergence/conflict.
+The installed Git lacks `merge-tree --write-tree`; that attempted check was
+replaced by the ancestor proof. No merge was performed.
+
+## Local desktop candidate
+
+Built with the existing PyInstaller server spec and `npm ci; npm run build`
+(commands executed separately) on native Intel macOS. Both the standalone final
+backend and the backend inside the app passed `--self-test` in the implementation's
+isolated self-test workspace. The packaged backend matches the built executable
+byte for byte. The app initially had no wrapper signature; local ad-hoc signing
+was applied to this candidate only, and `codesign --verify --deep --strict`
+passed. [build.json](build.json) records hashes and source provenance.
+
+Candidate, retained for review:
+`packaging/tauri/src-tauri/target/release/bundle/macos/ThreadDesk.app`.
+Build logs remain under ignored `.runtime/`. No installed app was replaced.
+The graphical wrapper was not launched because it selects the existing home
+workspace. A source/build/self-test result is not graphical user acceptance.
+No Apple notarization, Windows/Apple Silicon build or public release is claimed.
+The existing shell version is 0.1.2; the baseline Python project metadata still
+uses 0.1.1rc1 and needs release-version alignment before distribution.
+
+## Remaining gates and boundaries
+
+- KiraBridge's loaded catalog has no streaming adapter for this new contract.
+  Authentication, effective workspace/thread/transfer authorization and live
+  end-to-end acceptance must be completed in that separate repository. The
+  active bridge process/configuration and old queued tasks were not changed.
+- The existing portable-backup allowlist excludes `library-files`, including
+  copies and receipts. Library backup/restore is still open; no originals or
+  workspaces were removed. Receipt durability is not a backup promise.
+- Search indexes metadata and bounded supported text only. PDF/Office/media
+  content extraction, exhaustive pagination and an OS filesystem sandbox are
+  outside this implementation; the contract states these limits.
+- No PR or merge was created. No complete-suite/CI/independent-review acceptance
+  is claimed. The repository workflow requires complete browser acceptance
+  twice and native Windows backup checks before acceptance; release publication
+  also requires native artifacts. These gates remain for an approved PR/merge.
+  The GitHub protection endpoint returned `404: Branch not protected`; this
+  does not waive the user's explicit review and approval requirement.
+
+The authorized source branch was committed and pushed. No speech module was
+added or made mandatory. The integration contract is the next input for Codex 1;
+this session does not implement the KiraBridge side.
+
+## PR88 follow-up after explicit push/merge authorization
+
+The user subsequently authorized PR and merge. [PR88](https://github.com/landjunge/threaddesk/pull/88)
+was opened from the pushed branch. Its first full CI run
+[40107639959](https://github.com/landjunge/threaddesk/actions/runs/40107639959)
+reported **1031 passed, 2 failed**: the characterization fixture lacked the four
+new MCP tools, and the receiver guard used the private store root instead of the
+public workspace interface. Both are corrected without weakening either check.
+The native Windows backup job passed. All three native desktop build/package
+self-test jobs in [40107639974](https://github.com/landjunge/threaddesk/actions/runs/40107639974)
+passed. These CI artifacts are separate from the earlier local Tauri candidate.
+
+Automated review also identified a genuine crash window after exclusive
+hardlink publication and before temporary-name cleanup. The receiver now
+recognizes only a complete internal pair with the expected private name,
+matching regular-file identities, exactly two links and the expected digest.
+Status validates this pair without modifying files. An explicit mutation
+cleans up only the internal temporary name; the verified blob survives.
+Unknown/external links or incorrect content still fail closed and are preserved.
+
+The added regression exits a real subprocess immediately after successful
+`os.link`, then checks read-only status and successful commit or abort recovery
+with both JSON and SQLite. Negative cases preserve unrecognized and external
+hardlinks. The directly affected receiver/import/index, characterization,
+storage-contract and MCP-catalog tests passed **102 tests** with one existing
+Starlette warning. No broad local rerun was performed; full acceptance must
+pass in the new PR CI run before merge. The earlier local candidate in
+`build.json` still identifies its original source and is not relabelled as this
+follow-up build. Final CI/merge outcome belongs in the shared coordination
+whiteboard; no gate is waived by the user's merge authorization.
+
+The follow-up at `f4070aa` subsequently passed both complete acceptance runs,
+the no-skips assertion, JavaScript, Windows backup and all native package jobs.
+A second automated finding still required correction before merge: a writer
+crash with spilled rollback pages could prevent read-only status recovery.
+The receiving database now uses WAL with FULL synchronous mode from creation.
+The new JSON/SQLite regression uploads 4 MiB, forces page spills with a small
+cache and secure deletion, then exits after deleting chunks during abort but
+before commit. Both status tools must return the preceding committed receiving
+state and offset; hashes prove the database and WAL remain unchanged by status.
+The same transfer can then commit successfully. All **88 directly affected
+tests passed**. The final source requires fresh CI acceptance; the successful
+previous-head runs are not relabelled as results for the WAL correction.

@@ -13,6 +13,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
+import stat
 import tempfile
 import zipfile
 
@@ -29,6 +30,8 @@ MAX_ZIP_UNCOMPRESSED = 256 * 1024 * 1024
 MAX_TEXT_SCAN = 2 * 1024 * 1024
 UNASSIGNED_TITLE = "Nicht zugeordnet"
 _RECORD_ID = re.compile(r"^[0-9a-f]{12}$")
+_DIGEST = re.compile(r"^[0-9a-f]{64}$")
+_PUBLICATION_PARTIAL = re.compile(r"^\.([0-9a-f]{64})\.[a-z0-9_]{8}$")
 _SKIP_DIRS = {
     ".git", ".ssh", ".aws", ".gnupg", ".threaddesk", "node_modules",
     "__pycache__", "keychains",
@@ -200,7 +203,7 @@ def _zip_members(package: Path) -> list[tuple[str, bytes]]:
 class LibraryImporter:
     def __init__(self, store) -> None:
         self.store = store
-        self.workspace = Path(store.root)
+        self.workspace = Path(store.workspace_path)
         self.root = self.workspace / "library-files"
         self.blobs = self.root / "blobs"
         self.records = self.root / "records"
@@ -344,12 +347,54 @@ class LibraryImporter:
         path = self.records / f"{record_id}.json"
         if not path.is_file():
             raise NotFound(record_id)
-        record = json.loads(path.read_text(encoding="utf-8"))
-        blob = self.blobs / record["sha256"]
-        digest, size = _hash_file(blob)
-        if digest != record["sha256"] or size != record["size"] or record.get("status") != "stored":
-            raise LibraryImportError("integrity")
+        try:
+            if self.records.is_symlink() or path.is_symlink():
+                raise LibraryImportError("integrity")
+            record = json.loads(path.read_text(encoding="utf-8"))
+            expected = record.get("sha256", "")
+            if (not isinstance(expected, str) or not _DIGEST.fullmatch(expected)
+                    or record.get("id") != record_id or type(record.get("size")) is not int):
+                raise LibraryImportError("integrity")
+            blob = self.blobs / expected
+            if (self.root.is_symlink() or self.blobs.is_symlink() or blob.is_symlink()
+                    or not blob.is_file() or blob.stat().st_nlink != 1):
+                raise LibraryImportError("integrity")
+            digest, size = _hash_file(blob)
+            if digest != expected or size != record["size"] or record.get("status") != "stored":
+                raise LibraryImportError("integrity")
+        except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+            raise LibraryImportError("integrity") from exc
         return blob, record
+
+    def receive_verified(self, path: Path, *, filename: str, thread_id: str,
+                         record_id: str, sha256: str, size: int) -> dict:
+        """Publish a receiver-owned staging file, repairing interrupted retries.
+
+        The receiver persists record_id before this call. Never auto-assign a
+        remote upload by a folder title or accept a caller-selected local path.
+        """
+        thread = self.store.get_thread(thread_id)
+        validate_received_filename(filename)
+        if not _RECORD_ID.fullmatch(record_id) or not _DIGEST.fullmatch(sha256):
+            raise LibraryImportError("integrity")
+        _scan_text(path, Path(filename).suffix.casefold())
+        if _hash_file(path) != (sha256, size):
+            raise LibraryImportError("integrity")
+        target = self.records / f"{record_id}.json"
+        if target.exists():
+            _, record = self.open_record(record_id)
+            if (record["sha256"], record["size"], record["thread_id"], record["filename"]) != (sha256, size, thread_id, filename):
+                raise LibraryImportError("receipt_conflict")
+        else:
+            self._publish_blob(path, sha256, size)
+            kind, media = _FORMATS[Path(filename).suffix.casefold()]
+            record = self._write_record(relative=filename, digest=sha256, size=size,
+                                        kind=kind, media=media, thread=thread,
+                                        version=self._next_version(filename), record_id=record_id)
+        self._link_thread(thread, record_id)
+        return {"record_id": record_id, "sha256": sha256, "size": size,
+                "thread_id": thread_id, "open_path": f"/library/files/{record_id}",
+                "index": self.rebuild_index()}
 
     def _accept_source(self, source: Path) -> Path:
         try:
@@ -453,6 +498,43 @@ class LibraryImporter:
             filename=PurePosixPath(relative).name, format=kind,
         ), created
 
+    def recover_blob_publications(self, *, cleanup: bool = False) -> set[Path]:
+        """Recognize a completed internal link pair after a process crash.
+
+        Read callers only validate the pair. Explicit writes may unlink its
+        private temporary name, preserving the published blob. Any unknown or
+        external hardlink still fails the receiver's normal guard.
+        """
+        recognized: set[Path] = set()
+        pairs: list[tuple[Path, Path]] = []
+        if not self.blobs.is_dir():
+            return recognized
+        for partial in self.blobs.iterdir():
+            match = _PUBLICATION_PARTIAL.fullmatch(partial.name)
+            if not match:
+                continue
+            target = self.blobs / match[1]
+            try:
+                left, right = partial.lstat(), target.lstat()
+            except FileNotFoundError:
+                continue
+            if (not stat.S_ISREG(left.st_mode) or not stat.S_ISREG(right.st_mode)
+                    or left.st_nlink != 2 or right.st_nlink != 2
+                    or (left.st_dev, left.st_ino) != (right.st_dev, right.st_ino)):
+                continue
+            if _hash_file(target)[0] != match[1]:
+                continue
+            recognized.update((partial, target))
+            pairs.append((partial, target))
+        if cleanup:
+            for partial, target in pairs:
+                # Recheck identities before removing only the internal name.
+                left, right = partial.lstat(), target.lstat()
+                if (left.st_dev, left.st_ino, left.st_nlink) != (right.st_dev, right.st_ino, 2):
+                    raise LibraryImportError("integrity")
+                partial.unlink()
+        return recognized
+
     def _publish_blob(self, source: Path, digest: str, size: int) -> bool:
         self.blobs.mkdir(parents=True, exist_ok=True, mode=0o700)
         target = self.blobs / digest
@@ -460,30 +542,42 @@ class LibraryImporter:
             if not self._blob_matches(digest, size):
                 raise LibraryImportError("existing_checksum")
             return False
-        partial = self.blobs / f".{digest}.partial"
         digest_copy = hashlib.sha256()
         copied = 0
-        with source.open("rb") as incoming, partial.open("wb") as outgoing:
-            while True:
-                chunk = incoming.read(1024 * 1024)
-                if not chunk:
-                    break
-                outgoing.write(chunk)
-                digest_copy.update(chunk)
-                copied += len(chunk)
-        if digest_copy.hexdigest() != digest or copied != size:
+        fd, name = tempfile.mkstemp(prefix=f".{digest}.", dir=self.blobs)
+        partial = Path(name)
+        try:
+            with os.fdopen(fd, "wb") as outgoing, source.open("rb") as incoming:
+                while True:
+                    chunk = incoming.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    copied += len(chunk)
+                    if copied > size:
+                        raise LibraryImportError("copy_checksum")
+                    outgoing.write(chunk)
+                    digest_copy.update(chunk)
+                outgoing.flush()
+                os.fsync(outgoing.fileno())
+            if digest_copy.hexdigest() != digest or copied != size:
+                raise LibraryImportError("copy_checksum")
+            try:
+                os.link(partial, target)  # Exclusive publication; never replace an existing blob.
+            except FileExistsError:
+                if not self._blob_matches(digest, size):
+                    raise LibraryImportError("existing_checksum")
+                return False
+        finally:
             partial.unlink(missing_ok=True)
-            raise LibraryImportError("copy_checksum")
-        partial.chmod(0o600)
-        partial.replace(target)
-        target.chmod(0o600)
         if not self._blob_matches(digest, size):
             raise LibraryImportError("copy_checksum")
         return True
 
     def _blob_matches(self, digest: str, size: int) -> bool:
+        if not isinstance(digest, str) or not _DIGEST.fullmatch(digest):
+            return False
         target = self.blobs / digest
-        if not target.is_file():
+        if self.root.is_symlink() or self.blobs.is_symlink() or target.is_symlink() or not target.is_file():
             return False
         actual, actual_size = _hash_file(target)
         return actual == digest and actual_size == size
@@ -523,9 +617,9 @@ class LibraryImporter:
         current.context.extra["library_files"] = ids
         self.store.save_thread(current)
 
-    def _write_record(self, *, relative, digest, size, kind, media, thread, version: int) -> dict:
+    def _write_record(self, *, relative, digest, size, kind, media, thread, version: int, record_id=None) -> dict:
         record = {
-            "id": new_id(),
+            "id": record_id or new_id(),
             "sha256": digest,
             "size": size,
             "filename": PurePosixPath(relative).name,
@@ -552,12 +646,20 @@ class LibraryImporter:
         return max(versions, default=0) + 1
 
     def _record_by_id(self, record_id: str) -> dict | None:
-        if not _RECORD_ID.fullmatch(record_id or ""):
+        if not isinstance(record_id, str) or not _RECORD_ID.fullmatch(record_id):
             return None
         path = self.records / f"{record_id}.json"
         if not path.is_file():
             return None
-        return json.loads(path.read_text(encoding="utf-8"))
+        if self.root.is_symlink() or self.records.is_symlink() or path.is_symlink():
+            raise LibraryImportError("integrity")
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(record, dict):
+                raise LibraryImportError("integrity")
+            return record
+        except (OSError, ValueError) as exc:
+            raise LibraryImportError("integrity") from exc
 
     def _read_records(self) -> list[dict]:
         if not self.records.is_dir():
@@ -642,3 +744,13 @@ class LibraryImporter:
             "failed": count("failed"),
             "results": [item.__dict__ for item in results],
         }
+
+
+def validate_received_filename(filename: str) -> None:
+    if (not isinstance(filename, str) or not filename or len(filename.encode("utf-8")) > 240
+            or filename in {".", ".."} or any(ord(c) < 32 or c in '/\\:' for c in filename)):
+        raise LibraryImportError("unsafe_path")
+    if _looks_secret_name(filename):
+        raise LibraryImportError("secret_name")
+    if Path(filename).suffix.casefold() not in _FORMATS:
+        raise LibraryImportError("unsupported")
