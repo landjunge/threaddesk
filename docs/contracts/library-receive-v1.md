@@ -63,8 +63,11 @@ Commit is repeatable and returns the same durable receipt. Abort is repeatable
 but cannot remove a committed file; aborted IDs cannot be reused. Empty files
 are committed without appending a block.
 
-Chunks and offsets commit together in a private SQLite journal with FULL
-synchronous mode. Commit flushes published bytes/record before the receipt.
+Chunks and offsets commit together in a private SQLite WAL database with FULL
+synchronous mode. After an interrupted write, read-only status reads the last
+committed snapshot without restoring pages into the main database. SQLite may
+maintain its shared-memory sidecar; status does not commit or abort a transfer.
+Commit flushes published bytes/record before the receipt.
 If publication is interrupted, the preallocated record ID allows a commit retry
 to repair its thread link without creating another record. A failed commit
 keeps blocks available; it may already have published a verified copy and record.

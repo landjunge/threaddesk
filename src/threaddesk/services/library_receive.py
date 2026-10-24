@@ -139,6 +139,11 @@ class LibraryReceiver:
             else:
                 os.close(fd)
             conn = sqlite3.connect(self.db, timeout=10)
+            # A read-only client can inspect the last committed WAL snapshot
+            # after a writer dies, without rolling back pages in the main file.
+            if conn.execute("PRAGMA journal_mode=WAL").fetchone()[0] != "wal":
+                conn.close()
+                fail("unsafe_store")
             conn.execute("PRAGMA synchronous=FULL")
             conn.executescript('''
                 CREATE TABLE IF NOT EXISTS transfers (

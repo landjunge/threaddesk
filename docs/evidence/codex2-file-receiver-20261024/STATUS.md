@@ -122,3 +122,16 @@ pass in the new PR CI run before merge. The earlier local candidate in
 `build.json` still identifies its original source and is not relabelled as this
 follow-up build. Final CI/merge outcome belongs in the shared coordination
 whiteboard; no gate is waived by the user's merge authorization.
+
+The follow-up at `f4070aa` subsequently passed both complete acceptance runs,
+the no-skips assertion, JavaScript, Windows backup and all native package jobs.
+A second automated finding still required correction before merge: a writer
+crash with spilled rollback pages could prevent read-only status recovery.
+The receiving database now uses WAL with FULL synchronous mode from creation.
+The new JSON/SQLite regression uploads 4 MiB, forces page spills with a small
+cache and secure deletion, then exits after deleting chunks during abort but
+before commit. Both status tools must return the preceding committed receiving
+state and offset; hashes prove the database and WAL remain unchanged by status.
+The same transfer can then commit successfully. All **88 directly affected
+tests passed**. The final source requires fresh CI acceptance; the successful
+previous-head runs are not relabelled as results for the WAL correction.
