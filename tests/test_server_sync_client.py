@@ -17,6 +17,8 @@ class Wire:
         self.lose_ack = False
         self.fail_abort = False
         self.lose_commit_ack = False
+        self.lose_begin_ack = False
+        self.abort_on_begin = False
         self.corrupt_download = False
         self.client = httpx.Client(base_url="https://sync.example", transport=httpx.MockTransport(self.handle))
 
@@ -37,6 +39,11 @@ class Wire:
             if request.method == "POST" and len(path) == 2:
                 self.transfers.append(transfer)
                 value = self.store.start_upload(self.project, transfer, **payload)
+                if self.abort_on_begin:
+                    value = self.store.abort_upload(self.project, transfer)
+                if self.lose_begin_ack and value['state'] == 'receiving':
+                    self.lose_begin_ack = False
+                    raise httpx.ReadError("Injected lost begin acknowledgement", request=request)
             elif path[-1] == "abort":
                 if self.fail_abort:
                     return httpx.Response(503, json={"error": "injected_abort_failure"})
@@ -302,3 +309,60 @@ def test_vcs_internals_are_excluded_but_explicit_dependencies_still_block(tmp_pa
     assert issues
     (root / ".svn").symlink_to(tmp_path, target_is_directory=True)
     assert scan_project(root)[1]
+
+
+def test_server_canceled_unchanged_upload_restarts_with_durable_new_id(tmp_path):
+    root, store, project, wire, client = fixture(tmp_path)
+    path = root / 'large.bin'
+    path.write_bytes(b'previous committed original')
+    assert client.sync_once()['state'] == 'ready'
+    original = store.list_files(project)[0]['heads'][0]
+    data = b'updated bytes' * (256 * 1024 // len(b'updated bytes') + 100)
+    path.write_bytes(data)
+    wire.lose_ack = True
+    with pytest.raises(httpx.ReadError):
+        client.sync_once()
+    canceled_id = wire.transfers[-1]
+    assert store.upload_status(project, canceled_id)['state'] == 'receiving'
+    assert store.abort_upload(project, canceled_id)['state'] == 'aborted'
+    client.close()
+    restarted = SyncClient('https://sync.example', 'test-access-token', project, root,
+                           state_dir=tmp_path/'checkpoint', transport=wire.client)
+    # A lost acknowledgement for the replacement begin must retain the NEW
+    # checkpoint, so a second process restart does not allocate a third ID.
+    wire.lose_begin_ack = True
+    with pytest.raises(httpx.ReadError):
+        restarted.sync_once()
+    replacement_id = restarted.db.execute('SELECT transfer FROM uploads').fetchone()[0]
+    assert replacement_id != canceled_id
+    assert store.upload_status(project, replacement_id)['state'] == 'receiving'
+    restarted.close()
+    final = SyncClient('https://sync.example', 'test-access-token', project, root,
+                       state_dir=tmp_path/'checkpoint', transport=wire.client)
+    try:
+        assert final.sync_once()['state'] == 'ready'
+        assert wire.transfers[-1] == replacement_id
+        assert store.upload_status(project, canceled_id)['state'] == 'aborted'
+        assert store.read_revision(project, original['revision']) == b'previous committed original'
+        heads = store.list_files(project)[0]['heads']
+        assert len(heads) == 1 and store.read_revision(project, heads[0]['revision']) == data
+        assert len(store.history(project, 'large.bin')) == 2
+        assert path.read_bytes() == data
+    finally:
+        final.close()
+
+
+def test_server_repeated_cancellation_is_bounded_and_later_recoverable(tmp_path):
+    root, store, project, wire, client = fixture(tmp_path)
+    (root/'note.md').write_bytes(b'unchanged local original')
+    wire.abort_on_begin = True
+    status = client.sync_once()
+    assert status['state'] != 'ready'
+    assert any('repeatedly canceled' in issue for issue in status['local_issues'])
+    assert len(wire.transfers) == 2
+    assert client.db.execute('SELECT transfer FROM uploads').fetchone()[0] == wire.transfers[-1]
+    assert all(store.upload_status(project, value)['state'] == 'aborted' for value in wire.transfers)
+    wire.abort_on_begin = False
+    assert client.sync_once()['state'] == 'ready'
+    assert (root/'note.md').read_bytes() == b'unchanged local original'
+    client.close()

@@ -292,8 +292,22 @@ class SyncClient:
             transfer = uuid.uuid4().hex
             with self.db:
                 self.db.execute("INSERT OR REPLACE INTO uploads VALUES (?,?,?,?)", (relative, sha, base, transfer))
-        endpoint = self.api + "/uploads/" + transfer
-        state = self._json("POST", endpoint, json={"path": relative, "size": len(data), "sha256": sha, "base_revision": base})
+        manifest = {"path": relative, "size": len(data), "sha256": sha, "base_revision": base}
+        # An operator may have definitively aborted this persisted ID while the
+        # client was disconnected. Its bytes/base remain unchanged, but its ID
+        # is terminal. Replace only after that positive state, never on a timeout.
+        for attempt in range(2):
+            endpoint = self.api + "/uploads/" + transfer
+            state = self._json("POST", endpoint, json=manifest)
+            if state.get("state") != "aborted":
+                if state.get("state") not in {"receiving", "committed"}:
+                    raise ClientError("Invalid server transfer state")
+                break
+            if attempt == 1:
+                raise ClientError("Server repeatedly canceled upload; retry deferred")
+            transfer = uuid.uuid4().hex
+            with self.db:
+                self.db.execute("INSERT OR REPLACE INTO uploads VALUES (?,?,?,?)", (relative, sha, base, transfer))
         offset = state["next_offset"]
         if type(offset) is not int or not 0 <= offset <= len(data):
             raise ClientError("Invalid server resume offset")

@@ -173,6 +173,12 @@ Sicherungskopien benötigen zusätzlichen freien Plattenplatz. Unfertige
 unveröffentlichte Teilblöcke und ihre Reservierung freigegeben. Fertige Versionen
 bleiben erhalten. Ändert sich eine lokale Datei während eines Teiltransfers,
 klärt der Client erst dessen gespeicherten Zustand und beginnt danach neu.
+Wird ein Teiltransfer serverseitig ausdrücklich abgebrochen, verwendet der Client
+nach bestätigtem Abbruch eine dauerhaft gespeicherte neue Transferkennung.
+Unklare Antworten behalten ihre Kennung; Wiederanlauf erzeugt keine doppelten
+fertigen Versionen. Für größere Bestände unterstützt der Manifest-Endpunkt bis
+zu 20000 Dateien mit einer eigenen begrenzten Anfragengröße von 96 MiB. Die
+Grenzen der Datei-Transferblöcke werden dadurch nicht angehoben.
 
 Verdrängte lokale Dateien und zusätzliche Konfliktfassungen liegen im
 jeweiligen Quellordner unter `.threaddesk-sync-conflicts/`. Neben jeder Kopie beschreibt

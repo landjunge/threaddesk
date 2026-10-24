@@ -90,6 +90,20 @@ or uploaded. Independent read-only review found no critical authority/data-loss
 flaw in the final grant/reference/cache changes. Counts again overlap; no broad
 local suite was repeated for this correction.
 
+Head `7ce4003` subsequently passed the required complete CI **1116 tests twice**,
+native Windows backup (164 cases), all three native builds and Linux/TLS/restore.
+The final review gate reported two further valid P2 cases before merge: a
+browser-aborted upload would reuse its cancelled ID indefinitely, and the
+512 KiB body boundary rejected valid larger inventories. Confirmed cancellation
+now allocates one persisted replacement ID per run, while uncertain replies keep
+their checkpoint. Manifests now have one shared bounded 96 MiB endpoint limit;
+transfer blocks retain their smaller bounds. **13 client tests** passed including
+restart after cancellation/lost replacement acknowledgement and bounded repeated
+cancellations; **5 API tests** passed including real 5000-file header+stream
+manifests, stream-limit rejection and unchanged upload limits. These overlap
+earlier results. The correction image was rebuilt and accepted again; its source
+fingerprints below include both fixes. Required CI must validate the new head.
+
 During integration an earlier affected run had 138 passing / 3 new i18n failures.
 Labels, placeholder and dynamic-state catalog coverage were corrected and the
 failed checks passed. The guard for unsafe POST routes now includes the new
@@ -133,9 +147,9 @@ no global context switch or foreign container stop. A development OrbStack start
 was also issued during initial runtime discovery; neither runtime was stopped.
 Only the harness's own containers were cleaned up.
 
-Image: `sha256:154f9762622fbd2a64968c6bec2a3a295a91015dfc871a8ce6fb74d7d211bb1c`.
+Image: `sha256:8ddb68445dee7a612f1c0e7150a3bd2b0b6a175ecd6e4f70cbe34e886c797f23`.
 Production input content SHA256:
-`66677cd726422ae06d1b6795e7a8d1de756f08ead056e932e8f4a76eedb5faf6`.
+`81820eb1a6e1e2cd725f0a6692bd796b8353d1c070789e0e0d48cb854aea4da9`.
 The 148 input fingerprints were compared after acceptance; none changed.
 [Source manifest](source-manifest.json), [Linux receipt](linux.json),
 [complete build/acceptance log](linux-acceptance.log).

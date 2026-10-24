@@ -136,11 +136,18 @@ The whole transaction returns metadata_scope409 without partial publication.
 Opaque namespace identity is journaled durably, surviving path changes and full
 backup/restore. Documents are bounded to 1 MiB each, metadata HTTP bodies 4 MiB;
 other request bodies retain the 512 KiB transfer bound. No silent truncation.
+Manifest requests have a separate 96 MiB UTF-8/JSON bound for the declared
+20000-file inventory (2048-byte paths, escaping and bounded issues); both header
+and streamed-body checks use the same endpoint limit. Upload blocks keep the
+original 512 KiB HTTP / 256 KiB decoded-byte limits.
 When local metadata equals the last common base and no uncertain operation is
 pending, authenticated conditional GET/ETag proves an unchanged server without
 writing another receipt, snapshot or checkpoint. Pending operations still replay
 their original durable request. Idle automatic polling therefore does not grow
 the immutable metadata journal with repeated copies of the same document.
+A positively confirmed server-aborted file upload gets a newly persisted
+replacement transfer ID, with at most two begins per sync run. Uncertain replies
+retain the current checkpoint; committed receipts and old versions stay intact.
 
 ## Complete server backup
 

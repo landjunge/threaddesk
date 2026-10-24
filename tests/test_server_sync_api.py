@@ -169,3 +169,31 @@ def test_actual_two_clients_new_files_reconnect_conflict_and_originals(server,tm
         # b was closed before restart, so only close it on the earlier failure path.
         try: b.close()
         except Exception: pass
+
+
+def test_large_bounded_manifest_handles_header_and_stream_without_enlarging_uploads(server,monkeypatch):
+    import json
+    from threaddesk.server_sync import app as module
+    _,tokens,http=server;token=tokens['alice'];headers=auth(token)
+    pid=new_project(http,token);uri=f'/api/projects/{pid}'
+    value={'device_id':'many-files','issues':[], 'files':[
+        {'path':f'file-{i:05}.txt','size':1,'sha256':hashlib.sha256(b'x').hexdigest()} for i in range(5000)]}
+    encoded=json.dumps(value,separators=(',',':')).encode()
+    assert len(encoded)>module.MAX_BODY
+    response=http.post(uri+'/manifest',headers=headers,json=value)
+    assert response.status_code==200,response.text
+    assert len(response.json()['missing_files'])==5000 and response.json()['required_bytes']==5000
+    chunks=(encoded[offset:offset+8192] for offset in range(0,len(encoded),8192))
+    response=http.post(uri+'/manifest',headers={**headers,'Content-Type':'application/json'},content=chunks)
+    assert response.status_code==200,response.text
+    # Transfer endpoints retain their original 512 KiB body boundary.
+    response=http.post(uri+'/uploads/not-created',headers={**headers,'Content-Type':'application/json'},
+                       content=b' '*(module.MAX_BODY+1))
+    assert response.status_code==413
+    assert http.get(uri+'/uploads',headers=headers).json()['uploads']==[]
+    # Exercise the same bounded stream guard without allocating a 96 MiB test body.
+    monkeypatch.setattr(module,'MAX_MANIFEST_BODY',64)
+    response=http.post(uri+'/manifest',headers={**headers,'Content-Type':'application/json'},
+                       content=(b' '*40 for _ in range(2)))
+    assert response.status_code==413
+    assert http.get(uri+'/status',headers=headers).json()['required_bytes']==5000

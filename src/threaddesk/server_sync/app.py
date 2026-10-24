@@ -29,13 +29,21 @@ from threaddesk.storage.json_store import JsonStore
 
 COOKIE = "threaddesk_server_session"
 MAX_BODY = 512 * 1024
+# 20000 paths of up to 2048 UTF-8 bytes, JSON escaping and bounded issues.
+MAX_MANIFEST_BODY = 96 * 1024 * 1024
+
+
+def body_limit(path: str) -> int:
+    if path.startswith('/api/projects/') and path.endswith('/manifest'):
+        return MAX_MANIFEST_BODY
+    return 4 * 1024 * 1024 if '/metadata/' in path else MAX_BODY
 
 
 async def body(request: Request, required: set[str], optional: set[str] | None = None) -> dict:
     if request.headers.get("content-type", "").split(";")[0].strip() != "application/json":
         raise HTTPException(415, "application/json required")
     data = bytearray()
-    limit = 4 * 1024 * 1024 if '/metadata/' in request.url.path else MAX_BODY
+    limit = body_limit(request.url.path)
     async for part in request.stream():
         data.extend(part)
         if len(data) > limit:
@@ -123,7 +131,7 @@ def create_app(data_dir: Path, *, public_origin: str, allow_http_loopback: bool 
             return JSONResponse({"error": "foreign_origin"}, 403)
         if request.headers.get("content-length"):
             try:
-                limit = 4 * 1024 * 1024 if '/metadata/' in request.url.path else MAX_BODY
+                limit = body_limit(request.url.path)
                 if int(request.headers["content-length"]) > limit:
                     return JSONResponse({"error": "body_too_large"}, 413)
             except ValueError:

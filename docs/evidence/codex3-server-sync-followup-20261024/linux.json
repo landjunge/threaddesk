@@ -1,9 +1,9 @@
 {
   "platform": "Linux",
   "architecture": "x86_64",
-  "image": "sha256:154f9762622fbd2a64968c6bec2a3a295a91015dfc871a8ce6fb74d7d211bb1c",
-  "source_content_sha256": "66677cd726422ae06d1b6795e7a8d1de756f08ead056e932e8f4a76eedb5faf6",
-  "log_sha256": "2eeab1ac752f754e7a92c3542a2d1b70f7b7babcb46e1b573f2fb70c56029e9c",
+  "image": "sha256:8ddb68445dee7a612f1c0e7150a3bd2b0b6a175ecd6e4f70cbe34e886c797f23",
+  "source_content_sha256": "81820eb1a6e1e2cd725f0a6692bd796b8353d1c070789e0e0d48cb854aea4da9",
+  "log_sha256": "6072ad8ec1f7f0dc633a688549dec0da1ac1ffadd3b5c64c2345bc3906440d68",
   "source_changed_after_run": [],
   "result": "passed",
   "runtime": "existing Colima; explicit Docker context",
@@ -17,7 +17,8 @@
     "credentials, metadata snapshots, whiteboards, file histories, conflicts, chunks and durable receipts",
     "stable portable metadata namespace/origins and exact metadata receipt replay after restore",
     "latest metadata idle-journal and live Desktop status source included",
-    "PR review grant provenance, project scope and required-reference corrections included"
+    "PR review grant provenance, project scope and required-reference corrections included",
+    "bounded large manifests and confirmed-cancellation replacement-ID fixes included"
   ],
   "production_deployment": false
 }
