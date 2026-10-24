@@ -8,7 +8,8 @@ on:
     paths: ['src/**', 'packaging/**', 'scripts/**', 'brand/**', 'pyproject.toml', '.github/workflows/desktop-build.yml']
   workflow_dispatch:
 
-# Candidate publication is gated on full acceptance and all native builds.
+# Active development: macOS builds and Linux acceptance. Windows is paused.
+# All-platform release publication remains paused without its Windows artifact.
 permissions:
   contents: read
 
@@ -44,10 +45,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-latest
-            artifact: ThreadDesk-Windows
-            arch: x86_64
-            deployment: ''
           - os: macos-15-intel
             artifact: ThreadDesk-macOS
             arch: x86_64
@@ -128,7 +125,9 @@ jobs:
     uses: ./.github/workflows/tests.yml
 
   publish:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # verify_release.py requires all three historical native artifacts. Keep
+    # that guarantee and existing downloads intact while Windows is paused.
+    if: false
     needs: [build, acceptance]
     runs-on: ubuntu-latest
     permissions:
