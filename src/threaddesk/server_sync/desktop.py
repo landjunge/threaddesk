@@ -79,8 +79,12 @@ class BindingBook:
     def view(self, thread_id):
         config = self.load(thread_id)
         if not config:
-            return {'configured': False, 'status': {'state': 'unconfigured'}}
+            references = list(self.core.get(thread_id).context.files)
+            return {'configured': False, 'status': {'state': 'unconfigured'},
+                    'owner_references':references,'owner_references_text':'\n'.join(references)}
         public = {k:v for k,v in config.items() if k != 'token'}
+        public['owner_references_text'] = '\n'.join(config.get('owner_references',[]))
+        public['approved_roots_text'] = '\n'.join(config.get('approved_roots',[]))
         public['configured'] = True
         public['token_configured'] = bool(config.get('token'))
         status = _read(self.root / (thread_id + '.status.json'))
@@ -98,7 +102,7 @@ class BindingBook:
                     'operation_id':secrets.token_hex(16)})
         return public
 
-    def save(self, thread_id, *, url, project_id, root, token, approved_roots=(), automatic=True, offline_enabled=False):
+    def save(self, thread_id, *, url, project_id, root, token, approved_roots=(), owner_references=None, automatic=True, offline_enabled=False):
         _id(thread_id)
         origin = check_origin(url)
         selected = Path(root).expanduser()
@@ -119,6 +123,12 @@ class BindingBook:
             approved.append(str(path))
         with _BOOK_LOCK:
             old = self.load(thread_id) or {}
+            if owner_references is None:
+                # Never rebuild a configured binding's authority from replicated data.
+                owner_references = old.get('owner_references',[]) if old else list(self.core.get(thread_id).context.files)
+            if (not isinstance(owner_references,list) or len(owner_references)>128
+                    or any(not isinstance(ref,str) or len(ref)>4096 for ref in owner_references)):
+                raise InvalidState('Invalid owner file grants')
             if not token:
                 if old.get('url') != origin:
                     raise InvalidState('Provide an access token for this server')
@@ -130,6 +140,7 @@ class BindingBook:
             config = {'config_id':secrets.token_hex(16), 'thread_id':thread_id,
                       'url':origin, 'project_id':project_id, 'root':str(selected),
                       'token':token, 'approved_roots':approved, 'automatic':bool(automatic),
+                      'owner_references':list(dict.fromkeys(owner_references)),
                       'offline_enabled':bool(offline_enabled), 'offline_pending':True}
             _write(self.root / (thread_id+'.json'), config)
             return config
@@ -140,7 +151,7 @@ class BindingBook:
             if not config or config_id and config['config_id'] != config_id:
                 return
             config.update(fields)
-            if {'offline_enabled','offline_pending','automatic'} & fields.keys() and config_id is None:
+            if {'offline_enabled','offline_pending','automatic','owner_references'} & fields.keys() and config_id is None:
                 config['config_id'] = secrets.token_hex(16)
             _write(self.root / (thread_id+'.json'), config)
 
@@ -154,6 +165,22 @@ class BindingBook:
         if not self.root.exists():
             return []
         return [p.stem for p in self.root.glob('*.json') if '.status.' not in p.name and not p.name.startswith('.')]
+
+
+def record_owner_reference(core, thread_id, path, *, allowed=True):
+    """Only explicit protected local file actions may amend source authority."""
+    book = BindingBook(core)
+    with _BOOK_LOCK:
+        config = book.load(thread_id)
+        if not config:
+            return
+        references = list(config.get('owner_references',[]))
+        reference = path.strip()
+        if allowed and reference not in references:
+            references.append(reference)
+        if not allowed:
+            references = [value for value in references if value != reference]
+        book.update(thread_id,{'owner_references':references})
 
 
 class DesktopSyncManager:
@@ -210,8 +237,9 @@ class DesktopSyncManager:
         replica = client = None
         try:
             book.record(thread_id,config['config_id'],{'state':'syncing'})
-            # Capture only locally authorized references, before any remote merge.
-            references = list(core.get(thread_id).context.files)
+            # Owner grants are separate from the mutable replicated context.
+            references = list(config.get('owner_references',[]))
+            requirements = [ref for ref in core.get(thread_id).context.files if ref not in references]
             bootstrap = config.get('bootstrap_document')
             with _http_client(base_url=config['url'], headers={'Authorization':'Bearer '+config['token']},
                               timeout=10, follow_redirects=False) as http:
@@ -231,12 +259,14 @@ class DesktopSyncManager:
                     book.update(thread_id, {'offline_pending':False}, config_id=config['config_id'])
                 identity = config['url']+'\0'+pid+'\0'+hashlib.sha256(config['token'].encode()).hexdigest()
                 state = book.root / 'replicas' / thread_id / hashlib.sha256(identity.encode()).hexdigest()
+                file_state = state / 'files' / hashlib.sha256(str(Path(config['root']).resolve()).encode()).hexdigest()
                 replica = MetadataReplica(core, thread_id, state/'metadata', remote_identity=identity)
                 if bootstrap is not None:
                     replica.seed_base(bootstrap)
-                client = SyncClient(config['url'],config['token'],pid,Path(config['root']),state_dir=state/'files',
+                client = SyncClient(config['url'],config['token'],pid,Path(config['root']),state_dir=file_state,
                                     transport=http,allow_insecure_loopback=os.environ.get('THREADDESK_SYNC_ALLOW_HTTP')=='1',
-                                    metadata_replica=replica,local_references=references,approved_roots=config['approved_roots'])
+                                    metadata_replica=replica,local_references=references,approved_roots=config['approved_roots'],
+                                    required_references=requirements)
                 result = client.sync_once()
                 book.update(thread_id, {'bootstrap_document':None}, config_id=config['config_id'])
                 book.update(thread_id, {'offline_enabled':result['offline_enabled']}, config_id=config['config_id'])
@@ -292,6 +322,7 @@ def install_routes(app, service_factory, render):
             book.save(thread_id,url=str(form.get('url','')),project_id=str(form.get('project_id','')).strip(),
                       root=str(form.get('root','')),token=str(form.get('token','')),
                       approved_roots=[s.strip() for s in str(form.get('approved_roots','')).splitlines() if s.strip()],
+                      owner_references=[s.strip() for s in str(form.get('owner_references','')).splitlines() if s.strip()],
                       automatic=form.get('automatic')=='on',offline_enabled=form.get('offline')=='on')
             manager.run_once(core,thread_id)
         elif action == 'sync':

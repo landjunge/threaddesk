@@ -149,3 +149,34 @@ def test_real_metadata_replica_runs_first_and_unresolved_conflicts_persist_in_st
         assert external.read_text()=='explicit local context'
     finally:
         client.close();replica.close()
+
+
+def test_literal_encoded_grant_cannot_reactivate_a_cached_decoded_destination(server,tmp_path):
+    http,token=server;pid=project(http,token)['id']
+    root=tmp_path/'project';root.mkdir()
+    docs=tmp_path/'docs';docs.mkdir()
+    private=docs/'context.txt';private.write_bytes(b'owner original')
+    first=SyncClient('https://testserver',token,pid,root,state_dir=tmp_path/'state',transport=http,
+                     local_references=[private])
+    assert first.sync_once()['state']=='ready'
+    item=remote_files(http,token,pid)[0]
+    first.close()
+    publish(http,token,pid,item['path'],b'must not replace private file',
+            base=item['heads'][0]['revision'],transfer='cached-private-change')
+    punctuation=docs/'query?tag#one.txt';punctuation.write_bytes(b'literal owner file')
+    truncated=docs/'query';truncated.write_bytes(b'not approved')
+    # Keep the actual prior mapping in SQLite to exercise the legacy checkpoint
+    # path. The present owner grant names a DIFFERENT literal filesystem path.
+    client=SyncClient('https://testserver',token,pid,root,state_dir=tmp_path/'state',transport=http,
+                      local_references=['%2e%2e/docs/context.txt',punctuation])
+    try:
+        assert not client._trusted_target(private)
+        assert client._trusted_target(punctuation) and not client._trusted_target(truncated)
+        status=client.sync_once()
+        assert status['state']!='ready'
+        assert private.read_bytes()==b'owner original'
+        assert not (root/'_external').exists()
+        mapped={source.path for source in client.inventory.sources.values()}
+        assert punctuation in mapped and private not in mapped and truncated not in mapped
+    finally:
+        client.close()

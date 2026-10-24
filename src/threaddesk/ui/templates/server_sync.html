@@ -38,7 +38,9 @@
 <label>{{ t('sync.root') }}<input type="text" name="root" value="{{ sync_binding.root|default('') }}" required></label>
 <label>{{ t('sync.project_id') }}<input type="text" name="project_id" value="{{ sync_binding.project_id|default('') }}"></label>
 <p class="muted">{{ t('sync.binding_hint') }}</p>
-<label>{{ t('sync.approved_roots') }}<textarea name="approved_roots" rows="3">{{ sync_binding.approved_roots|default([])|join('\n') }}</textarea></label>
+<label>{{ t('sync.owner_references') }}<textarea name="owner_references" rows="3">{{ sync_binding.owner_references_text|default('') }}</textarea></label>
+<p class="muted">{{ t('sync.owner_hint') }}</p>
+<label>{{ t('sync.approved_roots') }}<textarea name="approved_roots" rows="3">{{ sync_binding.approved_roots_text|default('') }}</textarea></label>
 <label><input type="checkbox" name="automatic"{% if sync_binding.automatic|default(true) %} checked{% endif %}> {{ t('sync.automatic') }}</label>
 <label><input type="checkbox" name="offline"{% if sync_binding.offline_enabled|default(false) %} checked{% endif %}> {{ t('sync.offline') }}</label>
 <button class="btn btn-primary">{{ t('sync.save') }}</button>

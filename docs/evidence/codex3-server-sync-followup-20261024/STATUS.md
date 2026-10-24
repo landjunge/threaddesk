@@ -65,6 +65,31 @@ Unicode/CAS/append-only test then passed with the larger body boundary. These
 counts overlap and must not be added. One upstream Starlette/httpx deprecation
 warning; no skipped failures or weakened assertions.
 
+The first PR head `b824ae3` passed native Windows backup, all three native
+package builds and the new Linux/TLS/restore CI. Complete CI found 1110 passing
+tests and one template guard failure: a literal escape inside a Jinja join.
+Formatting was moved into the Python view; the existing guard was retained.
+
+Automated PR review then correctly identified two issues: imported references
+could become grants on a later sync through percent-decoding, and moving the
+selected directory reused a path-bound file checkpoint. Private owner grants
+are now independent from merged context, literal paths retain their spelling in
+discovery AND cache validation, explicit local add/remove actions update grants,
+and file checkpoint namespaces include the selected root. A native-team scope
+review also found deterministic imported IDs could overwrite an object moved out
+of this project; creation now refuses409 and the transaction retains foreign
+values. **53 directly affected checks passed** for these corrections, including
+two-run real-API private-file injection, directory relocation, cached grant
+revocation, foreign node/relation preservation and the original template guard.
+These results overlap the earlier checks. All required CI must pass again for
+the correction head; the older head's successful jobs do not substitute for it.
+After separating authority, another **29 directly affected checks passed** with
+new local references kept as validation-only requirements: an attachment added
+outside the protected grant action blocks readiness and is not silently omitted
+or uploaded. Independent read-only review found no critical authority/data-loss
+flaw in the final grant/reference/cache changes. Counts again overlap; no broad
+local suite was repeated for this correction.
+
 During integration an earlier affected run had 138 passing / 3 new i18n failures.
 Labels, placeholder and dynamic-state catalog coverage were corrected and the
 failed checks passed. The guard for unsafe POST routes now includes the new
@@ -108,9 +133,9 @@ no global context switch or foreign container stop. A development OrbStack start
 was also issued during initial runtime discovery; neither runtime was stopped.
 Only the harness's own containers were cleaned up.
 
-Image: `sha256:4e1083d3ccf0f59bed90a6cd649a5b6b338565dc6dda2707dccfc601ec35be52`.
+Image: `sha256:154f9762622fbd2a64968c6bec2a3a295a91015dfc871a8ce6fb74d7d211bb1c`.
 Production input content SHA256:
-`69a72d72229071c7595d022b944d9bebebcbfc73ed385644fda5ba70851591dc`.
+`66677cd726422ae06d1b6795e7a8d1de756f08ead056e932e8f4a76eedb5faf6`.
 The 148 input fingerprints were compared after acceptance; none changed.
 [Source manifest](source-manifest.json), [Linux receipt](linux.json),
 [complete build/acceptance log](linux-acceptance.log).

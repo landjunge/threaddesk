@@ -88,7 +88,17 @@ mapping each generated recovery copy to its original path and known revision.
 Known VCS internals are omitted; explicit references to them block readiness.
 The standalone file CLI synchronizes file content. DesktopSyncManager binds an
 explicit existing local ThreadService/workspace/thread, captures its local file
-grants before merging remote metadata, and passes MetadataReplica to SyncClient.
+grants in a private owner-authorized list separate from replicated context, and
+passes MetadataReplica to SyncClient. Automatic runs never rebuild grants from
+merged context.files. Explicit protected local add/remove actions amend authority;
+old bindings without separate provenance default to no extra grants. Ordinary
+filesystem references are literal; only explicit file: URIs decode escapes.
+Additional local context references remain required validation data: unapproved
+new attachments block readiness rather than silently disappear from inventory.
+They are never passed as source grants. Exact already-inventoried physical names
+can satisfy validation without reinterpreting URI escapes.
+File checkpoint directories include the selected root; metadata checkpoints keep
+their existing workspace/thread/server scope when the project directory moves.
 SourceFile mappings returned by discover_project determine descriptor-bound reads
 AND original write destinations. Revoked grants, unknown external namespaces and
 exact-file siblings cannot become write targets. Recovery stays on the target's
@@ -120,6 +130,9 @@ Absolute file references remain local; incoming safe relative refs are inert and
 never grant access outside an existing source grant. Agent state is not exported.
 Three-way field merges, atomic core receipts and previous snapshots protect
 concurrent values and uncertain responses. Replication never dispatches tasks.
+Deterministic imported node/relation IDs are checked against current scope before
+creation; an object moved to another project cannot be overwritten on reconnect.
+The whole transaction returns metadata_scope409 without partial publication.
 Opaque namespace identity is journaled durably, surviving path changes and full
 backup/restore. Documents are bounded to 1 MiB each, metadata HTTP bodies 4 MiB;
 other request bodies retain the 512 KiB transfer bound. No silent truncation.

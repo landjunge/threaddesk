@@ -102,7 +102,7 @@ def scan_project(root: Path, references=()) -> tuple[list[dict], list[str]]:
 class SyncClient:
     def __init__(self, base_url, token, project_id, root, *, state_dir=None,
                  transport=None, allow_insecure_loopback=False, metadata_replica=None,
-                 local_references=(), approved_roots=()):
+                 local_references=(), approved_roots=(), required_references=()):
         parsed = urlsplit(base_url)
         loopback = parsed.hostname in {"localhost", "127.0.0.1", "::1"}
         if (parsed.scheme != "https" and not (allow_insecure_loopback and loopback and parsed.scheme == "http")):
@@ -160,6 +160,7 @@ class SyncClient:
         self.http = transport or httpx.Client(base_url=self.base_url, headers={"Authorization": "Bearer " + token},
                                              timeout=30, follow_redirects=False)
         self.token = token
+        self.required_references = tuple(required_references)
         self.owns_http = transport is None
 
     def close(self):
@@ -195,10 +196,23 @@ class SyncClient:
         for value in tuple(roots) + self.local_references:
             if not isinstance(value, (str, Path)):
                 continue
-            parsed = urlsplit(str(value))
-            if parsed.scheme not in {'', 'file'} or parsed.netloc:
+            raw = str(value)
+            try:
+                parsed = urlsplit(raw)
+            except ValueError:
                 continue
-            grant = Path(unquote(parsed.path)).expanduser()
+            if not parsed.scheme:
+                # Plain owner paths retain percent escapes, query/hash characters
+                # literally, matching discovery's exact-file grant semantics.
+                grant = Path(raw).expanduser()
+            elif (parsed.scheme == 'file' and raw.lower().startswith('file:')
+                  and not parsed.netloc and not parsed.query and not parsed.fragment):
+                try:
+                    grant = Path(unquote(parsed.path, errors='strict')).expanduser()
+                except UnicodeError:
+                    continue
+            else:
+                continue
             if not grant.is_absolute():
                 grant = self.root / grant
             grant = Path(os.path.abspath(grant))
@@ -440,6 +454,7 @@ class SyncClient:
         thread = self._json("GET", self.api + "/thread")
         context = thread.get("context", {})
         references = context.get("files", []) if isinstance(context, dict) else []
+        references = list(references) + list(self.required_references)
         try:
             plan = self._discover(references)
         except (DiscoveryError, OSError) as exc:

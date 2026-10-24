@@ -200,7 +200,8 @@ def test_core_organization_project_mapping_and_owned_tasks_roundtrip(pair,tmp_pa
     from threaddesk.services.thread_management import manage,organization
     local,tid,remote,pid=pair
     project=local.create_node('project','Existing organized project')
-    task=local.create_node('task','Project-owned task',metadata={'project_id':project.id})
+    other_thread=local.create('Another thread in this project')
+    task=local.create_node('task','Project-owned task',metadata={'project_id':project.id,'thread_id':other_thread.id})
     unrelated=local.create_node('task','Other project task',metadata={'project_id':'another_project'})
     manage(local,{'operation_id':'organize','action':'organize','id':tid,
                   'expected_revision':local.get(tid).revision,'data':{'project_id':project.id}})
@@ -227,6 +228,7 @@ def test_core_organization_project_mapping_and_owned_tasks_roundtrip(pair,tmp_pa
     assert len(local.list_nodes())==3
     assert local.get_node(unrelated.id).title=='Other project task'
     assert local.get_node(task.id).metadata['project_id']==project.id
+    assert local.get_node(task.id).metadata['thread_id']==other_thread.id
     replica.close()
 
 
@@ -304,3 +306,48 @@ def test_idle_polling_304_does_not_grow_receipts_snapshots_or_checkpoint(pair,tm
     assert wire.get_codes[-1]==200
     assert counts()==before
     replica.close()
+
+
+def test_relocated_imported_graph_ids_cannot_overwrite_foreign_scope(pair):
+    local,tid,remote,pid=pair
+    first=local.create_node('task','First imported task',metadata={'thread_id':tid})
+    second=local.create_node('task','Second imported task',metadata={'thread_id':tid})
+    local.store.save_relation(Relation('scope_link',first.id,second.id,'contains'))
+    document=export_document(local,tid)
+    synchronize(remote,pid,'initial_scope',_empty(),document)
+    imported=next(n for n in remote.list_nodes() if n.title=='First imported task')
+    original=deepcopy(imported)
+    foreign_thread=remote.create('Unrelated thread')
+    with remote.store.transaction():
+        imported.metadata['thread_id']=foreign_thread.id
+        imported.title='Moved and privately edited'
+        remote.store.save_node(imported)
+    assert imported.metadata['sync_origin'] not in export_document(remote,pid)['nodes']
+    before=imported.to_dict()
+    receipts=len(remote.store.list_management_operations())
+    snapshots=len(remote.store.list_snapshots(pid))
+    # A new checkpoint has no old baseline; deterministic import IDs still must
+    # never replace a now-foreign object left behind by a previous binding.
+    with pytest.raises(SyncError) as error:
+        synchronize(remote,pid,'fresh_checkpoint',_empty(),document)
+    assert error.value.status==409 and error.value.code=='metadata_scope'
+    assert remote.get_node(imported.id).to_dict()==before
+    assert len(remote.store.list_management_operations())==receipts
+    assert len(remote.store.list_snapshots(pid))==snapshots
+    # Restore the task explicitly as an operator, then move just the old
+    # relation outside scope. The analogous generated relation ID is protected.
+    with remote.store.transaction():
+        remote.store.save_node(original)
+    unrelated=remote.create_node('task','Unrelated relation target',metadata={'thread_id':foreign_thread.id})
+    relation=remote.list_relations()[0]
+    with remote.store.transaction():
+        relation.source_id=unrelated.id
+        relation.target_id=unrelated.id
+        remote.store.save_relation(relation)
+    before_relation=relation.to_dict()
+    assert not export_document(remote,pid)['relations']
+    with pytest.raises(SyncError) as error:
+        synchronize(remote,pid,'fresh_relation_checkpoint',_empty(),document)
+    assert error.value.status==409 and error.value.code=='metadata_scope'
+    assert next(r for r in remote.list_relations() if r.id==relation.id).to_dict()==before_relation
+    assert remote.get_node(unrelated.id).metadata['thread_id']==foreign_thread.id

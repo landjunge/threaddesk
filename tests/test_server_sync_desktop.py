@@ -73,6 +73,13 @@ def test_existing_desktop_binding_metadata_files_and_option_roundtrip(tmp_path,m
         assert any(e['content']=='Desktop task' for e in server.get(uri+'/whiteboard',headers=headers).json()['entries'])
         paths=[f['path'] for f in server.get(uri+'/files',headers=headers).json()['files']]
         assert 'note.md' in paths and any(p.startswith('_external/') for p in paths)
+        # A reference added outside the protected owner-grant UI is required
+        # data, not read authority. Surface the missing approval instead of Ready.
+        unapproved=tmp_path/'unapproved-new.txt';unapproved.write_text('not granted')
+        core.add_file(str(unapproved),thread.id)
+        assert manager.run_once(core,thread.id)['state']=='blocked'
+        assert not any(f['path'].endswith('unapproved-new.txt') for f in server.get(uri+'/files',headers=headers).json()['files'])
+        core.remove_file(str(unapproved),thread.id)
         update={'revision':remote['revision'],'description':'Remote description','notes':'Remote notes'}
         assert server.put(uri+'/thread',headers=headers,json=update).status_code==200
         assert manager.run_once(core,thread.id)['metadata_conflict_count']==0
@@ -86,6 +93,30 @@ def test_existing_desktop_binding_metadata_files_and_option_roundtrip(tmp_path,m
         assert manager.run_once(core,thread.id)['state']=='metadata_only'
         assert (files/'note.md').read_text()=='local original' and attachment.read_text()=='explicit attachment'
         assert server.get(uri+'/files',headers=headers).json()['files']
+        # Replicated references remain data across TWO runs, never new owner grants.
+        private=tmp_path/'private.txt';private.write_text('not authorized for this project')
+        from copy import deepcopy
+        baseline=server.get(uri+'/metadata',headers=headers).json()['document']
+        poisoned=deepcopy(baseline);poisoned['thread']['files'].append('%2e%2e/private.txt')
+        response=server.post(uri+'/metadata/sync',headers=headers,json={
+            'operation_id':'remote-reference-injection','base':baseline,'document':poisoned})
+        assert response.status_code==200,response.text
+        book.update(thread.id,{'offline_enabled':True,'offline_pending':True})
+        for _ in range(2):
+            observed=manager.run_once(core,thread.id)
+            assert observed['state']=='blocked',observed
+        assert '%2e%2e/private.txt' in core.get(thread.id).context.files
+        assert '%2e%2e/private.txt' not in book.load(thread.id)['owner_references']
+        assert not any(f['path'].endswith('private.txt') for f in server.get(uri+'/files',headers=headers).json()['files'])
+        assert private.read_text()=='not authorized for this project'
+        # Moving the selected file directory gets a separate file checkpoint,
+        # while the metadata checkpoint/binding and existing versions survive.
+        moved=tmp_path/'moved-files';moved.mkdir();(moved/'note.md').write_text('local original')
+        book.save(thread.id,url='https://server.example',project_id=pid,root=moved,token='',automatic=False,offline_enabled=True)
+        moved_status=manager.run_once(core,thread.id)
+        assert moved_status['state']!='disconnected',moved_status
+        assert book.load(thread.id)['project_id']==pid
+        assert len(server.get(uri+'/history',headers=headers,params={'path':'note.md'}).json()['versions'])==1
         with pytest.raises(BackupError,match='in use'):
             backup(data,tmp_path/'online.tar')
     cold=backup(data,tmp_path/'cold.tar')
@@ -114,6 +145,11 @@ def test_desktop_form_is_csrf_protected_and_never_reflects_credential(tmp_path,m
     assert response.status_code==200 and 'x'*32 not in response.text
     state=http.get('/api/threads/'+thread.id+'/server-sync').json()
     assert state['configured'] is True and 'token' not in state
+    original=tmp_path/'owner-added.txt';original.write_text('owner added')
+    assert http.post('/threads/'+thread.id+'/files',data={'csrf_token':csrf,'path':str(original)}).status_code==200
+    assert str(original) in BindingBook(core).load(thread.id)['owner_references']
+    assert http.post('/threads/'+thread.id+'/files/remove',data={'csrf_token':csrf,'path':str(original)}).status_code==200
+    assert str(original) not in BindingBook(core).load(thread.id)['owner_references']
     assert core.current().id==other.id  # Reading/configuring does not switch threads.
     from copy import deepcopy
     from threaddesk.server_sync.metadata import export_document,synchronize

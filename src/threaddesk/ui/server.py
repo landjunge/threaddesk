@@ -22,7 +22,7 @@ from threaddesk.core.errors import InvalidState, NotFound, ThreadDeskError
 from threaddesk.services.actors import ActorRegistry
 from threaddesk.services.hausmeister import SURFACE_KINDS, Hausmeister, live_snapshot, note_activity
 from threaddesk.services.room_sync import RoomBook
-from threaddesk.server_sync.desktop import install_routes as install_sync_routes
+from threaddesk.server_sync.desktop import install_routes as install_sync_routes, record_owner_reference
 from threaddesk.server_sync.store import SyncError
 from threaddesk.services.ollama_local import OllamaError
 from threaddesk.core import i18n
@@ -1027,7 +1027,9 @@ def create_app() -> FastAPI:
         request: Request,
         path: str = Form(...),
     ) -> HTMLResponse:
-        _svc().add_file(path, thread_id)
+        core = _svc()
+        core.add_file(path, thread_id)
+        record_owner_reference(core,thread_id,path)
         return workspace(request, {"notice": i18n.translate("ui.file_added", _language(request), path=path.strip())})
 
     @app.post("/threads/{thread_id}/files/remove", response_class=HTMLResponse)
@@ -1036,7 +1038,9 @@ def create_app() -> FastAPI:
         request: Request,
         path: str = Form(...),
     ) -> HTMLResponse:
-        _svc().remove_file(path, thread_id)
+        core = _svc()
+        core.remove_file(path, thread_id)
+        record_owner_reference(core,thread_id,path,allowed=False)
         return workspace(request, {"notice": i18n.translate("ui.file_removed", _language(request))})
 
     @app.post("/threads/{thread_id}/prompt", response_class=HTMLResponse)

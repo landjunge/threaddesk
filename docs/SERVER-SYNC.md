@@ -132,6 +132,13 @@ bekommen stabile logische Namen unter `_external/`; Änderungen gehen auf den
 ursprünglich freigegebenen lokalen Pfad zurück, ohne doppelte Kopie im Hauptbaum.
 Die Freigabe einer einzelnen Datei erlaubt keinen Zugriff auf ihre Nachbarn.
 Entfernte Quellenfreigaben werden vor jedem Durchlauf erneut geprüft.
+Die private Freigabeliste bleibt ausdrücklich von replizierten Dateiverweisen
+getrennt. Lokales Hinzufügen/Entfernen im geschützten Desktop-Formular aktualisiert
+diese Liste; importierte Metadaten tun das nie. Ältere Verbindungen ohne eigene
+Freigabeliste übernehmen keine unbekannten Quellen automatisch. Normale Pfade
+bleiben wörtlich, einschließlich Prozentzeichen; nur ausdrückliche `file:`-URIs
+werden dekodiert. Beim Wechsel des Projektordners bleibt die Metadatenverbindung
+erhalten, während ein eigener Datei-Checkpoint für den neuen Ort angelegt wird.
 
 Unterstützte statische Verweise umfassen Markdown/HTML/CSS, Python-Importe und
 literale Dateiöffnungen, JavaScript-/TypeScript-Importe sowie Asset-Manifeste.

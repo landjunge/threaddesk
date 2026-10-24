@@ -135,3 +135,45 @@ def test_explicit_grants_never_follow_symlinks_or_key_directories(tmp_path):
     plan = discover_project(root, local_references=[tmp_path / 'shortcut/data.txt', forbidden])
     assert plan.files == [] and len(plan.issues) >= 1
     assert data.read_text() == 'context' and forbidden.read_text() == 'private key folder'
+
+
+def test_literal_percent_paths_cannot_grant_decoded_private_file(tmp_path):
+    root = tmp_path / 'project'
+    root.mkdir()
+    decoded_private = write(tmp_path, 'private.txt', 'outside private bytes')
+    literal = write(root, '%2e%2e/private.txt', 'literal project bytes')
+    external_literal = write(tmp_path, 'documents/report%20final.txt', 'literal percent filename')
+    decoded_space = write(tmp_path, 'documents/report final.txt', 'different unapproved file')
+    punctuation = write(tmp_path, 'documents/query?tag#one.txt', 'literal punctuation filename')
+    truncated = write(tmp_path, 'documents/query', 'unapproved URL-parsed alias')
+    plan = discover_project(root, local_references=['%2e%2e/private.txt', str(external_literal), str(punctuation)])
+    assert plan.issues == []
+    paths = {source.path for source in plan.sources.values()}
+    assert literal in paths and external_literal in paths and punctuation in paths
+    assert decoded_private not in paths and decoded_space not in paths and truncated not in paths
+    assert not any(source.read_bytes() in {b'outside private bytes', b'different unapproved file'} for source in plan.sources.values())
+    # Without an existing literal mapping, encoded traversal never becomes a grant.
+    empty = tmp_path / 'empty-project'
+    empty.mkdir()
+    rejected = discover_project(empty, local_references=['%2e%2e/private.txt'])
+    assert rejected.files == [] and rejected.issues
+    assert decoded_private.read_text() == 'outside private bytes'
+
+
+def test_file_uris_and_html_asset_encoding_work_without_server_traversal_aliases(tmp_path):
+    root = tmp_path / 'project'
+    root.mkdir()
+    write(root, 'index.html', '<img src="image%20one.png">')
+    write(root, 'image one.png', 'project image')
+    external = write(tmp_path, 'documents/context one.txt', 'explicit file URI context')
+    safe = discover_project(root, local_references=[external.as_uri()])
+    assert safe.issues == []
+    assert external in {source.path for source in safe.sources.values()}
+    # An encoded alias cannot point at an already authorized outside file through
+    # a server reference. It must use its actual, existing portable mapping.
+    blocked = discover_project(root, local_references=[external.as_uri()],
+                               server_references=['%2e%2e/documents/context%20one.txt'])
+    assert any('Encoded traversal' in issue for issue in blocked.issues)
+    assert len(blocked.files) == len(safe.files)
+    write(root, 'nested/page.html', '<img src="%252e%252e/image%20one.png">')
+    assert any('Encoded traversal' in issue for issue in discover_project(root).issues)

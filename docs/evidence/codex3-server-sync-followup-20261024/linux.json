@@ -1,9 +1,9 @@
 {
   "platform": "Linux",
   "architecture": "x86_64",
-  "image": "sha256:4e1083d3ccf0f59bed90a6cd649a5b6b338565dc6dda2707dccfc601ec35be52",
-  "source_content_sha256": "69a72d72229071c7595d022b944d9bebebcbfc73ed385644fda5ba70851591dc",
-  "log_sha256": "7b68f4db7da32eafad428c639410d2780ced437c3055adf0a21b2a793b21bbc3",
+  "image": "sha256:154f9762622fbd2a64968c6bec2a3a295a91015dfc871a8ce6fb74d7d211bb1c",
+  "source_content_sha256": "66677cd726422ae06d1b6795e7a8d1de756f08ead056e932e8f4a76eedb5faf6",
+  "log_sha256": "2eeab1ac752f754e7a92c3542a2d1b70f7b7babcb46e1b573f2fb70c56029e9c",
   "source_changed_after_run": [],
   "result": "passed",
   "runtime": "existing Colima; explicit Docker context",
@@ -16,7 +16,8 @@
     "complete cold backup and restore to new directory",
     "credentials, metadata snapshots, whiteboards, file histories, conflicts, chunks and durable receipts",
     "stable portable metadata namespace/origins and exact metadata receipt replay after restore",
-    "latest metadata idle-journal and live Desktop status source included"
+    "latest metadata idle-journal and live Desktop status source included",
+    "PR review grant provenance, project scope and required-reference corrections included"
   ],
   "production_deployment": false
 }

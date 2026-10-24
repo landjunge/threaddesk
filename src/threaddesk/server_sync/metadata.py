@@ -287,7 +287,15 @@ def _apply(core, thread_id, document):
     for origin,item in document['nodes'].items():
         node = existing.get(origin)
         if node is None:
-            node = KnowledgeNode(_local_id(thread_id,origin,'node'),item['kind'],item['title'],created_at=now_iso(),source='metadata-replica')
+            identifier=_local_id(thread_id,origin,'node')
+            try:
+                core.store.get_node(identifier)
+            except NotFound:
+                pass
+            else:
+                raise SyncError('Replica node identifier now belongs outside this project scope',
+                                'metadata_scope',409)
+            node = KnowledgeNode(identifier,item['kind'],item['title'],created_at=now_iso(),source='metadata-replica')
         metadata={**item['metadata'],'thread_id':node.metadata.get('thread_id') or thread_id,'sync_origin':origin}
         if item.get('project_origin') is not None:
             metadata['project_id']=node_ids[item['project_origin']]
@@ -310,7 +318,11 @@ def _apply(core, thread_id, document):
     for origin,item in document['relations'].items():
         relation = existing_rel.get(origin)
         if relation is None:
-            relation=Relation(_local_id(thread_id,origin,'relation'),node_ids[item['source']],node_ids[item['target']],item['kind'],now_iso(),source='metadata-replica',metadata={'sync_origin':origin})
+            identifier=_local_id(thread_id,origin,'relation')
+            if any(r.id==identifier for r in core.store.list_relations()):
+                raise SyncError('Replica relation identifier now belongs outside this project scope',
+                                'metadata_scope',409)
+            relation=Relation(identifier,node_ids[item['source']],node_ids[item['target']],item['kind'],now_iso(),source='metadata-replica',metadata={'sync_origin':origin})
         else:
             relation.source_id,relation.target_id,relation.kind=node_ids[item['source']],node_ids[item['target']],item['kind']
             relation.revision+=1

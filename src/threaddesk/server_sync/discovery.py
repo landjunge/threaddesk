@@ -57,6 +57,24 @@ def _absolute(value, parent=None):
     return Path(os.path.abspath(path))
 
 
+def _encoded_path_escape(value):
+    """Encoded URL path syntax must not disguise a different filesystem scope."""
+    current = value
+    for _ in range(4):
+        try:
+            decoded = unquote(current, errors='strict')
+        except UnicodeError:
+            return True
+        if decoded == current:
+            return False
+        normalized = decoded.replace('\\', '/')
+        if '..' in normalized.split('/') or (normalized.startswith('/') and not value.startswith('/')):
+            return True
+        current = decoded
+    # Further nested escapes are ambiguous rather than a grant to guess at.
+    return '%' in current and unquote(current) != current
+
+
 def _directory_fd(path):
     descriptor = os.open('/', os.O_RDONLY | os.O_DIRECTORY)
     try:
@@ -372,7 +390,14 @@ class _Inventory:
         if value == '__dynamic_html_base__':
             self.issue('HTML base URL requires an explicit dependency mapping', logical)
             return
-        raw_path = unquote(parsed.path)
+        if _encoded_path_escape(parsed.path):
+            self.issue('Encoded traversal or ambiguous dependency path is not an approved source', logical)
+            return
+        try:
+            raw_path = unquote(parsed.path, errors='strict') if web or parsed.scheme == 'file' else parsed.path
+        except UnicodeError:
+            self.issue('Dependency URI contains invalid encoded text', logical)
+            return
         if web and raw_path.startswith('/') and parsed.scheme != 'file':
             target = _absolute(raw_path.lstrip('/'), self.root)
         else:
@@ -614,19 +639,35 @@ def discover_project(root, *, local_references=(), approved_roots=(), server_ref
             inventory.issue('Invalid local file reference')
             continue
         raw = str(value)
-        parsed = urlsplit(raw)
-        if parsed.scheme in {'http', 'https', 'data', 'mailto', 'tel'}:
+        try:
+            parsed = urlsplit(raw)
+        except ValueError:
+            inventory.issue('Malformed local file reference')
             continue
-        if parsed.scheme not in {'', 'file'} or parsed.netloc:
+        if not parsed.scheme:
+            # context.files/add-file paths are literal filesystem names, not URLs.
+            # In particular %2e%2e, %20, # and ? never change the owner's grant.
+            inventory.add_grant(raw)
+        elif parsed.scheme in {'http', 'https', 'data', 'mailto', 'tel'}:
+            continue
+        elif parsed.scheme == 'file' and raw.lower().startswith('file:') and not parsed.netloc and not parsed.query and not parsed.fragment:
+            try:
+                path = unquote(parsed.path, errors='strict')
+            except UnicodeError:
+                inventory.issue('Local file URI contains invalid encoded text')
+                continue
+            if path:
+                inventory.add_grant(path)
+        else:
             inventory.issue('Unsupported local file reference')
-            continue
-        if parsed.path:
-            inventory.add_grant(unquote(parsed.path))
     inventory.scan()
     inventory.inspect()
+    known_physical = {str(source.path) for source in inventory.plan.sources.values()}
     # Remote references are checked only against files already read from grants.
     for value in server_references:
         if isinstance(value, str):
+            if value in known_physical:
+                continue
             # Use a synthetic existing source to carry only a logical origin label.
             if inventory.plan.sources:
                 logical = next(iter(inventory.plan.sources))

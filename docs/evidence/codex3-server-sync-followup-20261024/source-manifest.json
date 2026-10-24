@@ -1,5 +1,5 @@
 {
-  "source_content_sha256": "69a72d72229071c7595d022b944d9bebebcbfc73ed385644fda5ba70851591dc",
+  "source_content_sha256": "66677cd726422ae06d1b6795e7a8d1de756f08ead056e932e8f4a76eedb5faf6",
   "files": [
     {
       "path": "LICENSE",
@@ -47,7 +47,7 @@
     },
     {
       "path": "src/threaddesk/core/i18n.py",
-      "sha256": "73103e006f16bda9f6ca76b7a2e018de1f8202a465349a01ea00a35403d5babb"
+      "sha256": "9754588bc57b1955bf4cd42f068ff44f7ac19c9a5d75c7daf56206ee02a674ae"
     },
     {
       "path": "src/threaddesk/core/import_models.py",
@@ -103,19 +103,19 @@
     },
     {
       "path": "src/threaddesk/server_sync/client.py",
-      "sha256": "9d568cf55399a813baeecf621df5224b5c8b686e3993a1763b59333ff418628b"
+      "sha256": "3d61376dcfcc04a9e45accc8628ee40cad7c3df81ffddf40ed594c9196709bb4"
     },
     {
       "path": "src/threaddesk/server_sync/desktop.py",
-      "sha256": "2b2eef44c06d4d6a07608f29109de273c516b3ad2d046669a1d6b3461e6ba329"
+      "sha256": "2db75e948685a92e7fe703fc4e4441e5c582f543b953d9b0a875f0f310b561ad"
     },
     {
       "path": "src/threaddesk/server_sync/discovery.py",
-      "sha256": "53e624f0447d1002d0693a42baa243ede7e4f70ccc4e1428add60194245bafc5"
+      "sha256": "4b982143e3b486f9ffd77af29f744d9ed856d0cbb501d73969d7ffe33f12d66a"
     },
     {
       "path": "src/threaddesk/server_sync/metadata.py",
-      "sha256": "ef12b60d94c04613baec557ef99d0e7fb57af03ffd8b79a352f4c8054d803f46"
+      "sha256": "e1bc419365cc32b096df9da0be654cb1bcded07f1bc4266d862f62fe1b89664b"
     },
     {
       "path": "src/threaddesk/server_sync/metadata_routes.py",
@@ -383,7 +383,7 @@
     },
     {
       "path": "src/threaddesk/ui/server.py",
-      "sha256": "ff56fda5ab9d0be15da6c9d91cef1774accdb78ccd45dcae7c6e2116489fbc65"
+      "sha256": "35f78a9a5d8fc41e75c118e58c00820cec4b6861bb55b049dd296577990ec796"
     },
     {
       "path": "src/threaddesk/ui/static/UI-VENDOR-LICENSES.txt",
@@ -567,7 +567,7 @@
     },
     {
       "path": "src/threaddesk/ui/templates/server_sync.html",
-      "sha256": "3cc2570fa482b21844dfe94f61a1b6ffb997346babfc153246ad8190d4528a0f"
+      "sha256": "f0f7286d399f2e33e4920dc6f8fdad2b59c3a509991501444209083a4da7af98"
     },
     {
       "path": "src/threaddesk.egg-info/PKG-INFO",
