@@ -9,14 +9,15 @@
     "errors": 0,
     "skipped": 0
   },
-  "library_cases": 30,
+  "library_cases": 31,
   "initial_baseline_regressions": 3,
   "source_sha256": {
     "src/threaddesk/storage/library_backup.py": "b977edeee57b24eeef79622182d6b14ed869156e8eccaba2e01049ccfca2ce7e",
     "src/threaddesk/storage/portable_backup.py": "8f102ce2e83600bbe5aebc20b5b7c1a789616c73a54ad5b3177fcce444bd1c13",
     "src/threaddesk/storage/workspace_backup.py": "f34b0f3e55d6df31a98c5d21816d290679bc5296e430d3da85fb23c2695e4aa2",
-    "tests/test_library_backup.py": "87d5590ca6a9efbd3d8a37997ada7a0b0ff1b85b84132af0472499ddea0d7dbd",
-    ".github/workflows/tests.yml": "5cea83f8a1ee2b905e46602bd3edeb5a001f7b831f021554cf0032591717e4ce"
+    "tests/test_library_backup.py": "9ec573be627c6e53e83d65b17cfb7a1157c325d5088b8726b0532679fe6203c2",
+    ".github/workflows/tests.yml": "5cea83f8a1ee2b905e46602bd3edeb5a001f7b831f021554cf0032591717e4ce",
+    "src/threaddesk/services/library_receive.py": "8345ac84df30c5cf98d1b78596c11f480f8e7fc8849c9ae3d765b58fd3d4e862"
   },
   "local_full_suite": "not run; mandatory PR suite remains required",
   "native_windows": "pending PR job; new library tests included",
@@ -34,5 +35,25 @@
     "errors": 0,
     "skipped": 0
   },
-  "targeted_checks_scope": "207 affected checks before the final super-journal guard; final 30 library checks validate that guard and all library paths"
+  "targeted_checks_scope": "207 affected checks before the final super-journal guard; final 30 library checks validate that guard and all library paths",
+  "pre_windows_fix_source_sha256": {
+    "src/threaddesk/storage/library_backup.py": "b977edeee57b24eeef79622182d6b14ed869156e8eccaba2e01049ccfca2ce7e",
+    "src/threaddesk/storage/portable_backup.py": "8f102ce2e83600bbe5aebc20b5b7c1a789616c73a54ad5b3177fcce444bd1c13",
+    "src/threaddesk/storage/workspace_backup.py": "f34b0f3e55d6df31a98c5d21816d290679bc5296e430d3da85fb23c2695e4aa2",
+    "tests/test_library_backup.py": "87d5590ca6a9efbd3d8a37997ada7a0b0ff1b85b84132af0472499ddea0d7dbd",
+    ".github/workflows/tests.yml": "5cea83f8a1ee2b905e46602bd3edeb5a001f7b831f021554cf0032591717e4ce"
+  },
+  "windows_fix_local_checks": {
+    "tests": 101,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "initial_native_windows": {
+    "run": 40114758978,
+    "passed": 167,
+    "failed": 27,
+    "cause": "setup receiver commit OSError; read-only flush handle",
+    "new_head_acceptance": "pending"
+  }
 }

@@ -84,3 +84,22 @@ release-version alignment remain separate open tasks. The existing glib
 Dependabot alert in the unchanged Rust lockfile is not resolved by this Python
 backup change. Final push/PR/merge status belongs in the shared whiteboard;
 the preceding source-pinned desktop artifact is not relabelled as a new build.
+
+## Native Windows follow-up
+
+The first PR90 Windows run
+[40114758978](https://github.com/landjunge/threaddesk/actions/runs/40114758978)
+had 167 passing and 27 failing cases. All 27 failed during fixture setup at the
+same real MCP receive commit, before taking a backup; the newly added native
+coverage exposed an earlier receiver portability defect rather than a reason
+to omit the new tests. The three native desktop package jobs passed.
+
+Published blobs/records were reopened as `rb` before `os.fsync`. Windows flushing
+requires a write-capable handle, as documented for
+[FlushFileBuffers](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-flushfilebuffers).
+The receiver now uses `r+b` for this explicit write operation, without truncating
+or writing payload bytes. A regression models this access requirement with a
+zero-byte write before flushing; it reproduced the original OSError locally.
+After the change, all 101 affected library/receiver cases passed, including the
+31 final library cases. Native Windows acceptance must still be recorded for
+the new head; the failed run is not relabelled or skipped.

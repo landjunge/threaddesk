@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import sqlite3
+import stat
 import subprocess
 import sys
 import zipfile
@@ -441,3 +442,23 @@ def test_external_super_journal_is_refused_before_sqlite_opens_the_capture(tmp_p
         download_backup(store)
     assert outside.read_bytes() == b"must remain untouched"
     assert journal.read_bytes().endswith(trailer)
+
+
+def test_receiver_commit_uses_flushable_handles_without_changing_bytes(tmp_path, monkeypatch):
+    original_fsync = os.fsync
+    checked = []
+
+    def write_access_required(fd):
+        # Model FlushFileBuffers' GENERIC_WRITE requirement on POSIX too.
+        # A zero-byte write checks access without altering data or offset.
+        if stat.S_ISREG(os.fstat(fd).st_mode):
+            os.write(fd, b"")
+            checked.append(fd)
+        return original_fsync(fd)
+
+    monkeypatch.setattr(os, "fsync", write_access_required)
+    store = JsonStore(tmp_path / "source")
+    svc, original, receipt, payload = prepare(store, tmp_path)
+    path, _ = LibraryImporter(store).open_record(receipt["record_id"])
+    assert checked and path.read_bytes() == payload
+    assert original.read_bytes() == b"Library roundtrip text\n"
