@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block body %}
+<script src="/static/library-command.js" defer></script>
 <main class="panel migration-center library-import" tabindex="0" aria-label="{{ t('library.title') }}" data-testid="library-import">
   <h1>{{ t("library.title") }}</h1>
   <p>{{ t("library.intro") }}</p>
@@ -30,6 +31,38 @@
     <input id="library-package" name="package" type="file" accept=".zip,application/zip" required />
     <button class="btn btn-primary" type="submit">{{ t("library.package_submit") }}</button>
   </form>
+
+  <p class="muted">{{ t("library.command_help") }}</p>
+  <form method="post" action="/library/command">
+    <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
+    <label for="library-command">{{ t("library.command") }}</label>
+    <input id="library-command" name="command" type="text" required maxlength="400" data-library-command />
+    <button class="btn btn-primary" type="submit">{{ t("library.command_submit") }}</button>
+    <button class="btn btn-ghost" type="button" data-library-speak
+            data-unavailable="{{ t('library.speech_unavailable') }}"
+            data-denied="{{ t('library.speech_denied') }}"
+            data-silent="{{ t('library.speech_silent') }}"
+            data-insecure="{{ t('library.speech_insecure') }}">{{ t("library.speak") }}</button>
+    <p class="muted" data-library-speech></p>
+  </form>
+  {% if command_result %}
+  <section>
+    {% if command_result.ok %}
+    <ul>
+      {% for hit in command_result.hits %}
+      <li><a href="/library/files/{{ hit.id }}">{{ hit.filename }}</a> · {{ hit.thread_title }}</li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p role="alert">{{ command_result.error }}</p>
+    {% endif %}
+  </section>
+  {% endif %}
+  <p class="muted">
+    {% if library.index.status == "failed" or library.index.failed %}{{ t("library.index_failed", failed=library.index.failed) }}
+    {% elif library.index.status == "ready" %}{{ t("library.index_ready", documents=library.index.documents) }}
+    {% else %}{{ t("library.index_missing") }}{% endif %}
+  </p>
 
   <form method="post" action="/library/resume">
     <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
