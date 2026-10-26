@@ -8,12 +8,14 @@ from pathlib import Path, PurePosixPath
 
 from threaddesk.core.errors import ManagementError, NotFound
 from threaddesk.core.models import new_id, now_iso
-from threaddesk.services.library_import import LibraryImporter
 from threaddesk.services.library_files import state, validation
 
 
 class LibraryFileService:
     def __init__(self, store, *, opener=None, handler_resolver=None):
+        # The importer reads state overlays; defer construction to avoid a module
+        # initialization cycle when index code imports the independent state API.
+        from threaddesk.services.library_import import LibraryImporter
         self.store = store
         self.importer = LibraryImporter(store)
         self.root = self.importer.root
