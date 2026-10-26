@@ -298,3 +298,41 @@ def test_source_change_after_copy_preserves_snapshot_and_reports_conflict(setup,
     updated = LibraryBatchImporter(store).run({"files": [current]}, operation_id="fresh-after-copy")
     assert updated["complete"]
     assert updated["files"][0]["predecessor_record_id"] == record["id"]
+
+
+@pytest.mark.parametrize("trashed", [True, False], ids=["in-trash", "previously-restored"])
+def test_new_current_version_preserves_predecessor_lifecycle(setup, trashed):
+    store, source = setup
+    service = ThreadService(store=store)
+    thread = service.create("Bestehende Dateizuordnung")
+    primary = service.create_node("project", "Primärer Knoten")
+    secondary = service.create_node("project", "Weiterer Anhangsknoten")
+    entry = row(source, thread_id=thread.id, node_id=primary.id)
+    batch = LibraryBatchImporter(store)
+    first = batch.run({"files": [entry]}, operation_id="lifecycle-before")
+    first_id = first["files"][0]["record_id"]
+    importer = LibraryImporter(store)
+    _, previous = importer.open_record(first_id)
+    previous.update(trashed=trashed, trash_generation=4, deleted_at="2026-10-20T09:30:00+00:00",
+                    node_ids=[primary.id, secondary.id])
+    if not trashed:
+        previous["restored_at"] = "2026-10-21T10:00:00+00:00"
+    importer._write_json(importer.records / (first_id + ".json"), previous)
+    Path(entry["path"]).write_text("Aktuelle Bytes verändern den Papierkorbzustand nicht.\n")
+    current = {k: v for k, v in entry.items() if k not in {"sha256", "size", "thread_id", "node_id"}}
+    refreshed = batch.run({"files": [current]}, operation_id="lifecycle-after")
+    assert refreshed["complete"]
+    record_id = refreshed["files"][0]["record_id"]
+    assert record_id != first_id
+    _, updated = importer.open_record(record_id)
+    for field in ("trashed", "trash_generation", "deleted_at"):
+        assert updated[field] == previous[field]
+    assert updated.get("restored_at") == previous.get("restored_at")
+    assert updated["node_ids"] == [primary.id, secondary.id]
+    assert updated["node_id"] == primary.id
+    assert updated["thread_id"] == thread.id
+    assert updated["predecessor_record_id"] == first_id
+    assert updated["source_refs"] == [entry["source_ref"]]
+    assert batch.resume("lifecycle-after") == refreshed
+    _, unchanged_previous = importer.open_record(first_id)
+    assert unchanged_previous == previous

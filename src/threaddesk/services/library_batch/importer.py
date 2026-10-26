@@ -193,6 +193,11 @@ class LibraryBatchImporter:
                         metadata_row[field] = previous_record[field]
                 if row.get("node_id") is None and previous_record.get("node_ids"):
                     record["node_ids"] = list(previous_record["node_ids"])
+                if new_record and record["id"] != predecessor:
+                    # A source refresh is a new byte version, never a restore.
+                    for field in ("trashed", "trash_generation", "deleted_at", "restored_at"):
+                        if field in previous_record:
+                            record[field] = previous_record[field]
             record, assignment = self._metadata(record, metadata_row, preserve_assignment=preserve)
             sources["sources"][key]["state"] = "complete"
             source_error = self._post_copy_check(path, digest, size)
