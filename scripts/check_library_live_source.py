@@ -100,6 +100,14 @@ def main():
         assert current["current_version"] and current["predecessor_record_id"] == identity
         assert not command("info", id=identity)["current_version"]
         assert command("search", query="FreshAddedNeedle")["hits"]
+        trashed = command("trash", id=current["id"], operation_id="source-current-trash",
+                          expected_revision=current["revision"], data={})["record"]
+        restored = command("restore", id=current["id"], operation_id="source-current-restore",
+                           expected_revision=trashed["revision"],
+                           data={"trash_generation": trashed["trash_generation"]})["record"]
+        assert restored["id"] == current["id"] and not restored["trashed"]
+        assert command("operation", operation_id="source-current-restore")["found"]
+        assert command("search", query="CurrentSourceNeedle")["hits"]
         before = command("sources")["watches"][0]["fingerprint"]
         original.unlink()
         status = wait_for(lambda watch: watch["fingerprint"] != before and watch["missing_sources_count"] > 0)

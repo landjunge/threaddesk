@@ -3,7 +3,7 @@
   const panel = document.querySelector("[data-graph-files]");
   if (!panel) return;
   const strings = JSON.parse(panel.dataset.strings || "{}");
-  const t = key => strings[`files.${key}`] || key;
+  const t = key => strings[`graph_files.${key}`] || key;
   const find = name => panel.querySelector(`[data-${name}]`);
   const list = find("files-list"), status = find("files-status");
   const dialog = find("file-preview"), message = find("file-message");

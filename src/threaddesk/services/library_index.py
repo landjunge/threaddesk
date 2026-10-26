@@ -37,7 +37,8 @@ class _KeepPrevious(Exception):
 
 class LibraryIndex:
     def __init__(self, library_root: Path) -> None:
-        self.root = Path(library_root)
+        root = Path(library_root)
+        self.root = root.parent.resolve() / root.name
         self.path = self.root / "index.json"
         self.database = SearchDatabase(self.root)
 

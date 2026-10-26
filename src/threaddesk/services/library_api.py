@@ -140,8 +140,21 @@ class LibraryApplication:
             return binding.completed(args["operation_id"], result)
         if action == "formats":
             from threaddesk.services.file_formats import describe
-            from threaddesk.services.library_import import supported_formats
-            return [describe("file" + row["suffix"]) for row in supported_formats()]
+            from threaddesk.services.library_import import (
+                LibraryImportError, supported_formats, validate_received_filename,
+            )
+            result = []
+            for row in supported_formats():
+                filename = "file" + row["suffix"]
+                item = describe(filename)
+                try:
+                    validate_received_filename(filename)
+                except LibraryImportError as exc:
+                    item.update(import_allowed=False, import_error=exc.code)
+                else:
+                    item.update(import_allowed=True, import_error="")
+                result.append(item)
+            return result
         if action == "search":
             query = args.pop("query", "")
             if not isinstance(query, str) or not query.strip() or len(query.encode()) > 1000:

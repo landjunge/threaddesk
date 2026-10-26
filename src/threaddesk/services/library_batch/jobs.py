@@ -14,7 +14,7 @@ from threaddesk.services.library_batch.manifest import operation_id
 
 class JobStore:
     def __init__(self, store):
-        self.root = Path(store.workspace_path)
+        self.root = Path(store.workspace_path).resolve()
 
     def _path(self, name):
         path = self.root / name

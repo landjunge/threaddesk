@@ -23,7 +23,7 @@ Das Datenprofil wird wie bei den bisherigen Befehlen mit `THREADDESK_HOME` und `
 | `action` | Eingabe | Inhalt |
 | --- | --- | --- |
 | `status` | keine weiteren Felder | Kompakte Bestandszähler, Import- und Indexzustand; tatsächliche Paket-/Buildidentität. Dateidetails separat über `list`/`import_status`, Formatdetails über `formats`. `historical_inventory_verified=false` ist kein Fehler des Teilimports, sondern die offene historische Quellenprüfung. |
-| `formats` | keine weiteren Felder | Unabhängige Fähigkeiten `manage`, `index`, `preview`, `preview_kind`, `external_open`, `index_reason` pro registrierter Endung. |
+| `formats` | keine weiteren Felder | Unabhängige Fähigkeiten `manage`, `index`, `preview`, `preview_kind`, `external_open`, `index_reason` und die getrennte Aufnahmegrenze `import_allowed`/`import_error` pro registrierter Endung. |
 | `search` | `query`, optional `limit`, `offset`, `entity_type`, `thread_id`, `project_id`, `kind`, `date_from`, `date_to`, `assignment`, `include_trashed` | Treffer und Indexstatus. Standarddomäne ist `all`; wählbar sind `file`, `thread`, `node`. |
 | `list` | optional `thread_id`, `node_id`, `folder`, `sort`, `include_trashed`, `limit`, `offset` | Dateirecords, logische Unterordner, Gesamtzahl, `next_offset` und Generation. Sortierung `name`, `date`, `size`, `type`. |
 | `info` | exakte Datei-`id` | Aktueller Record mit Revision, Prüfsumme, logischem Pfad, Herkunft und Zuordnungen. Papierkorbeinträge sind in der normalen Information gesperrt. |
@@ -87,7 +87,7 @@ Für umfangreiche Importmanifeste `--request-file` verwenden. Ein Manifest enth�
 | HTML/HTM | Sicher extrahierter Text ohne Script-/Styleinhalt | Metadaten entsprechend Registry und Vorschaugrenze, kein aktives HTML | Nur nach ausdrücklicher Aktion im zulässigen Standardprogramm |
 | PDF | `pypdf`-Text im begrenzten Childprozess; keine OCR, verschlüsselte/gescannte Dateien gegebenenfalls nur Metadaten | Extrahierter Text, sonst Metadaten; kein eingebetteter PDF-Skriptrenderer | Erlaubter zugeordneter Mac-Betrachter |
 | DOCX, ODT, XLSX, ODS, PPTX, ODP, EPUB, RTF | Begrenzte sichere Textextraktion; Makros werden nicht ausgeführt | Extrahierter Text, keine Zusage originalgetreuen Office-/Tabellenlayouts | Erlaubter zugeordneter Mac-Betrachter |
-| DOC, XLS, PPT, KEY | Dateiname/Pfad/Metadaten; kein installierter Volltextadapter | Metadaten | Erlaubter zugeordneter Mac-Betrachter |
+| DOC, XLS, PPT | Dateiname/Pfad/Metadaten; kein installierter Volltextadapter | Metadaten | Erlaubter zugeordneter Mac-Betrachter |
 | CSV/TSV, JSON, XML, YAML, TOML, SQL, LOG, INI/CFG | Begrenzter Text | Text, keine Daten-/Queryausführung | Explizit, soweit ein zulässiger Standardbetrachter gefunden wird |
 | PY, JS, TS und weitere registrierte Quellcodes/Skripte | Begrenzter Text | Text | Standardübergabe blockiert, damit ein Interpreter nicht unbemerkt Inhalte ausführt |
 | JPG/JPEG, PNG, GIF, WEBP, BMP | Name/Pfad/Metadaten; keine OCR | Bild, sofern der tatsächliche Browserdecoder den Inhalt unterstützt | Erlaubter zugeordneter Mac-Betrachter |
@@ -132,3 +132,7 @@ Der getrennte aktuelle Quellenabgleich erfasste 24 tatsächlich lesbare gleichna
 Die sieben alten Projekt-/Threadziel-IDs existieren im vorhandenen Operatorprofil, nicht im separaten Desktopprofil. Sie dürfen nicht nach ähnlichen Titeln still ersetzt werden. Bei einer Übernahme in das Desktopprofil ist ein bestätigtes neues Mapping oder der zentrale Eingang erforderlich. Private Pfad-/Prüfsummenlisten und geschützte Inhalte gehören nicht ungeprüft in öffentliche Belege.
 
 Für jede Funktion sind Implementierung, passende Tests, tatsächlicher Bridgezugang sowie Installation/Produktivdatenübernahme getrennte Zustände. Der finale Integrations-/Paketbericht muss diese Zustände am tatsächlichen Quellpin ergänzen; dieses Vertragsdokument erfindet sie nicht.
+
+Nachtrag zur Bridge-Abnahme: Der separate Auftrag `td-library-frozen-live-20261026-v2` wurde anschließend erfolgreich im sichtbaren Terminal unter `codex` ausgeführt: 275 synthetische Dateien, 51 Aufrufe des gefrorenen Backends vom Pin `387a2eb`, max. 10.530 Bytes je Antwort, automatische Quellenänderungen und unabhängige Readbacks. Completion wurde verarbeitet und quittiert. Dieser Kandidatenbeleg ersetzt weiterhin weder produktiven Originalimport noch ChatGPT-Principal- oder finale Installationsprüfung.
+
+KEY-Aufnahmegrenze: `.key` kollidiert mit der bestehenden Schutzregel für private Schlüssel und wird im Ordnerimport sowie Dateiempfang derzeit mit `secret_name` gesperrt. Der Formatkatalog weist deshalb `import_allowed=false` aus. Ein bereits gespeicherter zulässiger Record kann verwaltbar sein; dies ist keine Zusage, eine neue Keynote-Datei aufnehmen zu können. Eine sichere positive Keynote-Inhaltsprüfung einschließlich echter geprüfter Fixture fehlt. KEY gilt ausdrücklich als noch nicht vollständig unterstützt; die private-Schlüssel-Sperre wird nicht pauschal gelockert.

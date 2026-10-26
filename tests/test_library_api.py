@@ -171,3 +171,13 @@ def test_source_refresh_has_definite_replay_and_readback(library, monkeypatch):
     assert app.call({"action": "operation", "operation_id": request["operation_id"]})["result"] == result
     assert app.call(request) == {**result, "duplicate": True}
     assert len(calls) == 1
+
+
+def test_format_capabilities_do_not_hide_import_guards(library):
+    app, *_ = library
+    formats = {row["suffix"]: row for row in app.call({"action": "formats"})}
+    assert not formats[".key"]["import_allowed"]
+    assert formats[".key"]["import_error"] == "secret_name"
+    assert not formats[".exe"]["import_allowed"]
+    assert formats[".pdf"]["import_allowed"]
+    assert formats[".py"]["import_allowed"] and not formats[".py"]["external_open"]

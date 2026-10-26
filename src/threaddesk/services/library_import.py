@@ -166,7 +166,7 @@ def _zip_members(package: Path) -> list[tuple[str, bytes]]:
 class LibraryImporter:
     def __init__(self, store) -> None:
         self.store = store
-        self.workspace = Path(store.workspace_path)
+        self.workspace = Path(store.workspace_path).resolve()
         self.root = self.workspace / "library-files"
         self.blobs = self.root / "blobs"
         self.records = self.root / "records"

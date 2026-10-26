@@ -212,7 +212,11 @@ class LibraryFileService:
     def _check_destination(self, record, action):
         if action not in {"rename", "copy", "move", "restore"}:
             return
+        from threaddesk.services.library_files.versions import confirmed_predecessors
+        previous_versions = confirmed_predecessors(record, self.root)
         for other in self.importer._read_records():
+            if other["id"] in previous_versions and not other.get("copied_from"):
+                continue
             if (other["id"] != record["id"] and not other.get("trashed")
                     and other.get("logical_path", other.get("origin_path", "")).casefold()
                     == record["logical_path"].casefold()):
