@@ -163,6 +163,7 @@ class LibraryBatchImporter:
                 _, record = self.importer.open_record(receipt["record_id"])
                 item_status = "duplicate"
                 preserve = receipt.get("state") == "complete"
+                new_record = bool(receipt.get("new_record")) and not preserve
             else:
                 journal = self.importer._read_journal()
                 self.importer.expected_source = (digest, size)
@@ -174,21 +175,24 @@ class LibraryBatchImporter:
                     raise LibraryImportError("source_changed_during_import")
                 item_status = imported.status
                 preserve = item_status == "duplicate"
+                new_record = item_status == "stored"
             # Persist this stage before metadata/link writes, so interrupted mapping
             # is distinguishable from an already completed duplicate import.
             sources["sources"][key] = {"record_id": record["id"], "sha256": digest, "size": size,
-                                       "state": "record_published", "history": history,
+                                       "state": "record_published", "history": history, "new_record": new_record,
                                        "predecessor_record_id": predecessor,
                                        "recorded_at": now_iso()}
             self.jobs.write("library-batch-sources.json", sources)
-            if predecessor and not record.get("predecessor_record_id") and record["id"] != predecessor:
+            if predecessor and new_record and not record.get("predecessor_record_id") and record["id"] != predecessor:
                 record["predecessor_record_id"] = predecessor
             metadata_row = dict(row)
             if predecessor:
-                previous_record = self.importer._record_by_id(predecessor) or {}
+                previous_record = self._previous_record(predecessor)
                 for field in ("thread_id", "node_id"):
                     if metadata_row.get(field) is None and previous_record.get(field):
                         metadata_row[field] = previous_record[field]
+                if row.get("node_id") is None and previous_record.get("node_ids"):
+                    record["node_ids"] = list(previous_record["node_ids"])
             record, assignment = self._metadata(record, metadata_row, preserve_assignment=preserve)
             sources["sources"][key]["state"] = "complete"
             return dict(result, status=item_status, record_id=record["id"], sha256=digest,
@@ -201,6 +205,16 @@ class LibraryBatchImporter:
             return dict(result, status="failed", error=exc.code)
         except (OSError, ValueError, InvalidState) as exc:
             return dict(result, status="failed", error=type(exc).__name__)
+
+    def _previous_record(self, record_id):
+        record = self.importer._record_by_id(record_id) or {}
+        try:
+            from threaddesk.services.library_files.state import apply_overlay
+        except ModuleNotFoundError as exc:
+            if exc.name not in {"threaddesk.services.library_files", "threaddesk.services.library_files.state"}:
+                raise
+            return record
+        return apply_overlay(record, self.importer.root)
 
     def _metadata(self, record, row, *, preserve_assignment):
         assignment = "unassigned"
@@ -251,13 +265,6 @@ class LibraryBatchImporter:
         try:
             from inspect import signature
             records = self.importer._read_records()
-            try:
-                from threaddesk.services.library_files.state import effective_records
-            except ModuleNotFoundError as exc:
-                if exc.name not in {"threaddesk.services.library_files", "threaddesk.services.library_files.state"}:
-                    raise
-            else:
-                records = effective_records(self.store, records)
             rebuild = LibraryIndex(self.importer.root).rebuild
             if "store" in signature(rebuild).parameters:
                 return rebuild(records, self.importer.blobs, store=self.store)

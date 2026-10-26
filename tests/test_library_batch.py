@@ -256,3 +256,21 @@ def test_new_current_source_version_inherits_existing_assignment(setup):
     assert updated["files"][0]["thread_id"] == thread.id
     assert updated["files"][0]["node_id"] == node.id
     assert updated["files"][0]["predecessor_record_id"] == first["files"][0]["record_id"]
+
+
+def test_source_reverting_to_old_bytes_keeps_acyclic_version_history(setup):
+    store, source = setup
+    entry = row(source)
+    path = Path(entry["path"])
+    original_bytes = path.read_bytes()
+    batch = LibraryBatchImporter(store)
+    original = batch.run({"files": [entry]}, operation_id="history-first")
+    current = {k: v for k, v in entry.items() if k not in {"sha256", "size"}}
+    path.write_text("Andere aktuelle Version\n")
+    batch.run({"files": [current]}, operation_id="history-second")
+    path.write_bytes(original_bytes)
+    reverted = batch.run({"files": [current]}, operation_id="history-revert")
+    assert reverted["files"][0]["record_id"] == original["files"][0]["record_id"]
+    _, record = LibraryImporter(store).open_record(original["files"][0]["record_id"])
+    assert not record.get("predecessor_record_id")
+    assert len(LibraryImporter(store)._read_records()) == 2
