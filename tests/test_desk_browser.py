@@ -242,6 +242,24 @@ def test_user_keeps_notes_and_snapshot_across_restart(tmp_path: Path) -> None:
             ).click()
             expect(page.locator(".snap-label")).to_have_text(LABEL)
 
+            # The save can commit before restore, yet its full-workspace reply
+            # can arrive afterwards. Exercise that order with real HTTP writes.
+            page.evaluate(r"""() => {
+                window.snapshotRestoreSwapped = false;
+                document.addEventListener('htmx:afterSwap', event => {
+                    const url = event.detail?.xhr?.responseURL || '';
+                    if (/\/snapshots\/[^/]+\/restore$/.test(url)) {
+                        window.snapshotRestoreSwapped = true;
+                    }
+                });
+            }""")
+
+            def delayed_note_reply(route):
+                response = route.fetch()
+                page.wait_for_function("() => window.snapshotRestoreSwapped === true")
+                route.fulfill(response=response)
+
+            page.route("**/threads/*/note", delayed_note_reply, times=1)
             _open_section(page, "notes")
             notes = page.locator('#notes textarea[name="text"]')
             notes.fill(LATER)
@@ -289,6 +307,64 @@ def _open_section(page, name: str) -> None:
     section = page.locator(f'details[data-disclosure="{name}"]')
     if not section.evaluate("el => el.open"):
         section.locator(":scope > summary").click()
+
+
+def test_late_note_reply_cannot_hide_a_later_write_failure(tmp_path: Path) -> None:
+    """A delayed success must preserve a newer error and its unsaved text."""
+    home = tmp_path / "desk"
+    home.mkdir()
+    desk = Desk(home)
+    try:
+        url = desk.start()
+        with sync_playwright() as play:
+            browser = _launch(play)
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            choose_language(page, url, "de")
+            _create(page, "Verspätete Speicherbestätigung")
+            _open_section(page, "notes")
+            page.evaluate("""() => {
+                window.delayedNoteFinished = false;
+                document.addEventListener('htmx:afterRequest', event => {
+                    if (event.detail?.xhr?.responseURL?.endsWith('/note')) {
+                        window.delayedNoteFinished = true;
+                    }
+                });
+            }""")
+            posts = []
+
+            def delayed_note_reply(route):
+                posts.append("note")
+                response = route.fetch()
+                page.wait_for_function("""() => !!document.querySelector(
+                    '#request-state[role="alert"][data-state="unknown"]')""")
+                route.fulfill(response=response)
+
+            def failed_board_write(route):
+                posts.append("whiteboard")
+                route.abort()
+
+            page.route("**/threads/*/note", delayed_note_reply)
+            page.route("**/threads/*/whiteboard", failed_board_write)
+            notes = page.locator('#notes textarea[name="text"]')
+            notes.fill("Diese Notiz wurde gespeichert.")
+            page.locator('#notes form[hx-post$="/note"] button[type="submit"]').click()
+            board = page.locator("[data-whiteboard-content]")
+            board.fill("Dieser ungespeicherte Eintrag muss erhalten bleiben.")
+            page.locator("[data-whiteboard-submit]").click()
+            page.wait_for_function("() => window.delayedNoteFinished === true")
+            expect(page.locator('#request-state[role="alert"]')).to_be_visible()
+            expect(page.locator("#request-state")).to_contain_text(
+                "Keine verlässliche Speicherbestätigung"
+            )
+            expect(board).to_have_value(
+                "Dieser ungespeicherte Eintrag muss erhalten bleiben."
+            )
+            expect(notes).to_have_value("Diese Notiz wurde gespeichert.")
+            assert posts.count("note") == posts.count("whiteboard") == 1
+            browser.close()
+    finally:
+        desk.stop()
+
 
 def _create(page, title: str) -> None:
     page.wait_for_function(

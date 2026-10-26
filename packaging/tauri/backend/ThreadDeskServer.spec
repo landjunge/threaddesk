@@ -1,11 +1,14 @@
 """PyInstaller server-only bundle; must run from the ThreadDesk project root."""
 from pathlib import Path
+import subprocess
+import sys
 from PyInstaller.utils.hooks import collect_submodules
 
 ROOT = Path.cwd()
 PACKAGE = ROOT / "src" / "threaddesk"
 if not PACKAGE.is_dir():
     raise RuntimeError("Run this build with the ThreadDesk repository as cwd")
+subprocess.run([sys.executable, str(ROOT / "scripts/write_build_info.py")], check=True)
 datas = []
 for item in PACKAGE.rglob("*"):
     if item.is_file() and not item.is_symlink() and item.suffix not in {".py", ".pyc", ".pyo"}:

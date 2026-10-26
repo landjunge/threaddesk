@@ -1,9 +1,11 @@
 from pathlib import Path
 import sys
+import subprocess
 
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 ROOT = Path.cwd()
+subprocess.run([sys.executable, str(ROOT / "scripts/write_build_info.py")], check=True)
 datas = collect_data_files("threaddesk")
 hiddenimports = collect_submodules("uvicorn") + collect_submodules("webview")
 icons = ROOT / "build" / "icons"

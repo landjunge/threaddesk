@@ -306,10 +306,25 @@ document.addEventListener("input", event => {
     requestState("browser.unsaved");
   }
 });
+// Independent forms can finish out of order. A completed older write must not
+// replace the workspace requested by a later action, such as loading a snapshot.
+// Let every write finish; suppress only its superseded view and success notice.
+const workspaceRequests = new WeakMap();
+let latestWorkspaceRequest = 0;
+function supersededWorkspaceResponse(event) {
+  const order = workspaceRequests.get(event.detail?.xhr);
+  return order !== undefined && order < latestWorkspaceRequest;
+}
 document.body.addEventListener("htmx:beforeRequest", event => {
+  if (event.detail?.target?.id === "workspace" && event.detail.xhr) {
+    workspaceRequests.set(event.detail.xhr, ++latestWorkspaceRequest);
+  }
   if (event.detail?.requestConfig?.verb?.toLowerCase() === "get") return;
   document.querySelectorAll("#workspace [role=status], #workspace [role=alert]").forEach(node => { node.hidden = true; });
   requestState("browser.saving");
+});
+document.body.addEventListener("htmx:beforeSwap", event => {
+  if (supersededWorkspaceResponse(event)) event.detail.shouldSwap = false;
 });
 function requestFailure(event) {
   if (event.detail?.requestConfig?.verb?.toLowerCase() === "get") requestState("browser.request_failed", true);
@@ -317,6 +332,7 @@ function requestFailure(event) {
 }
 document.body.addEventListener("htmx:afterRequest", event => {
   if (event.detail?.successful) {
+    if (supersededWorkspaceResponse(event)) return;
     const node = document.getElementById("request-state");
     if (node) { node.hidden = true; node.removeAttribute("role"); } // Server notice confirms storage.
   } else requestFailure(event);

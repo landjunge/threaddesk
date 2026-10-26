@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "threaddesk"
-version = "0.1.1rc1"
+version = "0.1.2"
 description = "Local-first control layer: persistent threads for AI work. Stores context, never executes."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -29,7 +29,7 @@ server = ["fastapi>=0.110", "uvicorn>=0.54", "httpx>=0.27"]
 where = ["src"]
 
 [tool.setuptools.package-data]
-threaddesk = ["ui/templates/**/*.html", "ui/static/*"]
+threaddesk = ["_build_info.json", "ui/templates/**/*.html", "ui/static/*"]
 "threaddesk.server_sync" = ["web/*"]
 
 [tool.pytest.ini_options]

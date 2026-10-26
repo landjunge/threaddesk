@@ -18,6 +18,7 @@ from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
 
 from threaddesk.api.service import ThreadService
+from threaddesk.build_info import BUILD_DESCRIPTION, BUILD_ID, BUILD_LABEL
 from threaddesk.core.errors import InvalidState, NotFound, ThreadDeskError
 from threaddesk.services.actors import ActorRegistry
 from threaddesk.services.hausmeister import SURFACE_KINDS, Hausmeister, live_snapshot, note_activity
@@ -290,6 +291,9 @@ def create_app() -> FastAPI:
     templates.env.globals["languages"] = i18n.LANGUAGES
     templates.env.globals["language_names"] = i18n.LANGUAGE_NAMES
     templates.env.globals["registers"] = i18n.REGISTERS
+    templates.env.globals.update(
+        build_label=BUILD_LABEL, build_description=BUILD_DESCRIPTION, build_id=BUILD_ID,
+    )
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     def workspace(request: Request, extra: dict | None = None) -> HTMLResponse:
