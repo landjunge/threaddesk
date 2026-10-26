@@ -72,9 +72,10 @@ def imported(graph_files):
     command(page, {"action": "reindex", "operation_id": "browser-index"})
     record = read(page, "list")["records"][0]
     page.reload(wait_until="networkidle")
-    page.locator(f'.map-node[data-node-id="{node}"]').click()
+    page.locator(f'.map-node[data-node-id="{node}"] .map-node-shape').click()
     panel = page.locator("[data-graph-files]")
     expect(panel.locator(f'[data-file-record="{record["id"]}"]')).to_be_visible()
+    panel.locator("[data-files-controls] > summary").click()
     return page, panel, record
 
 

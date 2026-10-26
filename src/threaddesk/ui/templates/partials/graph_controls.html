@@ -1,0 +1,12 @@
+<form class="graph-filters" data-map-filters role="search" aria-label="{{ t('map.search') }}">
+  <label class="graph-query">{{ t('map.search') }}<input data-map-query type="search" maxlength="200" autocomplete="off" /></label>
+  <label>{{ t('map.filter_kind') }}<select data-map-kind>
+    <option value="">{{ t('map.all_kinds') }}</option>
+    {% for kind in ('project', 'task', 'document', 'person', 'agent', 'decision', 'result', 'tool', 'source', 'workflow') %}
+    <option value="{{ kind }}">{{ t('kind.' ~ kind) }}</option>
+    {% endfor %}
+  </select></label>
+  <label>{{ t('map.filter_project') }}<select data-map-project><option value="">{{ t('map.all_projects') }}</option></select></label>
+  <button class="btn btn-ghost" type="button" data-map-clear-filters>{{ t('map.clear_filters') }}</button>
+  <output data-map-filter-count class="graph-filter-count" aria-live="polite" hidden></output>
+</form>

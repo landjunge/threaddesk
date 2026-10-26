@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block shell_class %} graph-shell{% endblock %}
 {% block body %}
 <main class="map-page" tabindex="0" aria-label="{{ t('map.title') }}" data-graph-endpoint="/api/graph" data-strings='{{ map_strings|safe }}' data-actor-marks="{{ actor_marks_json }}">
   <header class="map-toolbar">
@@ -12,9 +13,13 @@
       <button class="btn btn-ghost" type="button" data-map-zoom-out aria-label="{{ t('map.zoom_out') }}">−</button>
       <button class="btn btn-ghost" type="button" data-map-reset>{{ t("map.fit") }}</button>
       <button class="btn btn-ghost" type="button" data-map-zoom-in aria-label="{{ t('map.zoom_in') }}">+</button>
+      <button class="btn btn-ghost" type="button" data-map-focus-selection disabled>{{ t("map.focus_selection") }}</button>
+      <button class="btn btn-ghost" type="button" data-map-inspector-toggle aria-expanded="false" aria-controls="map-inspector">{{ t("map.inspector") }}</button>
     </div>
+    {% include "partials/graph_controls.html" %}
   </header>
-  <section class="map-stage" data-map-stage aria-label="{{ t('map.stage_label') }}">
+  <div class="map-workspace">
+    <section class="map-stage" data-map-stage aria-label="{{ t('map.stage_label') }}">
     <svg class="map-canvas" data-map-canvas viewBox="0 0 1000 700" role="img" aria-labelledby="map-title map-description">
       <title id="map-title">{{ t("map.svg_title") }}</title>
       <desc id="map-description">{{ t("map.svg_desc") }}</desc>
@@ -22,7 +27,26 @@
     </svg>
     <p class="map-empty" data-map-empty hidden>{{ t("map.empty") }}</p>
     <p class="map-error" data-map-error hidden>{{ t("map.error") }}</p>
-  </section>
+    </section>
+    <aside class="map-inspector" id="map-inspector" data-map-inspector aria-label="{{ t('map.inspector') }}" hidden>
+      <header class="map-inspector-head">
+        <div class="map-inspector-tabs" role="tablist" aria-label="{{ t('map.inspector') }}">
+          <button class="btn btn-ghost" type="button" id="map-selection-tab" role="tab" data-map-tab="selection" aria-selected="true" aria-controls="map-selection-pane">{{ t("map.tab_selection") }}</button>
+          <button class="btn btn-ghost" type="button" id="map-files-tab" role="tab" data-map-tab="files" aria-selected="false" aria-controls="map-files-pane" tabindex="-1">{{ t("map.tab_files") }}</button>
+        </div>
+        <button class="btn btn-ghost" type="button" data-map-inspector-close aria-label="{{ t('map.inspector_close') }}">×</button>
+      </header>
+      <section class="panel map-detail" id="map-selection-pane" role="tabpanel" aria-labelledby="map-selection-tab" tabindex="0" data-map-pane="selection" data-map-detail aria-live="polite">
+        <p class="eyebrow">{{ t("map.selection") }}</p>
+        <h2 data-map-detail-title>{{ t("map.no_selection") }}</h2>
+        <p class="muted" data-map-detail-text>{{ t("map.pick_hint") }}</p>
+        <dl data-map-detail-meta hidden></dl>
+      </section>
+      <section class="map-files-pane" id="map-files-pane" role="tabpanel" aria-labelledby="map-files-tab" tabindex="0" data-map-pane="files" hidden>
+        {% include "partials/graph_files.html" %}
+      </section>
+    </aside>
+  </div>
   <ul class="map-legend" aria-label="{{ t('map.legend') }}">
     <li><span class="key key-circle"></span>{{ t("map.legend_circle") }}</li>
     <li><span class="key key-rect"></span>{{ t("map.legend_rect") }}</li>
@@ -34,15 +58,12 @@
     <li><span class="key key-tone tone-risk"></span>{{ t("map.legend_risk") }}</li>
     <li><span class="key key-circle key-ai"></span>{{ t("map.legend_ai") }}</li>
   </ul>
-  <section class="panel map-detail" tabindex="0" data-map-detail aria-live="polite">
-    <p class="eyebrow">{{ t("map.selection") }}</p>
-    <h2 data-map-detail-title>{{ t("map.no_selection") }}</h2>
-    <p class="muted" data-map-detail-text>{{ t("map.pick_hint") }}</p>
-    <dl data-map-detail-meta hidden></dl>
-  </section>
-  {% include "partials/graph_files.html" %}
 </main>
 <link rel="stylesheet" href="/static/graph-files.css" />
+<link rel="stylesheet" href="/static/graph-workspace.css" />
+<script src="/static/map-viewport.js" defer></script>
+<script src="/static/map-layout.js" defer></script>
+<script src="/static/graph-workspace.js" defer></script>
 <script src="/static/map.js" defer></script>
 <script src="/static/graph-files.js" defer></script>
 {% endblock %}

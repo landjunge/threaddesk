@@ -328,15 +328,26 @@ select:focus-visible {
 }
 
 
+.shell.graph-shell {
+  height: 100dvh;
+  min-width: 0;
+  min-height: 0;
+}
+
+.graph-shell .topbar { gap: var(--space-3); }
+.graph-shell .brand { min-width: 144px; }
+.graph-shell .topbar-actions { min-width: 0; gap: var(--space-2); }
+.graph-shell .view-nav { gap: var(--space-2); }
+
 .map-page {
   display: grid;
-  grid-template-rows: auto minmax(180px, 1fr) auto auto;
-  gap: var(--space-4);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--space-3);
   width: 100%;
   min-height: 0;
   margin: 0;
   padding: var(--space-4);
-  overflow: auto;
+  overflow: hidden;
 }
 
 .map-toolbar {
@@ -347,13 +358,72 @@ select:focus-visible {
 }
 
 .map-actions { display: flex; gap: var(--space-2); }
+.map-toolbar > div:first-child { min-width: 0; }
+.map-toolbar .eyebrow { margin: 0 0 var(--space-1); }
+.map-toolbar [data-map-summary] { margin: var(--space-1) 0 0; }
+.map-page .map-toolbar .map-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; }
+.map-page .map-toolbar .map-actions .btn { width: auto; flex: 0 0 auto; }
+
+.map-workspace {
+  display: flex;
+  gap: var(--space-3);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.map-inspector {
+  flex: 0 0 clamp(320px, 30vw, 400px);
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elevated);
+}
+
+.map-inspector-head {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+.map-inspector-tabs { display: flex; gap: var(--space-1); min-width: 0; }
+.map-inspector-tabs [aria-selected="true"] { background: var(--bg-raised); border-color: var(--fg); }
+.map-page .map-inspector [data-map-pane] {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  min-width: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.map-inspector [data-map-pane]::-webkit-scrollbar { display: block; width: 8px; height: 8px; }
+.map-inspector [data-map-pane]::-webkit-scrollbar-thumb { background: var(--border-strong); }
+.map-inspector .map-detail { margin: 0; padding: var(--space-4); border: 0; }
+.map-inspector .map-detail h2, .map-inspector .map-detail p, .map-inspector .map-detail dd { overflow-wrap: anywhere; }
+.map-page .map-legend { padding: var(--space-1) var(--space-2); }
+
+@media (max-width: 1000px) {
+  .graph-shell .topbar { padding-inline: var(--space-3); }
+  .graph-shell .brand { min-width: 120px; }
+  .graph-shell .view-nav { gap: var(--space-1); }
+  .map-toolbar { gap: var(--space-2); }
+  .map-page .map-toolbar .map-actions { gap: var(--space-1); }
+  .map-inspector { flex-basis: 320px; }
+}
 
 .map-stage {
+  flex: 1 1 0;
+  min-width: 0;
   position: relative;
   overflow: hidden;
-  /* Feste Höhe statt min-height: sonst wächst die Bühne auf die
-     Eigenhöhe des SVG (viewBox-Seitenverhältnis) und die Karte
-     reicht über den Bildschirmrand hinaus. */
+  /* The canvas fills the workspace; inspector contents never size this row. */
   height: 100%;
   min-height: 0;
   border: 1px solid var(--border-strong);

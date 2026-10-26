@@ -49,6 +49,9 @@ def test_verified_import_receipts_metadata_assignment_and_restart(setup):
     blob, record = importer.open_record(receipt["record_id"])
     assert blob.read_bytes() == before[0]
     assert record["node_id"] == node.id
+    assert record["node_ids"] == [node.id]
+    from threaddesk.services.library_files import LibraryFileService
+    assert LibraryFileService(store).preview(record["id"])["record"]["node_ids"] == [node.id]
     assert record["source_refs"] == [entry["source_ref"]]
     assert record["source_metadata"][entry["source_ref"]]["historical_identity"] == "unverified"
     assert (origin.read_bytes(), origin.stat().st_mtime_ns) == before

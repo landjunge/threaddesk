@@ -14,7 +14,7 @@
     <script src="/static/alpine.min.js" defer></script>
   </head>
   <body class="np-ui" data-language="{{ lang }}" data-register="{{ register }}" data-ui-strings="{{ browser_strings|default('{}')|e }}">
-    <div class="shell np-desktop">
+    <div class="shell np-desktop{% block shell_class %}{% endblock %}">
       <header class="topbar">
         <div class="brand">
           <div>

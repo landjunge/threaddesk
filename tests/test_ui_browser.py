@@ -129,11 +129,19 @@ def page(live_map):
         browser.close()
 
 
+@pytest.fixture(autouse=True)
+def fresh_map_view(page, live_map):
+    """Each gesture starts with its own camera, selection and drawer state."""
+    page.set_viewport_size({"width": 1280, "height": 900})
+    page.goto(f"{live_map[0]}/map", wait_until="networkidle")
+    page.wait_for_selector(".map-node", timeout=15000)
+
+
 def test_no_overlay_swallows_node_clicks(page):
     """Ein Klick in die Knotenmitte muss den Knoten treffen, kein Overlay."""
     hit = page.evaluate(
         """() => {
-            const box = document.querySelector('.map-node').getBoundingClientRect();
+            const box = document.querySelector('.map-node-shape').getBoundingClientRect();
             const el = document.elementFromPoint(
                 box.x + box.width / 2, box.y + box.height / 2);
             return el.closest('.map-node') ? 'map-node' : el.tagName
@@ -145,7 +153,7 @@ def test_no_overlay_swallows_node_clicks(page):
 
 def test_click_selects_node_and_fills_detail(page):
     page.click("[data-map-reset]")
-    page.locator(".map-node").first.click()
+    page.locator(".map-node-shape").first.click()
     assert page.locator(".map-node.is-selected").count() == 1
     assert page.locator("[data-map-detail-title]").inner_text() != "Kein Knoten gewählt"
     assert page.locator("[data-map-detail-meta]").is_visible()
@@ -154,11 +162,11 @@ def test_click_selects_node_and_fills_detail(page):
 def test_shift_click_collects_and_plain_click_resets(page):
     page.click("[data-map-reset]")
     nodes = page.locator(".map-node")
-    nodes.nth(0).click()
-    nodes.nth(1).click(modifiers=["Shift"])
-    nodes.nth(2).click(modifiers=["Shift"])
+    nodes.nth(0).locator(".map-node-shape").click()
+    nodes.nth(1).locator(".map-node-shape").click(modifiers=["Shift"])
+    nodes.nth(2).locator(".map-node-shape").click(modifiers=["Shift"])
     assert page.locator(".map-node.is-selected").count() == 3
-    nodes.nth(0).click()
+    nodes.nth(0).locator(".map-node-shape").click()
     assert page.locator(".map-node.is-selected").count() == 1
 
 
@@ -186,12 +194,12 @@ def _visible_nodes(page) -> tuple[int, int]:
 
 
 def _centre_offset(page) -> tuple[float, float]:
-    """Abstand der Graphmitte zur Bühnenmitte, in Bildschirmpixeln."""
+    """Measure shapes; readable captions independently move during zoom."""
     return tuple(page.evaluate(
         """() => {
             const stage = document.querySelector('[data-map-stage]')
                 .getBoundingClientRect();
-            const boxes = [...document.querySelectorAll('.map-node')]
+            const boxes = [...document.querySelectorAll('.map-node-shape')]
                 .map(g => g.getBoundingClientRect());
             const cx = (Math.min(...boxes.map(b => b.left))
                 + Math.max(...boxes.map(b => b.right))) / 2;
@@ -238,7 +246,7 @@ def test_pan_follows_the_cursor(page, width):
     page.wait_for_timeout(150)
     stage = page.locator("[data-map-stage]").bounding_box()
     before = page.evaluate(
-        "() => document.querySelector('.map-node').getBoundingClientRect().x")
+        "() => document.querySelector('.map-node-shape').getBoundingClientRect().x")
     # Auf leerer Fläche greifen, sonst wird ein Knoten versetzt statt geschoben.
     spot = page.evaluate(
         """() => {
@@ -264,7 +272,7 @@ def test_pan_follows_the_cursor(page, width):
     page.mouse.up()
     page.wait_for_timeout(100)
     after = page.evaluate(
-        "() => document.querySelector('.map-node').getBoundingClientRect().x")
+        "() => document.querySelector('.map-node-shape').getBoundingClientRect().x")
     moved = after - before
     assert abs(moved - 150) <= 8, (
         f"Cursor 150px, Inhalt {moved:.1f}px bei Fensterbreite {width}")
@@ -274,8 +282,8 @@ def test_shift_click_does_not_select_label_text(page):
     """Shift-Klick sammelt Knoten — er darf nicht nebenbei Text markieren."""
     page.click("[data-map-reset]")
     nodes = page.locator(".map-node")
-    nodes.nth(0).click()
-    nodes.nth(1).click(modifiers=["Shift"])
+    nodes.nth(0).locator(".map-node-shape").click()
+    nodes.nth(1).locator(".map-node-shape").click(modifiers=["Shift"])
     selected_text = page.evaluate("() => window.getSelection().toString()")
     assert selected_text == "", f"Shift-Klick markierte Text: {selected_text!r}"
 
@@ -416,7 +424,7 @@ def test_node_can_be_dragged(page):
     """Knoten lassen sich versetzen, ohne die Auswahl auszulösen."""
     page.click("[data-map-reset]")
     page.wait_for_timeout(120)
-    node = page.locator(".map-node").first
+    node = page.locator(".map-node-shape").first
     box = node.bounding_box()
     start_x = box["x"] + box["width"] / 2
     start_y = box["y"] + box["height"] / 2

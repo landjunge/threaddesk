@@ -15,6 +15,7 @@ Regeln:
 
 from __future__ import annotations
 
+from threaddesk.core.graph_i18n import GRAPH_STRINGS
 from threaddesk.core.library_i18n import FILE_STRINGS
 
 LANGUAGES = ("de", "en")
@@ -1253,6 +1254,7 @@ CATALOG: dict[str, dict[str, str]] = {
 
 
 CATALOG.update(FILE_STRINGS)
+CATALOG.update(GRAPH_STRINGS)
 
 
 def normalise(language: str | None) -> str:

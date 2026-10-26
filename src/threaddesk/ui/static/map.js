@@ -21,11 +21,10 @@
   } catch (error) {
     STRINGS = {};
   }
-  try {
-    ACTORS = JSON.parse(root.dataset.actorMarks || "{}");
-  } catch (error) {
-    ACTORS = {};
-  }
+  try { ACTORS = JSON.parse(root.dataset.actorMarks || "{}"); }
+  catch (_) { ACTORS = {}; }
+  const ACTOR_COLORS = {ink: "#8b909a", moss: "#6f8f78", clay: "#a68462",
+    sea: "#6d8ea3", plum: "#8d7ea8", sand: "#b1a27a"};
   const t = (key, values) => {
     let text = STRINGS[key];
     if (text === undefined) return key;
@@ -36,10 +35,12 @@
     }
     return text;
   };
-  const MIN_SCALE = 0.25;
+  const viewport = window.ThreadDeskMapViewport;
+  const MIN_SCALE = 0.04;
   const MAX_SCALE = 4;
-  const [, , VIEW_W, VIEW_H] = (canvas.getAttribute("viewBox") || "0 0 1000 700")
-    .split(/\s+/).map(Number);
+  let VIEW_W = Math.max(1, stage.clientWidth);
+  let VIEW_H = Math.max(1, stage.clientHeight);
+  canvas.setAttribute("viewBox", `0 0 ${VIEW_W} ${VIEW_H}`);
 
   // ---------------------------------------------------------------- Sprache
   // Form trägt den Typ, Farbe den Zustand. Farbe ist nie das einzige Signal:
@@ -107,66 +108,11 @@
   };
 
   // ---------------------------------------------------------------- Layout
-  // Kräftesimulation statt fester Kreis: Verbundenes rückt zusammen,
-  // Unverbundenes weicht aus. Ohne Zufall, damit dieselben Daten dieselbe
-  // Karte ergeben.
-  const layout = (nodes, relations) => {
-    const CX = VIEW_W / 2;
-    const CY = VIEW_H / 2;
-    const count = nodes.length;
-    const points = new Map();
-    nodes.forEach((node, index) => {
-      const angle = (index / Math.max(count, 1)) * Math.PI * 2;
-      const spread = 120 + (index % 5) * 26;
-      points.set(node.id, {
-        x: CX + Math.cos(angle) * spread,
-        y: CY + Math.sin(angle) * spread * 0.72,
-        vx: 0, vy: 0, r: radiusOf(node) + 26,
-      });
-    });
-    const links = relations
-      .map((rel) => [points.get(rel.source_id), points.get(rel.target_id)])
-      .filter(([a, b]) => a && b && a !== b);
-    const list = [...points.values()];
-    const REST = 168;
-    for (let step = 0; step < 420; step += 1) {
-      const cooling = 1 - step / 420;
-      for (let i = 0; i < list.length; i += 1) {
-        for (let j = i + 1; j < list.length; j += 1) {
-          const a = list[i];
-          const b = list[j];
-          let dx = b.x - a.x;
-          let dy = b.y - a.y;
-          let dist = Math.hypot(dx, dy) || 0.01;
-          const push = 24000 / (dist * dist);
-          dx /= dist; dy /= dist;
-          a.vx -= dx * push; a.vy -= dy * push;
-          b.vx += dx * push; b.vy += dy * push;
-          const overlap = a.r + b.r - dist;
-          if (overlap > 0) {
-            a.vx -= dx * overlap * 0.5; a.vy -= dy * overlap * 0.5;
-            b.vx += dx * overlap * 0.5; b.vy += dy * overlap * 0.5;
-          }
-        }
-      }
-      links.forEach(([a, b]) => {
-        let dx = b.x - a.x;
-        let dy = b.y - a.y;
-        const dist = Math.hypot(dx, dy) || 0.01;
-        const pull = (dist - REST) * 0.012;
-        dx /= dist; dy /= dist;
-        a.vx += dx * pull; a.vy += dy * pull;
-        b.vx -= dx * pull; b.vy -= dy * pull;
-      });
-      list.forEach((p) => {
-        p.vx += (CX - p.x) * 0.004;
-        p.vy += (CY - p.y) * 0.004;
-        p.x += p.vx * cooling; p.y += p.vy * cooling;
-        p.vx *= 0.82; p.vy *= 0.82;
-      });
-    }
-    return points;
-  };
+  // Bestätigte Beziehungen ordnen eine ruhige, lesbare Anfangsansicht.
+  // Bereits gesetzte Positionen bleiben bei Aktualisierungen erhalten.
+  const layout = (nodes, relations, previous = new Map()) =>
+    window.ThreadDeskMapLayout(nodes, relations,
+      {width: VIEW_W, height: VIEW_H, radiusOf, previous});
 
   // ---------------------------------------------------------------- Zeichnen
   const el = (name, attrs = {}) => {
@@ -203,24 +149,25 @@
   // Beschriftung unter den Knoten, damit nichts abgeschnitten wird.
   const caption = (title) => {
     const group = el("g", {class: "map-label"});
-    const words = title.split(/\s+/);
+    group.appendChild(el("rect", {class: "map-label-hit", fill: "transparent", "pointer-events": "all"}));
+    const words = title.split(/\s+/).flatMap(word => word.match(/.{1,24}/g) || []);
     const lines = [];
     let line = "";
-    words.forEach((word) => {
+    words.forEach(word => {
       const candidate = line ? `${line} ${word}` : word;
-      if (candidate.length > 22 && line) {
-        lines.push(line);
-        line = word;
-      } else {
-        line = candidate;
-      }
+      if (candidate.length > 24 && line) { lines.push(line); line = word; }
+      else line = candidate;
     });
     if (line) lines.push(line);
+    if (lines.length > 2) lines[1] = `${lines[1].slice(0, 23)}…`;
     lines.slice(0, 2).forEach((text, index) => {
-      const item = el("text", {"text-anchor": "middle", y: 54 + index * 15});
+      const item = el("text", {"text-anchor": "middle", y: index * 16});
       item.textContent = text;
       group.appendChild(item);
     });
+    const fullTitle = el("title");
+    fullTitle.textContent = title;
+    group.appendChild(fullTitle);
     return group;
   };
 
@@ -292,13 +239,32 @@
   let nodeDrag = null;
   let placed = new Map();
   let sizes = new Map();
+  let updateLabels = () => {};
+  let applyFilter = () => {};
+  let activeFilter = {query: "", kind: "", project_id: ""};
+  let focusTicket = 0;
+  const cancelFocus = () => {
+    focusTicket += 1;
+    root.classList.remove("is-focusing");
+  };
+  let selectedFocusId = null;
+  const focusSelectionControl = root.querySelector("[data-map-focus-selection]");
+  const updateFocusControl = () => {
+    if (!focusSelectionControl) return;
+    const selected = [...world.querySelectorAll(".is-selected[data-node-id]")]
+      .some(node => node.style.display !== "none");
+    focusSelectionControl.disabled = !selected;
+    focusSelectionControl.setAttribute("aria-disabled", String(!selected));
+  };
 
   const applyTransform = () => {
     world.setAttribute("transform", `translate(${offsetX} ${offsetY}) scale(${scale})`);
+    updateLabels();
   };
   // Programmatischer Fokus gleitet einmal hin. Ziehen und Rad bleiben direkt.
   // effects-off deckt den Schalter und prefers-reduced-motion ab.
   const focusOn = (point) => {
+    const ticket = ++focusTicket;
     const targetX = VIEW_W / 2 - scale * point.x;
     const targetY = VIEW_H / 2 - scale * point.y;
     const motionOk = !root.classList.contains("effects-off");
@@ -313,6 +279,7 @@
     const startY = offsetY;
     const start = performance.now();
     const step = (now) => {
+      if (ticket !== focusTicket) return;
       const amount = Math.min(1, (now - start) / 220);
       const eased = 1 - (1 - amount) ** 3;
       offsetX = startX + (targetX - startX) * eased;
@@ -342,6 +309,7 @@
   };
   // Zoomt um einen festen Punkt, damit der Inhalt nicht aus dem Bild wandert.
   const zoomAt = (factor, anchor) => {
+    cancelFocus();
     const next = clamp(scale * factor);
     if (next === scale) return;
     offsetX = anchor.x - (next / scale) * (anchor.x - offsetX);
@@ -356,27 +324,22 @@
   const zoom = (factor) => zoomAt(factor, stageCentre());
   // Einpassen heißt einpassen: der ganze Graph muss sichtbar werden.
   const fit = () => {
-    scale = 1;
-    offsetX = 0;
-    offsetY = 0;
-    applyTransform();
-    const nodes = world.querySelector("[data-map-nodes]");
-    if (!nodes) return;
-    const box = nodes.getBBox();
-    if (!box.width || !box.height) return;
-    const padding = 44;
-    scale = clamp(Math.min(
-      (VIEW_W - padding * 2) / box.width,
-      (VIEW_H - padding * 2) / box.height,
-    ));
-    offsetX = VIEW_W / 2 - scale * (box.x + box.width / 2);
-    offsetY = VIEW_H / 2 - scale * (box.y + box.height / 2);
+    cancelFocus();
+    const points = [...world.querySelectorAll(".map-node")]
+      .filter(node => node.style.display !== "none")
+      .map(node => ({...placed.get(node.dataset.nodeId), r: sizes.get(node.dataset.nodeId)}));
+    const camera = viewport.fit(points, VIEW_W, VIEW_H);
+    if (!camera) return;
+    scale = camera.scale;
+    offsetX = camera.x;
+    offsetY = camera.y;
     applyTransform();
   };
 
   const render = (graph, refreshing = false) => {
     const selectedIds = refreshing ? [...world.querySelectorAll(".is-selected[data-node-id]")].map(item => item.dataset.nodeId) : [];
     const previousPositions = placed;
+    updateLabels = () => {};
     world.replaceChildren();
     canvas.querySelector("defs")?.remove();
     canvas.insertBefore(defs(), canvas.firstChild);
@@ -386,7 +349,7 @@
     });
 
     world.appendChild(backdrop());
-    placed = layout(graph.nodes, graph.relations);
+    placed = layout(graph.nodes, graph.relations, refreshing ? previousPositions : new Map());
     if (refreshing && previousPositions) {
       previousPositions.forEach((point, id) => { if (placed.has(id)) placed.set(id, point); });
     }
@@ -461,8 +424,8 @@
     graph.nodes.forEach((node) => {
       const point = placed.get(node.id);
       const tone = toneOf(node);
-      const appearance = node.metadata && ACTORS[node.metadata.actor_id];
-      const ai = node.kind === "agent" || Boolean(appearance && appearance.ai);
+      const appearance = ACTORS[node.metadata?.actor_id];
+      const ai = node.kind === "agent" || Boolean(appearance?.ai);
       const group = el("g", {
         class: `map-node map-node-${shapeOf(node)} map-tone-${tone}${ai ? " is-ai" : ""}`,
         transform: `translate(${point.x.toFixed(1)} ${point.y.toFixed(1)})`,
@@ -473,7 +436,6 @@
       });
       const threadId = node.metadata && node.metadata.thread_id;
       if (typeof threadId === "string" && threadId) group.dataset.threadId = threadId;
-      if (appearance && appearance.color_token) group.dataset.actorTone = appearance.color_token;
       const halo = outline(node);
       halo.setAttribute("class", "map-node-halo");
       const shape = outline(node);
@@ -486,7 +448,26 @@
       const mark = el("g", {class: "map-node-mark", transform: `translate(${mx} ${my})`});
       mark.appendChild(el("circle", {class: "map-node-mark-disc", r: 8}));
       mark.appendChild(el("path", {class: "map-node-mark-sign", d: MARK[tone] || MARK.idle}));
-      group.append(halo, shape, glyph, mark, caption(node.title));
+      const hit = el("rect", {class: "map-node-hit", fill: "transparent", "pointer-events": "all"});
+      group.append(hit, halo, shape, glyph, mark, caption(node.title));
+      if (appearance) {
+        const badge = el("g", {class: "map-node-actor-mark",
+          transform: `translate(${-mx} ${my})`, "data-actor-tone": appearance.color_token,
+          "pointer-events": "none"});
+        badge.appendChild(el("circle", {r: 6, fill: ACTOR_COLORS[appearance.color_token] || "#8b909a",
+          stroke: "#04070a", "stroke-width": 1}));
+        const actorTitle = el("title");
+        actorTitle.textContent = appearance.name || appearance.label || node.metadata.actor_id;
+        badge.appendChild(actorTitle);
+        group.appendChild(badge);
+      }
+      const title = el("title");
+      title.textContent = node.title;
+      group.appendChild(title);
+      group.addEventListener("focus", () => updateLabels());
+      group.addEventListener("blur", () => updateLabels());
+      group.addEventListener("pointerenter", () => { group.classList.add("is-hovered"); updateLabels(); });
+      group.addEventListener("pointerleave", () => { group.classList.remove("is-hovered"); updateLabels(); });
       if (ring) group.insertBefore(ring, glyph);
 
       const select = (additive = false) => {
@@ -495,6 +476,7 @@
             .forEach((item) => item.classList.remove("is-selected"));
         }
         group.classList.toggle("is-selected");
+        selectedFocusId = node.id;
         showDetail(node);
         highlight();
         // Selection must not move the other click targets out of the viewport.
@@ -549,7 +531,101 @@
           || (relation.target_id === id && chosen.has(relation.source_id)));
         item.classList.toggle("is-near", chosen.size > 0 && near);
       });
+      updateFocusControl();
+      updateLabels();
     };
+
+    const labelItems = [...nodeLayer.querySelectorAll(".map-node")].map((group, order) => {
+      const label = group.querySelector(".map-label");
+      const texts = [...label.querySelectorAll("text")];
+      return {group, label, texts, hit: group.querySelector(".map-node-hit"),
+        labelHit: label.querySelector(".map-label-hit"), order, widths: new Map()};
+    });
+    updateLabels = () => {
+      const candidates = labelItems.filter(item => item.group.style.display !== "none")
+        .map(item => {
+          const {group, label, texts, order, widths} = item;
+          const important = group.classList.contains("is-selected") ||
+            group.classList.contains("is-hovered") || document.activeElement === group;
+          const font = important ? 16 : 14;
+          texts.forEach((text, index) => {
+            text.style.fontSize = `${font}px`;
+            text.setAttribute("y", index * (font + 4));
+          });
+          if (!widths.has(font)) widths.set(font,
+            Math.min(VIEW_W - 24, Math.max(1, ...texts.map(text => text.getComputedTextLength()))));
+          const point = placed.get(group.dataset.nodeId);
+          const shape = SHAPE[group.dataset.kind] || "circle";
+          const dimensions = Array.isArray(SIZE[shape]) ? SIZE[shape] : [SIZE[shape], SIZE[shape]];
+          return {...item, font, width: widths.get(font), height: Math.max(1, texts.length) * (font + 4),
+            x: offsetX + scale * point.x, y: offsetY + scale * point.y,
+            radius: dimensions[1] * scale,
+            halfWidth: dimensions[0] * scale, halfHeight: dimensions[1] * scale,
+            priority: important ? 3 : group.classList.contains("is-near") ? 2 :
+              group.dataset.kind === "project" ? 1 : 0};
+        });
+      viewport.labels(candidates, VIEW_W, VIEW_H).forEach(item => {
+        item.label.style.display = item.visible ? "" : "none";
+        item.label.dataset.screenFontSize = String(item.font);
+        item.label.setAttribute("transform",
+          `translate(${item.shiftX / scale} ${item.baseline / scale}) scale(${1 / scale})`);
+        // The empty space between a displaced caption and its shape must stay
+        // clickable for other nodes. Two exact regions avoid an invisible wall.
+        const halfWidth = item.halfWidth / scale, halfHeight = item.halfHeight / scale;
+        Object.entries({x: -halfWidth, y: -halfHeight, width: halfWidth * 2, height: halfHeight * 2})
+          .forEach(([key, value]) => item.hit.setAttribute(key, value));
+        Object.entries({x: -item.width / 2, y: -item.font,
+          width: item.width, height: item.height})
+          .forEach(([key, value]) => item.labelHit.setAttribute(key, value));
+      });
+    };
+    applyFilter = () => {
+      const normalize = value => String(value || "").normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
+      const query = normalize(activeFilter.query).trim();
+      const project = activeFilter.project_id;
+      const members = new Set(project ? [project] : []);
+      if (project) {
+        const projectThread = graph.nodes.find(node => node.id === project &&
+          node.kind === "project")?.metadata?.thread_id;
+        graph.nodes.forEach(node => {
+          if (node.metadata?.project_id === project ||
+              node.metadata?.project_ids?.includes(project) ||
+              (projectThread && node.metadata?.thread_id === projectThread)) members.add(node.id);
+        });
+        let changed = true;
+        while (changed) {
+          changed = false;
+          graph.relations.forEach(relation => {
+            if (relation.kind === "contains" && members.has(relation.source_id) &&
+                !members.has(relation.target_id)) {
+              members.add(relation.target_id); changed = true;
+            }
+          });
+        }
+      }
+      const visible = new Set();
+      graph.nodes.forEach(node => {
+        const matches = (!query || normalize(`${node.title} ${node.details || ""}`).includes(query)) &&
+          (!activeFilter.kind || node.kind === activeFilter.kind) && (!project || members.has(node.id));
+        const group = nodeLayer.querySelector(`[data-node-id="${CSS.escape(node.id)}"]`);
+        group.style.display = matches ? "" : "none";
+        group.setAttribute("tabindex", matches ? "0" : "-1");
+        group.setAttribute("aria-hidden", String(!matches));
+        if (matches) visible.add(node.id);
+      });
+      edges.forEach(({path, relation}) => {
+        path.style.display = visible.has(relation.source_id) && visible.has(relation.target_id) ? "" : "none";
+      });
+      empty.hidden = visible.size !== 0;
+      empty.textContent = query || activeFilter.kind || project ? t("map.no_matches") : t("map.empty");
+      updateFocusControl();
+      updateLabels();
+      root.dispatchEvent(new CustomEvent("threaddesk:graph-filtered", {
+        bubbles: true, detail: {visible: visible.size, total: graph.nodes.length},
+      }));
+    };
+    applyFilter();
 
     root.__mapDrag = (event) => {
       if (!nodeDrag) return false;
@@ -564,6 +640,7 @@
       nodeDrag.group.setAttribute(
         "transform", `translate(${point.x.toFixed(1)} ${point.y.toFixed(1)})`);
       redrawEdges();
+      updateLabels();
       return true;
     };
     if (refreshing) {
@@ -587,6 +664,7 @@
         if (item) item.classList.add("is-selected");
       });
       if (chosen.length) {
+        selectedFocusId = chosen[0].id;
         showDetail(chosen[0]);
         highlight();
         const point = placed.get(chosen[0].id);
@@ -595,10 +673,40 @@
     }
   };
 
+  root.addEventListener("threaddesk:graph-filter", event => {
+    const detail = event.detail || {};
+    activeFilter = {query: String(detail.query || ""), kind: String(detail.kind || ""),
+      project_id: String(detail.project_id || "")};
+    applyFilter();
+  });
+  const resizeStage = () => {
+    const width = Math.max(1, stage.clientWidth);
+    const height = Math.max(1, stage.clientHeight);
+    if (width === VIEW_W && height === VIEW_H) return;
+    cancelFocus();
+    const next = viewport.resize({x: offsetX, y: offsetY},
+      {width: VIEW_W, height: VIEW_H}, {width, height});
+    offsetX = next.x; offsetY = next.y;
+    VIEW_W = width; VIEW_H = height;
+    canvas.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    applyTransform();
+  };
+  if (window.ResizeObserver) new ResizeObserver(resizeStage).observe(stage);
+  else window.addEventListener("resize", resizeStage);
+
   // ---------------------------------------------------------------- Bedienung
   root.querySelector("[data-map-zoom-in]").addEventListener("click", () => zoom(1.25));
   root.querySelector("[data-map-zoom-out]").addEventListener("click", () => zoom(1 / 1.25));
   root.querySelector("[data-map-reset]").addEventListener("click", fit);
+  focusSelectionControl?.addEventListener("click", () => {
+    const selected = [...world.querySelectorAll(".is-selected[data-node-id]")]
+      .filter(node => node.style.display !== "none");
+    const target = selected.find(node => node.dataset.nodeId === selectedFocusId) || selected[0];
+    if (!target) return;
+    scale = Math.max(1, scale);
+    focusOn(placed.get(target.dataset.nodeId));
+  });
+  updateFocusControl();
   stage.addEventListener("wheel", (event) => {
     event.preventDefault();
     zoomAt(event.deltaY < 0 ? 1.12 : 1 / 1.12, toUser(event.clientX, event.clientY));
@@ -607,6 +715,7 @@
   const DRAG_THRESHOLD = 3;
   stage.addEventListener("pointerdown", (event) => {
     if (nodeDrag) return;
+    cancelFocus();
     drag = {
       x: event.clientX, y: event.clientY, offsetX, offsetY,
       pointerId: event.pointerId, panning: false,
@@ -667,6 +776,9 @@
       const graph = await response.json();
       if (ticket !== refreshTicket) return;
       render(graph, refreshing); error.hidden = true;
+      root.dispatchEvent(new CustomEvent("threaddesk:graph-loaded", {
+        bubbles: true, detail: {nodes: graph.nodes},
+      }));
     } catch (_) { if (ticket === refreshTicket) error.hidden = false; }
   }
   document.addEventListener("threaddesk:library-changed", () => refreshGraph(true));

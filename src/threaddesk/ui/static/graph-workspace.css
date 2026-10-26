@@ -1,0 +1,28 @@
+/* The graph keeps the working area; controls never scale its text down. */
+.map-toolbar { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px 20px; }
+.map-toolbar h1 { margin:0; font-size:var(--text-lg); }
+.map-toolbar .eyebrow { display:none; }
+.graph-filters {
+  grid-column:1 / -1; display:grid;
+  grid-template-columns:minmax(180px,1fr) minmax(130px,180px) minmax(150px,220px) auto;
+  gap:12px; align-items:end; margin:0;
+}
+.graph-filters label { display:flex; flex-direction:column; gap:4px; min-width:0; font-size:var(--text-sm); }
+.graph-filters input,.graph-filters select { width:100%; min-width:0; }
+.graph-filter-count { grid-column:1 / -1; font-size:var(--text-sm); color:var(--fg-muted); }
+.map-page.has-selection .map-node { opacity:1; }
+.map-page.has-selection .map-node:not(.is-near):not(.is-selected) .map-node-shape { opacity:.5; }
+.map-page.has-selection .map-node:not(.is-near):not(.is-selected) .map-node-halo { opacity:.1; }
+.map-inspector .map-detail { max-height:none; }
+@media (max-width:1000px) {
+  .map-toolbar { gap:8px 12px; }
+  .map-toolbar .map-actions { gap:4px; }
+  .graph-filters { gap:8px; grid-template-columns:minmax(150px,1fr) 130px 150px auto; }
+}
+@media (max-width:760px) {
+  .map-toolbar { grid-template-columns:minmax(0,1fr); }
+  .map-page .map-toolbar .map-actions { justify-content:flex-start; }
+  .graph-filters { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .map-workspace { position:relative; }
+  .map-inspector { position:absolute; inset:0 0 0 auto; width:min(320px,100%); z-index:2; }
+}

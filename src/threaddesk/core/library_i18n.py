@@ -3,6 +3,7 @@ FILE_STRINGS = {
     "graph_files.import": {"de": "Dateien hinzufügen", "en": "Add files"},
     "graph_files.information": {"de": "Dateiinformationen und Herkunft", "en": "File information and provenance"},
     "graph_files.heading": {"de": "Dateien im Graphen", "en": "Files in the graph"},
+    "graph_files.controls": {"de": "Suche, Filter und Ordner", "en": "Search, filters and folders"},
     "graph_files.search": {"de": "Dateien und Inhalte suchen", "en": "Search files and content"},
     "graph_files.all": {"de": "Alle Dateien", "en": "All files"},
     "graph_files.folder": {"de": "Ordner", "en": "Folder"},

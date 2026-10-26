@@ -9,9 +9,9 @@ from __future__ import annotations
 import copy
 import json
 import os
-from pathlib import Path
 import stat
 import tempfile
+from pathlib import Path
 
 from threaddesk.core.errors import ManagementError
 
@@ -100,7 +100,12 @@ def normalize(record: dict) -> dict:
     value.setdefault("logical_path", value.get("origin_path", value.get("filename", "")))
     value.setdefault("trashed", False)
     value.setdefault("trash_generation", 0)
-    value.setdefault("node_ids", [value["node_id"]] if value.get("node_id") else [])
+    # Older batch metadata added node_id after node_ids had become [].
+    # Explicit unassignment removes both fields; retain real legacy links.
+    targets = list(value.get("node_ids") or [])
+    if value.get("node_id") and value["node_id"] not in targets:
+        targets.insert(0, value["node_id"])
+    value["node_ids"] = targets
     return value
 
 

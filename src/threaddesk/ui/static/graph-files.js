@@ -137,6 +137,9 @@
       }
       if (request !== listTicket) return;
       const rows = result.hits || result.records || []; render(rows, result.folders);
+      document.querySelector("[data-graph-endpoint]")?.dispatchEvent(new CustomEvent("threaddesk:files-listed", {
+        detail: {node_id: node?.id || null, total: result.total ?? rows.length},
+      }));
       next = result.next_offset ?? (rows.length === 50 ? offset + 50 : null);
       find("files-more").hidden = next === null;
       const index = result.index;
