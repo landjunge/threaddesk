@@ -195,7 +195,10 @@ class LibraryBatchImporter:
                     record["node_ids"] = list(previous_record["node_ids"])
             record, assignment = self._metadata(record, metadata_row, preserve_assignment=preserve)
             sources["sources"][key]["state"] = "complete"
-            return dict(result, status=item_status, record_id=record["id"], sha256=digest,
+            source_error = self._post_copy_check(path, digest, size)
+            return dict(result, status="conflict" if source_error else item_status,
+                        **({"error": source_error} if source_error else {}),
+                        record_id=record["id"], sha256=digest,
                         size=size, thread_id=record["thread_id"], node_id=record.get("node_id"),
                         assignment=assignment, predecessor_record_id=record.get("predecessor_record_id"),
                         historical_identity=row.get("historical_identity") or "unverified")
@@ -205,6 +208,17 @@ class LibraryBatchImporter:
             return dict(result, status="failed", error=exc.code)
         except (OSError, ValueError, InvalidState) as exc:
             return dict(result, status="failed", error=type(exc).__name__)
+
+    @staticmethod
+    def _post_copy_check(path, digest, size):
+        try:
+            if any(parent.is_symlink() for parent in (path, *path.parents)):
+                return "source_changed_after_copy"
+            if _hash_file(path) != (digest, size):
+                return "source_changed_after_copy"
+        except (OSError, LibraryImportError):
+            return "source_unavailable_after_copy"
+        return None
 
     def _previous_record(self, record_id):
         record = self.importer._record_by_id(record_id) or {}

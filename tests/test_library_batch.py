@@ -274,3 +274,27 @@ def test_source_reverting_to_old_bytes_keeps_acyclic_version_history(setup):
     _, record = LibraryImporter(store).open_record(original["files"][0]["record_id"])
     assert not record.get("predecessor_record_id")
     assert len(LibraryImporter(store)._read_records()) == 2
+
+
+def test_source_change_after_copy_preserves_snapshot_and_reports_conflict(setup, monkeypatch):
+    store, source = setup
+    entry = row(source)
+    path = Path(entry["path"])
+    original_bytes = path.read_bytes()
+    batch = LibraryBatchImporter(store)
+    original_metadata = batch._metadata
+    def change_after_copy(*args, **kwargs):
+        result = original_metadata(*args, **kwargs)
+        path.write_text("Geändert nach der CAS-Veröffentlichung\n")
+        return result
+    monkeypatch.setattr(batch, "_metadata", change_after_copy)
+    result = batch.run({"files": [entry]}, operation_id="change-after-copy")
+    receipt = result["files"][0]
+    assert not result["complete"]
+    assert receipt["error"] == "source_changed_after_copy"
+    blob, record = LibraryImporter(store).open_record(receipt["record_id"])
+    assert blob.read_bytes() == original_bytes
+    current = {k: v for k, v in entry.items() if k not in {"sha256", "size"}}
+    updated = LibraryBatchImporter(store).run({"files": [current]}, operation_id="fresh-after-copy")
+    assert updated["complete"]
+    assert updated["files"][0]["predecessor_record_id"] == record["id"]
