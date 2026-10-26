@@ -206,6 +206,12 @@ def test_focus_and_graph_search_type_project_filters(graph_workspace):
     focus.click()
     _settle(page)
     assert _camera(page)["scale"] >= 0.99
+    before_zoom = _camera(page)
+    page.locator("[data-map-zoom-in]").click()
+    _settle(page)
+    after_zoom = _camera(page)
+    assert math.hypot(before_zoom["x"] - after_zoom["x"], before_zoom["y"] - after_zoom["y"]) < 1
+    assert math.isclose(after_zoom["scale"], before_zoom["scale"] * 1.25, rel_tol=0.02)
     node = page.locator(f'.map-node[data-node-id="{primary.id}"] .map-node-shape')
     node_box = node.bounding_box()
     stage_box = page.locator("[data-map-stage]").bounding_box()

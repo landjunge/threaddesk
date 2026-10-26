@@ -194,12 +194,12 @@ def _visible_nodes(page) -> tuple[int, int]:
 
 
 def _centre_offset(page) -> tuple[float, float]:
-    """Abstand der Graphmitte zur Bühnenmitte, in Bildschirmpixeln."""
+    """Measure shapes; readable captions independently move during zoom."""
     return tuple(page.evaluate(
         """() => {
             const stage = document.querySelector('[data-map-stage]')
                 .getBoundingClientRect();
-            const boxes = [...document.querySelectorAll('.map-node')]
+            const boxes = [...document.querySelectorAll('.map-node-shape')]
                 .map(g => g.getBoundingClientRect());
             const cx = (Math.min(...boxes.map(b => b.left))
                 + Math.max(...boxes.map(b => b.right))) / 2;
