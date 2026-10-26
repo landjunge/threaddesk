@@ -150,7 +150,8 @@ def test_fts_finds_content_beyond_old_excerpt_and_spelling_variants(tmp_path):
         assert index.search(term)[0]["node_id"] == "n" * 12
     hit = index.search("Jahresabschluss")[0]
     assert hit["open_path"].endswith(record["id"])
-    assert hit["graph_path"].endswith("n" * 12)
+    assert hit["graph_path"] == "/map?node=" + record["id"]
+    assert hit["node_id"] == "n" * 12  # The confirmed attachment is retained separately.
     assert len(hit["snippet"]) <= 240
 
 
