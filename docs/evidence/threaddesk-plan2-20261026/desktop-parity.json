@@ -1,0 +1,35 @@
+{
+  "time_utc": "2026-10-26T17:22:28.574212+00:00",
+  "read_only": true,
+  "app": "/Applications/ThreadDesk.app",
+  "bundle_version": "0.1.2",
+  "bundle_build": "0.1.2",
+  "sha256": {
+    "Contents/MacOS/threaddesk-tauri": "7caf8530f2d33052d13e4ebbce2031222c284d4f37db017ccef1f0aa6a273317",
+    "Contents/Resources/bin/ThreadDeskServer": "341b51d3ba57d30eb30180e7ad85eb11423742038ddd9e202278f21647aebf60"
+  },
+  "binary_matches_prior_independent_install": {
+    "Contents/MacOS/threaddesk-tauri": true,
+    "Contents/Resources/bin/ThreadDeskServer": true
+  },
+  "prior_embedded_build_identity": {
+    "version": "0.1.2",
+    "source_commit": "07e10bf10ad24084becb8ae24e869a624f0b16d1",
+    "dirty": false,
+    "build_id": "20261026T152152Z"
+  },
+  "identity_source": "transitive exact binary SHA256 equality with independently inspected final install and sidecar archive; no new app launch",
+  "origin_main": "07e10bf10ad24084becb8ae24e869a624f0b16d1",
+  "code_baseline": "07e10bf10ad24084becb8ae24e869a624f0b16d1",
+  "module_hashes_verified_against_git": 70,
+  "ui_hashes_verified_against_git": 46,
+  "all_recorded_sources_match_git": true,
+  "codesign_returncode": 0,
+  "codesign_output": "/Applications/ThreadDesk.app: valid on disk\n/Applications/ThreadDesk.app: satisfies its Designated Requirement",
+  "limitations": [
+    "No new runtime/UI/browser test",
+    "No app start, stop, rebuild, replacement or user-data write",
+    "Earlier window_onscreen=false remains visible in original evidence; not reclassified passed",
+    "Future documentation-only commits do not change packaged runtime code or embedded build SHA"
+  ]
+}

@@ -1,5 +1,7 @@
 # ThreadDesk und KiraBridge gemeinsam vervollständigen
 
+**Historischer Diagnose- und Planstand.** Der anschließende Nutzerauftrag beschränkt alle weiteren Bau- und Planpakete auf ThreadDesk. Maßgeblich ist jetzt der [konkrete ThreadDesk-Plan](THREADDESK-GRAPH-PAPIERKORB-BEDIENUNG-20261026.md). Die unten genannten KiraBridge-Implementierungspakete sind damit nicht Teil des aktuellen Auftrags; sie bleiben als historische Analyse erhalten.
+
 Stand: 26. Oktober 2026. Planungsbasis ThreadDesk `07e10bf10ad24084becb8ae24e869a624f0b16d1`.
 
 ThreadDesk soll seine fachlichen Funktionen über einen vollständigen, versionierten Katalog für KiraBridge anbieten. Lesen, Schreiben und Betriebsaktionen erhalten klar getrennte Verträge. Bestehende Fachservices, Speicherprotokolle und die KiraBridge-Queue bleiben die Grundlage. Zuerst werden die reproduzierten Konsistenzfehler behoben; anschließend wächst die Abdeckung in kleinen Modulpaketen.
