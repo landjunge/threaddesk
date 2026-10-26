@@ -58,6 +58,8 @@ def snapshot(root: Path) -> dict:
                         relative,
                         info.st_size,
                         info.st_mtime_ns,
+                        info.st_ctime_ns,
+                        info.st_ino,
                         stat.S_IFMT(info.st_mode),
                     ]
                 )

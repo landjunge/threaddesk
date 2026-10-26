@@ -245,3 +245,20 @@ def test_round_robin_does_not_starve_other_registered_roots(context):
     outcome = watch.poll_once()["outcomes"][0]
     assert outcome["id"] == second_id
     assert outcome["status"] == "ready"
+
+
+def test_same_size_change_with_preserved_mtime_is_detected(context):
+    import os
+
+    store, source = context
+    file = source / "preserved.md"
+    file.write_text("version A")
+    watch = LibrarySourceWatch(store)
+    watch.register(source)
+    first = only(watch.poll_once())
+    old = file.stat()
+    file.write_text("version B")
+    os.utime(file, ns=(old.st_atime_ns, old.st_mtime_ns))
+    second = only(watch.poll_once())
+    assert second["operation_id"] != first["operation_id"]
+    assert second["status"] == "ready"
