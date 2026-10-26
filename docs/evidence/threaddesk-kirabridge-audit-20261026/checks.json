@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-26",
+  "threaddesk_source": "07e10bf10ad24084becb8ae24e869a624f0b16d1",
+  "kirabridge_adapter_source": "d2edeb6",
+  "analysis_only": true,
+  "runtime_code_changed": false,
+  "live_dynamic_catalog": {
+    "tools": [],
+    "enabled": false
+  },
+  "counts": {
+    "threaddesk_mcp_tools": 34,
+    "explicit_read_tools": 12,
+    "http_routes": 62
+  },
+  "verification": {
+    "threaddesk_unique_selected_cases_passed": 68,
+    "kirabridge_adapter_cases_passed": 55,
+    "threaddesk_annotation_case_passed": 1,
+    "initial_environment_failures": 11,
+    "initial_environment_failures_resolved": true,
+    "initial_browser_skip_resolved": true,
+    "full_suite_run": false,
+    "installed_application_acceptance": false
+  },
+  "reproductions": {
+    "stale_note": {
+      "backends": [
+        "json",
+        "sqlite"
+      ],
+      "before_revision": 2,
+      "first_status": 200,
+      "first_revision": 3,
+      "stale_status": 200,
+      "stale_revision": 4,
+      "final_note": "stale edit B",
+      "fixed": false
+    },
+    "rolled_back_events": {
+      "backends": [
+        "json",
+        "sqlite"
+      ],
+      "error": "not_found",
+      "persisted_threads": 0,
+      "events": [
+        "thread.created",
+        "thread.switched"
+      ],
+      "fixed": false
+    },
+    "dynamic_peer_tool_limit": {
+      "peer_tools": 65,
+      "eligible_reads": 1,
+      "error": "threaddesk_tool_limit",
+      "fixed": false
+    }
+  }
+}
