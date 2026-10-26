@@ -70,14 +70,26 @@ def main():
             "from threaddesk.api.service import ThreadService; "
             "worker=LibraryRuntime(lambda: ThreadService().store); worker.start(); "
             "print('THREADDESK_URL source-worker',flush=True); sys.stdin.buffer.read(1); worker.stop()")]
-    process = subprocess.Popen(backend, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=log, text=True)
-    try:
+    def start_backend():
+        process = subprocess.Popen(backend, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=log, text=True)
         with selectors.DefaultSelector() as selector:
             selector.register(process.stdout, selectors.EVENT_READ)
             assert selector.select(timeout=30), "Backend startup timed out"
             ready = process.stdout.readline().strip()
         assert ready.startswith("THREADDESK_URL "), ready
+        return process
 
+    def stop_backend(process):
+        if process.stdin:
+            process.stdin.close()
+        try:
+            process.wait(timeout=15)
+        except subprocess.TimeoutExpired:
+            process.terminate()
+            process.wait(timeout=10)
+
+    process = start_backend()
+    try:
         def wait_for(predicate):
             deadline = time.monotonic() + 45
             while time.monotonic() < deadline:
@@ -115,19 +127,31 @@ def main():
         assert command("search", query="CurrentSourceNeedle")["hits"]
         assert "CurrentSourceNeedle" in command("preview", id=current["id"])["text"]
     finally:
-        if process.stdin:
-            process.stdin.close()
-        try:
-            process.wait(timeout=15)
-        except subprocess.TimeoutExpired:
-            process.terminate()
-            process.wait(timeout=10)
+        stop_backend(process)
+    # Preserve the disposable index outside this owned workspace, simulating a
+    # portable restore that contains originals/receipts but omits the cache DB.
+    derived = root / "derived-before-restart"
+    derived.mkdir(mode=0o700)
+    database = workspace / "library-files" / "content-search.sqlite3"
+    for suffix in ("", "-wal", "-shm"):
+        path = Path(str(database) + suffix)
+        if path.exists():
+            assert not path.is_symlink()
+            path.replace(derived / path.name)
+    assert command("status")["index"]["status"] == "failed"
+    process = start_backend()
+    try:
+        deadline = time.monotonic() + 45
+        while command("status")["index"]["status"] != "ready" and time.monotonic() < deadline:
+            assert process.poll() is None
+            time.sleep(1)
+        assert command("search", query="CurrentSourceNeedle")["hits"]
+    finally:
+        stop_backend(process)
         log.close()
-    # A fresh process must still find the retained source snapshot after shutdown.
-    assert command("search", query="CurrentSourceNeedle")["hits"]
     report = {"fixture_only": True, "initial_files": 275, "traversed_files": len(seen),
               "automatic_source_refresh": True, "preserved_user_overrides": True,
-              "missing_source_retained": True, "commands": evidence}
+              "missing_source_retained": True, "index_rebuilt_after_restart": True, "commands": evidence}
     (root / "live-result.json").write_text(json.dumps(report, ensure_ascii=False, indent=2))
     print(json.dumps({"ok": True, "commands": len(evidence), "files": len(seen),
                       "max_response_bytes": max(row["response_bytes"] for row in evidence),

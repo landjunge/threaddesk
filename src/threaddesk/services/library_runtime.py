@@ -1,5 +1,7 @@
 """One bounded worker for explicitly registered source roots in the active profile."""
+
 from threading import Event, Thread
+from time import monotonic
 
 from threaddesk.services.library_index import LibraryIndex
 from threaddesk.services.library_refresh import refresh_existing
@@ -13,6 +15,7 @@ class LibraryRuntime:
         self.stopped = Event()
         self.thread = None
         self.last_error = ""
+        self.repair_after = 0.0
 
     def tick(self):
         store = None
@@ -21,10 +24,24 @@ class LibraryRuntime:
             if (store.workspace_path / "library-watch.json").is_file():
                 LibrarySourceWatch(store).poll_once()
             index = LibraryIndex(store.workspace_path / "library-files")
-            if index.path.is_file() and index.status()["status"] == "stale":
-                refresh_existing(store)
+            state = index.status()
+            needs_refresh = (
+                state["status"] in {"stale", "failed"}
+                or state.get("mode") == "legacy_json"
+                or state["status"] == "missing"
+                and (index.root / "records").is_dir()
+            )
+            if needs_refresh:
+                if monotonic() < self.repair_after:
+                    return
+                result = refresh_existing(store, initialize=True)
+                if result["status"] not in {"ready", "partial", "not_initialized"}:
+                    self.last_error = result.get("error") or result["status"]
+                    self.repair_after = monotonic() + 30.0
+                    return
             self.last_error = ""
-        except Exception as exc:
+            self.repair_after = 0.0
+        except Exception as exc:  # noqa: BLE001 -- isolate optional background projection failures
             # Per-source failures are durable watch receipts. A broken optional
             # projection must not take down normal thread or browser operations.
             self.last_error = type(exc).__name__
@@ -35,9 +52,11 @@ class LibraryRuntime:
     def start(self):
         if self.thread is not None:
             return
+
         def loop():
             while not self.stopped.wait(self.interval):
                 self.tick()
+
         self.thread = Thread(target=loop, name="threaddesk-library-watch", daemon=True)
         self.thread.start()
 
