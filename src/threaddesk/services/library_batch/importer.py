@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections import Counter
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from threaddesk.core.errors import InvalidState, NotFound
 from threaddesk.core.models import new_thread, now_iso
@@ -198,6 +198,14 @@ class LibraryBatchImporter:
                     for field in ("trashed", "trash_generation", "deleted_at", "restored_at"):
                         if field in previous_record:
                             record[field] = previous_record[field]
+                    if not previous_record.get("copied_from"):
+                        origin = previous_record.get("origin_path", "")
+                        filename = previous_record.get("filename")
+                        logical_path = previous_record.get("logical_path")
+                        if filename and filename != PurePosixPath(origin).name:
+                            record["filename"] = filename
+                        if logical_path and logical_path != origin:
+                            record["logical_path"] = logical_path
             record, assignment = self._metadata(record, metadata_row, preserve_assignment=preserve)
             sources["sources"][key]["state"] = "complete"
             source_error = self._post_copy_check(path, digest, size)

@@ -336,3 +336,51 @@ def test_new_current_version_preserves_predecessor_lifecycle(setup, trashed):
     assert batch.resume("lifecycle-after") == refreshed
     _, unchanged_previous = importer.open_record(first_id)
     assert unchanged_previous == previous
+
+
+def test_new_source_version_keeps_effective_user_filename_and_folder(setup, monkeypatch):
+    store, source = setup
+    entry = row(source)
+    batch = LibraryBatchImporter(store)
+    first = batch.run({"files": [entry]}, operation_id="user-metadata-before")
+    record_id = first["files"][0]["record_id"]
+    importer = LibraryImporter(store)
+    _, original_record = importer.open_record(record_id)
+    # The file-domain overlay is a separate owner's public projection. Simulate
+    # its effective result without changing the original imported record.
+    effective_previous = {**original_record, "filename": "Nutzername.txt",
+                          "logical_path": "Nutzerordner/Nutzername.txt"}
+    monkeypatch.setattr(batch, "_previous_record", lambda identity: dict(effective_previous))
+    original_path = Path(entry["path"])
+    original_path.write_text("Neue Bytes unter unverändertem Originaldateinamen.\n")
+    expected_bytes = original_path.read_bytes()
+    current = {k: v for k, v in entry.items() if k not in {"sha256", "size"}}
+    refreshed = batch.run({"files": [current]}, operation_id="user-metadata-after")
+    assert refreshed["complete"]
+    _, updated = importer.open_record(refreshed["files"][0]["record_id"])
+    assert updated["filename"] == "Nutzername.txt"
+    assert updated["logical_path"] == "Nutzerordner/Nutzername.txt"
+    assert updated["origin_path"] == original_record["origin_path"]
+    assert updated["source_metadata"][entry["source_ref"]]["local_origin"] == str(original_path)
+    assert original_path.name == "document.txt" and original_path.read_bytes() == expected_bytes
+    _, unchanged_original = importer.open_record(record_id)
+    assert unchanged_original == original_record
+
+
+def test_source_version_does_not_take_name_or_folder_from_copied_record(setup, monkeypatch):
+    store, source = setup
+    entry = row(source)
+    batch = LibraryBatchImporter(store)
+    first = batch.run({"files": [entry]}, operation_id="copy-metadata-before")
+    importer = LibraryImporter(store)
+    _, previous = importer.open_record(first["files"][0]["record_id"])
+    copied = {**previous, "copied_from": "another-record", "filename": "Kopie.txt",
+              "logical_path": "Kopien/Kopie.txt"}
+    monkeypatch.setattr(batch, "_previous_record", lambda identity: dict(copied))
+    Path(entry["path"]).write_text("Neue Originalbytes sind keine Dateikopie.\n")
+    current = {k: v for k, v in entry.items() if k not in {"sha256", "size"}}
+    refreshed = batch.run({"files": [current]}, operation_id="copy-metadata-after")
+    _, updated = importer.open_record(refreshed["files"][0]["record_id"])
+    assert updated["filename"] == "document.txt"
+    assert updated.get("logical_path", updated["origin_path"]) == updated["origin_path"]
+    assert not updated.get("copied_from")
