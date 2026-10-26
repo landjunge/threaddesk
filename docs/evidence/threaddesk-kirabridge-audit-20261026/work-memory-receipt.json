@@ -1,0 +1,9 @@
+{
+  "thread_id": "188ce4729a62",
+  "operation_id": "td-kb-plan-20261026-v1",
+  "before_revision": 67,
+  "after_revision": 68,
+  "marker_verified": true,
+  "old_content_preserved": true,
+  "transport": "existing pinned ThreadDesk MCP stdio; separate process readback"
+}

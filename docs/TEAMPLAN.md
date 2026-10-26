@@ -1,3 +1,5 @@
+> Aktueller Auftrag vom 26.10.2026: [ThreadDesk konkret: Bedienung, Papierkorb und Graph](plans/THREADDESK-GRAPH-PAPIERKORB-BEDIENUNG-20261026.md). Die nachfolgenden älteren Planstände bleiben als Historie erhalten.
+
 # ThreadDesk – Abschlussplan, 2. Oktober 2026
 
 ## Ziel und Geltungsbereich
