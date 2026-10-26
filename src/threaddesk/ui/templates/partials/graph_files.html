@@ -1,7 +1,11 @@
 <section class="panel graph-files" data-graph-files data-strings='{{ map_strings|safe }}' aria-label="{{ t('graph_files.heading') }}">
-  <h2>{{ t('graph_files.heading') }}</h2>
-  <a class="btn btn-ghost" href="/library">{{ t('graph_files.import') }}</a>
-  <form data-file-search>
+  <header class="file-list-heading">
+    <h2>{{ t('graph_files.heading') }}</h2>
+    <a class="btn btn-ghost" href="/library">{{ t('graph_files.import') }}</a>
+  </header>
+  <details class="file-controls" data-files-controls>
+    <summary>{{ t('graph_files.controls') }}</summary>
+    <form data-file-search>
     <label>{{ t('graph_files.search') }} <input name="query" type="search" maxlength="1000" /></label>
     <label>{{ t('graph_files.type') }} <select data-files-type>
       <option value="">{{ t('graph_files.all_types') }}</option>
@@ -16,14 +20,17 @@
     <label>{{ t('graph_files.date_to') }} <input data-files-date-to type="date" /></label>
     <button class="btn" type="submit">{{ t('graph_files.search') }}</button>
     <button class="btn btn-ghost" type="button" data-files-all>{{ t('graph_files.all') }}</button>
-  </form>
-  <div class="map-actions">
-    <label>{{ t('graph_files.folder') }} <input data-files-folder maxlength="500" /></label>
-    <button class="btn btn-ghost" data-files-folder-open>{{ t('graph_files.browse') }}</button>
+    </form>
+    <div class="map-actions">
+      <label>{{ t('graph_files.folder') }} <input data-files-folder maxlength="500" /></label>
+      <button class="btn btn-ghost" data-files-folder-open>{{ t('graph_files.browse') }}</button>
+    </div>
+  </details>
+  <p class="muted" data-files-status aria-live="polite">{{ t('graph_files.choose_node') }}</p>
+  <div class="map-actions file-list-controls">
     <label>{{ t('graph_files.sort') }} <select data-files-sort><option value="name">{{ t('graph_files.name') }}</option><option value="date">{{ t('graph_files.date') }}</option><option value="type">{{ t('graph_files.type') }}</option><option value="size">{{ t('graph_files.size') }}</option></select></label>
     <label><input type="checkbox" data-files-trash /> {{ t('graph_files.show_trash') }}</label>
   </div>
-  <p class="muted" data-files-status aria-live="polite">{{ t('graph_files.choose_node') }}</p>
   <ul class="file-list" data-files-list></ul>
   <button class="btn btn-ghost" data-files-more hidden>{{ t('graph_files.more') }}</button>
   <dialog data-file-preview aria-labelledby="file-preview-heading">

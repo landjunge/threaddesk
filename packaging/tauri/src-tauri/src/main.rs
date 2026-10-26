@@ -48,6 +48,7 @@ fn main() {
             WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url))
                 .title("ThreadDesk")
                 .inner_size(1360.0, 900.0)
+                .maximized(true)
                 .min_inner_size(940.0, 640.0)
                 .background_color(tauri::window::Color(13, 14, 19, 255))
                 .build()?;
