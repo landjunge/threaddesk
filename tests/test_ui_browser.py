@@ -129,6 +129,14 @@ def page(live_map):
         browser.close()
 
 
+@pytest.fixture(autouse=True)
+def fresh_map_view(page, live_map):
+    """Each gesture starts with its own camera, selection and drawer state."""
+    page.set_viewport_size({"width": 1280, "height": 900})
+    page.goto(f"{live_map[0]}/map", wait_until="networkidle")
+    page.wait_for_selector(".map-node", timeout=15000)
+
+
 def test_no_overlay_swallows_node_clicks(page):
     """Ein Klick in die Knotenmitte muss den Knoten treffen, kein Overlay."""
     hit = page.evaluate(
