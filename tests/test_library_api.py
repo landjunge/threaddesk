@@ -96,7 +96,9 @@ def test_canonical_writes_stale_then_refresh_index(library):
         app.call({"action": "search", "query": "UniqueCurrentThreadNeedle"})
     from threaddesk.services.library_refresh import refresh_existing
     assert refresh_existing(svc.store)["status"] == "ready"
-    assert app.call({"action": "search", "query": "UniqueCurrentThreadNeedle"})["hits"]
+    hits = app.call({"action": "search", "query": "UniqueCurrentThreadNeedle"})["hits"]
+    thread_hit = next(row for row in hits if row["entity_type"] == "thread")
+    assert thread_hit["thread_path"] == "/?thread=" + svc.current().id
     request = {"action": "reindex", "operation_id": "reindex-receipt"}
     assert app.call(request)["index"]["status"] == "ready"
     assert app.call(request)["duplicate"]

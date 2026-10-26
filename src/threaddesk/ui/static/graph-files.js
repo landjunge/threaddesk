@@ -104,13 +104,17 @@
         entry.addEventListener("dblclick", () => selected?.id === id && perform("open")); li.append(entry);
       } else {
         const a = document.createElement("a"); a.textContent = title;
-        a.href = row.graph_path || `/map?node=${encodeURIComponent(row.node_id || row.id)}`; li.append(a);
+        a.href = row.entity_type === "thread"
+          ? row.thread_path || `/?thread=${encodeURIComponent(row.thread_id || row.id)}`
+          : row.graph_path || `/map?node=${encodeURIComponent(row.node_id || row.id)}`;
+        li.append(a);
       }
       const info = document.createElement("span"); info.className = "muted";
       info.textContent = ` ${row.format || row.entity_type || ""} · ${row.logical_path || row.origin_path || ""}${row.trashed ? ` · ${t("trash")}` : ""}`; li.append(info);
       if (row.node_id || id) {
         const a = document.createElement("a"); a.textContent = t("node");
-        a.href = `/map?node=${encodeURIComponent(row.file_node_id || row.node_id || id)}`; li.append(a);
+        a.href = row.graph_path || `/map?node=${encodeURIComponent(row.file_node_id || id || row.node_id)}`;
+        li.append(a);
       }
       list.append(li);
     });

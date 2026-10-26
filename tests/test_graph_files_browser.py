@@ -78,6 +78,18 @@ def imported(graph_files):
     return page, panel, record
 
 
+def test_thread_search_result_opens_the_existing_thread(graph_files):
+    page, _url, _home, _source, _original, thread_id, _node = graph_files
+    page, panel, _record = imported(graph_files)
+    panel.locator('[name="query"]').fill("Library Project")
+    result = submit_search(page, panel)
+    assert any(row["entity_type"] == "thread" and row["thread_id"] == thread_id
+               for row in result["hits"])
+    panel.locator(f'a[href="/?thread={thread_id}"]').click()
+    expect(page).to_have_url(f"{_url}/?thread={thread_id}")
+    expect(page.locator('#notes textarea[name="text"]')).to_have_value("")
+
+
 @pytest.mark.parametrize("language", ["de", "en"])
 def test_graph_file_lifecycle_and_explicit_open(graph_files, language):
     page, url, _home, _source, original, _thread, node = graph_files

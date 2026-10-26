@@ -14,6 +14,7 @@ import tempfile
 from datetime import date
 from pathlib import Path
 from uuid import uuid4
+from urllib.parse import quote
 
 from threaddesk.services.library_search.database import SearchDatabase
 from threaddesk.services.library_search.normalize import folded, terms
@@ -308,8 +309,10 @@ class LibraryIndex:
             item["open_path"] = (
                 "/library/files/" + item["record_id"] if item.get("record_id") else ""
             )
-            item["graph_path"] = (
-                "/map?node=" + item["node_id"] if item.get("node_id") else ""
+            graph_id = item.get("file_node_id") or item.get("record_id") or item.get("node_id")
+            item["graph_path"] = "/map?node=" + quote(str(graph_id), safe="") if graph_id else ""
+            item["thread_path"] = (
+                "/?thread=" + quote(str(item["thread_id"]), safe="") if item.get("thread_id") else ""
             )
         return found
 
