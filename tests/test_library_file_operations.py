@@ -1,7 +1,6 @@
 """File lifecycle changes preserve imported originals and shared CAS bytes."""
 from pathlib import Path
 from types import SimpleNamespace
-import json
 import subprocess
 
 import pytest

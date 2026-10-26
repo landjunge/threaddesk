@@ -6,6 +6,9 @@ store after a second SHA-256 check. An existing blob is never overwritten.
 """
 from __future__ import annotations
 
+from threaddesk.services.file_formats.registry import FORMATS as FORMAT_REGISTRY
+
+from datetime import datetime, timezone
 from dataclasses import dataclass
 import hashlib
 import json
@@ -17,7 +20,7 @@ import stat
 import tempfile
 import zipfile
 
-from threaddesk.core.errors import InvalidState, NotFound, SecretRejected
+from threaddesk.core.errors import InvalidState, NotFound, SecretRejected, ThreadDeskError
 from threaddesk.core.models import new_id, new_thread
 from threaddesk.core.secrets import reject_secrets
 from threaddesk.services.library_index import LibraryIndex
@@ -40,56 +43,16 @@ _SECRET_NAME = re.compile(
     r"(?i)(^|[._-])(env|id_rsa|id_ed25519|credentials|cookies|secrets?)($|[._-])"
     r"|\.(pem|key|p12|pfx|kdbx)$"
 )
-_FORMATS = {
-    ".md": ("markdown", "text/markdown"),
-    ".markdown": ("markdown", "text/markdown"),
-    ".txt": ("text", "text/plain"),
-    ".rst": ("text", "text/plain"),
-    ".csv": ("csv", "text/csv"),
-    ".tsv": ("tsv", "text/tab-separated-values"),
-    ".json": ("json", "application/json"),
-    ".yaml": ("yaml", "application/yaml"),
-    ".yml": ("yaml", "application/yaml"),
-    ".html": ("html", "text/html"),
-    ".htm": ("html", "text/html"),
-    ".xml": ("xml", "application/xml"),
-    ".pdf": ("pdf", "application/pdf"),
-    ".doc": ("word", "application/msword"),
-    ".docx": ("word", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
-    ".xls": ("excel", "application/vnd.ms-excel"),
-    ".xlsx": ("excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
-    ".ppt": ("powerpoint", "application/vnd.ms-powerpoint"),
-    ".pptx": ("powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
-    ".odt": ("word", "application/vnd.oasis.opendocument.text"),
-    ".ods": ("excel", "application/vnd.oasis.opendocument.spreadsheet"),
-    ".odp": ("powerpoint", "application/vnd.oasis.opendocument.presentation"),
-    ".rtf": ("rtf", "application/rtf"),
-    ".png": ("image", "image/png"),
-    ".jpg": ("image", "image/jpeg"),
-    ".jpeg": ("image", "image/jpeg"),
-    ".gif": ("image", "image/gif"),
-    ".webp": ("image", "image/webp"),
-    ".heic": ("image", "image/heic"),
-    ".heif": ("image", "image/heif"),
-    ".tif": ("image", "image/tiff"),
-    ".tiff": ("image", "image/tiff"),
-    ".bmp": ("image", "image/bmp"),
-    ".svg": ("image", "image/svg+xml"),
-    ".zip": ("zip", "application/zip"),
-    ".mp3": ("audio", "audio/mpeg"),
-    ".wav": ("audio", "audio/wav"),
-    ".m4a": ("audio", "audio/mp4"),
-    ".aac": ("audio", "audio/aac"),
-    ".ogg": ("audio", "audio/ogg"),
-    ".flac": ("audio", "audio/flac"),
-    ".aiff": ("audio", "audio/aiff"),
-    ".mp4": ("video", "video/mp4"),
-    ".m4v": ("video", "video/mp4"),
-    ".mov": ("video", "video/quicktime"),
-    ".webm": ("video", "video/webm"),
-    ".mkv": ("video", "video/x-matroska"),
-}
-_TEXT_SUFFIXES = {".md", ".markdown", ".txt", ".rst", ".csv", ".tsv", ".json", ".yaml", ".yml", ".html", ".htm", ".xml"}
+_FORMATS = {suffix: (entry[0], entry[1]) for suffix, entry in FORMAT_REGISTRY.items()}
+
+
+def _format_for(suffix):
+    return _FORMATS.get(suffix, ("unknown", "application/octet-stream"))
+
+
+_EXECUTABLE_SUFFIXES = {".exe", ".com", ".command", ".msi", ".app", ".pkg", ".dmg"}
+_TEXT_SUFFIXES = {suffix for suffix, entry in FORMAT_REGISTRY.items()
+                  if entry[2] in {"text", "html", "rtf"}}
 
 
 class LibraryImportError(InvalidState):
@@ -295,8 +258,10 @@ class LibraryImporter:
 
     def rebuild_index(self) -> dict:
         try:
-            return LibraryIndex(self.root).rebuild(self._read_records(), self.blobs)
-        except OSError:
+            from threaddesk.services.library_links import sync_file_nodes
+            sync_file_nodes(self.store)
+            return LibraryIndex(self.root).rebuild(self._read_records(), self.blobs, store=self.store)
+        except (OSError, ValueError, ThreadDeskError):
             return {"status": "failed", "documents": 0, "failed": 0, "error": "index_store"}
 
     def reassign(self, record_id: str, thread_title: str) -> dict:
@@ -334,12 +299,12 @@ class LibraryImporter:
             raise LibraryImportError("no_source")
         return self.import_tree(Path(source))
 
-    def open_record(self, record_id: str) -> tuple[Path, dict]:
+    def open_record(self, record_id: str, *, include_trashed: bool = False) -> tuple[Path, dict]:
         if not _RECORD_ID.fullmatch(record_id or ""):
             raise NotFound(record_id)
         path = self.records / f"{record_id}.json"
         record = self._record_by_id(record_id)
-        if record is None or record.get("trashed"):
+        if record is None or (record.get("trashed") and include_trashed is not True):
             raise NotFound(record_id)
         try:
             if self.records.is_symlink() or path.is_symlink():
@@ -380,7 +345,7 @@ class LibraryImporter:
                 raise LibraryImportError("receipt_conflict")
         else:
             self._publish_blob(path, sha256, size)
-            kind, media = _FORMATS[Path(filename).suffix.casefold()]
+            kind, media = _format_for(Path(filename).suffix.casefold())
             record = self._write_record(relative=filename, digest=sha256, size=size,
                                         kind=kind, media=media, thread=thread,
                                         version=self._next_version(filename), record_id=record_id)
@@ -441,7 +406,7 @@ class LibraryImporter:
             self._remember(journal, relative, status="failed", error="not_a_file")
             return ImportItem(relative, "failed", error="not_a_file"), False
         suffix = PurePosixPath(relative).suffix.casefold()
-        if suffix not in _FORMATS:
+        if suffix in _EXECUTABLE_SUFFIXES:
             self._remember(journal, relative, status="failed", error="unsupported")
             return ImportItem(relative, "failed", error="unsupported"), False
         if _looks_secret_name(relative):
@@ -470,7 +435,7 @@ class LibraryImporter:
         self._remember(journal, relative, status="pending", sha256=digest, size=size)
         try:
             created = self._publish_blob(path, digest, size)
-            kind, media = _FORMATS[suffix]
+            kind, media = _format_for(suffix)
             thread = self._assign(relative)
             record = self._write_record(
                 relative=relative, digest=digest, size=size, kind=kind, media=media,
@@ -625,6 +590,7 @@ class LibraryImporter:
             "status": "stored",
             "version": version,
             "integrity": "verified",
+            "imported_at": datetime.now(timezone.utc).isoformat(),
         }
         self.records.mkdir(parents=True, exist_ok=True, mode=0o700)
         self._write_json(self.records / f"{record['id']}.json", record)
@@ -753,5 +719,5 @@ def validate_received_filename(filename: str) -> None:
         raise LibraryImportError("unsafe_path")
     if _looks_secret_name(filename):
         raise LibraryImportError("secret_name")
-    if Path(filename).suffix.casefold() not in _FORMATS:
+    if Path(filename).suffix.casefold() in _EXECUTABLE_SUFFIXES:
         raise LibraryImportError("unsupported")

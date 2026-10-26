@@ -37,11 +37,17 @@ def preview(service, record_id):
               "content_url": "/api/library/content/" + record_id,
               "text": "", "truncated": False,
               "integrity": "verified", "message": ""}
-    if kind == "text":
-        with blob.open("rb") as incoming:
-            data = incoming.read(MAX_PREVIEW_BYTES + 1)
-        result["text"] = data[:MAX_PREVIEW_BYTES].decode("utf-8", errors="replace")
-        result["truncated"] = len(data) > MAX_PREVIEW_BYTES
+    if kind in {"text", "pdf"}:
+        from threaddesk.services.file_formats import extract
+        extracted = extract(blob, record["filename"])
+        result["extraction_status"] = extracted["status"]
+        result["message"] = extracted.get("error", "")
+        if extracted.get("text"):
+            result["kind"] = "text"
+            result["text"] = extracted["text"][:MAX_PREVIEW_BYTES]
+            result["truncated"] = extracted.get("truncated", False) or len(extracted["text"]) > MAX_PREVIEW_BYTES
+        else:
+            result["kind"] = "metadata"
     elif kind not in {"pdf", "image", "audio", "video"}:
         result.update(kind="metadata", message="Keine sichere interne Vorschau verfügbar.")
     return result

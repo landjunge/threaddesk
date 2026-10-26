@@ -69,7 +69,6 @@ def running_server(listener):
 def self_test() -> int:
     with isolated_self_test():
         # Resolve the store only after replacing the real data-directory setting.
-        from threaddesk.ui.server import _svc
         with desktop_listener(JsonStore(base_root())) as listener, running_server(listener) as url:
             with urlopen(url + "/migration?lang=en", timeout=3) as response:
                 page = response.read().decode("utf-8")
@@ -84,10 +83,15 @@ def self_test() -> int:
 
 
 def main() -> int:
+    if len(sys.argv) == 3 and sys.argv[1] == "--library-command":
+        from threaddesk.ui.cli import main as library_cli
+        return library_cli(["library", "--request", sys.argv[2]])
+    if len(sys.argv) == 3 and sys.argv[1] == "--file-format-pdf-worker":
+        from threaddesk.services.file_formats.pdf_worker import main as pdf_main
+        return pdf_main(sys.argv[2]) or 0
     if "--self-test" in sys.argv:
         return self_test()
     import webview
-    from threaddesk.ui.server import _svc
 
     try:
         with desktop_listener(JsonStore(base_root())) as listener, running_server(listener) as url:

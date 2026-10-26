@@ -22,7 +22,7 @@ def _register(
 
 
 _register(".txt .md .markdown .rst", "document", "text/plain", "text", "text")
-_register(".html .htm", "document", "text/html", "html", "text")
+_register(".html .htm", "document", "text/html", "html")
 _register(".pdf", "document", "application/pdf", "pdf", "pdf")
 _register(".doc", "document", "application/msword")
 _register(
@@ -136,7 +136,7 @@ _register(
 _register(".zip .tar .gz .tgz", "archive", "application/octet-stream", "archive")
 _register(".7z", "archive", "application/x-7z-compressed")
 _register(
-    ".exe .com .app .dmg .pkg .msi .dll .so .dylib .jar .scpt .workflow",
+    ".exe .com .command .app .dmg .pkg .msi .dll .so .dylib .jar .scpt .workflow",
     "executable",
     "application/octet-stream",
     external=False,
@@ -160,3 +160,9 @@ def descriptor(filename: str) -> dict:
         "adapter": adapter,
         "index_reason": "" if adapter != "metadata" else "metadata_only",
     }
+
+# Preserve previously accepted library suffixes alongside the shared registry.
+_register(".bmp", "image", "image/bmp", preview="image")
+_register(".heif", "image", "image/heif")
+_register(".aiff", "audio", "audio/aiff", preview="audio")
+_register(".m4v", "video", "video/mp4", preview="video")

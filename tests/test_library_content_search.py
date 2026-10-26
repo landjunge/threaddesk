@@ -72,7 +72,7 @@ def test_registry_distinguishes_each_operation_and_never_runs_source():
     assert describe("name.doc")["external_open"] is True
     for suffix in ["py", "js", "ts", "sh", "exe", "unknown"]:
         assert describe("name." + suffix)["external_open"] is False
-    assert describe("page.html")["preview_kind"] == "text"
+    assert describe("page.html")["preview_kind"] == "metadata"
     assert describe("image.svg")["preview_kind"] == "metadata"
     assert len(supported_formats()) >= len(expected)
 

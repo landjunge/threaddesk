@@ -28,3 +28,7 @@ Gilt grundsätzlich für alle künftigen delegierten Aufgaben, nicht nur den akt
 - Vollständige Bedienbarkeit durch ChatGPT über KiraBridge ist ein Abnahmeziel für alle ThreadDesk-Fachaktionen. Ein nur lesender Katalog genügt nicht. Tatsächliche verfügbare Transportwege und pro Funktion Erfolg, Konflikt, Wiederholung und Readback nachweisen.
 - Verbesserte Graphansicht: echte Dateiänderungen und bewusst ausgelöste Dateizugriffe getrennt erfassen; Graphöffnung, technischer Cache/Index/Sync und bloße Statusänderungen sind keine Dateiaktivität. Quellen und offene Brainstormingentscheidungen erhalten.
 - Papierkorb muss Threads und Graphbeziehungen mit stabilen IDs wiederherstellen; endgültige Löschung benötigt einen konkreten ausdrücklichen Löschauftrag. Originaldateien und geteilte Inhalte nicht pauschal kaskadieren.
+
+## Bibliotheksauftrag mit sofortiger Integration
+
+Der anschließende Nutzerauftrag autorisiert die schrittweise Umsetzung von Bibliotheksimport, verbindlicher lokaler Indexsuche, Dateimanager im vorhandenen Graphen, Formatadaptern und zugehöriger Dateiwiederherstellung. Der bisherige Plan wird erweitert, kein konkurrierender Plan angelegt. Jedes fertige Paket braucht sofort einen tatsächlichen KiraBridge-Aufruf mit Readback; keine spätere Sammelintegration und keine Erfolgsaussage allein aus Mock-/Unit-Tests. KiraBridge selbst bleibt unverändert. Fehlende Originalbytes, native Vertragsgrenzen und nicht geprüfte Principal-Kontexte ausdrücklich benennen. Indexsuche ist nun hohe Priorität und verbindlicher Umfang.

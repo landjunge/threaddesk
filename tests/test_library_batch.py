@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from threaddesk.api.service import ThreadService
+from threaddesk.core.errors import NotFound
 from threaddesk.services.library_batch import LibraryBatchImporter
 from threaddesk.services.library_import import LibraryImportError, LibraryImporter
 from threaddesk.storage.json_store import JsonStore
@@ -312,7 +313,7 @@ def test_new_current_version_preserves_predecessor_lifecycle(setup, trashed):
     first = batch.run({"files": [entry]}, operation_id="lifecycle-before")
     first_id = first["files"][0]["record_id"]
     importer = LibraryImporter(store)
-    _, previous = importer.open_record(first_id)
+    _, previous = importer.open_record(first_id, include_trashed=True)
     previous.update(trashed=trashed, trash_generation=4, deleted_at="2026-10-20T09:30:00+00:00",
                     node_ids=[primary.id, secondary.id])
     if not trashed:
@@ -324,7 +325,7 @@ def test_new_current_version_preserves_predecessor_lifecycle(setup, trashed):
     assert refreshed["complete"]
     record_id = refreshed["files"][0]["record_id"]
     assert record_id != first_id
-    _, updated = importer.open_record(record_id)
+    _, updated = importer.open_record(record_id, include_trashed=True)
     for field in ("trashed", "trash_generation", "deleted_at"):
         assert updated[field] == previous[field]
     assert updated.get("restored_at") == previous.get("restored_at")
@@ -334,8 +335,11 @@ def test_new_current_version_preserves_predecessor_lifecycle(setup, trashed):
     assert updated["predecessor_record_id"] == first_id
     assert updated["source_refs"] == [entry["source_ref"]]
     assert batch.resume("lifecycle-after") == refreshed
-    _, unchanged_previous = importer.open_record(first_id)
+    _, unchanged_previous = importer.open_record(first_id, include_trashed=True)
     assert unchanged_previous == previous
+    if trashed:
+        with pytest.raises(NotFound):
+            importer.open_record(record_id)
 
 
 def test_new_source_version_keeps_effective_user_filename_and_folder(setup, monkeypatch):
@@ -384,3 +388,33 @@ def test_source_version_does_not_take_name_or_folder_from_copied_record(setup, m
     assert updated["filename"] == "document.txt"
     assert updated.get("logical_path", updated["origin_path"]) == updated["origin_path"]
     assert not updated.get("copied_from")
+
+
+def test_fresh_batch_of_unchanged_trashed_source_does_not_reactivate(setup):
+    from threaddesk.services.library_files import LibraryFileService
+    store, source = setup
+    entry = row(source)
+    batch = LibraryBatchImporter(store)
+    first = batch.run({"files": [entry]}, operation_id="trash-duplicate-before")
+    record_id = first["files"][0]["record_id"]
+    files = LibraryFileService(store)
+    original = files.info(record_id)
+    files.manage({"operation_id": "trash-duplicate-action", "action": "trash", "id": record_id,
+                  "expected_revision": original["revision"], "data": {}})
+    importer = LibraryImporter(store)
+    with pytest.raises(NotFound):
+        importer.open_record(record_id)
+    blob, trashed = importer.open_record(record_id, include_trashed=True)
+    assert trashed["trashed"] and blob.read_bytes() == Path(entry["path"]).read_bytes()
+    second = LibraryBatchImporter(store).run({"files": [entry]}, operation_id="trash-duplicate-after")
+    assert second["complete"]
+    assert second["files"][0]["status"] == "duplicate"
+    assert second["files"][0]["record_id"] == record_id
+    _, after = importer.open_record(record_id, include_trashed=True)
+    assert after["trashed"]
+    assert after["trash_generation"] == trashed["trash_generation"]
+    assert after["deleted_at"] == trashed["deleted_at"]
+    assert files.list()["records"] == []
+    assert len(importer._read_records()) == 1
+    with pytest.raises(NotFound):
+        importer.open_record(record_id)

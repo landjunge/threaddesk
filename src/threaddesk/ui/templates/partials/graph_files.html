@@ -1,0 +1,50 @@
+<section class="panel graph-files" data-graph-files data-strings='{{ map_strings|safe }}' aria-label="{{ t('files.heading') }}">
+  <h2>{{ t('files.heading') }}</h2>
+  <a class="btn btn-ghost" href="/library">{{ t('files.import') }}</a>
+  <form data-file-search>
+    <label>{{ t('files.search') }} <input name="query" type="search" maxlength="1000" /></label>
+    <label>{{ t('files.type') }} <select data-files-type>
+      <option value="">{{ t('files.all_types') }}</option>
+      <option value="document">{{ t('files.documents') }}</option><option value="spreadsheet">{{ t('files.spreadsheets') }}</option>
+      <option value="presentation">{{ t('files.presentations') }}</option><option value="image">{{ t('files.images') }}</option>
+      <option value="audio">{{ t('files.audio') }}</option><option value="video">{{ t('files.video') }}</option>
+      <option value="source">{{ t('files.code') }}</option><option value="archive">{{ t('files.archives') }}</option>
+      <option value="unknown">{{ t('files.unknown_format') }}</option>
+    </select></label>
+    <label>{{ t('files.project') }} <select data-files-project><option value="">{{ t('files.all_projects') }}</option></select></label>
+    <label>{{ t('files.date_from') }} <input data-files-date-from type="date" /></label>
+    <label>{{ t('files.date_to') }} <input data-files-date-to type="date" /></label>
+    <button class="btn" type="submit">{{ t('files.search') }}</button>
+    <button class="btn btn-ghost" type="button" data-files-all>{{ t('files.all') }}</button>
+  </form>
+  <div class="map-actions">
+    <label>{{ t('files.folder') }} <input data-files-folder maxlength="500" /></label>
+    <button class="btn btn-ghost" data-files-folder-open>{{ t('files.browse') }}</button>
+    <label>{{ t('files.sort') }} <select data-files-sort><option value="name">{{ t('files.name') }}</option><option value="date">{{ t('files.date') }}</option><option value="type">{{ t('files.type') }}</option><option value="size">{{ t('files.size') }}</option></select></label>
+    <label><input type="checkbox" data-files-trash /> {{ t('files.show_trash') }}</label>
+  </div>
+  <p class="muted" data-files-status aria-live="polite">{{ t('files.choose_node') }}</p>
+  <ul class="file-list" data-files-list></ul>
+  <button class="btn btn-ghost" data-files-more hidden>{{ t('files.more') }}</button>
+  <dialog data-file-preview aria-labelledby="file-preview-heading">
+    <header><h2 id="file-preview-heading" data-file-title></h2><button class="btn btn-ghost" data-file-close>{{ t('files.close') }}</button></header>
+    <div data-file-body></div>
+    <details><summary>{{ t('files.information') }}</summary><pre data-file-information class="muted"></pre></details>
+    <label>{{ t('files.name') }} <input data-file-name maxlength="240" /></label>
+    <label>{{ t('files.folder') }} <input data-file-folder maxlength="500" /></label>
+    <label>{{ t('files.project') }} <select data-file-project><option value="">{{ t('files.keep_project') }}</option></select></label>
+    <p class="muted" data-file-assignments></p>
+    <label>{{ t('files.add_node') }} <select data-file-node><option value="">{{ t('files.no_node') }}</option></select></label>
+    <div class="map-actions">
+      <button class="btn" data-file-action="open">{{ t('files.open') }}</button>
+      <button class="btn btn-ghost" data-file-action="rename">{{ t('files.rename') }}</button>
+      <button class="btn btn-ghost" data-file-action="copy">{{ t('files.copy') }}</button>
+      <button class="btn btn-ghost" data-file-action="move">{{ t('files.move') }}</button>
+      <button class="btn btn-ghost" data-file-action="assign">{{ t('files.assign') }}</button>
+      <button class="btn btn-ghost" data-file-action="trash">{{ t('files.trash') }}</button>
+      <button class="btn btn-ghost" data-file-action="restore">{{ t('files.restore') }}</button>
+    </div>
+    <button class="btn btn-ghost" data-file-check>{{ t("files.check") }}</button>
+    <p data-file-message aria-live="polite"></p>
+  </dialog>
+</section>

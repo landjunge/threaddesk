@@ -96,6 +96,7 @@ def apply_overlay(record: dict, library_root: Path) -> dict:
 def normalize(record: dict) -> dict:
     value = copy.deepcopy(record)
     value.setdefault("revision", 1)
+    value["file_node_id"] = value.get("id")
     value.setdefault("logical_path", value.get("origin_path", value.get("filename", "")))
     value.setdefault("trashed", False)
     value.setdefault("trash_generation", 0)
@@ -107,4 +108,5 @@ def effective_records(records: list[dict], library_root: Path) -> list[dict]:
     state = read_state(library_root)
     rows = {record["id"]: normalize(record) for record in records}
     rows.update({key: normalize(value) for key, value in state["records"].items()})
-    return [rows[key] for key in sorted(rows)]
+    from threaddesk.services.library_files.versions import annotate_versions
+    return annotate_versions([rows[key] for key in sorted(rows)], library_root)

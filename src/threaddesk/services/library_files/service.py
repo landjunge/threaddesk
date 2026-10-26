@@ -6,7 +6,7 @@ import hashlib
 import json
 from pathlib import Path, PurePosixPath
 
-from threaddesk.core.errors import ManagementError, NotFound
+from threaddesk.core.errors import ManagementError, NotFound, ThreadDeskError
 from threaddesk.core.models import new_id, now_iso
 from threaddesk.services.library_files import state, validation
 
@@ -29,7 +29,8 @@ class LibraryFileService:
             state.fail("not_found", "Datei wurde nicht gefunden.")
         if record.get("trashed") and not include_trashed:
             state.fail("object_in_trash", "Datei liegt im Papierkorb.")
-        return state.normalize(record)
+        from threaddesk.services.library_files.versions import annotate_versions
+        return state.normalize(annotate_versions([record], self.root)[0])
 
     def list(self, *, thread_id=None, node_id=None, folder=None,
              include_trashed=False, sort="name", limit=100, offset=0) -> dict:
@@ -43,11 +44,20 @@ class LibraryFileService:
             validation.record_id(node_id)
         if folder is not None:
             validation.folder(folder)
+        linked_thread = None
+        if node_id is not None:
+            try:
+                node = self.store.get_node(node_id)
+            except NotFound:
+                node = None
+            if node is not None and not node.metadata.get("library_record_id"):
+                linked_thread = node.metadata.get("thread_id")
         rows = [state.normalize(row) for row in self.importer._read_records()
                 if row.get("status") == "stored"]
         rows = [row for row in rows if (include_trashed or not row["trashed"])
                 and (thread_id is None or row.get("thread_id") == thread_id)
-                and (node_id is None or node_id == row["id"] or node_id in row.get("node_ids", []))]
+                and (node_id is None or node_id == row["id"] or node_id in row.get("node_ids", [])
+                     or (linked_thread is not None and row.get("thread_id") == linked_thread))]
         folders = set()
         if folder is not None:
             prefix = folder + "/" if folder else ""
@@ -73,6 +83,22 @@ class LibraryFileService:
         return {"operation_id": operation_id, "found": saved is not None,
                 "result": copy.deepcopy(saved["result"]) if saved else None}
 
+    def verify_recorded_request(self, arguments: dict) -> dict:
+        """Read-only owner validation before adopting a legacy public receipt.
+
+        A wrong replay must not reserve a new command binding. Validate exactly
+        as the original owner does; historical receipts do not depend on today's
+        object revision, visibility, standard application, or index availability.
+        """
+        if isinstance(arguments, dict) and arguments.get("action") == "open":
+            from threaddesk.services.library_files.opening import validate_open_request
+            args = validate_open_request(arguments)
+        else:
+            args = validation.request(arguments)
+        saved = state.read_state(self.root)["operations"].get(args["operation_id"])
+        return {"operation_id": args["operation_id"], "found": saved is not None,
+                "result": self._replay(saved, self._request_hash(args)) if saved else None}
+
     def manage(self, arguments: dict) -> dict:
         args = validation.request(arguments)
         digest = self._request_hash(args)
@@ -89,6 +115,7 @@ class LibraryFileService:
             result_record = self._mutate(record, action, args["data"])
             if action == "copy":
                 result_record["id"] = new_id()
+                result_record["file_node_id"] = result_record["id"]
                 result_record["revision"] = 1
                 result_record["copied_from"] = record["id"]
                 result_record["node_ids"] = list(args["data"].get("node_ids", []))
@@ -195,11 +222,13 @@ class LibraryFileService:
         # Metadata committed independently; an index failure cannot undo/replay it.
         try:
             from threaddesk.services.library_index import LibraryIndex
+            from threaddesk.services.library_links import sync_file_nodes
+            sync_file_nodes(self.store)
             index = LibraryIndex(self.root)
             import inspect
             options = {"store": self.store} if "store" in inspect.signature(index.rebuild).parameters else {}
             return index.rebuild(self.importer._read_records(), self.importer.blobs, **options)
-        except (OSError, ValueError, ManagementError):
+        except (OSError, ValueError, ThreadDeskError):
             return {"status": "stale", "error": "index_refresh_failed"}
 
     def preview(self, record_id: str) -> dict:

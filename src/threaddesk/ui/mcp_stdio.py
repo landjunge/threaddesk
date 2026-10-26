@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from importlib.metadata import PackageNotFoundError, version
 import sys
 from typing import Any
 
@@ -12,10 +11,8 @@ from threaddesk.services.mcp import McpBridge
 
 
 def _package_version():
-    try:
-        return version("threaddesk")
-    except PackageNotFoundError:
-        return "unknown-source"
+    from threaddesk import __version__
+    return __version__
 
 
 def _msg(id_: Any, result: Any) -> dict[str, Any]:
@@ -63,20 +60,26 @@ def handle(bridge: McpBridge, req: dict[str, Any]) -> dict[str, Any] | None:
 
 def serve(svc: ThreadService | None = None) -> None:
     bridge = McpBridge(svc or ThreadService())
-    for line in sys.stdin:
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            req = json.loads(line)
-        except json.JSONDecodeError:
-            sys.stdout.write(json.dumps(_err(None, -32700, "parse error")) + "\n")
-            sys.stdout.flush()
-            continue
-        out = handle(bridge, req)
-        if out is not None:
-            sys.stdout.write(json.dumps(out, ensure_ascii=False) + "\n")
-            sys.stdout.flush()
+    from threaddesk.services.library_runtime import LibraryRuntime
+    runtime = LibraryRuntime(lambda: type(bridge.svc.store)(bridge.svc.store.workspace_path))
+    runtime.start()
+    try:
+        for line in sys.stdin:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                req = json.loads(line)
+            except json.JSONDecodeError:
+                sys.stdout.write(json.dumps(_err(None, -32700, "parse error")) + "\n")
+                sys.stdout.flush()
+                continue
+            out = handle(bridge, req)
+            if out is not None:
+                sys.stdout.write(json.dumps(out, ensure_ascii=False) + "\n")
+                sys.stdout.flush()
+    finally:
+        runtime.stop()
 
 
 def main() -> None:

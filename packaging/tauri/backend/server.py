@@ -9,6 +9,12 @@ from packaging_desktop_entry import running_server, self_test
 
 
 def main() -> int:
+    if len(sys.argv) == 3 and sys.argv[1] == "--library-command":
+        from threaddesk.ui.cli import main as library_cli
+        return library_cli(["library", "--request", sys.argv[2]])
+    if len(sys.argv) == 3 and sys.argv[1] == "--file-format-pdf-worker":
+        from threaddesk.services.file_formats.pdf_worker import main as pdf_main
+        return pdf_main(sys.argv[2]) or 0
     if "--self-test" in sys.argv:
         return self_test()
     with desktop_listener(JsonStore(base_root())) as listener:

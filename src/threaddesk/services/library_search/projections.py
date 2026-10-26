@@ -88,9 +88,13 @@ def file_document(record, blobs, cached=None):
         id=record["id"],
         entity_type="file",
         record_id=record["id"],
+        file_node_id=record["id"],
         node_id=node,
         node_ids=node_ids,
+        project_ids=record.get("project_ids", []),
+        project_title=record.get("project_title", ""),
         title=record.get("filename", ""),
+        version=record.get("version", 1), current_version=record.get("current_version", True),
         logical_path=record.get("logical_path") or record.get("origin_path", ""),
         updated_at=record.get("updated_at")
         or record.get("imported_at")
@@ -137,7 +141,7 @@ def _node_projection(node):
         "key": "node:" + node.id,
         "id": node.id,
         "entity_type": "node",
-        "record_id": meta.get("record_id", ""),
+        "record_id": meta.get("library_record_id") or meta.get("record_id", ""),
         "thread_id": meta.get("thread_id", ""),
         "node_id": node.id,
         "project_id": node.id if node.kind == "project" else meta.get("project_id", ""),

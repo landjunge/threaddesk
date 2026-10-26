@@ -7,7 +7,6 @@ import shutil
 import subprocess
 import tempfile
 
-from threaddesk.core.errors import ManagementError
 from threaddesk.core.models import now_iso
 from threaddesk.services.library_files import state, validation
 from threaddesk.services.library_files.launch_services import default_application
@@ -69,13 +68,23 @@ def _named_copy(service, record, document):
         raise
 
 
-def open_file(service, record_id, *, operation_id, expected_revision):
-    validation.operation_id(operation_id)
-    validation.record_id(record_id)
-    if type(expected_revision) is not int or expected_revision < 1:
+def validate_open_request(arguments):
+    if (not isinstance(arguments, dict)
+            or set(arguments) != {"action", "id", "operation_id", "expected_revision"}
+            or arguments.get("action") != "open"):
+        state.fail("validation_error", "Ungültige Öffnungsanfrage.")
+    validation.operation_id(arguments["operation_id"])
+    validation.record_id(arguments["id"])
+    revision = arguments["expected_revision"]
+    if type(revision) is not int or revision < 1:
         state.fail("validation_error", "Positive erwartete Dateirevision erforderlich.")
-    request = {"action": "open", "id": record_id, "operation_id": operation_id,
-               "expected_revision": expected_revision}
+    return dict(arguments)
+
+
+def open_file(service, record_id, *, operation_id, expected_revision):
+    request = validate_open_request({"action": "open", "id": record_id,
+                                     "operation_id": operation_id,
+                                     "expected_revision": expected_revision})
     request_hash = service._request_hash(request)
     with service.store.transaction():
         document = state.read_state(service.root)

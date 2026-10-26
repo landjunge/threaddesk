@@ -182,6 +182,9 @@ class SearchDatabase:
                     params.extend(
                         [value, value, value if value.startswith(".") else "." + value]
                     )
+                elif column == "project_id":
+                    clauses.append("(d.project_id=? OR EXISTS(SELECT 1 FROM json_each(json_extract(d.payload,'$.project_ids')) p WHERE p.value=?))")
+                    params.extend([value, value])
                 elif column in COLUMNS.split(","):
                     clauses.append("d." + column + "=?")
                     params.append(value)

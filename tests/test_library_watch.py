@@ -145,7 +145,9 @@ def test_partial_secret_failure_isolated_with_same_error_backoff(context, monkey
     result = only(watch.poll_once())
     assert result["status"] == "partial"
     assert result["receipt"]["counts"]["stored"] == 1
-    assert result["receipt"]["counts"]["failed"] == 1
+    assert result["receipt"]["counts"]["blocked"] == 1
+    job = LibraryBatchImporter(store).status(result["receipt"]["operation_id"])
+    assert any(item.get("error") == "secret_name" for item in job["files"])
     assert result["last_success"] is None
 
     def forbidden(*args, **kwargs):

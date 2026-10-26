@@ -1,0 +1,19 @@
+.graph-files { grid-column: 1 / -1; }
+.graph-files form, .graph-files .map-actions { display:flex; flex-wrap:wrap; gap:.6rem; align-items:end; }
+.graph-files label { display:flex; flex-direction:column; gap:.25rem; }
+.graph-files .file-list { max-height:24rem; overflow:auto; }
+.graph-files .file-list li { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; }
+.graph-files dialog { color:var(--text, #ddd); background:var(--panel, #202027); width:min(52rem,90vw); max-height:85vh; overflow:auto; border:1px solid #888; border-radius:.7rem; }
+.graph-files dialog::backdrop { background:#0009; }
+.graph-files dialog header { display:flex; justify-content:space-between; gap:1rem; }
+.graph-files dialog img, .graph-files dialog video { max-width:100%; max-height:45vh; }
+.graph-files dialog pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:35vh; overflow:auto; }
+.graph-files dialog > label { margin:.5rem 0; }
+
+.graph-files input, .graph-files select { max-width:100%; min-height:40px; }
+.graph-files form label { flex:1 1 10rem; min-width:0; }
+.graph-files form input[type="search"] { min-width:12rem; }
+.graph-files form select { max-width:18rem; }
+.graph-files dialog h2 { overflow-wrap:anywhere; }
+.graph-files dialog select { width:100%; }
+.graph-files [data-file-message] { white-space:pre-wrap; overflow-wrap:anywhere; }

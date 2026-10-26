@@ -57,6 +57,14 @@ class LibraryIndex:
             for record in sorted(records.glob("*.json")):
                 stat = record.lstat()
                 signature.append((record.name, stat.st_mtime_ns, stat.st_size))
+        from threaddesk.storage.library_search_state import canonical_state
+        signature.append(("canonical", canonical_state(self.root.parent)))
+        receipts = self.root.parent / "library-batch-sources.json"
+        if receipts.is_symlink():
+            raise OSError("unsafe_source_receipts")
+        if receipts.exists():
+            info = receipts.stat()
+            signature.append(("source_receipts", info.st_mtime_ns, info.st_size))
         return generation, hashlib.sha256(json.dumps(signature).encode()).hexdigest()
 
     def status(self) -> dict:
@@ -112,6 +120,8 @@ class LibraryIndex:
         )
         had_previous = self._has_ready_index()
         generation, signature = self._source_state()
+        from threaddesk.services.library_search.projects import project_records
+        records = project_records(store, records)
         token = uuid4().hex
         try:
             with self.database.connect(write=True) as db:
@@ -203,26 +213,9 @@ class LibraryIndex:
 
     def sync_workspace(self, store) -> dict:
         """Refresh existing thread projections/graph documents after a source write."""
-        document = self._read()
-        if not document or document.get("backend") != "sqlite":
-            return self.status()
-        with self.database.connect(write=True) as db:
-            self.database.initialize(db)
-            errors = []
-            self.database.replace(
-                db, workspace_documents(store, errors), ("thread", "node")
-            )
-            document["projection_errors"] = errors[:100]
-            document["entity_documents"] = db.execute(
-                "SELECT count(*) FROM documents WHERE entity_type!='file'"
-            ).fetchone()[0]
-            document["generation"] = uuid4().hex
-            db.execute(
-                "INSERT OR REPLACE INTO metadata VALUES('generation',?)",
-                (document["generation"],),
-            )
-        self._replace(document)
-        return self.status()
+        from threaddesk.services.library_import import LibraryImporter
+        importer = LibraryImporter(store)
+        return self.rebuild(importer._read_records(), importer.blobs, store=store)
 
     def search(
         self,

@@ -4,10 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "threaddesk"
-version = "0.1.2"
+version = "0.1.3"
 description = "Local-first control layer: persistent threads for AI work. Stores context, never executes."
 readme = "README.md"
 requires-python = ">=3.9"
+dependencies = ["pypdf>=6.19,<7"]
 authors = [{ name = "landjunge" }]
 license = { text = "Proprietary" }
 

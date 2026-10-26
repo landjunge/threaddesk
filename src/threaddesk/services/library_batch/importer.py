@@ -95,7 +95,7 @@ class LibraryBatchImporter:
                 old = previous.get(key)
                 if old and old["status"] in {"stored", "duplicate"}:
                     try:
-                        _, record = self.importer.open_record(old["record_id"])
+                        _, record = self.importer.open_record(old["record_id"], include_trashed=True)
                         results.append(old)
                         total += record["size"]
                         continue
@@ -160,7 +160,7 @@ class LibraryBatchImporter:
             if predecessor and predecessor not in history:
                 history.append(predecessor)
             if unchanged:
-                _, record = self.importer.open_record(receipt["record_id"])
+                _, record = self.importer.open_record(receipt["record_id"], include_trashed=True)
                 item_status = "duplicate"
                 preserve = receipt.get("state") == "complete"
                 new_record = bool(receipt.get("new_record")) and not preserve
@@ -170,7 +170,7 @@ class LibraryBatchImporter:
                 imported, _created = self.importer._import_one(path, row["relative_path"], journal)
                 if imported.status not in {"stored", "duplicate"}:
                     return dict(result, status="blocked" if imported.error.startswith("secret_") else "failed", error=imported.error)
-                _, record = self.importer.open_record(imported.record_id)
+                _, record = self.importer.open_record(imported.record_id, include_trashed=True)
                 if (record["sha256"], record["size"]) != (digest, size):
                     raise LibraryImportError("source_changed_during_import")
                 item_status = imported.status
