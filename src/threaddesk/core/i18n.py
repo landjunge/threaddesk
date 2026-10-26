@@ -15,6 +15,8 @@ Regeln:
 
 from __future__ import annotations
 
+from threaddesk.core.library_i18n import FILE_STRINGS
+
 LANGUAGES = ("de", "en")
 DEFAULT_LANGUAGE = "de"
 
@@ -1248,6 +1250,9 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "cli.help.serve_open": {"de": "Browser öffnen", "en": "Open the browser"},
 }
+
+
+CATALOG.update(FILE_STRINGS)
 
 
 def normalise(language: str | None) -> str:

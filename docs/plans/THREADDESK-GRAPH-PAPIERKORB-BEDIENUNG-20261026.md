@@ -1,6 +1,6 @@
 # Konkreter ThreadDesk Plan für Bedienung, Papierkorb und Graph
 
-Stand: 26. Oktober 2026. Produktbasis `07e10bf`; die anschließenden Commits dieses Auftrags ändern ausschließlich Planung, Projektregeln und Nachweise. **Zunächst Planung, keine Umsetzung der neuen Funktionen.** Dieser Plan ersetzt die Umsetzungszuweisungen des [vorherigen Plans](THREADDESK-KIRABRIDGE-PLAN-20261026.md). Dessen Fehlerdiagnose bleibt gültig.
+Stand: 26. Oktober 2026. Produktbasis `07e10bf`; die anschließenden Commits dieses Auftrags ändern ausschließlich Planung, Projektregeln und Nachweise. **Fortgeschriebener Auftrag: Bibliotheksimport, verbindliche Indexsuche und Dateimanager jetzt schrittweise umsetzen.** Dieser Plan ersetzt die Umsetzungszuweisungen des [vorherigen Plans](THREADDESK-KIRABRIDGE-PLAN-20261026.md). Dessen Fehlerdiagnose bleibt gültig.
 
 ThreadDesk wird vollständig bedienbar, erhält einen wiederherstellbaren Papierkorb und anschließend eine deutlich bessere Graphansicht mit nachvollziehbarer Dateiaktivität. ChatGPT muss alle Fachaktionen über vorhandene KiraBridge-Zugänge ausführen können. In diesem Auftrag wird ausschließlich ThreadDesk geplant und gebaut; KiraBridge bleibt eine externe Gegenstelle. Es gibt keine KiraBridge-Baupakete.
 
@@ -13,7 +13,7 @@ ThreadDesk wird vollständig bedienbar, erhält einen wiederherstellbaren Papier
 5. Neue Graphtechnik im echten Desktop vergleichen, anschließend Übersicht, Zeitmodus und vollständige Bedienung bauen.
 6. Review, Pflicht-CI, Commit/Push/Merge, Paket und installierte Desktop-Version aus demselben Laufzeitstand abnehmen.
 
-Die letzte Stufe setzt eine spätere Umsetzungsfreigabe voraus. Die aktuelle Planungsaufgabe endet mit geprüftem und integriertem Plan, erhaltenen Originalen und belegtem Desktop-/Git-Laufzeitvergleich. Kein Diagramm, Katalog oder Dokumentationsmerge wird als fertig implementierte Funktion ausgegeben.
+Der anschließende Nutzerauftrag erteilt die Umsetzungsfreigabe für Bibliotheksimport, Indexsuche, Graph-Dateimanager, zugehörigen Dateipapierkorb und sofortige KiraBridge-Bedienung. Die genaue aktuelle Reihenfolge und Abnahme stehen in Abschnitt 11. Nicht hierzu gehörende spätere Themen bleiben zurückgestellt. Kein Diagramm, Katalog oder Dokumentationsmerge wird als fertig implementierte Funktion ausgegeben.
 
 ## 2. Zusammenfassung vorhandener Brainstormings
 
@@ -197,4 +197,74 @@ Pflicht-CI bleibt unverändert: zweimal Gesamtsuite einschließlich Browsern und
 
 Die konkreten Anforderungen wurden aus tatsächlich gelesenen Quellen konsolidiert. Aktuelle Grafiktechniken wurden anhand von Primärquellen recherchiert. Papierkorb, Zeitaktivität und vollständige Bedienung haben klar getrennte Fachverträge, ThreadDesk-Dateibereiche, Zuständigkeiten, Abhängigkeiten und Abnahmen. Die feste KiraBridge-Writegrenze bleibt ausdrücklich ausgewiesen.
 
-Keine Produktfunktion wurde durch diesen Plan bereits implementiert; kein Nutzerinhalt wurde gelöscht, umorganisiert oder in private Originalvolltexte nach Git kopiert. Papierkorb-/Graph-/CLI-Umsetzung startet erst als nächster ausdrücklich beauftragter Bauabschnitt.
+Keine Produktfunktion wurde durch diesen Plan bereits implementiert; kein Nutzerinhalt wurde gelöscht, umorganisiert oder in private Originalvolltexte nach Git kopiert. Der anschließend ausdrücklich beauftragte Bibliotheks-/Such-/Dateimanager-Bauabschnitt folgt nun in Abschnitt 11; die historische Planungsabnahme wird dadurch nicht nachträglich als Umsetzung ausgegeben.
+
+
+## 11. Aktueller Bauauftrag Bibliothek, Indexsuche und Graph-Dateimanager
+
+Der neue Nutzerauftrag ergänzt diesen Plan statt einen parallelen Plan einzuführen. Verbindlich sind nun: echte zugängliche freigegebene Inhalte importieren, lokale Indexsuche mit hoher Priorität, Dateiverwaltung direkt im vorhandenen Graphen, erweiterbare Formate und sofortiger Bediennachweis über vorhandene KiraBridge. Eine neue Graphengine, semantische KI-Suche, Mobilanwendung und weitere früher zurückgestellte Produktideen gehören nicht zu diesem Bauabschnitt. Der vorhandene Graph wird für Dateinavigation erweitert.
+
+### Bestand und Wahrheit über Originale
+
+**Nutzerpräzisierung:** Maßgeblich ist der jeweils aktuelle autorisierte Dateibestand, der sich laufend ändern kann. 275 Dateien/23 Ordner sind ausschließlich historische Vergleichszahlen, kein festes Soll und keine Obergrenze. Jeder Lauf bekommt einen frischen Quellenstand mit Erfassungszeit und Fingerprints; neue/geänderte/umbenannte/fehlende Dateien als Delta führen. Eine Änderung während der Übernahme wird erkannt und als instabil beziehungsweise neue Version behandelt. Wiederaufnahme bleibt an ihren belegten Quellenstand gebunden; ein Folgelauf erfasst den aktuellen Stand neu.
+
+Die historische Inventur enthält275Einträge und nennt23Ordner; viele Zeilen besitzen weder Originalbytes noch Hash oder individuelleQuellversion. Für jede Zeile getrennt erfassen: zugänglicheQuelle, tatsächlicherByteimport, Referenz-only, eindeutigerlokalerKandidat ohne historischenIdentitätsbeweis, Konflikt, ausdrücklicherAusschluss. Namens-/Größenübereinstimmung allein bestätigt nicht das historischeOriginal. Eine bestätigteÜbernahme braucht SHA256 der tatsächlichgelesenenQuelle und der gespeichertenKopie; Originale bleiben unberührt. FehlendeOriginale einzeln ausweisen, nicht durch neueDateien oder Referenzen ersetzen. Ursprüngliche sensitive/redaktierte Ausschlüsse bleiben geschützt.
+
+Importe verwenden vorhandenenLibraryImporter/Receiver/CAS mit persistentenQuellen-/Dateibelegen. UnklareZuordnung geht in den vorhandenen zentralenEingang. GleicheInhalte werden als Dubletten markiert und können Blobs teilen, ohneDateirecords/Quellenzuordnungen automatischzulöschen. Wiederaufnahme derselbenOperation liefert ihrenBeleg oder setzt nur offeneEinträge fort. KeinBlindreplay historischerKiraBridge-Aufträge. PrivateOriginalinhalte und lokaleInventurpfade gehören nicht in öffentlichePrüfbelege.
+
+### Erweiterte Funktionspakete mit sofortiger KiraBridge-Abnahme
+
+Die folgende Reihenfolge konkretisiert B03–B05, B06–B12 und B16–B18 für den aktuellen Umfang. Keine zweiteModulverwaltung, keinzweiterDateispeicher und kein konkurrierenderSuchdienst. JederLIB-Punkt verlangt schon vorFertigmeldung Oberfläche/Fachschnittstelle UND realenautorisiertenBridgeaufruf plusReadback; Integration ist kein späteresRestpaket. GewichtejePaket1, fertig nur mitallen zugehörigenBelegen.
+
+| Paket | Wiederverwendung und Dateieigentum | Abhängigkeit und Abnahme |
+| --- | --- | --- |
+| LIB01 Bestand und Importbelege | LibraryImporter/Receiver, bestehendeInventur; Quellen-/Importmodul | Historische 275 Zeilen als Vergleich nachvollziehbar; aktueller freigegebener Bestand je Lauf maßgeblich, erreichbare Originalbytes/konkrete Lücken getrennt; SHA256vor/nach, Zuordnungen/Originale erhalten, Dubletten ohneLöschung; Status überBridge lesen |
+| LIB02 ErweiterbareFormatadapter | kleineAdapter für Klassifikation/Extraktion, vorhandenerImport | Verwalten/Index/Vorschau/externesÖffnen unabhängig ausgewiesen; keineSkript-/Makroausführung; proDateiTimeout/Größenlimit/Fehlerisolation; Formatliste überBridge |
+| LIB03 VerbindlicherlokalerIndex | vorhandenerLibraryIndex+Suchprojektionen, SQLiteFTS5 | Name/Pfad/auslesbarerInhalt/Projekt/Thread/Graph; Teilbegriffe, Schreibvarianten, Typ/Datum/Projekt/Zuordnung; Treffer mitDatei-/KnotenIDs; echteNamens-/Inhaltssuche überBridge |
+| LIB04 Dateiverwaltung | bestehendeCASRecords, kleinerLibraryFileService | Liste/Ordner/Sortierung/Info, mehrereAnhänge, rename/copy/move/assign mitRevision+Operation; Provenienz/Referenzen erhalten; jedeAktion überBridge samtReadback |
+| LIB05 Popup und externesMacÖffnen | eigenerPreview-/Openadapter, vorhandenerGraphinspektor | ErsterDateiklick nurPopup, explizitererneuterKlick/Doppelklick/InAppöffnen; keineunbeabsichtigtenStarts; fehlenderHandler erklärt; zulässigerrealerBridgeOpen mitLaunchbeleg, keinmenschlichesLesenbehauptet |
+| LIB06 Dateipapierkorb und Indexnachführung | kontrollierterDateilifecycle ausB06–B10, keineOriginalkaskade | Trash/Restore gleicheRecord-/KnotenIDs, Index/Ansichtaktualisiert; Replay/alteRevision/Neustart; Backup erhältLifecycle; BridgeTrash/Restore jeweils unabhängigzurücklesen |
+| LIB07 DurchgehendeBedienung | dünneUI/API/MCP/CLIAdapter einerFachlogik | Original→Import→Index→Name/Inhalt→Graph→Popup→MacApp→rename/move→Index/Zuordnung→Trash/Restore→erneutfinden; jederentsprechendeBridgeaufruf echt; nativeVertragsgrenze benannt, sichtbareCLInachgewiesen |
+| LIB08 Integration und Auslieferung | bestehendeTests/CI/Paketierung | GroßeDatei/unbekannt/keinHandler/Konflikt/Offline/Neustart/ältererIntelMac; zweiPflichtGesamtabnahmen+Review, Commit/Push/Merge, finalerDesktop-/GitPin undDatenerhalt |
+
+### Formatumfang und sichere Rückfälle
+
+Dokumente: PDF,DOC/DOCX,ODT,RTF,TXT,EPUB,HTML,Markdown. Tabellen:XLS/XLSX,ODS,CSV/TSV. Präsentationen:PPT/PPTX,ODP,KEY. Bilder:JPG,PNG,GIF,WEBP,TIFF,HEIC,SVG. Audio:MP3,WAV,FLAC,AAC,M4A,OGG. Video:MP4,MOV,WEBM,MKV,AVI. Quellcode/strukturierteDaten:PY,JS,TS,JSON,XML,YAML,TOML,SQL,LOG. Archive:ZIP,TAR,GZ,7Z. UnbekannteFormate werden soweit zulässig gespeichert/verwaltet, ohneunsichereVorschau oderAusführung.
+
+Text/Quellcode wird nuralsDaten gelesen, HTML/SVGniemalsalsaktiveAnwendung eingebettet. OOXML/ODF/EPUBwerden mitgebundenemArchiv-/XMLbudget extrahiert; keineMakros/externenReferenzen. PDF benötigt einenbegrenztenParser; gescanntePDFs ohneOCR werden nicht alsvolltextindexiert bezeichnet. LegacyOffice,KEY,7Zoder nichtdekodierbareMedien können Metadaten/Standardprogrammfallback liefern. JedeFormatantwort sagt konkret, was verwaltbar,indexierbar,internvorschaufähigundexternöffnungsfähig ist. Parserfehler blockiertkeineanderenTreffer.
+
+### Status und Evidenz
+
+ProFunktion getrenntführen: vorhervorhanden, geplant, implementiert, gezieltgetestet, integrativgetestet und tatsächlichüberKiraBridgeerreichbar. EinTest mitMock-Open ist keinrealerMacprogrammstart; CodexPrincipal ist nicht automatisch einChatGPTPrincipal; einlokalerMCP-Test ist keinBridge-End-to-End. Verfügbarkeit ist erst nachkonkretemzulässigemAufruf undReadbackbelegt.
+
+
+### Implementierungsstand des Bibliotheksabschnitts · 26. Oktober 2026
+
+Der frühere Gesamtplan und seine zurückgestellten Themen bleiben erhalten. Die folgende Matrix betrifft ausschließlich den nun autorisierten Bibliotheksabschnitt. „Implementiert“ bedeutet Quellcode im aktuellen Integrationszweig; Installation, produktiver Datenimport und die ChatGPT-Identitätsprüfung sind eigene Abnahmeschritte.
+
+| Funktion | Bereits vorhanden | Ergänzung jetzt implementiert | Geprüfter Stand / verbleibende Abnahme |
+| --- | --- | --- | --- |
+| Bibliotheksbytes und Empfang | CAS, ursprünglicher Importer, resumierbarer Dateiempfang | Aktuelle Quellenmanifeste, SHA vor/nach Veröffentlichung, Checkpoints, Wiederaufnahme, Dubletten und unveränderliche Quellversionen | JSON/SQLite und eigene Testdateien geprüft; **aktuelle freigegebene Originalquelle für produktiven Vollimport fehlt** |
+| Bestandsabgleich | Historische Inventur mit 275 Einträgen/23 Ordnern | Einzelfallabgleich und getrennte Lücken/Kandidaten/Konflikte/Ausschlüsse | 24 lokale Kandidaten ohne historischen Identitätsbeweis, fünf Größenkonflikte, 238 im geprüften Umfang fehlende Originale, acht geschützte Ausschlüsse; keine Importerfolgsmeldung daraus |
+| Lokale Indexsuche | Bestehende LibraryIndex-Schnittstelle | SQLite-FTS5, Inhaltsadapter, Namen/Pfade, Threads/Graph/Projekte, deutsche Varianten, Teilbegriffe und Filter | Suchtests und tatsächliche Bridge-Namens-/Inhalts-/Projektabfragen; keine allgemeine KI- oder Tippfehlerkorrektur behauptet |
+| Quellenänderungen | Manueller Ordnerimport | Nur ausdrücklich registrierte Quellen beobachten; neue Versionen, fehlende Quellen und Nachführung mit festem Budget | Änderungen/Neustart/Metadatenersetzung gezielt getestet; lokaler Lauf mit 275 Dateien und 61 CLI-Aufrufen bestätigt automatische Änderungen/Neuzugänge, erhaltene Nutzernamen/-ordner und erhaltene Kopie bei fehlender Quelle; zusätzlicher Bridgebeleg offen |
+| Formate | Vorherige Importklassifikation | Gemeinsame erweiterbare Registry mit getrennten Fähigkeiten; begrenzte Text-/Office-/Archiv-/PDF-Adapter | Metadatenrückfälle und Parserfehler geprüft; echte Bridge-Formatabfrage vorhanden; gefrorenen PDF-Worker im finalen Paket prüfen |
+| Graph-Dateimanager | Bestehender Graph und Inspektor | Mehrere Anhänge, Dateiliste/Ordner/Sortieren/Info/Zuordnung, Popup, rename/copy/move | Browserfälle für DE/EN und API-Parität; KiraBridge-CLI-Aktionen mit unabhängigem Readback tatsächlich ausgeführt |
+| Mac-Öffnen | Vorherige Downloadmöglichkeit | Explizite Aktion, LaunchServices-Handler, geprüfte schreibgeschützte benannte Kopie, dauerhafter Startbeleg | Tatsächliche TextEdit-Anforderung mit anschließendem Operationsreadback; kein menschliches Lesen behauptet; fehlender Handler/unklares Ergebnis gezielt getestet |
+| Dateipapierkorb | Originale und gespeicherte Referenzen | Reversibler Record-Lifecycle mit Revision/Generation und gleicher ID; Graph-/Indexfilter, Restore | JSON/SQLite, Backup und echter Bridge-Trash-/Restore-/Suchablauf; keine endgültige Löschung angeboten |
+| Gemeinsame Bedienlogik | Vorhandene CLI, MCP, lokale UI-Routen | LibraryApplication mit dünnen HTTP-/CLI-/MCP-Adaptern; Operationsbindung und paginierter Importstatus | Lokale Transportparität; realer sichtbarer Bridge-Ablauf mit 31 Aufrufen unter **codex** bestätigt; **ChatGPT-Principal nicht geprüft** |
+| Integration und Desktop | Installierte App 0.1.2, älterer Laufzeitpin 07e10bf | Kandidat 0.1.3 vorbereitet | Finaler Review, Pflicht-CI zweimal, regulärer Merge und Paket-/Installationsidentität sind bis zum konkreten Releasebeleg offen |
+
+Die nativen vorhandenen KiraBridge-Schreibverträge werden nicht still erweitert. Der dynamische Lesekatalog war bei der tatsächlichen Prüfung deaktiviert. Der autorisierte sichtbare CLI-Weg wurde unter der tatsächlichen Identität `codex` genutzt; daraus folgt keine bestätigte Bedienbarkeit aus einem anderen ChatGPT-Kontext. Der erste zusätzliche Großbestands-/Live-Source-Auftrag scheiterte vor dem Programmstart an einem KiraBridge-Terminaltimeout. Ein neuer, eigenständig quittierter Auftrag td-library-frozen-live-20261026-v2 wurde anschließend tatsächlich im sichtbaren Terminal ausgeführt: 275 eigene Dateien, 51 Aufrufe des gepackten Backends vom Quellpin 387a2eb, automatische Änderung/Neuzugang und Erhalt gespeicherter Kopien; max. 10.530 Bytes je Antwort, Exit 0 und verarbeiteter Completionbeleg. Auch dieser Nachweis betrifft den Principal codex. KiraBridge selbst wird dafür nicht verändert.
+
+Importantworten und `import_status` liefern jetzt eine begrenzte Zusammenfassung ohne das vollständige Quellenmanifest sowie Dateiseiten mit `total`, `returned`, `next_offset` und Kürzungskennzeichen. Der Aufrufer folgt dem tatsächlichen `next_offset`. Der Extremtest traversiert alle 275 Einträge einschließlich langer Unicodepfade innerhalb des 30-KiB-Seitenbudgets. Ein lokaler Test dieses Budgets ersetzt den echten Bridge-Transportnachweis nicht.
+
+Der reale bisherige Bridge-Ablauf verwendete eigene synthetische Dateien: Import → automatische Indexierung → Namens-/Inhalts-/Projekt-/Variantenabfragen → Knotendateiliste → Vorschauinformationen → TextEdit-Startbeleg und Operationsreadback → Kopieren → Umbenennen → Verschieben → Zuordnen → Papierkorb → Wiederherstellen → erneut finden. Unbekannte Formate blieben verwaltbar und wurden nicht gestartet. Die eigentliche Popup-Bedienung wurde separat im Browser geprüft; eine CLI-Vorschauantwort wird nicht als sichtbarer Popupbeleg ausgegeben.
+
+Detaillierte stabile Befehlsverträge, Formatmatrix und Ressourcengrenzen stehen in [library-commands.md](../library-commands.md). Private Inventurpfade, Originalinhalte und vollständige Terminalverläufe bleiben außerhalb des Repositorys. Die eigens erzeugten Akzeptanzskripte sind `scripts/check_library_workflow.py` und `scripts/check_library_live_source.py`; ihre Ausgaben sind Testbelege und keine produktiven Nutzerdateien.
+
+Versionswiederherstellung: Der unabhängige Schlussreview fand und korrigierte den Konflikt einer aktuellen Quellversion mit ihrem eigenen erhaltenen Vorgänger. Nur exakte IDs aus demselben bestätigten Source-Receipt erlauben diese Versionsüberlagerung; unabhängige Kopien und fremde Quellen bleiben Namenskonflikte. Sechs JSON-/SQLite-Regressionen prüfen Original-/Historienerhalt und die Konfliktgrenze. Der erweiterte Live-Source-Akzeptanzlauf enthält nun auch Trash/Restore nach einem Quellenversionswechsel.
+
+Offene Formatabnahme KEY: Die bestehende private-Schlüssel-Schutzregel sperrt `.key` beim Import/Empfang. Der tatsächliche Formatkatalog nennt diese Admissiongrenze nun ausdrücklich (`import_allowed=false`, `secret_name`). KEY ist nicht vollständig unterstützt. Vor Freigabe werden echte geprüfte Keynote-Dateien und eine gemeinsam genutzte positive Inhaltsprüfung benötigt; keine pauschale Ausnahme für private Schlüssel. Diese Grenze bleibt neben aktueller Originalquelle und ChatGPT-Principal in der Restabnahme sichtbar.
+
+Index-/Graph-Wiederaufnahme: Der aktive Hintergrundlauf repariert eine verlorene abgeleitete Suchdatenbank, migriert den alten JSON-Index und initialisiert ausschließlich bereits vorhandene CAS-Records ohne Indexmanifest. Er rekonstruiert fehlende Dateiknoten vor der Indexierung; reine Readtools und leere Profile schreiben dadurch nichts. Zwölf gezielte JSON-/SQLite-Fälle einschließlich echtem Backup/Restore, Original-/CAS-Erhalt und Record-Linkguards sind geprüft. Nach einer Reparaturstörung gilt ein 30-Sekunden-Retryabstand. Der finale gepackte Live-Source-Lauf verschiebt dafür nur seine eigene Test-Indexdatenbank samt Sidecars, startet den Backendprozess neu und prüft den automatischen Suchreadback.

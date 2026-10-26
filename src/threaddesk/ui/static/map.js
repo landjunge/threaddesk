@@ -374,7 +374,9 @@
     applyTransform();
   };
 
-  const render = (graph) => {
+  const render = (graph, refreshing = false) => {
+    const selectedIds = refreshing ? [...world.querySelectorAll(".is-selected[data-node-id]")].map(item => item.dataset.nodeId) : [];
+    const previousPositions = placed;
     world.replaceChildren();
     canvas.querySelector("defs")?.remove();
     canvas.insertBefore(defs(), canvas.firstChild);
@@ -385,6 +387,9 @@
 
     world.appendChild(backdrop());
     placed = layout(graph.nodes, graph.relations);
+    if (refreshing && previousPositions) {
+      previousPositions.forEach((point, id) => { if (placed.has(id)) placed.set(id, point); });
+    }
     sizes = new Map(graph.nodes.map((node) => [node.id, radiusOf(node)]));
 
     const edgeLayer = el("g", {class: "map-edges", "data-map-edges": ""});
@@ -412,7 +417,8 @@
       edges.push({path, relation, style});
     });
 
-    const showDetail = (node) => {
+    const showDetail = (node, notify = true) => {
+      if (notify) root.dispatchEvent(new CustomEvent("threaddesk:node-selected", {detail: {id: node.id, thread_id: node.metadata?.thread_id}}));
       detailTitle.textContent = node.title;
       detailText.textContent = node.details || t("map.no_details");
       detailMeta.hidden = false;
@@ -560,6 +566,13 @@
       redrawEdges();
       return true;
     };
+    if (refreshing) {
+      selectedIds.forEach(id => nodeLayer.querySelector(`[data-node-id="${CSS.escape(id)}"]`)?.classList.add("is-selected"));
+      const current = graph.nodes.find(node => selectedIds.includes(node.id));
+      if (current) showDetail(current, false);
+      highlight(); applyTransform();
+      return;
+    }
     fit();
     const params = new URLSearchParams(window.location.search);
     const wantedNode = params.get("node");
@@ -645,11 +658,17 @@
     setEffects(root.classList.contains("effects-off"));
   });
 
-  fetch(root.dataset.graphEndpoint, {headers: {Accept: "application/json"}})
-    .then((response) => {
+  let refreshTicket = 0;
+  async function refreshGraph(refreshing = false) {
+    const ticket = ++refreshTicket;
+    try {
+      const response = await fetch(root.dataset.graphEndpoint, {headers: {Accept: "application/json"}, cache: "no-store"});
       if (!response.ok) throw new Error("graph request failed");
-      return response.json();
-    })
-    .then(render)
-    .catch(() => { error.hidden = false; });
+      const graph = await response.json();
+      if (ticket !== refreshTicket) return;
+      render(graph, refreshing); error.hidden = true;
+    } catch (_) { if (ticket === refreshTicket) error.hidden = false; }
+  }
+  document.addEventListener("threaddesk:library-changed", () => refreshGraph(true));
+  refreshGraph();
 })();

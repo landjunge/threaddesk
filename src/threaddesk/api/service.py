@@ -278,12 +278,15 @@ class ThreadService:
             for node in self.store.list_nodes()
             if (not kind or node.kind == kind) and (not status or node.status == status)
         ]
+        from threaddesk.services.library_links import visible_library_nodes, library_relations
+        nodes = visible_library_nodes(self.store, nodes)
         node_ids = {node.id for node in nodes}
         relations = [
             relation
             for relation in self.store.list_relations()
             if relation.source_id in node_ids and relation.target_id in node_ids
         ]
+        relations.extend(library_relations(self.store, nodes))
         return {
             "schema": "threaddesk.graph.v1",
             "nodes": [node.to_dict() for node in nodes],

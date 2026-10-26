@@ -14,7 +14,7 @@ from threaddesk.services.knowledge_export import KnowledgeExportService
 from threaddesk.services.knowledge_visual_export import encode_pdf, encode_svg
 from threaddesk.services.knowledge_package import KnowledgePackageService
 from threaddesk.services.modules import ModuleRegistry, ModuleRuntime
-from threaddesk.services.workshop_module import WORKSHOP_MANIFEST, WorkshopEvent, WorkshopService
+from threaddesk.services.workshop_module import WorkshopEvent, WorkshopService
 
 Translator = Callable[..., str]
 
@@ -799,6 +799,8 @@ def build_parser(language: str = i18n.DEFAULT_LANGUAGE,
     se.set_defaults(func=cmd_serve)
     from threaddesk.ui.search_cli import register_search
     register_search(sub, language, _svc)
+    from threaddesk.ui.library_cli import register_library
+    register_library(sub, language, _svc)
     return p
 
 
@@ -809,7 +811,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser(language, register)
     args = parser.parse_args(items)
     try:
-        return int(args.func(args))
+        result = int(args.func(args))
+        if result == 0 and args.cmd != "library":
+            from threaddesk.services.library_refresh import refresh_existing
+            refresh_existing(_svc().store)
+        return result
     except ThreadDeskError as exc:
         print(i18n.translate("cli.error", args.lang, args.mode, message=exc),
               file=sys.stderr)

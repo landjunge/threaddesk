@@ -98,7 +98,7 @@ def test_cli_and_mcp_publish_the_current_command_and_tool_contracts(tmp_path: Pa
     assert tuple(commands) == (
         "new", "list", "switch", "current", "note", "describe", "status",
         "files", "rename", "archive", "unarchive", "delete", "snap", "prompt",
-        "handoff", "inbox", "mcp", "grok", "gnom", "gnom-job", "module", "workshop", "gate", "dash", "graph", "authority", "serve", "ui", "search",
+        "handoff", "inbox", "mcp", "grok", "gnom", "gnom-job", "module", "workshop", "gate", "dash", "graph", "authority", "serve", "ui", "search", "library",
     )
 
     bridge = McpBridge(ThreadService(JsonStore(tmp_path)))
@@ -111,7 +111,7 @@ def test_cli_and_mcp_publish_the_current_command_and_tool_contracts(tmp_path: Pa
         "save_snapshot", "list_snapshots", "restore_snapshot", "generate_prompt",
         "export_handoff", "import_return", "get_return", "list_returns", "review_return",
         "export_grok", "export_gnom", "bind_gnom_job", "receive_gnom_callback",
-        "list_gnom_jobs", "check_gate", "dashboard",
+        "list_gnom_jobs", "check_gate", "dashboard", "library_query", "library_manage",
     ]
     assert all("delete" not in tool["name"] for tool in bridge.list_tools())
 

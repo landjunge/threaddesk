@@ -1,0 +1,50 @@
+<section class="panel graph-files" data-graph-files data-strings='{{ map_strings|safe }}' aria-label="{{ t('graph_files.heading') }}">
+  <h2>{{ t('graph_files.heading') }}</h2>
+  <a class="btn btn-ghost" href="/library">{{ t('graph_files.import') }}</a>
+  <form data-file-search>
+    <label>{{ t('graph_files.search') }} <input name="query" type="search" maxlength="1000" /></label>
+    <label>{{ t('graph_files.type') }} <select data-files-type>
+      <option value="">{{ t('graph_files.all_types') }}</option>
+      <option value="document">{{ t('graph_files.documents') }}</option><option value="spreadsheet">{{ t('graph_files.spreadsheets') }}</option>
+      <option value="presentation">{{ t('graph_files.presentations') }}</option><option value="image">{{ t('graph_files.images') }}</option>
+      <option value="audio">{{ t('graph_files.audio') }}</option><option value="video">{{ t('graph_files.video') }}</option>
+      <option value="source">{{ t('graph_files.code') }}</option><option value="archive">{{ t('graph_files.archives') }}</option>
+      <option value="unknown">{{ t('graph_files.unknown_format') }}</option>
+    </select></label>
+    <label>{{ t('graph_files.project') }} <select data-files-project><option value="">{{ t('graph_files.all_projects') }}</option></select></label>
+    <label>{{ t('graph_files.date_from') }} <input data-files-date-from type="date" /></label>
+    <label>{{ t('graph_files.date_to') }} <input data-files-date-to type="date" /></label>
+    <button class="btn" type="submit">{{ t('graph_files.search') }}</button>
+    <button class="btn btn-ghost" type="button" data-files-all>{{ t('graph_files.all') }}</button>
+  </form>
+  <div class="map-actions">
+    <label>{{ t('graph_files.folder') }} <input data-files-folder maxlength="500" /></label>
+    <button class="btn btn-ghost" data-files-folder-open>{{ t('graph_files.browse') }}</button>
+    <label>{{ t('graph_files.sort') }} <select data-files-sort><option value="name">{{ t('graph_files.name') }}</option><option value="date">{{ t('graph_files.date') }}</option><option value="type">{{ t('graph_files.type') }}</option><option value="size">{{ t('graph_files.size') }}</option></select></label>
+    <label><input type="checkbox" data-files-trash /> {{ t('graph_files.show_trash') }}</label>
+  </div>
+  <p class="muted" data-files-status aria-live="polite">{{ t('graph_files.choose_node') }}</p>
+  <ul class="file-list" data-files-list></ul>
+  <button class="btn btn-ghost" data-files-more hidden>{{ t('graph_files.more') }}</button>
+  <dialog data-file-preview aria-labelledby="file-preview-heading">
+    <header><h2 id="file-preview-heading" data-file-title></h2><button class="btn btn-ghost" data-file-close>{{ t('graph_files.close') }}</button></header>
+    <div data-file-body></div>
+    <details><summary>{{ t('graph_files.information') }}</summary><pre data-file-information class="muted"></pre></details>
+    <label>{{ t('graph_files.name') }} <input data-file-name maxlength="240" /></label>
+    <label>{{ t('graph_files.folder') }} <input data-file-folder maxlength="500" /></label>
+    <label>{{ t('graph_files.project') }} <select data-file-project><option value="">{{ t('graph_files.keep_project') }}</option></select></label>
+    <p class="muted" data-file-assignments></p>
+    <label>{{ t('graph_files.add_node') }} <select data-file-node><option value="">{{ t('graph_files.no_node') }}</option></select></label>
+    <div class="map-actions">
+      <button class="btn" data-file-action="open">{{ t('graph_files.open') }}</button>
+      <button class="btn btn-ghost" data-file-action="rename">{{ t('graph_files.rename') }}</button>
+      <button class="btn btn-ghost" data-file-action="copy">{{ t('graph_files.copy') }}</button>
+      <button class="btn btn-ghost" data-file-action="move">{{ t('graph_files.move') }}</button>
+      <button class="btn btn-ghost" data-file-action="assign">{{ t('graph_files.assign') }}</button>
+      <button class="btn btn-ghost" data-file-action="trash">{{ t('graph_files.trash') }}</button>
+      <button class="btn btn-ghost" data-file-action="restore">{{ t('graph_files.restore') }}</button>
+    </div>
+    <button class="btn btn-ghost" data-file-check>{{ t("graph_files.check") }}</button>
+    <p data-file-message aria-live="polite"></p>
+  </dialog>
+</section>

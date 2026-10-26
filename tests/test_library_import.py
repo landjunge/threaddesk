@@ -136,6 +136,8 @@ def test_rejects_secrets_symlinks_traversal_and_executables(tmp_path: Path) -> N
     source = tmp_path / "library"
     source.mkdir()
     (source / "note.md").write_text("api_key=sk-abcdefghijklmnopqrstuvwxyz\n", encoding="utf-8")
+    (source / "module.py").write_text("api_key=sk-abcdefghijklmnopqrstuvwxyz\n", encoding="utf-8")
+    (source / "settings.toml").write_text("api_key=sk-abcdefghijklmnopqrstuvwxyz\n", encoding="utf-8")
     (source / ".env").write_text("TOKEN=abc\n", encoding="utf-8")
     (source / "run.exe").write_bytes(b"MZ")
     outside = tmp_path / "outside.txt"

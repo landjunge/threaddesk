@@ -247,15 +247,42 @@ def create_app() -> FastAPI:
         # refreshed by their protected POST actions, never by rendering a view.
         bootstrap_profile()
         app.state.server_sync_manager.start()
+        app.state.library_runtime.start()
         try:
             yield
         finally:
+            app.state.library_runtime.stop()
             app.state.server_sync_manager.stop()
 
     app = FastAPI(title="ThreadDesk", docs_url=None, redoc_url=None,
                   dependencies=[Depends(require_ui_csrf)], lifespan=lifespan)
     app.state.hausmeister_probes = {}
     app.add_middleware(LocalHTTPAccess)
+    from threaddesk.ui.library_router import library_router
+    app.include_router(library_router(_svc))
+    from threaddesk.services.library_runtime import LibraryRuntime
+    app.state.library_runtime = LibraryRuntime(lambda: _svc().store)
+
+    @app.middleware("http")
+    async def refresh_library_after_commit(request: Request, call_next):
+        response = await call_next(request)
+        if (request.method == "POST" and response.status_code < 400
+                and not request.url.path.startswith(("/api/library/", "/library/"))):
+            from starlette.background import BackgroundTasks
+            from threaddesk.services.library_refresh import refresh_existing
+            tasks = BackgroundTasks()
+            if response.background is not None:
+                tasks.add_task(response.background)
+            def refresh_selected():
+                store = _svc().store
+                try:
+                    refresh_existing(store)
+                finally:
+                    if hasattr(store, "connection"):
+                        store.connection.close()
+            tasks.add_task(refresh_selected)
+            response.background = tasks
+        return response
 
     def remember_probe(store, status: dict) -> None:
         key = str(store.artifact_path("hausmeister.json"))

@@ -40,6 +40,9 @@
     <p class="muted" data-map-detail-text>{{ t("map.pick_hint") }}</p>
     <dl data-map-detail-meta hidden></dl>
   </section>
+  {% include "partials/graph_files.html" %}
 </main>
+<link rel="stylesheet" href="/static/graph-files.css" />
 <script src="/static/map.js" defer></script>
+<script src="/static/graph-files.js" defer></script>
 {% endblock %}

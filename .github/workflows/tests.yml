@@ -88,6 +88,7 @@ jobs:
         run: |
           node --check src/threaddesk/ui/static/map.js
           node --check src/threaddesk/ui/static/app.js
+          node --check src/threaddesk/ui/static/graph-files.js
       - name: Test results
         if: always()
         uses: actions/upload-artifact@v4

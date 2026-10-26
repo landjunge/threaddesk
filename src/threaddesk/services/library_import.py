@@ -6,6 +6,9 @@ store after a second SHA-256 check. An existing blob is never overwritten.
 """
 from __future__ import annotations
 
+from threaddesk.services.file_formats.registry import FORMATS as FORMAT_REGISTRY
+
+from datetime import datetime, timezone
 from dataclasses import dataclass
 import hashlib
 import json
@@ -17,7 +20,7 @@ import stat
 import tempfile
 import zipfile
 
-from threaddesk.core.errors import InvalidState, NotFound, SecretRejected
+from threaddesk.core.errors import InvalidState, NotFound, SecretRejected, ThreadDeskError
 from threaddesk.core.models import new_id, new_thread
 from threaddesk.core.secrets import reject_secrets
 from threaddesk.services.library_index import LibraryIndex
@@ -40,56 +43,16 @@ _SECRET_NAME = re.compile(
     r"(?i)(^|[._-])(env|id_rsa|id_ed25519|credentials|cookies|secrets?)($|[._-])"
     r"|\.(pem|key|p12|pfx|kdbx)$"
 )
-_FORMATS = {
-    ".md": ("markdown", "text/markdown"),
-    ".markdown": ("markdown", "text/markdown"),
-    ".txt": ("text", "text/plain"),
-    ".rst": ("text", "text/plain"),
-    ".csv": ("csv", "text/csv"),
-    ".tsv": ("tsv", "text/tab-separated-values"),
-    ".json": ("json", "application/json"),
-    ".yaml": ("yaml", "application/yaml"),
-    ".yml": ("yaml", "application/yaml"),
-    ".html": ("html", "text/html"),
-    ".htm": ("html", "text/html"),
-    ".xml": ("xml", "application/xml"),
-    ".pdf": ("pdf", "application/pdf"),
-    ".doc": ("word", "application/msword"),
-    ".docx": ("word", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
-    ".xls": ("excel", "application/vnd.ms-excel"),
-    ".xlsx": ("excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
-    ".ppt": ("powerpoint", "application/vnd.ms-powerpoint"),
-    ".pptx": ("powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
-    ".odt": ("word", "application/vnd.oasis.opendocument.text"),
-    ".ods": ("excel", "application/vnd.oasis.opendocument.spreadsheet"),
-    ".odp": ("powerpoint", "application/vnd.oasis.opendocument.presentation"),
-    ".rtf": ("rtf", "application/rtf"),
-    ".png": ("image", "image/png"),
-    ".jpg": ("image", "image/jpeg"),
-    ".jpeg": ("image", "image/jpeg"),
-    ".gif": ("image", "image/gif"),
-    ".webp": ("image", "image/webp"),
-    ".heic": ("image", "image/heic"),
-    ".heif": ("image", "image/heif"),
-    ".tif": ("image", "image/tiff"),
-    ".tiff": ("image", "image/tiff"),
-    ".bmp": ("image", "image/bmp"),
-    ".svg": ("image", "image/svg+xml"),
-    ".zip": ("zip", "application/zip"),
-    ".mp3": ("audio", "audio/mpeg"),
-    ".wav": ("audio", "audio/wav"),
-    ".m4a": ("audio", "audio/mp4"),
-    ".aac": ("audio", "audio/aac"),
-    ".ogg": ("audio", "audio/ogg"),
-    ".flac": ("audio", "audio/flac"),
-    ".aiff": ("audio", "audio/aiff"),
-    ".mp4": ("video", "video/mp4"),
-    ".m4v": ("video", "video/mp4"),
-    ".mov": ("video", "video/quicktime"),
-    ".webm": ("video", "video/webm"),
-    ".mkv": ("video", "video/x-matroska"),
-}
-_TEXT_SUFFIXES = {".md", ".markdown", ".txt", ".rst", ".csv", ".tsv", ".json", ".yaml", ".yml", ".html", ".htm", ".xml"}
+_FORMATS = {suffix: (entry[0], entry[1]) for suffix, entry in FORMAT_REGISTRY.items()}
+
+
+def _format_for(suffix):
+    return _FORMATS.get(suffix, ("unknown", "application/octet-stream"))
+
+
+_EXECUTABLE_SUFFIXES = {".exe", ".com", ".command", ".msi", ".app", ".pkg", ".dmg"}
+_TEXT_SUFFIXES = {suffix for suffix, entry in FORMAT_REGISTRY.items()
+                  if entry[2] in {"text", "html", "rtf"}}
 
 
 class LibraryImportError(InvalidState):
@@ -203,7 +166,7 @@ def _zip_members(package: Path) -> list[tuple[str, bytes]]:
 class LibraryImporter:
     def __init__(self, store) -> None:
         self.store = store
-        self.workspace = Path(store.workspace_path)
+        self.workspace = Path(store.workspace_path).resolve()
         self.root = self.workspace / "library-files"
         self.blobs = self.root / "blobs"
         self.records = self.root / "records"
@@ -212,7 +175,7 @@ class LibraryImporter:
     def catalog(self) -> dict:
         journal = self._read_journal()
         records = [self._public_record(item) for item in self._read_records()]
-        stored = [item for item in records if item["integrity"] == "verified"]
+        stored = [item for item in records if item["integrity"] == "verified" and not item.get("trashed")]
         failed = [item for item in journal["items"].values() if item.get("status") == "failed"]
         pending = [item for item in journal["items"].values() if item.get("status") == "pending"]
         outstanding = self._outstanding(journal)
@@ -246,7 +209,7 @@ class LibraryImporter:
             return []
         return [
             self._public_record(item) for item in records
-            if item.get("thread_id") == thread_id and item.get("status") == "stored"
+            if item.get("thread_id") == thread_id and item.get("status") == "stored" and not item.get("trashed")
         ]
 
     def import_tree(self, source: Path) -> dict:
@@ -295,34 +258,29 @@ class LibraryImporter:
 
     def rebuild_index(self) -> dict:
         try:
-            return LibraryIndex(self.root).rebuild(self._read_records(), self.blobs)
-        except OSError:
+            from threaddesk.services.library_links import sync_file_nodes
+            sync_file_nodes(self.store)
+            return LibraryIndex(self.root).rebuild(self._read_records(), self.blobs, store=self.store)
+        except (OSError, ValueError, ThreadDeskError):
             return {"status": "failed", "documents": 0, "failed": 0, "error": "index_store"}
 
     def reassign(self, record_id: str, thread_title: str) -> dict:
-        if not _RECORD_ID.fullmatch(record_id or ""):
-            raise NotFound(record_id)
-        record = self._record_by_id(record_id)
-        if record is None or record.get("status") != "stored":
-            raise NotFound(record_id)
-        from threaddesk.api.service import ThreadService
-        title = _norm(thread_title)
-        match = None
-        for thread in ThreadService(store=self.store).list(include_archived=True):
-            if _norm(thread.title) == title:
-                match = thread
-                break
-        if match is None:
+        """Legacy name-based facade; effective membership belongs to file manager."""
+        from threaddesk.services.library_files import LibraryFileService
+        service = LibraryFileService(self.store)
+        record = service.info(record_id)
+        matches = [thread for thread in self.store.list_threads(include_archived=True)
+                   if _norm(thread.title) == _norm(thread_title)]
+        if not matches:
             raise LookupError(thread_title)
-        if record.get("thread_id") != match.id:
-            self._unlink_thread(record.get("thread_id"), record_id)
-            record["thread_id"] = match.id
-            record["thread_title"] = match.title
-            record["assignment"] = "unassigned" if _norm(match.title) == _norm(UNASSIGNED_TITLE) else "matched"
-            self._write_json(self.records / f"{record_id}.json", record)
-            self._link_thread(match, record_id)
-        self.rebuild_index()
-        return self._public_record(record)
+        if len(matches) != 1:
+            from threaddesk.core.errors import ManagementError
+            raise ManagementError("assignment_conflict", "Threadtitel ist nicht eindeutig.")
+        result = service.manage({"operation_id": "legacy-reassign-" + new_id(),
+                                 "action": "assign", "id": record_id,
+                                 "expected_revision": record["revision"],
+                                 "data": {"thread_id": matches[0].id}})
+        return self._public_record(result["record"])
 
     def _unlink_thread(self, thread_id: str | None, record_id: str) -> None:
         if not thread_id:
@@ -341,16 +299,16 @@ class LibraryImporter:
             raise LibraryImportError("no_source")
         return self.import_tree(Path(source))
 
-    def open_record(self, record_id: str) -> tuple[Path, dict]:
+    def open_record(self, record_id: str, *, include_trashed: bool = False) -> tuple[Path, dict]:
         if not _RECORD_ID.fullmatch(record_id or ""):
             raise NotFound(record_id)
         path = self.records / f"{record_id}.json"
-        if not path.is_file():
+        record = self._record_by_id(record_id)
+        if record is None or (record.get("trashed") and include_trashed is not True):
             raise NotFound(record_id)
         try:
             if self.records.is_symlink() or path.is_symlink():
                 raise LibraryImportError("integrity")
-            record = json.loads(path.read_text(encoding="utf-8"))
             expected = record.get("sha256", "")
             if (not isinstance(expected, str) or not _DIGEST.fullmatch(expected)
                     or record.get("id") != record_id or type(record.get("size")) is not int):
@@ -387,7 +345,7 @@ class LibraryImporter:
                 raise LibraryImportError("receipt_conflict")
         else:
             self._publish_blob(path, sha256, size)
-            kind, media = _FORMATS[Path(filename).suffix.casefold()]
+            kind, media = _format_for(Path(filename).suffix.casefold())
             record = self._write_record(relative=filename, digest=sha256, size=size,
                                         kind=kind, media=media, thread=thread,
                                         version=self._next_version(filename), record_id=record_id)
@@ -448,7 +406,7 @@ class LibraryImporter:
             self._remember(journal, relative, status="failed", error="not_a_file")
             return ImportItem(relative, "failed", error="not_a_file"), False
         suffix = PurePosixPath(relative).suffix.casefold()
-        if suffix not in _FORMATS:
+        if suffix in _EXECUTABLE_SUFFIXES:
             self._remember(journal, relative, status="failed", error="unsupported")
             return ImportItem(relative, "failed", error="unsupported"), False
         if _looks_secret_name(relative):
@@ -477,7 +435,7 @@ class LibraryImporter:
         self._remember(journal, relative, status="pending", sha256=digest, size=size)
         try:
             created = self._publish_blob(path, digest, size)
-            kind, media = _FORMATS[suffix]
+            kind, media = _format_for(suffix)
             thread = self._assign(relative)
             record = self._write_record(
                 relative=relative, digest=digest, size=size, kind=kind, media=media,
@@ -632,6 +590,7 @@ class LibraryImporter:
             "status": "stored",
             "version": version,
             "integrity": "verified",
+            "imported_at": datetime.now(timezone.utc).isoformat(),
         }
         self.records.mkdir(parents=True, exist_ok=True, mode=0o700)
         self._write_json(self.records / f"{record['id']}.json", record)
@@ -648,6 +607,10 @@ class LibraryImporter:
     def _record_by_id(self, record_id: str) -> dict | None:
         if not isinstance(record_id, str) or not _RECORD_ID.fullmatch(record_id):
             return None
+        from threaddesk.services.library_files.state import normalize, read_state
+        overlay = read_state(self.root)["records"].get(record_id)
+        if overlay is not None:
+            return normalize(overlay)
         path = self.records / f"{record_id}.json"
         if not path.is_file():
             return None
@@ -657,19 +620,23 @@ class LibraryImporter:
             record = json.loads(path.read_text(encoding="utf-8"))
             if not isinstance(record, dict):
                 raise LibraryImportError("integrity")
-            return record
+            return normalize(record)
         except (OSError, ValueError) as exc:
             raise LibraryImportError("integrity") from exc
 
     def _read_records(self) -> list[dict]:
-        if not self.records.is_dir():
-            return []
+        from threaddesk.services.library_files.state import effective_records
         rows = []
-        for path in sorted(self.records.glob("*.json")):
-            if not _RECORD_ID.fullmatch(path.stem):
-                continue
-            rows.append(json.loads(path.read_text(encoding="utf-8")))
-        return rows
+        if self.records.is_dir():
+            if self.root.is_symlink() or self.records.is_symlink():
+                raise LibraryImportError("integrity")
+            for path in sorted(self.records.glob("*.json")):
+                if not _RECORD_ID.fullmatch(path.stem):
+                    continue
+                if path.is_symlink():
+                    raise LibraryImportError("integrity")
+                rows.append(json.loads(path.read_text(encoding="utf-8")))
+        return effective_records(rows, self.root)
 
     def _public_record(self, record: dict) -> dict:
         item = dict(record)
@@ -752,5 +719,5 @@ def validate_received_filename(filename: str) -> None:
         raise LibraryImportError("unsafe_path")
     if _looks_secret_name(filename):
         raise LibraryImportError("secret_name")
-    if Path(filename).suffix.casefold() not in _FORMATS:
+    if Path(filename).suffix.casefold() in _EXECUTABLE_SUFFIXES:
         raise LibraryImportError("unsupported")
