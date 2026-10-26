@@ -345,3 +345,35 @@ def test_search_database_never_follows_a_link(tmp_path):
     with pytest.raises(OSError):
         LibraryIndex(root).rebuild([record], root / "blobs")
     assert outside.read_bytes() == b"unchanged"
+
+
+def test_frozen_pdf_uses_its_packaged_worker_frontdoor(tmp_path, monkeypatch):
+    import subprocess
+    import sys
+
+    pdf = tmp_path / "packaged.pdf"
+    pdf.write_bytes(b"%PDF-1.4")
+    observed = []
+
+    def completed(argv, **kwargs):
+        observed.append(argv)
+        return subprocess.CompletedProcess(
+            argv,
+            0,
+            json.dumps(
+                {
+                    "text": "packaged marker",
+                    "status": "indexed",
+                    "error": "",
+                    "truncated": False,
+                }
+            ),
+            "",
+        )
+
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(
+        "threaddesk.services.file_formats.extraction.subprocess.run", completed
+    )
+    assert extract(pdf, pdf.name)["text"] == "packaged marker"
+    assert observed == [[sys.executable, "--file-format-pdf-worker", str(pdf)]]

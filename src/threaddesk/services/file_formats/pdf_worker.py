@@ -13,7 +13,7 @@ MAX_TEXT = 1024 * 1024
 MAX_PAGES = 200
 
 
-def main():
+def main(path=None):
     try:
         import resource
 
@@ -45,7 +45,7 @@ def main():
             from io import BytesIO
 
             descriptor = os.open(
-                sys.argv[1], os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+                path or sys.argv[1], os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
             )
             with os.fdopen(descriptor, "rb") as stream:
                 info = os.fstat(stream.fileno())

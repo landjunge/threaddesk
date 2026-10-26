@@ -12,6 +12,7 @@ from pathlib import Path
 from threaddesk.core.errors import SecretRejected
 from threaddesk.core.secrets import reject_secrets
 
+from . import pdf_worker
 from .containers import archive_text, zip_text
 from .registry import descriptor
 from .text import decode, html_text, rtf_text
@@ -66,13 +67,13 @@ def extract_file(path: Path, filename: str) -> dict:
             text, bounded = archive_text(raw, filename)
             truncated |= bounded
         elif adapter == "pdf":
+            command = (
+                [sys.executable, "--file-format-pdf-worker", str(path)]
+                if getattr(sys, "frozen", False)
+                else [sys.executable, "-m", pdf_worker.__name__, str(path)]
+            )
             completed = subprocess.run(
-                [
-                    sys.executable,
-                    "-m",
-                    "threaddesk.services.file_formats.pdf_worker",
-                    str(path),
-                ],
+                command,
                 capture_output=True,
                 text=True,
                 timeout=5,
