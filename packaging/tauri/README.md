@@ -1,28 +1,59 @@
 # ThreadDesk 0.1.2 (Tauri, Intel macOS)
 
-This release candidate bundles the existing local-first ThreadDesk Python HTTP server with an independent Tauri WebKit window. It does **not** require a Python installation on target machines.
+Dieser Veröffentlichungskandidat bündelt den vorhandenen lokalen
+ThreadDesk-Python-HTTP-Server mit einem eigenständigen Tauri-WebKit-Fenster.
+Auf dem Zielrechner ist keine eigene Pythoninstallation erforderlich.
 
-The window opens the existing workspace at `~/.threaddesk`. It does not create a second store or migrate one. There is no auto-update endpoint and no remote service. Version 0.1.2 is ad-hoc signed only.
+Das Fenster öffnet den vorhandenen Arbeitsbereich unter `~/.threaddesk`.
+Es legt keine zweite Ablage an und migriert keine bestehende. Es gibt weder
+einen automatischen Aktualisierungsendpunkt noch einen entfernten Dienst.
+Version 0.1.2 ist ausschließlich ad-hoc signiert.
 
-To build on an x86_64 macOS host:
+Auf einem x86_64-Mac bauen:
 
-1. Install the ThreadDesk development dependencies including PyInstaller.
-2. From repository root, run `python -m PyInstaller --clean --noconfirm --distpath packaging/tauri/backend/dist --workpath packaging/tauri/backend/build packaging/tauri/backend/ThreadDeskServer.spec`.
-3. Run `packaging/tauri/backend/dist/ThreadDeskServer --self-test`.
-4. From `packaging/tauri`, run `npm ci` and `npm run build`.
-5. Check `src-tauri/target/release/bundle/macos/ThreadDesk.app`, sign locally with `codesign --force --deep --sign -` if needed and package a zip for GitHub release uploads.
+1. Die ThreadDesk-Entwicklungsabhängigkeiten einschließlich PyInstaller installieren.
+2. Im Repository-Stamm `python -m PyInstaller --clean --noconfirm --distpath packaging/tauri/backend/dist --workpath packaging/tauri/backend/build packaging/tauri/backend/ThreadDeskServer.spec` ausführen.
+3. `packaging/tauri/backend/dist/ThreadDeskServer --self-test` ausführen.
+4. Unter `packaging/tauri` erst `npm ci`, dann `npm run build` ausführen.
+5. `src-tauri/target/release/bundle/macos/ThreadDesk.app` prüfen, bei Bedarf lokal mit `codesign --force --deep --sign -` signieren und für einen GitHub-Release als ZIP verpacken.
 
-No Apple Developer ID signing or notarization is provided. Gatekeeper may require manual user approval. Verify the bundle, bundled backend, and local GUI with a clean test workspace before distributing. This is a release candidate, not a notarized stable release.
+Eine Signatur mit Apple Developer ID oder eine Notarisierung wird nicht
+bereitgestellt. Gatekeeper kann eine manuelle Benutzerfreigabe verlangen.
+Vor Weitergabe das Bundle, den gebündelten Hintergrunddienst und die lokale
+Oberfläche mit einem sauberen Testarbeitsbereich prüfen. Dies ist ein
+Veröffentlichungskandidat, keine notarisierte stabile Ausgabe.
 
-## Visible version and source identity
+## Sichtbare Version und Quellidentität
 
-The shared header displays the package version and the first seven characters of the source commit. Both PyInstaller specifications run `scripts/write_build_info.py` before collecting resources. It records the current commit, whether the checkout contains local changes, and the UTC build identifier in an ignored package resource. The running app reads that resource without executing Git or accessing a user workspace.
+Die gemeinsame Kopfzeile zeigt Paketversion und die ersten sieben Zeichen
+des Quellcommits. Beide PyInstaller-Spezifikationen führen vor dem Einsammeln
+der Ressourcen `scripts/write_build_info.py` aus. Das Skript hält aktuellen
+Commit, lokale Änderungen und UTC-Baukennung in einer ignorierten
+Paketressource fest. Die laufende Anwendung liest diese Ressource, ohne Git
+auszuführen oder auf einen Nutzerarbeitsbereich zuzugreifen.
 
-Commit the intended source before building a distributable package. A clean checkout produces a label such as `v0.1.2 · abcdef0`; an uncommitted checkout adds `+lokal`. A source launch without valid packaged metadata says `Quellstand` rather than claiming a commit. Keep the Python package version, Tauri configuration, npm package and Cargo package aligned when changing versions.
+Die gewünschte Quelle vor dem Bau eines weiterzugebenden Pakets committen.
+Ein sauberer Arbeitsstand erzeugt eine Kennzeichnung wie `v0.1.2 · abcdef0`;
+ein nicht committeter Stand ergänzt `+lokal`. Ein Quellstart ohne gültige
+Paketmetadaten zeigt `Quellstand` statt einer behaupteten Commitkennung.
+Bei Versionsänderungen Pythonpaket, Tauri-Konfiguration, npm- und Cargo-Paket
+auf demselben Stand halten.
 
-Before replacing an installation, preserve the previous app and workspace, run the packaged self-test, and check the app with a separate HOME containing a workspace copy. Verify the actual header and the thread/graph/whiteboard counts, then compare source hashes and embedded build metadata. Install only the tested bundle. Publishing that exact source commit afterwards keeps the installed label traceable to GitHub.
+Vor dem Austausch einer Installation die vorherige App und den Arbeitsbereich
+erhalten, den Paket-Selbsttest ausführen und die App mit einem gesonderten
+Benutzerverzeichnis und einer Arbeitsbereichskopie prüfen. Tatsächliche
+Kopfzeile und Anzahlen der Threads, Graphobjekte und Whiteboard-Einträge prüfen,
+dann Quellhashes und eingebettete Baumetadaten vergleichen. Nur das geprüfte
+Bundle installieren. Die anschließende Veröffentlichung genau dieses
+Quellcommits hält die installierte Kennzeichnung gegenüber GitHub nachvollziehbar.
 
-## Workspace response ordering
+## Reihenfolge der Arbeitsbereichsantworten
 
-Independent editor forms may finish in a different order from their requests. The UI suppresses superseded workspace responses so that an older note-save response cannot replace a later snapshot restore or thread selection. Requests still finish normally and write failures remain visible. The browser regression delays a real note-save reply until after the restore swap and verifies the restored note again after a server restart.
-
+Unabhängige Bearbeitungsformulare können in anderer Reihenfolge antworten als
+angefragt. Die Oberfläche unterdrückt überholte Arbeitsbereichsantworten,
+damit eine ältere Notizspeicherantwort weder eine spätere Wiederherstellung
+eines Zwischenstands noch die Threadauswahl ersetzen kann. Anfragen werden
+weiter normal abgeschlossen; Schreibfehler bleiben sichtbar. Die vorhandene
+Browserprüfung verzögert eine echte Notizspeicherantwort bis nach dem
+Wiederherstellungswechsel und prüft die wiederhergestellte Notiz erneut nach
+einem Dienstneustart.

@@ -1,0 +1,62 @@
+Netzwerkpunkt Personal Use License 1.0
+Individuelle Lizenz mit einsehbarem Quelltext
+Copyright (c) 2026 Daniel Filipek / landjunge
+
+DEUTSCH — maßgebliche Fassung
+
+1. Geltungsbereich
+Diese Bedingungen gelten für die vom genannten Rechteinhaber unter dieser
+Datei angebotenen eigenen Beiträge zur Software und ihrer Dokumentation.
+Gesondert gekennzeichnete Drittbestandteile unterliegen ihren eigenen
+Lizenzen. Diese Lizenz ist keine Open-Source-Lizenz und keine von OSI oder
+PolyForm anerkannte Standardlizenz.
+
+2. Kostenlose private Nutzung
+Natürliche Personen dürfen die Software für eigene private, nicht
+geschäftliche Zwecke kostenlos herunterladen, installieren, ausführen,
+untersuchen und für diesen Bedarf verändern. Erforderliche lokale Builds,
+Sicherungskopien und der selbst betriebene Dienst für den eigenen privaten
+Bedarf sind eingeschlossen. Urheber- und Lizenzhinweise sind zu erhalten.
+Die bloße Beschäftigung bei einem Unternehmen schließt eine davon getrennte
+private Nutzung nicht aus.
+
+3. Gesonderte Erlaubnis für geschäftliche Nutzung
+Eine vorherige schriftliche Erlaubnis beziehungsweise gesonderte Lizenz des
+Rechteinhabers ist erforderlich für:
+- den Einsatz in betrieblichen Abläufen oder im Auftrag eines Unternehmens,
+  eines Selbstständigen oder einer sonstigen Organisation;
+- den Verkauf oder Weiterverkauf der Software, auch verändert oder gebündelt;
+- das kostenpflichtige Bereitstellen der Software oder ihrer Funktionen als
+  gehosteten Dienst, API, Bestandteil eines Angebots oder Kundenleistung.
+Eine kostenlose Abgabe an Kunden macht einen geschäftlichen Einsatz nicht
+zur privaten Nutzung. Konditionen werden gesondert vereinbart; diese Datei
+enthält keine Zusage einer kommerziellen Lizenz oder eines bestimmten Preises.
+
+4. Weitergabe und sonstige Rechte
+Diese Lizenz erteilt keine allgemeine Erlaubnis zur Weiterverteilung,
+Unterlizenzierung oder Veröffentlichung eigener Distributionskopien oder
+abgeleiteter Werke. Dafür ist, soweit nicht anderweitig erlaubt, eine
+gesonderte schriftliche Erlaubnis erforderlich. Links auf die Originalquelle
+und die Beschreibung des Projekts sind erlaubt. Gesetzliche Nutzungsrechte
+und Rechte, die nach den anwendbaren GitHub-Bedingungen eingeräumt werden,
+bleiben unberührt. Marken-, Namens- und Logorechte werden nicht übertragen.
+Nicht ausdrücklich eingeräumte Rechte bleiben vorbehalten.
+
+5. Historische Fassungen und bestehende Erlaubnisse
+Diese Fassung gilt ab ihrer Veröffentlichung für die unter ihr angebotene
+Fassung. Bereits zuvor eingeräumte Rechte werden nicht rückwirkend entzogen.
+Für früher bezogene Fassungen bleiben die damals geltenden Bedingungen und
+gesondert erteilte Erlaubnisse maßgeblich. Insbesondere bleiben die bereits eingeräumten MIT-Rechte an historischen
+ThreadDesk-Fassungen vor dem früheren All-rights-reserved-Lizenzwechsel
+unberührt. Der spätere All-rights-reserved-Hinweis wird durch diese neue
+Lizenz für die jetzt unter ihr angebotene Fassung ersetzt; historische
+Fassungen werden dadurch nicht nachträglich umgeschrieben.
+
+6. Bereitstellung und Haftung
+Die Software wird im vorhandenen Zustand bereitgestellt. Eine Garantie für
+Fehlerfreiheit, Sicherheit, Verfügbarkeit oder einen bestimmten Zweck wird
+nicht übernommen. Soweit gesetzlich zulässig, sind Gewährleistung und Haftung
+ausgeschlossen. Zwingende gesetzliche Ansprüche und Haftung, insbesondere
+für Vorsatz, grobe Fahrlässigkeit und Schäden an Leben, Körper oder Gesundheit,
+bleiben unberührt. Eine Support-, Wartungs- oder Updatepflicht entsteht durch
+diese Lizenz nicht.
