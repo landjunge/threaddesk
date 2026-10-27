@@ -5,6 +5,7 @@ import json
 import math
 import os
 import re
+import time
 from pathlib import Path
 
 import pytest
@@ -28,7 +29,8 @@ def _screenshot(page, viewport, label):
     phase = os.environ.get("THREADDESK_GRAPH_SHOT_PHASE", "after")
     page.screenshot(path=str(SHOTS / f"{phase}-{viewport[0]}x{viewport[1]}-{label}.png"), full_page=True)
     (SHOTS / f"{phase}-{viewport[0]}x{viewport[1]}-{label}.json").write_text(
-        json.dumps({"geometry": _geometry(page), "labels": _readability(page)}, indent=2))
+        json.dumps({"geometry": _geometry(page), "labels": _readability(page),
+                    "startup_trace": page.evaluate("() => window.__graphWorkspaceTrace || null")}, indent=2))
 
 
 def _readability(page):
@@ -332,3 +334,117 @@ def test_compact_overview_node_shapes_remain_individually_clickable(graph_worksp
     page.mouse.click(target["x"], target["y"])
     expect(page.locator(f'.map-node[data-node-id="{target["expected"]}"]')).to_have_class(re.compile("is-selected"))
     expect(page.locator(f'.map-node[data-node-id="{primary.id}"]')).not_to_have_class(re.compile("is-selected"))
+
+
+@pytest.mark.parametrize("graph_workspace", [(940, 640)], indirect=True, ids=["early-maximize"])
+def test_delayed_styles_and_early_maximize_fit_once_then_preserve_user_camera(graph_workspace):
+    page, _viewport, _primary, _record_id = graph_workspace
+    held_styles = []
+    page.add_init_script("""(() => {
+      const events=[];
+      window.__graphWorkspaceTrace={events};
+      const record=(name,extra={})=>events.push({name,at:performance.now(),...extra});
+      document.addEventListener('threaddesk:graph-loaded',()=>record('graph-loaded'));
+      document.addEventListener('DOMContentLoaded',()=>record('DOMContentLoaded'));
+      window.addEventListener('load',()=>record('load'));
+      window.addEventListener('resize',()=>record('resize',{width:innerWidth,height:innerHeight}));
+      ['pointerdown','wheel','keydown','input'].forEach(name=>document.addEventListener(name,event=>{
+        if(event.target.closest?.('[data-graph-endpoint]')) record(name,{trusted:event.isTrusted});
+      },{capture:true}));
+    })();""")
+
+    def delay_style(route):
+        held_styles.append(route)
+
+    page.route("**/graph-workspace.css", delay_style)
+    page.goto(page.url.split("?")[0] + "?lang=de", wait_until="commit")
+    expect(page.locator("[data-map-stage]")).to_be_attached()
+    request_deadline = time.monotonic() + 1
+    while not held_styles and time.monotonic() < request_deadline:
+        # Pump the driver's event loop until the actual intercepted request
+        # arrives; waiting for paint here would deadlock a head stylesheet.
+        page.wait_for_timeout(10)
+    assert held_styles, "The actual graph stylesheet request must be held for this regression"
+    early_geometry = _geometry(page)
+    for route in held_styles:
+        route.fulfill(response=route.fetch())
+    page.wait_for_load_state("load")
+    expect(page.locator(".map-node")).to_have_count(28)
+    # Native windows may finish maximizing after the page's first graph draw.
+    # No graph/camera input has happened during either loading or this resize.
+    page.evaluate("() => window.__graphWorkspaceTrace.events.push({name:'maximize-request',at:performance.now()})")
+    page.set_viewport_size({"width": 1440, "height": 900})
+    _settle(page)
+
+    def graph_bounds():
+        return page.locator("[data-map-stage]").evaluate("""stage => {
+          const frame=stage.getBoundingClientRect();
+          const nodes=[...stage.querySelectorAll('.map-node-shape')].map(node=>node.getBoundingClientRect());
+          const left=Math.min(...nodes.map(r=>r.left)),right=Math.max(...nodes.map(r=>r.right));
+          const top=Math.min(...nodes.map(r=>r.top)),bottom=Math.max(...nodes.map(r=>r.bottom));
+          return {count:nodes.length,inside:nodes.every(r=>r.left>=frame.left && r.right<=frame.right &&
+            r.top>=frame.top && r.bottom<=frame.bottom),widthShare:(right-left)/frame.width,
+            heightShare:(bottom-top)/frame.height};
+        }""")
+
+    # Observe the settling window; an untouched native maximize must produce
+    # a useful first overview within one second, without pressing Fit.
+    deadline = time.monotonic() + 1
+    while True:
+        first = graph_bounds()
+        if (first["inside"] and first["widthShare"] >= 0.65 and first["heightShare"] >= 0.50
+                or time.monotonic() >= deadline):
+            break
+        _settle(page)
+    _screenshot(page, (1440, 900), "first-layout-with-delayed-styles")
+    assert first["inside"] and first["widthShare"] >= 0.65 and first["heightShare"] >= 0.50, {
+        "early_geometry": early_geometry, "first_overview": first}
+    # Real wheel and pointer input establishes a camera the app must preserve.
+    stage = page.locator("[data-map-stage]").bounding_box()
+    assert stage
+    x, y = stage["x"] + 30, stage["y"] + 30
+    page.mouse.move(x, y)
+    initial_camera = _camera(page)
+    page.mouse.wheel(0, -300)
+    _settle(page)
+    zoomed_camera = _camera(page)
+    assert zoomed_camera["scale"] > initial_camera["scale"]
+    page.mouse.down()
+    page.mouse.move(x + 55, y + 35, steps=4)
+    page.mouse.up()
+    _settle(page)
+    user_camera = _camera(page)
+    assert math.hypot(user_camera["x"] - zoomed_camera["x"],
+                      user_camera["y"] - zoomed_camera["y"]) * user_camera["scale"] >= 40
+    page.set_viewport_size({"width": 1180, "height": 760})
+    deadline = time.monotonic() + 1
+    while True:
+        _settle(page)
+        _assert_same_camera(user_camera, _camera(page))
+        if time.monotonic() >= deadline:
+            break
+    _screenshot(page, (1180, 760), "user-camera-after-initial-layout")
+
+
+@pytest.mark.parametrize("graph_workspace", [(940, 640)], indirect=True, ids=["button-activation"])
+def test_camera_button_without_pointer_preserves_its_view_during_startup(graph_workspace):
+    page, _viewport, _primary, _record_id = graph_workspace
+    page.add_init_script("""document.addEventListener('threaddesk:graph-loaded', () => {
+      if (window.__cameraButtonActivation) return;
+      const world=document.querySelector('[data-map-world]');
+      const before=world.getScreenCTM().a;
+      document.querySelector('[data-map-zoom-in]').click();
+      window.__cameraButtonActivation={before,after:world.getScreenCTM().a,at:performance.now()};
+    });""")
+    page.goto(page.url.split("?")[0] + "?lang=de", wait_until="commit")
+    page.wait_for_function("window.__cameraButtonActivation")
+    activation = page.evaluate("window.__cameraButtonActivation")
+    assert math.isclose(activation["after"], activation["before"] * 1.25, rel_tol=0.02), activation
+    _settle(page)
+    chosen = _camera(page)
+    assert page.evaluate("performance.now()") - activation["at"] < 2500
+    page.set_viewport_size({"width": 1440, "height": 900})
+    deadline = time.monotonic() + 1
+    while time.monotonic() < deadline:
+        _settle(page)
+        _assert_same_camera(chosen, _camera(page))

@@ -1,3 +1,3 @@
 """ThreadDesk — local-first thread control layer. Never executes."""
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"

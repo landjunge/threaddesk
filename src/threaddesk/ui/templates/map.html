@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 {% block shell_class %} graph-shell{% endblock %}
+{% block page_styles %}
+<link rel="stylesheet" href="/static/graph-files.css" />
+<link rel="stylesheet" href="/static/graph-workspace.css" />
+{% endblock %}
 {% block body %}
 <main class="map-page" tabindex="0" aria-label="{{ t('map.title') }}" data-graph-endpoint="/api/graph" data-strings='{{ map_strings|safe }}' data-actor-marks="{{ actor_marks_json }}">
   <header class="map-toolbar">
@@ -59,8 +63,6 @@
     <li><span class="key key-circle key-ai"></span>{{ t("map.legend_ai") }}</li>
   </ul>
 </main>
-<link rel="stylesheet" href="/static/graph-files.css" />
-<link rel="stylesheet" href="/static/graph-workspace.css" />
 <script src="/static/map-viewport.js" defer></script>
 <script src="/static/map-layout.js" defer></script>
 <script src="/static/graph-workspace.js" defer></script>

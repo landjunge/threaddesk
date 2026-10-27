@@ -51,5 +51,43 @@
           baseline: (box || below).y + item.font - item.y};
       });
   };
-  window.ThreadDeskMapViewport = Object.freeze({fit, resize, labels});
+  // A page may have positive SVG dimensions before its final styles arrive.
+  // Only the first layout waits; ordinary interaction never pays this delay.
+  const stable = (stage, quietMs = 120, timeoutMs = 4000) => new Promise((resolve, reject) => {
+    let previous = "", unchangedSince = performance.now(), frame;
+    const timeout = setTimeout(() => {
+      cancelAnimationFrame(frame);
+      reject(new Error("map_stage_not_ready"));
+    }, timeoutMs);
+    const sample = () => {
+      const now = performance.now();
+      const width = stage.clientWidth, height = stage.clientHeight;
+      const current = `${width}:${height}`;
+      if (current !== previous || width <= 1 || height <= 1) unchangedSince = now;
+      previous = current;
+      if (width > 1 && height > 1 && now - unchangedSince >= quietMs) {
+        clearTimeout(timeout);
+        resolve({width, height});
+      } else frame = requestAnimationFrame(sample);
+    };
+    frame = requestAnimationFrame(sample);
+  });
+  const ready = async stage => {
+    let timer;
+    const assets = async () => {
+      if (document.readyState !== "complete") {
+        await new Promise(resolve => window.addEventListener("load", resolve, {once: true}));
+      }
+      if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(link =>
+        !link.disabled && !link.sheet)) throw new Error("map_styles_not_ready");
+      if (document.fonts?.ready) await document.fonts.ready;
+    };
+    try {
+      await Promise.race([assets(), new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("map_assets_timeout")), 8000);
+      })]);
+    } finally { clearTimeout(timer); }
+    return stable(stage);
+  };
+  window.ThreadDeskMapViewport = Object.freeze({fit, resize, labels, ready, stable});
 })();
