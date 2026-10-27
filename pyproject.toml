@@ -8,7 +8,7 @@ version = "0.1.5"
 description = "Local-first control layer: persistent threads for AI work. Stores context, never executes."
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = ["pypdf>=6.19,<7"]
+dependencies = ["pypdf>=6.19,<7", "jsonschema==4.25.1"]
 authors = [{ name = "landjunge" }]
 license = { text = "Proprietary" }
 
