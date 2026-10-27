@@ -11,6 +11,7 @@ from copy import deepcopy
 from threaddesk.core.errors import InvalidState, ManagementError, NotFound
 from threaddesk.core.models import now_iso
 from threaddesk.services.trash import TrashService, _hash, _id
+from threaddesk.storage.operation_results import result_object
 
 ROOM_SCHEMA = "threaddesk.room.v2"
 
@@ -44,7 +45,7 @@ def record_conflict(store, *, thread_id, source, reason, incoming):
 
 
 def conflict_is_resolved(store, key):
-    return any(item.get("result", {}).get("resolved_conflict") == key
+    return any(result_object(item).get("resolved_conflict") == key
                for item in store.list_management_operations())
 
 

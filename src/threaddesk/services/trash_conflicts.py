@@ -5,6 +5,7 @@ from copy import deepcopy
 
 from threaddesk.core.errors import ManagementError, NotFound
 from threaddesk.services.trash import _hash, _id
+from threaddesk.storage.operation_results import result_object
 
 
 class TrashConflictReview:
@@ -14,7 +15,7 @@ class TrashConflictReview:
 
     def list(self):
         records = self.store.list_management_operations()
-        resolved = {item.get("result", {}).get("resolved_conflict") for item in records}
+        resolved = {result_object(item).get("resolved_conflict") for item in records}
         result = []
         for record in records:
             if record.get("kind") != "lifecycle_conflict" or record["result"]["operation_id"] in resolved:
@@ -45,7 +46,7 @@ class TrashConflictReview:
             thread_id = conflict["thread_id"]
             if expected_object_digest != self._conflict_object_digest(thread_id):
                 raise ManagementError("revision_conflict", "Objekt wurde seit der Konfliktansicht geändert.")
-            if any(item.get("result", {}).get("resolved_conflict") == conflict_id
+            if any(result_object(item).get("resolved_conflict") == conflict_id
                    for item in self.store.list_management_operations()):
                 raise ManagementError("lifecycle_conflict", "Konflikt wurde bereits aufgelöst.")
             if choice == "adopt_incoming":

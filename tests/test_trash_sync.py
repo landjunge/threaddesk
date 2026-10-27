@@ -86,6 +86,13 @@ def test_room_conflict_resolution_is_exact_replayable_and_keeps_private_payload(
         expected_revision=left.get_thread(thread_id).revision, operation_id="move")
     incoming = books["a"].export_bundle(room_id)
     books["b"].apply_bundle(incoming)
+    # Public commands retain immutable pending/complete transitions alongside
+    # domain receipts. Their null result is unrelated to the room conflict.
+    from threaddesk.services.commands import CommandApplication
+    application = CommandApplication(ThreadService(right))
+    application.call({"version": 1, "workspace_id": application.workspace_id, "command": "thread_manage",
+                      "arguments": {"action": "create", "data": {"title": "Unrelated local context"}},
+                      "operation_id": "unrelated-global-create", "expected_revision": 0})
     service = TrashService(right)
     conflict = service.sync_conflicts()[0]
     request = dict(conflict_id=conflict["operation_id"], expected_object_digest=conflict["expected_object_digest"],

@@ -34,6 +34,11 @@ def create(app, title="Command project", operation="create-project"):
                   operation_id=operation, expected_revision=0)["result"]["thread"]
 
 
+def test_global_command_reservations_do_not_break_trash_conflict_reads(application):
+    create(application)
+    assert invoke(application, "trash.sync_conflicts")["result"]["items"] == []
+
+
 def test_catalogue_pages_are_bounded_and_cover_existing_mcp(application):
     from threaddesk.services.mcp import TOOLS
     rows, offset = [], 0
