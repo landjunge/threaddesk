@@ -240,6 +240,19 @@
   let placed = new Map();
   let sizes = new Map();
   let updateLabels = () => {};
+  let invalidateLabelWidths = () => {};
+  let initialDrawn = false, latestGraph = null;
+  let startupDeadline = 0, startupTimer = null;
+  let layoutWindow = {width: window.innerWidth, height: window.innerHeight};
+  const windowGeometryChanged = () => window.innerWidth !== layoutWindow.width ||
+    window.innerHeight !== layoutWindow.height;
+  let startupCorrectionUsed = false, correctionPending = false, hasInteraction = false;
+  const noteInteraction = () => {
+    hasInteraction = true;
+    clearTimeout(startupTimer);
+  };
+  ["pointerdown", "click", "keydown", "wheel", "input"].forEach(name =>
+    root.addEventListener(name, noteInteraction, {capture: true, passive: true}));
   let applyFilter = () => {};
   let activeFilter = {query: "", kind: "", project_id: ""};
   let focusTicket = 0;
@@ -336,7 +349,7 @@
     applyTransform();
   };
 
-  const render = (graph, refreshing = false) => {
+  const render = (graph, refreshing = false, initialReflow = false) => {
     const selectedIds = refreshing ? [...world.querySelectorAll(".is-selected[data-node-id]")].map(item => item.dataset.nodeId) : [];
     const previousPositions = placed;
     updateLabels = () => {};
@@ -347,10 +360,15 @@
     summary.textContent = t("map.nodes_relations", {
       nodes: graph.counts.nodes, relations: graph.counts.relations,
     });
+    if (!refreshing || initialReflow) {
+      // The summary itself may wrap and change the available stage height.
+      resizeStage();
+      layoutWindow = {width: window.innerWidth, height: window.innerHeight};
+    }
 
     world.appendChild(backdrop());
-    placed = layout(graph.nodes, graph.relations, refreshing ? previousPositions : new Map());
-    if (refreshing && previousPositions) {
+    placed = layout(graph.nodes, graph.relations, refreshing && !initialReflow ? previousPositions : new Map());
+    if (refreshing && !initialReflow && previousPositions) {
       previousPositions.forEach((point, id) => { if (placed.has(id)) placed.set(id, point); });
     }
     sizes = new Map(graph.nodes.map((node) => [node.id, radiusOf(node)]));
@@ -541,6 +559,7 @@
       return {group, label, texts, hit: group.querySelector(".map-node-hit"),
         labelHit: label.querySelector(".map-label-hit"), order, widths: new Map()};
     });
+    invalidateLabelWidths = () => labelItems.forEach(item => item.widths.clear());
     updateLabels = () => {
       const candidates = labelItems.filter(item => item.group.style.display !== "none")
         .map(item => {
@@ -552,12 +571,14 @@
             text.style.fontSize = `${font}px`;
             text.setAttribute("y", index * (font + 4));
           });
-          if (!widths.has(font)) widths.set(font,
+          const type = getComputedStyle(texts[0] || label);
+          const metricKey = `${font}|${type.fontFamily}|${type.fontWeight}|${type.fontStyle}|${type.fontStretch}|${type.letterSpacing}`;
+          if (!widths.has(metricKey)) widths.set(metricKey,
             Math.min(VIEW_W - 24, Math.max(1, ...texts.map(text => text.getComputedTextLength()))));
           const point = placed.get(group.dataset.nodeId);
           const shape = SHAPE[group.dataset.kind] || "circle";
           const dimensions = Array.isArray(SIZE[shape]) ? SIZE[shape] : [SIZE[shape], SIZE[shape]];
-          return {...item, font, width: widths.get(font), height: Math.max(1, texts.length) * (font + 4),
+          return {...item, font, width: widths.get(metricKey), height: Math.max(1, texts.length) * (font + 4),
             x: offsetX + scale * point.x, y: offsetY + scale * point.y,
             radius: dimensions[1] * scale,
             halfWidth: dimensions[0] * scale, halfHeight: dimensions[1] * scale,
@@ -647,7 +668,16 @@
       selectedIds.forEach(id => nodeLayer.querySelector(`[data-node-id="${CSS.escape(id)}"]`)?.classList.add("is-selected"));
       const current = graph.nodes.find(node => selectedIds.includes(node.id));
       if (current) showDetail(current, false);
-      highlight(); applyTransform();
+      highlight();
+      if (initialReflow) {
+        fit();
+        if (current) {
+          const point = placed.get(current.id);
+          offsetX = VIEW_W / 2 - scale * point.x;
+          offsetY = VIEW_H / 2 - scale * point.y;
+        }
+      }
+      applyTransform();
       return;
     }
     fit();
@@ -674,11 +704,30 @@
   };
 
   root.addEventListener("threaddesk:graph-filter", event => {
+    noteInteraction();
     const detail = event.detail || {};
     activeFilter = {query: String(detail.query || ""), kind: String(detail.kind || ""),
       project_id: String(detail.project_id || "")};
     applyFilter();
   });
+  // One bounded correction catches a late native WINDOW resize before input.
+  // Our own header/inspector changes only preserve camera and positions.
+  const scheduleStartupCorrection = () => {
+    if (!initialDrawn || hasInteraction || startupCorrectionUsed || correctionPending ||
+        !windowGeometryChanged() || performance.now() > startupDeadline) return;
+    clearTimeout(startupTimer);
+    startupTimer = setTimeout(async () => {
+      correctionPending = true;
+      try {
+        await viewport.stable(stage);
+        if (hasInteraction || startupCorrectionUsed || !latestGraph ||
+            !windowGeometryChanged() || performance.now() > startupDeadline) return;
+        startupCorrectionUsed = true;
+        render(latestGraph, true, true);
+      } catch (_) { /* keep the last usable graph if the window never settles */ }
+      finally { correctionPending = false; }
+    }, 180);
+  };
   const resizeStage = () => {
     const width = Math.max(1, stage.clientWidth);
     const height = Math.max(1, stage.clientHeight);
@@ -690,6 +739,7 @@
     VIEW_W = width; VIEW_H = height;
     canvas.setAttribute("viewBox", `0 0 ${width} ${height}`);
     applyTransform();
+    scheduleStartupCorrection();
   };
   if (window.ResizeObserver) new ResizeObserver(resizeStage).observe(stage);
   else window.addEventListener("resize", resizeStage);
@@ -767,20 +817,38 @@
     setEffects(root.classList.contains("effects-off"));
   });
 
+  document.fonts?.addEventListener?.("loadingdone", () => {
+    invalidateLabelWidths();
+    updateLabels();
+  });
+  const pageReady = viewport.ready(stage);
+  pageReady.catch(() => {}); // the request path below presents the error state
   let refreshTicket = 0;
-  async function refreshGraph(refreshing = false) {
+  async function refreshGraph() {
     const ticket = ++refreshTicket;
     try {
       const response = await fetch(root.dataset.graphEndpoint, {headers: {Accept: "application/json"}, cache: "no-store"});
       if (!response.ok) throw new Error("graph request failed");
       const graph = await response.json();
+      await pageReady;
       if (ticket !== refreshTicket) return;
-      render(graph, refreshing); error.hidden = true;
+      resizeStage();
+      latestGraph = graph;
+      const wasDrawn = initialDrawn;
+      render(graph, wasDrawn);
+      if (!wasDrawn) {
+        initialDrawn = true;
+        startupDeadline = performance.now() + 2500;
+      }
+      error.hidden = true;
       root.dispatchEvent(new CustomEvent("threaddesk:graph-loaded", {
         bubbles: true, detail: {nodes: graph.nodes},
       }));
     } catch (_) { if (ticket === refreshTicket) error.hidden = false; }
   }
-  document.addEventListener("threaddesk:library-changed", () => refreshGraph(true));
+  document.addEventListener("threaddesk:library-changed", () => {
+    noteInteraction();
+    refreshGraph();
+  });
   refreshGraph();
 })();
