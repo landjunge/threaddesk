@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from threaddesk.core.errors import GateBlocked, InvalidState, NotFound
+from threaddesk.core.errors import GateBlocked, InvalidState, ManagementError, NotFound
 from threaddesk.core.events import EventBus
 from threaddesk.core.models import (
     NODE_KINDS,
@@ -405,13 +405,12 @@ class ThreadService:
         return thread
 
     def delete(self, key: str) -> None:
-        thread = self.get(key)
-        if thread.status != "archived":
-            raise InvalidState("Nur archivierte Threads löschen (erst td archive).")
-        self.store.delete_thread(thread.id)
-        if self.store.get_current_id() == thread.id:
-            self.store.set_current_id(None)
-        self.bus.emit("thread.deleted", {"id": thread.id})
+        """Retain the legacy entry point without an unguarded purge bypass."""
+        raise ManagementError(
+            "legacy_delete_requires_purge_contract",
+            "Die alte dauerhafte Löschung ist gesperrt. trash.move verwenden; "
+            "endgültiges Löschen erfordert trash.purge mit konkreter Vorschau und Bestätigung.",
+        )
 
     def snapshot(self, label: str = "", key: str | None = None) -> Snapshot:
         reject_secrets(label)

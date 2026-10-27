@@ -50,16 +50,15 @@ def test_complete_lifecycle_and_exact_repetition(bridge):
     mutation(bridge, "switch-1", "switch", thread)
     assert bridge.call("current_thread")["result"]["id"] == thread["id"]
     denied = bridge.call("thread_manage", {"operation_id": "early-delete", "action": "delete", "id": thread["id"], "expected_revision": thread["revision"]})
-    assert denied["code"] == "invalid_state"
+    assert denied["code"] == "legacy_delete_requires_purge_contract"
     thread = mutation(bridge, "archive-1", "archive", thread)["thread"]
     thread = mutation(bridge, "restore-1", "unarchive", thread)["thread"]
     assert thread["status"] == "paused"
     thread = mutation(bridge, "archive-2", "archive", thread)["thread"]
-    deleted = mutation(bridge, "delete-1", "delete", thread)
-    assert deleted["deleted"] and deleted["thread"] is None
-    again = mutation(bridge, "delete-1", "delete", thread)
-    assert again["duplicate"]
-    assert not bridge.call("get_thread", {"id": thread["id"]})["ok"]
+    for _ in range(2):
+        denied = bridge.call("thread_manage", {"operation_id": "delete-1", "action": "delete", "id": thread["id"], "expected_revision": thread["revision"]})
+        assert denied["code"] == "legacy_delete_requires_purge_contract"
+    assert bridge.call("get_thread", {"id": thread["id"]})["ok"]
     assert not any(name in {"grok.packet", "gnom.packet", "handoff.written"} for name in events)
 
 

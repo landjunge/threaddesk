@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from threaddesk.api.service import ThreadService
-from threaddesk.core.errors import InvalidState, SecretRejected
+from threaddesk.core.errors import InvalidState, ManagementError, SecretRejected
 from threaddesk.storage.json_store import JsonStore
 
 
@@ -33,13 +33,15 @@ def test_create_switch_note_snapshot(svc: ThreadService) -> None:
     assert svc.current().context.notes == "beta-notiz"
 
 
-def test_archive_then_delete(svc: ThreadService) -> None:
+def test_archive_does_not_bypass_preview_bound_permanent_deletion(svc: ThreadService) -> None:
     t = svc.create("Weg")
     with pytest.raises(InvalidState):
         svc.delete(t.id)
     svc.archive(t.id)
-    svc.delete(t.id)
-    assert svc.list(include_archived=True) == []
+    with pytest.raises(ManagementError) as blocked:
+        svc.delete(t.id)
+    assert blocked.value.code == "legacy_delete_requires_purge_contract"
+    assert [row.id for row in svc.list(include_archived=True)] == [t.id]
 
 
 def test_reject_secrets(svc: ThreadService) -> None:

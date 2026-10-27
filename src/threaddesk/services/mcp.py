@@ -21,9 +21,11 @@ def _management_schema() -> dict[str, Any]:
         "status": {"type": "string", "enum": ["idea", "active", "paused", "done"]},
         "text": {"type": "string", "maxLength": 100000}, "append": {"type": "boolean"},
         "path": {**text, "minLength": 1}, "project_id": reference, "parent_thread_id": reference,
+        "label": text,
+        "snapshot_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$"},
         "related_thread_ids": {"type": "array", "maxItems": 100, "uniqueItems": True, "items": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$"}},
     }
-    required = {"create": ["title"], "set_note": ["text"], "add_file": ["path"], "remove_file": ["path"]}
+    required = {"create": ["title"], "set_note": ["text"], "add_file": ["path"], "remove_file": ["path"], "restore_snapshot": ["snapshot_id"]}
     variants = []
     for action, names in FIELDS.items():
         data = {"type": "object", "additionalProperties": False, "properties": {key: fields[key] for key in sorted(names)}}
@@ -32,6 +34,8 @@ def _management_schema() -> dict[str, Any]:
         if action in {"update", "organize"}:
             data["minProperties"] = 1
         variant = {"properties": {"action": {"const": action}, "data": data}}
+        if action == "delete":
+            variant.update(deprecated=True, description="Legacy permanent deletion is disabled. Use trash.move or the explicit preview-bound trash.purge contract.")
         if action in required or action in {"update", "organize"}:
             variant["required"] = ["data"]
         if action == "create":
