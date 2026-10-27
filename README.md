@@ -56,6 +56,20 @@ Private, non-business use is free, including installation, private modifications
 
 See the [full German license and English translation](LICENSE); the German text governs. This is not a standard open-source license and has not undergone legal review. Historical license grants, including earlier MIT rights, remain intact. Existing downloads and older releases may retain their original terms; this change does not retroactively relicense them.
 
+Lizenzreferenz für die unter der aktuellen Eigenlizenz angebotenen Beiträge:
+`LicenseRef-Netzwerkpunkt-Personal-Use-1.0`. Die Python-Paketmetadaten nennen
+zusätzlich `MIT AND 0BSD` für erhaltene MIT-Anteile und die mitgelieferten
+UI-Drittkomponenten; dies ist keine Wahllizenz für das gesamte Produkt.
+[Lizenzhistorie und Abgrenzung](docs/LICENSING.md) sowie
+[Drittkomponenten und Notices](THIRD-PARTY-NOTICES.md) beschreiben den Umfang.
+
+The current own-contribution license reference is
+`LicenseRef-Netzwerkpunkt-Personal-Use-1.0`. Python distribution metadata also
+lists `MIT AND 0BSD` for retained MIT portions and bundled third-party UI
+components; this does not offer an alternative license for the entire product.
+See the [license history and scope](docs/LICENSING.md) and
+[third-party notices](THIRD-PARTY-NOTICES.md).
+
 ---
 
 ## Für Nutzer

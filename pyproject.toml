@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77.0.3", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -10,7 +10,14 @@ readme = "README.md"
 requires-python = ">=3.9"
 dependencies = ["pypdf>=6.19,<7"]
 authors = [{ name = "landjunge" }]
-license = { text = "Proprietary" }
+license = "LicenseRef-Netzwerkpunkt-Personal-Use-1.0 AND MIT AND 0BSD"
+license-files = [
+    "LICENSE",
+    "licenses/ThreadDesk-MIT-historical.txt",
+    "docs/LICENSING.md",
+    "THIRD-PARTY-NOTICES.md",
+    "src/threaddesk/ui/static/UI-VENDOR-LICENSES.txt",
+]
 
 [project.scripts]
 threaddesk = "threaddesk.ui.cli:main"
