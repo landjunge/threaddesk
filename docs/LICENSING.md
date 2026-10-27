@@ -2,6 +2,9 @@
 
 Dokumentationsstand: 27.10.2026. Geprüfte Basis ist main
 `1199c8ba581dbf4ecaf2c489171f085c958b7560` (Version 0.1.5).
+Die frühere nichtmaßgebliche englische Übersetzung ist im Originalverlauf und
+im externen Belegarchiv erhalten. Die aktuelle eigene Lizenzdatei ist Deutsch;
+ihre bisherigen deutschen Bedingungen bleiben wortgleich.
 Diese Bestandsbeschreibung ändert keine Lizenzbedingungen und keine bereits
 erteilten Rechte. Maßgeblich bleiben die jeweiligen Originaltexte und der
 tatsächlich unter ihnen erhaltene Code.
@@ -28,7 +31,7 @@ späteren eigenen Ergänzungen unter MIT.
 
 ## Heutige Metadaten und Texte
 
-- [Root-LICENSE](../LICENSE): unveränderte Netzwerkpunkt Personal Use License 1.0
+- [Root-LICENSE](../LICENSE): Netzwerkpunkt Personal Use License 1.0 mit unverändertem deutschen Bedingungstext
   für die unter ihr angebotenen eigenen Beiträge; Deutsch ist maßgeblich.
 - Python: `LicenseRef-Netzwerkpunkt-Personal-Use-1.0 AND MIT AND 0BSD` erfasst
   die aktuelle Eigenlizenz zusammen mit erhaltenen MIT-Anteilen und den
@@ -61,15 +64,3 @@ Privatnutzungsrechte sowie Drittkomponenten ausdrücklich aus einer etwaigen
 Exklusivitätszusage ausnehmen. Rechte an menschlichen Fremdbeiträgen,
 Arbeitsverhältnissen, KI-unterstützter Herkunft, Logos und Domains sind anhand
 separater Unterlagen zu prüfen. Ein Autorname im Gitverlauf allein genügt nicht.
-
-## English scope summary
-
-The current own-contribution terms remain the Netzwerkpunkt Personal Use
-License 1.0. The original LICENSE is unchanged. The history table records the
-MIT baseline, the 7 October all-rights-reserved change and the 18 October
-personal-use terms. Existing MIT grants, separate permissions and third-party
-licenses remain intact. The preserved historical MIT text does not relicense
-all later additions. The Python `AND` expression records combined license
-scopes in the distribution, not an alternative MIT license for the whole
-product. No exclusive title, transfer or sublicensing authority is established
-by these metadata or this history document.
