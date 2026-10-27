@@ -146,9 +146,9 @@ def test_desktop_form_is_csrf_protected_and_never_reflects_credential(tmp_path,m
     state=http.get('/api/threads/'+thread.id+'/server-sync').json()
     assert state['configured'] is True and 'token' not in state
     original=tmp_path/'owner-added.txt';original.write_text('owner added')
-    assert http.post('/threads/'+thread.id+'/files',data={'csrf_token':csrf,'path':str(original)}).status_code==200
+    assert http.post('/threads/'+thread.id+'/files',data={'csrf_token':csrf,'path':str(original),'expected_revision':core.get(thread.id).revision,'operation_id':'form-owner-add'}).status_code==200
     assert str(original) in BindingBook(core).load(thread.id)['owner_references']
-    assert http.post('/threads/'+thread.id+'/files/remove',data={'csrf_token':csrf,'path':str(original)}).status_code==200
+    assert http.post('/threads/'+thread.id+'/files/remove',data={'csrf_token':csrf,'path':str(original),'expected_revision':core.get(thread.id).revision,'operation_id':'form-owner-remove'}).status_code==200
     assert str(original) not in BindingBook(core).load(thread.id)['owner_references']
     assert core.current().id==other.id  # Reading/configuring does not switch threads.
     from copy import deepcopy

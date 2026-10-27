@@ -251,6 +251,9 @@ class LibraryReceiver:
                 os.fsync(output.fileno())
             if digest.hexdigest() != manifest["sha256"]:
                 fail("checksum_mismatch")
+            # .key is a conditional filename at begin. receive_verified owns
+            # IWA identity and exact-snapshot validation before any CAS publish;
+            # a completed upload alone never authorizes private key material.
             receipt = self.importer.receive_verified(path, filename=manifest["filename"],
                 thread_id=manifest["thread_id"], record_id=row["record_id"],
                 sha256=manifest["sha256"], size=manifest["size"])

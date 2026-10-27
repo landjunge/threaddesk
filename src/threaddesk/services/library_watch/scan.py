@@ -43,6 +43,13 @@ def snapshot(root: Path) -> dict:
                 relative = path.relative_to(root).as_posix()
                 info = entry.stat(follow_symlinks=False)
                 if stat.S_ISDIR(info.st_mode):
+                    if path.suffix.casefold() == ".key":
+                        warnings.append({"path":relative, "error":"keynote_directory_package_unsupported"})
+                        if len(rows) >= MAX_FILES or len(relative.encode()) > 4096:
+                            raise LibraryImportError("watch_scan_budget")
+                        rows.append([relative, info.st_size, info.st_mtime_ns, info.st_ctime_ns,
+                                     info.st_ino, stat.S_IFMT(info.st_mode)])
+                        continue
                     if (
                         not entry.name.startswith(".")
                         and entry.name.casefold() not in _SKIP_DIRS

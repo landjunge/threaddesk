@@ -259,5 +259,10 @@
   document.querySelector("[data-graph-endpoint]")?.addEventListener("threaddesk:node-selected", event => {
     node = event.detail; activeSearch = ""; browseFolder = null; find("files-folder").value = ""; load();
   });
+  document.querySelector("[data-graph-endpoint]")?.addEventListener("threaddesk:graph-live-updated", async () => {
+    if (busy || dialog.open) return;
+    await refreshChoices();
+    if (node || activeSearch || browseFolder !== null) await load();
+  });
   refreshChoices(); actionState();
 })();

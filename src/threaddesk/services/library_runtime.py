@@ -16,6 +16,9 @@ class LibraryRuntime:
         self.thread = None
         self.last_error = ""
         self.repair_after = 0.0
+        self.activity_offset = 0
+        self.activity_profile = None
+        self.activity_error = ""
 
     def tick(self):
         store = None
@@ -23,6 +26,16 @@ class LibraryRuntime:
             store = self.store_factory()
             if (store.workspace_path / "library-watch.json").is_file():
                 LibrarySourceWatch(store).poll_once()
+            if self.activity_profile != store.workspace_path:
+                self.activity_profile, self.activity_offset = store.workspace_path, 0
+            if (store.workspace_path / "library-files").is_dir():
+                from threaddesk.services.activity import ActivityService
+                try:
+                    activity = ActivityService(store).reconcile(limit=50, offset=self.activity_offset)
+                    self.activity_offset = activity["next_offset"] or 0
+                    self.activity_error = "activity_projection_partial" if activity["failed"] else ""
+                except Exception as exc:  # optional derived projection; index recovery continues
+                    self.activity_error = type(exc).__name__
             index = LibraryIndex(store.workspace_path / "library-files")
             state = index.status()
             needs_refresh = (

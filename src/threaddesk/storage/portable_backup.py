@@ -21,8 +21,8 @@ from threaddesk.storage.workspace_backup import (
 LIMIT = 128 * 1024 * 1024
 DATA_DIRS = {'threads', 'snapshots', 'nodes', 'relations', 'graph-events',
              'source-records', 'whiteboard', 'artifacts', 'imports',
-             'management-operations', 'thread-revisions', 'issued-handoffs', 'library-files'}
-RUNTIME_FILES = {'desktop-port.json', 'desktop.lock', 'active-profile.json'}
+             'management-operations', 'thread-revisions', 'issued-handoffs', 'library-files', 'trash'}
+RUNTIME_FILES = {'desktop-port.json', 'desktop.lock', 'active-profile.json', 'graph-view-control.json'}
 
 
 def base_root() -> Path:
@@ -145,6 +145,56 @@ def _download_backup(store) -> bytes:
         return body
 
 
+def _checked_manifest(archive):
+    members = archive.infolist()
+    if len(members) > 20000 or sum(m.file_size for m in members) > LIMIT:
+        raise BackupError('Backup exceeds the size limit.')
+    names = [m.filename for m in members]
+    if len(names) != len(set(names)) or 'manifest.json' not in names:
+        raise BackupError('Invalid backup manifest.')
+    manifest = json.loads(archive.read('manifest.json'))
+    backend, files = manifest.get('backend'), manifest.get('files')
+    if (manifest.get('kind') != 'threaddesk.portable-backup' or manifest.get('version') not in {1, 2}
+            or backend not in {'json', 'sqlite'} or not isinstance(files, dict)):
+        raise BackupError('Unknown backup format.')
+    if manifest['version'] < 2 and any(n.startswith('library-files/') for n in files):
+        raise BackupError('Library files require portable backup version 2.')
+    if set(names) != {'manifest.json'} | {'workspace/' + n for n in files}:
+        raise BackupError('Unexpected backup files.')
+    if any(not _allowed(n, backend) for n in files):
+        raise BackupError('Invalid backup path.')
+    if any(stat.S_ISLNK(m.external_attr >> 16) for m in members):
+        raise BackupError('Symbolic links are not allowed.')
+    for relative, expected in files.items():
+        if (not isinstance(expected, dict) or type(expected.get('size')) is not int
+                or expected['size'] < 0 or not isinstance(expected.get('sha256'), str)):
+            raise BackupError('Invalid backup checksum metadata.')
+        data = archive.read('workspace/' + relative)
+        if len(data) != expected['size'] or hashlib.sha256(data).hexdigest() != expected['sha256']:
+            raise BackupError('Backup checksum does not match.')
+    if backend == 'sqlite' and 'threaddesk.sqlite3' not in files:
+        raise BackupError('Missing workspace database.')
+    return manifest
+
+
+def inspect_backup(body: bytes) -> dict:
+    """Verify a portable archive without extraction, activation or data writes."""
+    if not isinstance(body, bytes) or len(body) > LIMIT:
+        raise BackupError('Backup exceeds the size limit.')
+    try:
+        with zipfile.ZipFile(io.BytesIO(body)) as archive:
+            manifest = _checked_manifest(archive)
+        return {'kind': manifest['kind'], 'version': manifest['version'],
+                'backend': manifest['backend'], 'files': len(manifest['files']),
+                'bytes': len(body), 'sha256': hashlib.sha256(body).hexdigest(),
+                'restore_behavior': 'new_separate_profile', 'verified': True,
+                'verification_scope': 'archive_paths_sizes_and_checksums; restore validates workspace models separately'}
+    except Exception as exc:
+        if isinstance(exc, BackupError):
+            raise
+        raise BackupError('Backup could not be opened.') from exc
+
+
 def restore_backup(body: bytes, root: Path) -> Path:
     if len(body) > LIMIT:
         raise BackupError('Backup exceeds the size limit.')
@@ -158,32 +208,12 @@ def restore_backup(body: bytes, root: Path) -> Path:
     owned = None
     try:
         with zipfile.ZipFile(io.BytesIO(body)) as archive:
-            members = archive.infolist()
-            if len(members) > 20000 or sum(m.file_size for m in members) > LIMIT:
-                raise BackupError('Backup exceeds the size limit.')
-            names = [m.filename for m in members]
-            if len(names) != len(set(names)) or 'manifest.json' not in names:
-                raise BackupError('Invalid backup manifest.')
-            manifest = json.loads(archive.read('manifest.json'))
-            backend = manifest.get('backend')
-            files = manifest.get('files')
-            if (manifest.get('kind') != 'threaddesk.portable-backup' or manifest.get('version') not in {1, 2}
-                    or backend not in {'json', 'sqlite'} or not isinstance(files, dict)):
-                raise BackupError('Unknown backup format.')
-            if manifest['version'] < 2 and any(n.startswith('library-files/') for n in files):
-                raise BackupError('Library files require portable backup version 2.')
-            if set(names) != {'manifest.json'} | {'workspace/' + n for n in files}:
-                raise BackupError('Unexpected backup files.')
-            if any(not _allowed(n, backend) for n in files):
-                raise BackupError('Invalid backup path.')
-            if any(stat.S_ISLNK(m.external_attr >> 16) for m in members):
-                raise BackupError('Symbolic links are not allowed.')
+            manifest = _checked_manifest(archive)
+            backend, files = manifest['backend'], manifest['files']
             target.mkdir(mode=0o700)
             owned = _stamp(target.lstat())[:2]
             for relative, expected in files.items():
                 data = archive.read('workspace/' + relative)
-                if len(data) != expected['size'] or hashlib.sha256(data).hexdigest() != expected['sha256']:
-                    raise BackupError('Backup checksum does not match.')
                 path = target / relative
                 path.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
                 with path.open('xb') as output:

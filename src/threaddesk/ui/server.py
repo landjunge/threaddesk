@@ -16,14 +16,16 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
+from uuid import uuid4
+from threaddesk.ui.thread_mutations import install as install_thread_mutations, rejection_response
 
 from threaddesk.api.service import ThreadService
 from threaddesk.build_info import BUILD_DESCRIPTION, BUILD_ID, BUILD_LABEL
-from threaddesk.core.errors import InvalidState, NotFound, ThreadDeskError
+from threaddesk.core.errors import InvalidState, ManagementError, NotFound, ThreadDeskError
 from threaddesk.services.actors import ActorRegistry
 from threaddesk.services.hausmeister import SURFACE_KINDS, Hausmeister, live_snapshot, note_activity
 from threaddesk.services.room_sync import RoomBook
-from threaddesk.server_sync.desktop import install_routes as install_sync_routes, record_owner_reference
+from threaddesk.server_sync.desktop import install_routes as install_sync_routes
 from threaddesk.server_sync.store import SyncError
 from threaddesk.services.ollama_local import OllamaError
 from threaddesk.core import i18n
@@ -141,7 +143,7 @@ def _browser_strings(language: str, register: str) -> str:
         {
             key: value
             for key, value in i18n.catalog_for(language, register).items()
-            if key.startswith("browser.")
+            if key.startswith(("browser.", "ui.mutation_", "trash."))
         },
         ensure_ascii=False,
     )
@@ -260,6 +262,10 @@ def create_app() -> FastAPI:
     app.add_middleware(LocalHTTPAccess)
     from threaddesk.ui.library_router import library_router
     app.include_router(library_router(_svc))
+    from threaddesk.ui.command_router import command_router
+    app.include_router(command_router(_svc))
+    from threaddesk.ui.graph_control_router import graph_control_router
+    app.include_router(graph_control_router(_svc))
     from threaddesk.services.library_runtime import LibraryRuntime
     app.state.library_runtime = LibraryRuntime(lambda: _svc().store)
 
@@ -267,7 +273,7 @@ def create_app() -> FastAPI:
     async def refresh_library_after_commit(request: Request, call_next):
         response = await call_next(request)
         if (request.method == "POST" and response.status_code < 400
-                and not request.url.path.startswith(("/api/library/", "/library/"))):
+                and not request.url.path.startswith(("/api/library/", "/library/", "/api/commands", "/api/graph/views", "/api/graph/v2", "/api/graph/view-control"))):
             from starlette.background import BackgroundTasks
             from threaddesk.services.library_refresh import refresh_existing
             tasks = BackgroundTasks()
@@ -298,6 +304,8 @@ def create_app() -> FastAPI:
             # Controlled app/profile startup, before serving its GET views.
             # Keep existing identities, module enablement and grants unchanged.
             ActorRegistry(store).instance_id()
+            from threaddesk.services.graph_view_control import GraphViewControlService
+            GraphViewControlService(store).reset_runtime()
             home = Hausmeister(store)
             home.install()
             # Transport timeout 0.4s, caller budget 0.5s; late results cannot
@@ -314,6 +322,7 @@ def create_app() -> FastAPI:
                               context.get("register") or i18n.DEFAULT_REGISTER,
                               **values)
 
+    templates.env.globals["mutation_id"] = lambda: uuid4().hex
     templates.env.globals["t"] = _t
     templates.env.globals["languages"] = i18n.LANGUAGES
     templates.env.globals["language_names"] = i18n.LANGUAGE_NAMES
@@ -329,13 +338,16 @@ def create_app() -> FastAPI:
         )
 
     def sync_page(request: Request, extra: dict) -> HTMLResponse:
-        selected = _svc().get(request.path_params['thread_id'])
+        selected = _svc().store.get_thread(request.path_params['thread_id'], include_trashed=True)
         return templates.TemplateResponse(request,'server_sync.html',_ctx(request,{**extra,'current':selected}))
 
     install_sync_routes(app, lambda: _svc(), sync_page)
+    install_thread_mutations(app, lambda: _svc(), workspace, _language)
 
     @app.exception_handler(ThreadDeskError)
     async def _on_error(request: Request, exc: ThreadDeskError) -> Response:
+        if isinstance(exc, ManagementError):
+            return rejection_response(request, exc, _language(request))
         if request.url.path.startswith("/api/"):
             status = 404 if isinstance(exc, NotFound) else 400
             return JSONResponse(
@@ -364,6 +376,12 @@ def create_app() -> FastAPI:
     @app.get("/data", response_class=HTMLResponse)
     def data_view(request: Request) -> HTMLResponse:
         return data_page(request)
+
+    @app.get("/trash", response_class=HTMLResponse)
+    def trash_view(request: Request) -> HTMLResponse:
+        language, register = _language(request), _register(request)
+        strings = {key: value for key, value in i18n.catalog_for(language, register).items() if key.startswith("trash.")}
+        return templates.TemplateResponse(request, "trash.html", _ctx(request, {"trash_strings": json.dumps(strings, ensure_ascii=False)}))
 
     @app.post("/data/download")
     def data_download(request: Request) -> Response:
@@ -738,37 +756,8 @@ def create_app() -> FastAPI:
             },
         )
 
-    @app.post("/knowledge/nodes", response_class=RedirectResponse)
-    def create_knowledge_node(
-        kind: str = Form(...),
-        title: str = Form(...),
-        status: str = Form("idea"),
-        details: str = Form(""),
-    ) -> RedirectResponse:
-        _svc().create_node(kind, title, status=status, details=details)
-        return RedirectResponse("/knowledge", status_code=303)
-
-    @app.post("/knowledge/relations", response_class=RedirectResponse)
-    def create_knowledge_relation(
-        source_id: str = Form(...),
-        target_id: str = Form(...),
-        kind: str = Form(...),
-    ) -> RedirectResponse:
-        _svc().connect(source_id, target_id, kind)
-        return RedirectResponse("/knowledge", status_code=303)
-
-    @app.post(
-        "/knowledge/nodes/{node_id}/transition", response_class=RedirectResponse
-    )
-    def transition_knowledge_node(
-        node_id: str,
-        status: str = Form(...),
-        expected_revision: int = Form(...),
-    ) -> RedirectResponse:
-        _svc().transition_node(
-            node_id, status, expected_revision=expected_revision
-        )
-        return RedirectResponse("/knowledge", status_code=303)
+    from threaddesk.ui.knowledge_mutations import install_knowledge_mutations
+    install_knowledge_mutations(app, _svc)
 
     @app.get("/partials/threads", response_class=HTMLResponse)
     def partial_threads(request: Request) -> HTMLResponse:
@@ -785,30 +774,6 @@ def create_app() -> FastAPI:
     @app.get("/partials/gate", response_class=HTMLResponse)
     def partial_gate(request: Request) -> HTMLResponse:
         return templates.TemplateResponse(request, "partials/gate.html", _ctx(request))
-
-    @app.post("/threads", response_class=HTMLResponse)
-    def create_thread(
-        request: Request,
-        title: str = Form(...),
-        description: str = Form(""),
-    ) -> HTMLResponse:
-        thread = _svc().create(title, description)
-        return workspace(request, {"notice": i18n.translate("ui.created", _language(request), title=thread.title)})
-
-    @app.post("/threads/{thread_id}/switch", response_class=HTMLResponse)
-    def switch_thread(thread_id: str, request: Request) -> HTMLResponse:
-        _svc().switch(thread_id)
-        return workspace(request)
-
-    @app.post("/threads/{thread_id}/note", response_class=HTMLResponse)
-    def set_note(
-        thread_id: str,
-        request: Request,
-        text: str = Form(""),
-        append: str = Form(""),
-    ) -> HTMLResponse:
-        _svc().set_note(text, thread_id, append=bool(append))
-        return workspace(request, {"notice": i18n.translate("ui.note_saved", _language(request))})
 
     @app.post("/threads/{thread_id}/whiteboard", response_class=HTMLResponse)
     def append_whiteboard_form(
@@ -1016,64 +981,6 @@ def create_app() -> FastAPI:
             return JSONResponse({"ok": False}, status_code=403)
         return JSONResponse(result)
 
-    @app.post("/threads/{thread_id}/describe", response_class=HTMLResponse)
-    def set_description(
-        thread_id: str,
-        request: Request,
-        text: str = Form(""),
-    ) -> HTMLResponse:
-        _svc().set_description(text, thread_id)
-        return workspace(request, {"notice": i18n.translate("ui.description_saved", _language(request))})
-
-    @app.post("/threads/{thread_id}/status", response_class=HTMLResponse)
-    def set_status(
-        thread_id: str,
-        request: Request,
-        status: str = Form(...),
-    ) -> HTMLResponse:
-        thread = _svc().set_status(status, thread_id)
-        return workspace(request, {"notice": i18n.translate("ui.status_saved", _language(request), status=thread.status)})
-
-    @app.post("/threads/{thread_id}/snapshot", response_class=HTMLResponse)
-    def save_snapshot(
-        thread_id: str,
-        request: Request,
-        label: str = Form(""),
-    ) -> HTMLResponse:
-        snap = _svc().snapshot(label, thread_id)
-        return workspace(request, {"notice": i18n.translate("ui.snapshot_saved", _language(request), id=snap.id)})
-
-    @app.post("/threads/{thread_id}/rename", response_class=HTMLResponse)
-    def rename_thread(
-        thread_id: str,
-        request: Request,
-        title: str = Form(...),
-    ) -> HTMLResponse:
-        thread = _svc().rename(thread_id, title)
-        return workspace(request, {"notice": i18n.translate("ui.renamed", _language(request), title=thread.title)})
-
-    @app.post("/threads/{thread_id}/files", response_class=HTMLResponse)
-    def add_file(
-        thread_id: str,
-        request: Request,
-        path: str = Form(...),
-    ) -> HTMLResponse:
-        core = _svc()
-        core.add_file(path, thread_id)
-        record_owner_reference(core,thread_id,path)
-        return workspace(request, {"notice": i18n.translate("ui.file_added", _language(request), path=path.strip())})
-
-    @app.post("/threads/{thread_id}/files/remove", response_class=HTMLResponse)
-    def remove_file(
-        thread_id: str,
-        request: Request,
-        path: str = Form(...),
-    ) -> HTMLResponse:
-        core = _svc()
-        core.remove_file(path, thread_id)
-        record_owner_reference(core,thread_id,path,allowed=False)
-        return workspace(request, {"notice": i18n.translate("ui.file_removed", _language(request))})
-
     @app.post("/threads/{thread_id}/prompt", response_class=HTMLResponse)
     def preview_prompt(
         thread_id: str,
@@ -1088,10 +995,6 @@ def create_app() -> FastAPI:
         )
         return workspace(request, {"notice": notice, "prompt_preview": text})
 
-    @app.post("/threads/{thread_id}/archive", response_class=HTMLResponse)
-    def archive_thread(thread_id: str, request: Request) -> HTMLResponse:
-        thread = _svc().archive(thread_id)
-        return workspace(request, {"notice": i18n.translate("ui.archived", _language(request), title=thread.title)})
 
     @app.post("/threads/{thread_id}/handoff", response_class=HTMLResponse)
     def write_handoff(thread_id: str, request: Request) -> HTMLResponse:
@@ -1117,10 +1020,6 @@ def create_app() -> FastAPI:
             {"notice": i18n.translate("ui.grok_written", _language(request)), "packet": packet},
         )
 
-    @app.post("/snapshots/{snap_id}/restore", response_class=HTMLResponse)
-    def restore_snapshot(snap_id: str, request: Request) -> HTMLResponse:
-        thread = _svc().restore(snap_id)
-        return workspace(request, {"notice": i18n.translate("ui.snapshot_loaded", _language(request), id=thread.current_snapshot_id)})
 
     @app.post("/gate/freeze", response_class=HTMLResponse)
     def freeze_gate(request: Request, frozen: str = Form(...)) -> HTMLResponse:

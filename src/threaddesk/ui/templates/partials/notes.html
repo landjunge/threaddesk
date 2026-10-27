@@ -11,6 +11,8 @@
     hx-swap="innerHTML"
   >
       <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
+      <input type="hidden" name="expected_revision" value="{{ current.revision }}" />
+      <input type="hidden" name="operation_id" value="{{ mutation_id() }}" />
     <textarea aria-label="{{ t('notes.title') }}" name="text" rows="4" placeholder="{{ t('notes.placeholder') }}">{{ current.context.notes }}</textarea>
     <p class="mic-interim" x-show="interim" x-cloak x-text="interim"></p>
     <p class="banner-error" x-show="err" x-cloak x-text="err"></p>

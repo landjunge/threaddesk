@@ -119,8 +119,12 @@ def _hash_file(path: Path, limit: int = MAX_FILE_BYTES) -> tuple[str, int]:
     return digest.hexdigest(), size
 
 
-def _looks_secret_name(relative: str) -> bool:
+def _looks_secret_name(relative: str, *, conditional_keynote: bool = False) -> bool:
     name = PurePosixPath(relative).name
+    if conditional_keynote and PurePosixPath(name).suffix.casefold() == ".key":
+        # Only the ambiguous suffix is deferred to the byte validator. Names
+        # such as credentials.key, secret.key or id_rsa.key remain blocked.
+        name = PurePosixPath(name).stem
     return bool(_SECRET_NAME.search(name))
 
 
@@ -344,11 +348,12 @@ class LibraryImporter:
             if (record["sha256"], record["size"], record["thread_id"], record["filename"]) != (sha256, size, thread_id, filename):
                 raise LibraryImportError("receipt_conflict")
         else:
-            self._publish_blob(path, sha256, size)
+            _, proof = self._publish_validated_blob(path, sha256, size, filename)
             kind, media = _format_for(Path(filename).suffix.casefold())
             record = self._write_record(relative=filename, digest=sha256, size=size,
                                         kind=kind, media=media, thread=thread,
-                                        version=self._next_version(filename), record_id=record_id)
+                                        version=self._next_version(filename), record_id=record_id,
+                                        content_validation=proof)
         self._link_thread(thread, record_id)
         return {"record_id": record_id, "sha256": sha256, "size": size,
                 "thread_id": thread_id, "open_path": f"/library/files/{record_id}",
@@ -361,6 +366,8 @@ class LibraryImporter:
             raise LibraryImportError("source_missing") from exc
         if not root.is_dir() or root.is_symlink():
             raise LibraryImportError("source_not_directory")
+        if root.suffix.casefold() == ".key":
+            raise LibraryImportError("keynote_directory_package_unsupported")
         home = Path.home().resolve()
         if root == home or root == Path(root.anchor).resolve():
             raise LibraryImportError("source_too_broad")
@@ -374,9 +381,16 @@ class LibraryImporter:
     def _discover(self, root: Path) -> list[tuple[Path, str]]:
         found: list[tuple[Path, str]] = []
         for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+            packages = [name for name in dirnames
+                        if not name.startswith(".") and Path(name).suffix.casefold() == ".key"]
+            for name in sorted(packages):
+                path = Path(dirpath) / name
+                found.append((path, path.relative_to(root).as_posix()))
+                if len(found) > MAX_FILES:
+                    raise LibraryImportError("too_many_files")
             dirnames[:] = [
                 name for name in dirnames
-                if not name.startswith(".") and name.casefold() not in _SKIP_DIRS
+                if not name.startswith(".") and name.casefold() not in _SKIP_DIRS and name not in packages
             ]
             for name in sorted(filenames):
                 path = Path(dirpath) / name
@@ -402,6 +416,11 @@ class LibraryImporter:
         except LibraryImportError as exc:
             self._remember(journal, relative, status="failed", error=exc.code)
             return ImportItem(relative, "failed", error=exc.code), False
+        if (not path.is_symlink() and path.is_dir()
+                and PurePosixPath(relative).suffix.casefold() == ".key"):
+            code = "keynote_directory_package_unsupported"
+            self._remember(journal, relative, status="failed", error=code)
+            return ImportItem(relative, "failed", error=code), False
         if path.is_symlink() or not path.is_file():
             self._remember(journal, relative, status="failed", error="not_a_file")
             return ImportItem(relative, "failed", error="not_a_file"), False
@@ -409,7 +428,7 @@ class LibraryImporter:
         if suffix in _EXECUTABLE_SUFFIXES:
             self._remember(journal, relative, status="failed", error="unsupported")
             return ImportItem(relative, "failed", error="unsupported"), False
-        if _looks_secret_name(relative):
+        if _looks_secret_name(relative, conditional_keynote=suffix == ".key"):
             self._remember(journal, relative, status="failed", error="secret_name")
             return ImportItem(relative, "failed", error="secret_name"), False
         try:
@@ -434,12 +453,12 @@ class LibraryImporter:
             ), False
         self._remember(journal, relative, status="pending", sha256=digest, size=size)
         try:
-            created = self._publish_blob(path, digest, size)
+            created, proof = self._publish_validated_blob(path, digest, size, relative)
             kind, media = _format_for(suffix)
             thread = self._assign(relative)
             record = self._write_record(
                 relative=relative, digest=digest, size=size, kind=kind, media=media,
-                thread=thread, version=self._next_version(relative),
+                thread=thread, version=self._next_version(relative), content_validation=proof,
             )
             self._link_thread(thread, record["id"])
         except (LibraryImportError, OSError) as exc:
@@ -531,6 +550,40 @@ class LibraryImporter:
             raise LibraryImportError("copy_checksum")
         return True
 
+    def _publish_validated_blob(self, source, digest, size, filename):
+        if PurePosixPath(filename).suffix.casefold() != ".key":
+            return self._publish_blob(source, digest, size), None
+        from threaddesk.services.file_formats.keynote import inspect_keynote, KeynoteError
+        # A mutable source must not change from a validated presentation into
+        # key material between inspection, hashing and CAS publication.
+        with tempfile.TemporaryDirectory(prefix=".keynote-validation-", dir=self.workspace) as folder:
+            snapshot = Path(folder) / "payload"
+            copied, hasher = 0, hashlib.sha256()
+            descriptor = os.open(source, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
+            if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+                os.close(descriptor)
+                raise LibraryImportError("integrity")
+            with os.fdopen(descriptor, "rb") as incoming, snapshot.open("xb") as outgoing:
+                os.fchmod(outgoing.fileno(), 0o600)
+                while True:
+                    chunk = incoming.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    copied += len(chunk)
+                    if copied > size or copied > MAX_FILE_BYTES:
+                        raise LibraryImportError("copy_checksum")
+                    outgoing.write(chunk)
+                    hasher.update(chunk)
+                outgoing.flush()
+                os.fsync(outgoing.fileno())
+            if copied != size or hasher.hexdigest() != digest:
+                raise LibraryImportError("copy_checksum")
+            try:
+                proof = inspect_keynote(snapshot, expected_sha256=digest, expected_size=size)
+            except KeynoteError as exc:
+                raise LibraryImportError(exc.code) from exc
+            return self._publish_blob(snapshot, digest, size), proof
+
     def _blob_matches(self, digest: str, size: int) -> bool:
         if not isinstance(digest, str) or not _DIGEST.fullmatch(digest):
             return False
@@ -575,7 +628,7 @@ class LibraryImporter:
         current.context.extra["library_files"] = ids
         self.store.save_thread(current)
 
-    def _write_record(self, *, relative, digest, size, kind, media, thread, version: int, record_id=None) -> dict:
+    def _write_record(self, *, relative, digest, size, kind, media, thread, version: int, record_id=None, content_validation=None) -> dict:
         record = {
             "id": record_id or new_id(),
             "sha256": digest,
@@ -592,6 +645,8 @@ class LibraryImporter:
             "integrity": "verified",
             "imported_at": datetime.now(timezone.utc).isoformat(),
         }
+        if content_validation is not None:
+            record["content_validation"] = content_validation
         self.records.mkdir(parents=True, exist_ok=True, mode=0o700)
         self._write_json(self.records / f"{record['id']}.json", record)
         return record
@@ -717,7 +772,7 @@ def validate_received_filename(filename: str) -> None:
     if (not isinstance(filename, str) or not filename or len(filename.encode("utf-8")) > 240
             or filename in {".", ".."} or any(ord(c) < 32 or c in '/\\:' for c in filename)):
         raise LibraryImportError("unsafe_path")
-    if _looks_secret_name(filename):
+    if _looks_secret_name(filename, conditional_keynote=True):
         raise LibraryImportError("secret_name")
     if Path(filename).suffix.casefold() in _EXECUTABLE_SUFFIXES:
         raise LibraryImportError("unsupported")

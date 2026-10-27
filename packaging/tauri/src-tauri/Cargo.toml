@@ -1,6 +1,6 @@
 [package]
 name = "threaddesk-tauri"
-version = "0.1.5"
+version = "0.2.0"
 description = "ThreadDesk standalone macOS desktop shell"
 authors = ["ThreadDesk"]
 edition = "2021"

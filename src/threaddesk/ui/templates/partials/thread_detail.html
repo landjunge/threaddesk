@@ -22,12 +22,15 @@
           hx-swap="innerHTML"
         >
       <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
+      <input type="hidden" name="expected_revision" value="{{ current.revision }}" />
+      <input type="hidden" name="operation_id" value="{{ mutation_id() }}" />
           <input type="text" name="title" value="{{ current.title }}" required maxlength="160" />
           <button type="submit" class="btn btn-primary">{{ t("detail.ok") }}</button>
         </form>
     <div class="detail-meta">
       <p class="thread-id detail-id">{{ current.id }}</p>
       <div class="detail-actions">
+        <button type="button" class="btn btn-ghost btn-compact" data-trash-object="{{ current.id }}" data-trash-kind="thread" data-trash-revision="{{ current.revision }}" data-trash-confirm="{{ t('trash.confirm') }}">{{ t('trash.move') }}</button>
         <button type="button" class="btn btn-ghost btn-compact" @click="rename = !rename">
           {{ t("detail.rename") }}
         </button>
@@ -39,6 +42,8 @@
         hx-confirm="{{ t('detail.confirm_archive') }}"
       >
       <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
+      <input type="hidden" name="expected_revision" value="{{ current.revision }}" />
+      <input type="hidden" name="operation_id" value="{{ mutation_id() }}" />
         <button type="submit" class="btn btn-ghost btn-compact">{{ t("detail.archive") }}</button>
       </form>
       </div>
@@ -53,6 +58,8 @@
           hx-swap="innerHTML"
         >
       <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
+      <input type="hidden" name="expected_revision" value="{{ current.revision }}" />
+      <input type="hidden" name="operation_id" value="{{ mutation_id() }}" />
           <input type="hidden" name="status" value="{{ s }}" />
           <button
             type="submit"
@@ -72,6 +79,8 @@
         hx-swap="innerHTML"
       >
       <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
+      <input type="hidden" name="expected_revision" value="{{ current.revision }}" />
+      <input type="hidden" name="operation_id" value="{{ mutation_id() }}" />
         <input type="text" name="text" value="{{ current.description }}" maxlength="400" placeholder="{{ t('detail.description_placeholder') }}" />
         <button type="submit" class="btn btn-primary">{{ t("detail.save") }}</button>
       </form>

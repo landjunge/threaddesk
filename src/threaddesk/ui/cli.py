@@ -10,6 +10,7 @@ from threaddesk.api.service import ThreadService
 from threaddesk.core import i18n
 from threaddesk.core.errors import ThreadDeskError
 from threaddesk.core.models import Thread
+from threaddesk.ui.thread_cli_mutations import change as thread_change, add_options as thread_change_options
 from threaddesk.services.knowledge_export import KnowledgeExportService
 from threaddesk.services.knowledge_visual_export import encode_pdf, encode_svg
 from threaddesk.services.knowledge_package import KnowledgePackageService
@@ -92,7 +93,7 @@ def _print_context(thread: Thread, t: Translator) -> None:
 
 def cmd_new(args: argparse.Namespace) -> int:
     t = _lang(args)
-    thread = _svc().create(args.title, args.description or "")
+    thread = Thread.from_dict(thread_change(_svc(), args, "create", {"title": args.title, "description": args.description or ""})["thread"])
     print(t("cli.thread.created", id=thread.id, title=thread.title))
     return 0
 
@@ -130,7 +131,7 @@ def cmd_switch(args: argparse.Namespace) -> int:
     t = _lang(args)
     if not args.id:
         return cmd_list(argparse.Namespace(all=False, lang=args.lang))
-    thread = _svc().switch(args.id)
+    thread = Thread.from_dict(thread_change(_svc(), args, "switch", key=args.id)["thread"])
     print(t("cli.thread.active", id=thread.id, title=thread.title))
     _print_context(thread, t)
     return 0
@@ -149,21 +150,21 @@ def cmd_current(args: argparse.Namespace) -> int:
 
 def cmd_note(args: argparse.Namespace) -> int:
     t = _lang(args)
-    thread = _svc().set_note(args.text, args.id, append=args.append)
+    thread = Thread.from_dict(thread_change(_svc(), args, "set_note", {"text": args.text, "append": args.append}, key=args.id)["thread"])
     print(t("cli.note.saved", id=thread.id))
     return 0
 
 
 def cmd_describe(args: argparse.Namespace) -> int:
     t = _lang(args)
-    thread = _svc().set_description(args.text, args.id)
+    thread = Thread.from_dict(thread_change(_svc(), args, "update", {"description": args.text}, key=args.id)["thread"])
     print(t("cli.description.saved", id=thread.id))
     return 0
 
 
 def cmd_status(args: argparse.Namespace) -> int:
     t = _lang(args)
-    thread = _svc().set_status(args.status, args.id)
+    thread = Thread.from_dict(thread_change(_svc(), args, "update", {"status": args.status}, key=args.id)["thread"])
     print(t("cli.status.saved", status=thread.status, id=thread.id))
     return 0
 
@@ -183,31 +184,31 @@ def cmd_files(args: argparse.Namespace) -> int:
             print(path)
         return 0
     if args.files_cmd == "add":
-        thread = svc.add_file(args.path, args.id)
+        thread = Thread.from_dict(thread_change(svc, args, "add_file", {"path": args.path}, key=args.id)["thread"])
         print(t("cli.files.added", path=args.path, id=thread.id))
         return 0
-    thread = svc.remove_file(args.path, args.id)
+    thread = Thread.from_dict(thread_change(svc, args, "remove_file", {"path": args.path}, key=args.id)["thread"])
     print(t("cli.files.removed", path=args.path, id=thread.id))
     return 0
 
 
 def cmd_rename(args: argparse.Namespace) -> int:
     t = _lang(args)
-    thread = _svc().rename(args.id, args.title)
+    thread = Thread.from_dict(thread_change(_svc(), args, "update", {"title": args.title}, key=args.id)["thread"])
     print(t("cli.thread.renamed", id=thread.id, title=thread.title))
     return 0
 
 
 def cmd_archive(args: argparse.Namespace) -> int:
     t = _lang(args)
-    thread = _svc().archive(args.id)
+    thread = Thread.from_dict(thread_change(_svc(), args, "archive", key=args.id)["thread"])
     print(t("cli.thread.archived", id=thread.id))
     return 0
 
 
 def cmd_unarchive(args: argparse.Namespace) -> int:
     t = _lang(args)
-    thread = _svc().unarchive(args.id)
+    thread = Thread.from_dict(thread_change(_svc(), args, "unarchive", key=args.id)["thread"])
     print(t("cli.thread.unarchived", id=thread.id))
     return 0
 
@@ -217,14 +218,16 @@ def cmd_delete(args: argparse.Namespace) -> int:
     if not args.yes:
         print(t("cli.thread.delete_guard"), file=sys.stderr)
         return 2
-    _svc().delete(args.id)
+    thread_change(_svc(), args, "delete", key=args.id)
     print(t("cli.thread.deleted", id=args.id))
     return 0
 
 
 def cmd_snap_save(args: argparse.Namespace) -> int:
     t = _lang(args)
-    snap = _svc().snapshot(args.label or "", args.id)
+    result = thread_change(_svc(), args, "snapshot", {"label": args.label or ""}, key=args.id)
+    from threaddesk.core.models import Snapshot
+    snap = Snapshot.from_dict(result["snapshot"])
     print(t("cli.snap.saved", id=snap.id, label=snap.label or t("cli.snap.no_label")))
     return 0
 
@@ -461,7 +464,9 @@ def cmd_prompt(args: argparse.Namespace) -> int:
 
 def cmd_snap_load(args: argparse.Namespace) -> int:
     t = _lang(args)
-    thread = _svc().restore(args.snap_id)
+    svc = _svc()
+    snapshot = svc.store.get_snapshot(args.snap_id)
+    thread = Thread.from_dict(thread_change(svc, args, "restore_snapshot", {"snapshot_id": args.snap_id}, key=snapshot.thread_id)["thread"])
     print(
         t("cli.snap.restored", id=thread.id, snapshot=thread.current_snapshot_id)
     )
@@ -588,6 +593,7 @@ def build_parser(language: str = i18n.DEFAULT_LANGUAGE,
     n = sub.add_parser("new", help=t("cli.help.new"))
     n.add_argument("title")
     n.add_argument("-d", "--description", default="")
+    thread_change_options(n)
     n.set_defaults(func=cmd_new)
 
     ls = sub.add_parser("list", help=t("cli.help.list"))
@@ -596,6 +602,7 @@ def build_parser(language: str = i18n.DEFAULT_LANGUAGE,
 
     sw = sub.add_parser("switch", help=t("cli.help.switch"))
     sw.add_argument("id", nargs="?", help=t("cli.help.switch_id"))
+    thread_change_options(sw)
     sw.set_defaults(func=cmd_switch)
 
     cu = sub.add_parser("current", help=t("cli.help.current"))
@@ -605,16 +612,19 @@ def build_parser(language: str = i18n.DEFAULT_LANGUAGE,
     nt.add_argument("text")
     nt.add_argument("--id", default=None)
     nt.add_argument("-a", "--append", action="store_true")
+    thread_change_options(nt)
     nt.set_defaults(func=cmd_note)
 
     ds = sub.add_parser("describe", help=t("cli.help.describe"))
     ds.add_argument("text")
     ds.add_argument("--id", default=None)
+    thread_change_options(ds)
     ds.set_defaults(func=cmd_describe)
 
     st = sub.add_parser("status", help=t("cli.help.status"))
     st.add_argument("status")
     st.add_argument("--id", default=None)
+    thread_change_options(st)
     st.set_defaults(func=cmd_status)
 
     fl = sub.add_parser("files", help=t("cli.help.files"))
@@ -623,10 +633,12 @@ def build_parser(language: str = i18n.DEFAULT_LANGUAGE,
     fa = fls.add_parser("add")
     fa.add_argument("path")
     fa.add_argument("--id", default=None)
+    thread_change_options(fa)
     fa.set_defaults(func=cmd_files)
     fr = fls.add_parser("rm")
     fr.add_argument("path")
     fr.add_argument("--id", default=None)
+    thread_change_options(fr)
     fr.set_defaults(func=cmd_files)
     # ls needs optional --id
     fls.choices["ls"].add_argument("--id", default=None)
@@ -634,19 +646,24 @@ def build_parser(language: str = i18n.DEFAULT_LANGUAGE,
     rn = sub.add_parser("rename", help=t("cli.help.rename"))
     rn.add_argument("id")
     rn.add_argument("title")
+    thread_change_options(rn)
     rn.set_defaults(func=cmd_rename)
 
     ar = sub.add_parser("archive", help=t("cli.help.archive"))
     ar.add_argument("id")
+    thread_change_options(ar)
     ar.set_defaults(func=cmd_archive)
 
     ua = sub.add_parser("unarchive", help=t("cli.help.unarchive"))
     ua.add_argument("id")
+    thread_change_options(ua)
     ua.set_defaults(func=cmd_unarchive)
 
     de = sub.add_parser("delete", help=t("cli.help.delete"))
     de.add_argument("id")
     de.add_argument("--yes", action="store_true")
+    de.add_argument("--legacy-permanent", action="store_true", help=t("ui.mutation_legacy_delete"))
+    thread_change_options(de)
     de.set_defaults(func=cmd_delete)
 
     ss = sub.add_parser("snap", help=t("cli.help.snap"))
@@ -654,12 +671,14 @@ def build_parser(language: str = i18n.DEFAULT_LANGUAGE,
     sv = ssub.add_parser("save", help=t("cli.help.snap_save"))
     sv.add_argument("label", nargs="?", default="")
     sv.add_argument("--id", default=None)
+    thread_change_options(sv)
     sv.set_defaults(func=cmd_snap_save)
     sl = ssub.add_parser("list", help=t("cli.help.snap_list"))
     sl.add_argument("--id", default=None)
     sl.set_defaults(func=cmd_snap_list)
     ld = ssub.add_parser("load", help=t("cli.help.snap_load"))
     ld.add_argument("snap_id")
+    thread_change_options(ld)
     ld.set_defaults(func=cmd_snap_load)
 
     pr = sub.add_parser("prompt", help=t("cli.help.prompt"))
@@ -801,6 +820,8 @@ def build_parser(language: str = i18n.DEFAULT_LANGUAGE,
     register_search(sub, language, _svc)
     from threaddesk.ui.library_cli import register_library
     register_library(sub, language, _svc)
+    from threaddesk.ui.command_cli import register_commands
+    register_commands(sub, _svc)
     return p
 
 
@@ -812,7 +833,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(items)
     try:
         result = int(args.func(args))
-        if result == 0 and args.cmd != "library":
+        if result == 0 and args.cmd not in {"library", "command"}:
             from threaddesk.services.library_refresh import refresh_existing
             refresh_existing(_svc().store)
         return result

@@ -137,6 +137,8 @@ class LocalHTTPAccess:
         async def guarded_send(message):
             if message["type"] == "http.response.start":
                 headers = list(message.get("headers", []))
+                controlled = {b"cache-control", b"x-content-type-options", b"referrer-policy", b"x-frame-options"}
+                headers = [(key, value) for key, value in headers if key.lower() not in controlled]
                 headers.extend([(b"cache-control", b"no-store"), (b"x-content-type-options", b"nosniff"),
                                 (b"referrer-policy", b"same-origin"), (b"x-frame-options", b"DENY"),
                                 (b"content-security-policy", b"frame-ancestors 'none'")])

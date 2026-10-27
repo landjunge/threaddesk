@@ -134,12 +134,15 @@ class LibraryBatchImporter:
             path = Path(row["path"])
             if any(parent.is_symlink() for parent in (path, *path.parents)):
                 raise LibraryImportError("source_symlink")
+            if path.is_dir() and path.suffix.casefold() == ".key":
+                return dict(result, status="blocked", error="keynote_directory_package_unsupported")
             if not path.is_file():
                 return dict(result, status="missing", error="source_missing")
             root = self.importer.workspace.resolve()
             resolved = path.resolve(strict=True)
             if resolved == root or root in resolved.parents:
                 raise LibraryImportError("source_is_store")
+            source_info = path.stat()
             digest, size = _hash_file(path)
             if total + size > MAX_BATCH_BYTES:
                 raise LibraryImportError("batch_too_large")
@@ -182,6 +185,8 @@ class LibraryBatchImporter:
                                        "state": "record_published", "history": history, "new_record": new_record,
                                        "predecessor_record_id": predecessor,
                                        "recorded_at": now_iso()}
+            if unchanged and receipt.get("activity_evidence"):
+                sources["sources"][key]["activity_evidence"] = receipt["activity_evidence"]
             self.jobs.write("library-batch-sources.json", sources)
             if predecessor and new_record and not record.get("predecessor_record_id") and record["id"] != predecessor:
                 record["predecessor_record_id"] = predecessor
@@ -209,8 +214,19 @@ class LibraryBatchImporter:
             record, assignment = self._metadata(record, metadata_row, preserve_assignment=preserve)
             sources["sources"][key]["state"] = "complete"
             source_error = self._post_copy_check(path, digest, size)
+            activity = None
+            if predecessor and not source_error:
+                from threaddesk.services.library_activity import change_evidence, apply_change
+                previous_record = self._previous_record(predecessor)
+                if not unchanged and previous_record.get("sha256") and record["sha256"] != previous_record["sha256"]:
+                    sources["sources"][key]["activity_evidence"] = change_evidence(record, previous_record, source_info, key)
+                    self.jobs.write("library-batch-sources.json", sources)
+                evidence = sources["sources"][key].get("activity_evidence")
+                if evidence:
+                    activity = apply_change(self.store, evidence)
             return dict(result, status="conflict" if source_error else item_status,
                         **({"error": source_error} if source_error else {}),
+                        **({"activity": activity} if activity is not None else {}),
                         record_id=record["id"], sha256=digest,
                         size=size, thread_id=record["thread_id"], node_id=record.get("node_id"),
                         assignment=assignment, predecessor_record_id=record.get("predecessor_record_id"),

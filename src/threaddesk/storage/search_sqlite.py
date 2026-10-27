@@ -102,6 +102,8 @@ class SQLiteSearchAdapter:
 
     def read(self, exact_id, *, canonical=False):
         identifier(exact_id)
+        if self.store.object_in_trash("thread", exact_id):
+            raise SearchError("source_in_trash")
         # Check length before materializing an untrusted source payload.
         db = self.store.connection if canonical else self._reader()
         row = db.execute(

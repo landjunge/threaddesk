@@ -82,7 +82,7 @@ def test_sqlite_schema_is_versioned_indexed_and_fts_ready(tmp_path: Path) -> Non
         )
     }
 
-    assert version == 6
+    assert version == 7
     assert objects["idx_threads_status_updated"] == "index"
     assert objects["idx_snapshots_thread_created"] == "index"
     assert objects["idx_nodes_kind_status_updated"] == "index"

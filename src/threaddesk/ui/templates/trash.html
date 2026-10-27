@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block body %}
+<main class="data-page" data-trash-page data-strings="{{ trash_strings|e }}">
+  <header class="panel-head"><div><h1>{{ t('trash.title') }}</h1><p>{{ t('trash.explain') }}</p></div>
+    <button type="button" class="btn" data-trash-refresh>{{ t('trash.refresh') }}</button></header>
+  <div class="toolbar" role="group" aria-label="{{ t('trash.title') }}">
+    <button type="button" class="btn" data-trash-tab="objects" aria-pressed="true">{{ t('trash.objects') }}</button>
+    <button type="button" class="btn" data-trash-tab="files" aria-pressed="false">{{ t('trash.files') }}</button>
+  </div>
+  <p data-trash-message role="status" aria-live="polite"></p>
+  <ul data-trash-items class="trash-items"></ul>
+  <button type="button" class="btn" data-trash-next hidden>{{ t('trash.next') }}</button>
+</main>
+{% endblock %}

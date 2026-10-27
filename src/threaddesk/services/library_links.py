@@ -12,7 +12,7 @@ def sync_file_nodes(store) -> dict:
         record_id = record["id"]
         # Generated document identity stays stable across rename/move/restore.
         try:
-            node = store.get_node(record_id)
+            node = store.get_node(record_id, include_trashed=True)
         except NotFound:
             node = KnowledgeNode(id=record_id, kind="document", title=record["filename"],
                                  created_at=now_iso(), updated_at=now_iso(), source="library")
@@ -27,7 +27,7 @@ def sync_file_nodes(store) -> dict:
                     "trashed": bool(record.get("trashed"))}
         if node.title != record["filename"] or node.metadata != metadata:
             node.title, node.metadata, node.updated_at = record["filename"], metadata, now_iso()
-            store.save_node(node)
+            store.save_node(node, include_trashed=True)
             updated += 1
     return {"created": created, "updated": updated}
 
@@ -60,7 +60,7 @@ def library_relations(store, nodes):
         targets = set(record.get("node_ids") or [])
         if record.get("node_id"):
             targets.add(record["node_id"])
-        targets.update(node.id for node in nodes if node.kind == "project"
+        targets.update(node.id for node in nodes if record.get("thread_id") and node.kind == "project"
                        and node.metadata.get("thread_id") == record.get("thread_id"))
         for target in sorted(targets):
             if target not in by_id or target == record["id"]:

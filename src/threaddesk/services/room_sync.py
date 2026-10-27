@@ -219,6 +219,8 @@ class RoomBook:
         room = self._require(room_id)
         if self._role(room) not in PUBLISH:
             return _empty_bundle(room_id, self.instance_id())
+        from threaddesk.services.trash_sync import ROOM_SCHEMA, export_room_lifecycle
+        lifecycle = export_room_lifecycle(self.store, room_id)
         entries, threads = [], []
         seen: set[str] = set()
         for thread in self.store.list_threads(include_archived=True):
@@ -230,14 +232,20 @@ class RoomBook:
                 threads.append({"id": thread.id, "title": thread.title})
                 seen.add(thread.id)
         return {
-            "schema": SCHEMA, "room_id": room_id, "instance_id": self.instance_id(),
+            "schema": ROOM_SCHEMA if lifecycle else SCHEMA, "room_id": room_id, "instance_id": self.instance_id(),
             "entries": entries, "threads": threads,
+            **({"lifecycle": lifecycle} if lifecycle else {}),
         }
 
     def apply_bundle(self, bundle: Any) -> dict[str, int]:
         """Validate every row before changing any thread or whiteboard."""
-        if not isinstance(bundle, dict) or bundle.get("schema") != SCHEMA:
+        from threaddesk.services.trash_sync import (ROOM_SCHEMA, apply_room_lifecycle,
+            record_conflict, validate_room_lifecycle, conflict_is_resolved)
+        if not isinstance(bundle, dict) or bundle.get("schema") not in {SCHEMA, ROOM_SCHEMA}:
             raise InvalidState("room_bundle")
+        lifecycle = validate_room_lifecycle(bundle.get("lifecycle", []))
+        if bundle["schema"] == SCHEMA and lifecycle:
+            raise InvalidState("room_lifecycle_requires_v2")
         room_id = bundle.get("room_id")
         if not _safe_id(room_id):
             raise InvalidState("room_bundle")
@@ -273,11 +281,30 @@ class RoomBook:
             if entry.room_id != room_id:
                 raise InvalidState("room_bundle")
             incoming.append(entry)
+        lifecycle_conflicts = apply_room_lifecycle(self.store, room_id, lifecycle)
+        generations = {item["thread_id"]: item for item in lifecycle}
+        accepted = []
+        blocked = set()
         for entry in incoming:
+            latest = self.store.get_object_lifecycle("thread", entry.thread_id)
+            declared = generations.get(entry.thread_id)
+            if latest and (latest["state"] != "restored" or declared is None
+                           or declared["generation"] != latest["generation"]
+                           or declared["state"] != "restored"):
+                if entry.thread_id not in blocked:
+                    key = record_conflict(self.store, thread_id=entry.thread_id, source="room:" + room_id,
+                                    reason="late_room_data_after_lifecycle_change",
+                                    incoming={"schema": bundle["schema"], "entry_ids": sorted(e.id for e in incoming if e.thread_id == entry.thread_id)})
+                    lifecycle_conflicts += not conflict_is_resolved(self.store, key)
+                    blocked.add(entry.thread_id)
+                continue
             self._shell(entry.thread_id, titles.get(entry.thread_id, ""))
-        if not incoming:
-            return {"added": 0, "kept": 0, "conflicts": 0}
-        return merge_whiteboard(self.store, incoming)
+            accepted.append(entry)
+        if not accepted:
+            return {"added": 0, "kept": 0, "conflicts": lifecycle_conflicts}
+        result = merge_whiteboard(self.store, accepted)
+        result["conflicts"] += lifecycle_conflicts
+        return result
 
     def serve_pull(self, instance_id: str, token: str, room_id: str) -> dict[str, Any]:
         self._trusted(instance_id, token, room_id)

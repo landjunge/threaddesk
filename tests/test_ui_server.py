@@ -45,7 +45,7 @@ def test_partial_threads_and_switch(home: Path) -> None:
     assert "Alpha" in listed.text
     assert "Beta" in listed.text
 
-    switched = client.post(f"/threads/{a.id}/switch")
+    switched = client.post_thread_form(f"/threads/{a.id}/switch")
     assert switched.status_code == 200
     assert "Alpha" in switched.text
     assert ThreadService(store=JsonStore(home)).current().id == a.id
@@ -59,29 +59,29 @@ def test_write_note_status_snapshot_and_gate(home: Path) -> None:
     from threaddesk.ui.server import create_app
 
     client = TestClient(create_app())
-    created = client.post("/threads", data={"title": "Gamma", "description": "d"})
+    created = client.post_thread_form("/threads", data={"title": "Gamma", "description": "d"})
     assert created.status_code == 200
     svc = ThreadService(store=JsonStore(home))
     thread = svc.current()
     assert thread is not None
     assert thread.title == "Gamma"
 
-    note = client.post(f"/threads/{thread.id}/note", data={"text": "stand heute"})
+    note = client.post_thread_form(f"/threads/{thread.id}/note", data={"text": "stand heute"})
     assert note.status_code == 200
     assert "stand heute" in note.text
 
-    status = client.post(f"/threads/{thread.id}/status", data={"status": "active"})
+    status = client.post_thread_form(f"/threads/{thread.id}/status", data={"status": "active"})
     assert status.status_code == 200
     assert ThreadService(store=JsonStore(home)).current().status == "active"
 
-    snap = client.post(f"/threads/{thread.id}/snapshot", data={"label": "vor-umbau"})
+    snap = client.post_thread_form(f"/threads/{thread.id}/snapshot", data={"label": "vor-umbau"})
     assert snap.status_code == 200
     snaps = ThreadService(store=JsonStore(home)).snapshots(thread.id)
     assert snaps
     assert snaps[0].label == "vor-umbau"
 
-    client.post(f"/threads/{thread.id}/note", data={"text": "anders"})
-    restored = client.post(f"/snapshots/{snaps[0].id}/restore")
+    client.post_thread_form(f"/threads/{thread.id}/note", data={"text": "anders"})
+    restored = client.post_thread_form(f"/snapshots/{snaps[0].id}/restore")
     assert restored.status_code == 200
     assert ThreadService(store=JsonStore(home)).current().context.notes == "stand heute"
 
@@ -97,7 +97,7 @@ def test_packet_and_archive(home: Path) -> None:
     from threaddesk.ui.server import create_app
 
     client = TestClient(create_app())
-    client.post("/threads", data={"title": "Delta", "description": "paket"})
+    client.post_thread_form("/threads", data={"title": "Delta", "description": "paket"})
     svc = ThreadService(store=JsonStore(home))
     thread = svc.current()
     assert thread is not None
@@ -114,7 +114,7 @@ def test_packet_and_archive(home: Path) -> None:
     assert (home / "gnom.json").exists()
     assert (home / "gnom-chat.json").exists()
 
-    archived = client.post(f"/threads/{thread.id}/archive")
+    archived = client.post_thread_form(f"/threads/{thread.id}/archive")
     assert archived.status_code == 200
     assert ThreadService(store=JsonStore(home)).get(thread.id).status == "archived"
     assert "Archivieren" not in archived.text or "Delta" not in archived.text
@@ -141,15 +141,15 @@ def test_rename_files_and_prompt_preview(home: Path) -> None:
     from threaddesk.ui.server import create_app
 
     client = TestClient(create_app())
-    client.post("/threads", data={"title": "Alt", "description": ""})
+    client.post_thread_form("/threads", data={"title": "Alt", "description": ""})
     thread = ThreadService(store=JsonStore(home)).current()
     assert thread is not None
 
-    renamed = client.post(f"/threads/{thread.id}/rename", data={"title": "Neu"})
+    renamed = client.post_thread_form(f"/threads/{thread.id}/rename", data={"title": "Neu"})
     assert renamed.status_code == 200
     assert ThreadService(store=JsonStore(home)).current().title == "Neu"
 
-    added = client.post(f"/threads/{thread.id}/files", data={"path": "src/app.py"})
+    added = client.post_thread_form(f"/threads/{thread.id}/files", data={"path": "src/app.py"})
     assert added.status_code == 200
     assert "src/app.py" in added.text
     assert "src/app.py" in ThreadService(store=JsonStore(home)).current().context.files
@@ -168,7 +168,7 @@ def test_rename_files_and_prompt_preview(home: Path) -> None:
     assert saved.status_code == 200
     assert ThreadService(store=JsonStore(home)).current().context.prompts
 
-    removed = client.post(
+    removed = client.post_thread_form(
         f"/threads/{thread.id}/files/remove", data={"path": "src/app.py"}
     )
     assert removed.status_code == 200
@@ -190,7 +190,7 @@ def test_map_page_is_a_read_only_api_graph_view(home: Path) -> None:
     page = client.get("/map")
 
     assert page.status_code == 200
-    assert 'data-graph-endpoint="/api/graph"' in page.text
+    assert 'data-graph-endpoint="/api/graph/v2?mode=work"' in page.text
     assert 'src="/static/map.js"' in page.text
     assert "Hineinzoomen" in page.text
     assert "Herauszoomen" in page.text
@@ -217,7 +217,7 @@ def test_knowledge_page_applies_guarded_node_transition(home: Path) -> None:
 
     changed = client.post(
         f"/knowledge/nodes/{task.id}/transition",
-        data={"status": "assigned", "expected_revision": task.revision},
+        data={"status": "assigned", "expected_revision": task.revision, "operation_id": "ui-node-transition"},
         follow_redirects=False,
     )
 

@@ -24,6 +24,8 @@ from pathlib import Path
 
 import pytest
 
+from http_ui_client import _ThreadForm
+
 from threaddesk.core.models import WhiteboardEntry
 from threaddesk.storage.json_store import JsonStore
 
@@ -70,6 +72,9 @@ def _serve(home: Path, port: int, log_path: Path) -> subprocess.Popen:
     log = log_path.open("w", encoding="utf-8")
     env = os.environ.copy()
     env["THREADDESK_HOME"] = str(home)
+    # pytest's pythonpath option changes only its own interpreter. Each live
+    # child must run this checkout too, rather than an older editable install.
+    env["PYTHONPATH"] = os.pathsep.join(filter(None, (str(ROOT / "src"), env.get("PYTHONPATH", ""))))
     env.pop("THREADDESK_STORAGE", None)
     if port not in _LISTENERS:
         _reserve_port(port)
@@ -141,6 +146,15 @@ def _request(base: str, path: str, form: dict[str, str] | None = None) -> str:
         token = re.search(r'name="threaddesk-csrf" content="([a-f0-9]+)"', page)[1]
         _CLIENTS[base] = (opener, token)
     opener, token = _CLIENTS[base]
+    if form is not None and (path == "/threads" or re.fullmatch(r"/threads/[^/]+/note", path)):
+        thread = re.fullmatch(r"/threads/([^/]+)/note", path)
+        view = "/?thread=" + thread[1] if thread else "/"
+        with opener.open(base + view, timeout=15) as response:
+            parser = _ThreadForm(path)
+            parser.feed(response.read().decode())
+        assert parser.envelope is not None, f"No displayed mutation form: {path}"
+        assert {"operation_id", "expected_revision"} <= parser.envelope.keys()
+        form = {**parser.envelope, **form}
     data = None if form is None else urllib.parse.urlencode(form).encode()
     headers = {} if form is None else {"Origin": base, "X-ThreadDesk-CSRF": token}
     request = urllib.request.Request(base + path, data=data, method="POST" if form is not None else "GET", headers=headers)

@@ -327,6 +327,13 @@ document.body.addEventListener("htmx:beforeSwap", event => {
   if (supersededWorkspaceResponse(event)) event.detail.shouldSwap = false;
 });
 function requestFailure(event) {
+  const rejected = event.detail?.xhr?.getResponseHeader("X-ThreadDesk-Mutation-Error");
+  if (rejected) {
+    requestState(rejected, true);
+    const node = document.getElementById("request-state");
+    if (node) node.dataset.state = "rejected";
+    return;
+  }
   if (event.detail?.requestConfig?.verb?.toLowerCase() === "get") requestState("browser.request_failed", true);
   else requestState("browser.save_uncertain", true);
 }

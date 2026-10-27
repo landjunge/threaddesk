@@ -29,6 +29,8 @@
 
   <section class="knowledge-grid">
     <form class="panel knowledge-form" method="post" action="/knowledge/nodes">
+      <input type="hidden" name="operation_id" value="{{ mutation_id() }}" />
+      <input type="hidden" name="expected_revision" value="0" />
       <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
       <div class="panel-head"><h2>{{ t("knowledge.new_node") }}</h2></div>
       <label>{{ t("knowledge.kind") }}<select name="kind">{% for kind in node_kinds %}<option value="{{ kind }}">{{ t("kind." ~ kind) }}</option>{% endfor %}</select></label>
@@ -39,12 +41,15 @@
     </form>
 
     <form class="panel knowledge-form" method="post" action="/knowledge/relations">
+      <input type="hidden" name="operation_id" value="{{ mutation_id() }}" />
+      <input type="hidden" name="expected_revision" value="{{ nodes[0].revision if nodes else 0 }}" />
+      <input type="hidden" name="expected_target_revision" value="{{ nodes[0].revision if nodes else 0 }}" />
       <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
       <div class="panel-head"><h2>{{ t("knowledge.new_relation") }}</h2></div>
       {% if nodes|length >= 2 %}
-      <label>{{ t("knowledge.from") }}<select name="source_id">{% for node in nodes %}<option value="{{ node.id }}">{{ node.title }} · {{ t("kind." ~ node.kind) }}</option>{% endfor %}</select></label>
+      <label>{{ t("knowledge.from") }}<select name="source_id">{% for node in nodes %}<option value="{{ node.id }}" data-revision="{{ node.revision }}">{{ node.title }} · {{ t("kind." ~ node.kind) }}</option>{% endfor %}</select></label>
       <label>{{ t("knowledge.relation") }}<select name="kind">{% for kind in relation_kinds %}<option value="{{ kind }}">{{ t("relation." ~ kind) }}</option>{% endfor %}</select></label>
-      <label>{{ t("knowledge.to") }}<select name="target_id">{% for node in nodes %}<option value="{{ node.id }}">{{ node.title }} · {{ t("kind." ~ node.kind) }}</option>{% endfor %}</select></label>
+      <label>{{ t("knowledge.to") }}<select name="target_id">{% for node in nodes %}<option value="{{ node.id }}" data-revision="{{ node.revision }}">{{ node.title }} · {{ t("kind." ~ node.kind) }}</option>{% endfor %}</select></label>
       <button class="btn btn-primary" type="submit">{{ t("knowledge.save_relation") }}</button>
       {% else %}
       <p class="muted">{{ t("knowledge.need_two") }}</p>
@@ -66,9 +71,11 @@
         </div>
         <span class="node-kind">{{ node.kind }}</span>
         <span class="status status-{{ node.status }}">{{ node.status }}</span>
+        <button type="button" class="btn btn-ghost btn-compact" data-trash-object="{{ node.id }}" data-trash-kind="node" data-trash-revision="{{ node.revision }}" data-trash-confirm="{{ t('trash.confirm') }}">{{ t('trash.move') }}</button>
         {% set transitions = transitions_by_node[node.id] %}
         {% if transitions %}
         <form method="post" action="/knowledge/nodes/{{ node.id }}/transition">
+          <input type="hidden" name="operation_id" value="{{ mutation_id() }}" />
       <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
           <input type="hidden" name="expected_revision" value="{{ node.revision }}" />
           <select name="status" aria-label="{{ t('knowledge.next_status_for', title=node.title) }}">

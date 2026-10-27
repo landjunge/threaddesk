@@ -21,6 +21,7 @@ from threaddesk.core.models import (
     plan_whiteboard_append,
 )
 from threaddesk.core.provenance import SourceRecord
+from threaddesk.storage.lifecycle import JsonLifecycleStore
 
 DEFAULT_ROOT = Path.home() / ".threaddesk"
 _WORKSPACE_LOCKS: dict[str, threading.RLock] = {}
@@ -55,7 +56,7 @@ def _unlock(lock: IO[bytes]) -> None:
         fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
 
 
-class JsonStore:
+class JsonStore(JsonLifecycleStore):
     @property
     def workspace_path(self) -> Path:
         return self.root
@@ -82,6 +83,7 @@ class JsonStore:
         self.source_records_dir.mkdir(parents=True, exist_ok=True)
         self.whiteboard_dir.mkdir(parents=True, exist_ok=True)
         self._pending: dict[str, dict | None] | None = None
+        self._transaction_owner: int | None = None
         self._lock_depth = 0
         self._control_source = None
         self._recovering = False
@@ -218,12 +220,18 @@ class JsonStore:
         except (OSError, ValueError) as exc:
             raise InvalidState("management_journal_path") from exc
 
+    @property
+    def in_transaction(self) -> bool:
+        """Only the caller owning the writer may join its pending changes."""
+        return self._pending is not None and self._transaction_owner == threading.get_ident()
+
     @contextmanager
     def transaction(self):
         with self._locked():
             if self._pending is not None:
                 raise RuntimeError("Verschachtelte Transaktionen werden nicht unterstützt.")
             self._pending = {}
+            self._transaction_owner = threading.get_ident()
             try:
                 yield
                 writes = self._pending
@@ -233,6 +241,7 @@ class JsonStore:
                     self._recover()
             finally:
                 self._pending = None
+                self._transaction_owner = None
 
     def list_issued_handoffs(self):
         return [self._read_json(path) for path in sorted((self.root / "issued-handoffs").glob("*.json"))]
@@ -439,19 +448,32 @@ class JsonStore:
         self._write_json(path, dict(data))
         return path
 
+    def read_json_artifact(self, name: str) -> dict[str, Any] | None:
+        """Read the caller's staged value, otherwise the committed artifact."""
+        path = self.artifact_path(name)
+        with self._locked():
+            if not self._staged_exists(path):
+                return None
+            value = self._read_json(path)
+            if not isinstance(value, dict):
+                raise InvalidState("artifact_json_object")
+            return value
+
     def write_text_artifact(self, name: str, text: str) -> Path:
         path = self.artifact_path(name)
         path.write_text(text, encoding="utf-8")
         return path
 
-    def list_threads(self, include_archived: bool = False) -> list[Thread]:
+    def list_threads(self, include_archived: bool = False, *, include_trashed: bool = False) -> list[Thread]:
         with self._locked():
-            return self._list_threads(include_archived)
+            return self._list_threads(include_archived, include_trashed=include_trashed)
 
-    def _list_threads(self, include_archived: bool = False) -> list[Thread]:
+    def _list_threads(self, include_archived: bool = False, *, include_trashed: bool = False) -> list[Thread]:
         items: list[Thread] = []
         for path in sorted(self.threads_dir.glob("*.json")):
-            thread = self.get_thread(path.stem)
+            if not include_trashed and self.object_in_trash("thread", path.stem):
+                continue
+            thread = self.get_thread(path.stem, include_trashed=include_trashed)
             if include_archived or thread.status != "archived":
                 items.append(thread)
         items.sort(key=lambda t: (t.updated_at, t.id), reverse=True)
@@ -473,11 +495,13 @@ class JsonStore:
         path = self.root / "thread-revisions" / f"{thread.id}.json"
         self._write_json(path, {"revision": thread.revision, "content_hash": self._thread_digest(thread)})
 
-    def get_thread(self, thread_id: str) -> Thread:
+    def get_thread(self, thread_id: str, *, include_trashed: bool = False) -> Thread:
         with self._locked():
+            if not include_trashed:
+                self.require_live_object("thread", thread_id)
             if self._pending is None:
                 with self.transaction():
-                    return self.get_thread(thread_id)
+                    return self.get_thread(thread_id, include_trashed=include_trashed)
             path = self._thread_path(thread_id)
             if not self._staged_exists(path):
                 raise NotFound(f"Thread nicht gefunden: {thread_id}")
@@ -542,12 +566,16 @@ class JsonStore:
         self._write_json(self.state_path, {"current_id": thread_id})
 
     def save_snapshot(self, snap: Snapshot) -> None:
-        path = self.snaps_dir / snap.thread_id / f"{snap.id}.json"
-        self._write_json(path, snap.to_dict())
+        with self._locked():
+            self.require_live_object("thread", snap.thread_id)
+            path = self.snaps_dir / snap.thread_id / f"{snap.id}.json"
+            self._write_json(path, snap.to_dict())
 
     def get_snapshot(self, snap_id: str) -> Snapshot:
         for path in self.snaps_dir.glob(f"*/{snap_id}.json"):
-            return Snapshot.from_dict(self._read_json(path))
+            snap = Snapshot.from_dict(self._read_json(path))
+            self.require_live_object("thread", snap.thread_id)
+            return snap
         raise NotFound(f"Snapshot nicht gefunden: {snap_id}")
 
     def _whiteboard_dir(self, thread_id: str) -> Path:
@@ -564,7 +592,9 @@ class JsonStore:
             raise InvalidState("whiteboard_thread")
         return folder
 
-    def list_whiteboard(self, thread_id: str) -> list[WhiteboardEntry]:
+    def list_whiteboard(self, thread_id: str, *, include_trashed: bool = False) -> list[WhiteboardEntry]:
+        if not include_trashed:
+            self.require_live_object("thread", thread_id)
         folder = self._whiteboard_dir(thread_id)
         if not folder.exists():
             return []
@@ -576,39 +606,42 @@ class JsonStore:
         return entries
 
     def append_whiteboard_entry(self, entry: WhiteboardEntry) -> tuple[WhiteboardEntry, bool]:
-        """Write a new file. An existing contribution is never rewritten."""
-        self.get_thread(entry.thread_id)
-        if (
-            not entry.id
-            or entry.id in {".", ".."}
-            or "/" in entry.id
-            or "\\" in entry.id
-            or entry.id != Path(entry.id).name
-        ):
-            raise InvalidState("whiteboard_id")
-        folder = self._whiteboard_dir(entry.thread_id)
-        folder.mkdir(parents=True, exist_ok=True)
-        lock_path = folder / ".append.lock"
-        with lock_path.open("a+b") as lock:
-            _lock_exclusive(lock)
-            try:
-                stored, duplicate = plan_whiteboard_append(
-                    self.list_whiteboard(entry.thread_id), entry
-                )
-                if duplicate:
-                    return stored, True
-                path = folder / f"{entry.id}.json"
-                if path.exists():
-                    current = WhiteboardEntry.from_dict(self._read_json(path))
-                    if current.same_body(entry):
-                        return current, True
-                    raise InvalidState("whiteboard_conflict")
-                self._write_json(path, stored.to_dict())
-                return stored, False
-            finally:
-                _unlock(lock)
+        with self._locked():
+            """Write a new file. An existing contribution is never rewritten."""
+            self.get_thread(entry.thread_id)
+            if (
+                not entry.id
+                or entry.id in {".", ".."}
+                or "/" in entry.id
+                or "\\" in entry.id
+                or entry.id != Path(entry.id).name
+            ):
+                raise InvalidState("whiteboard_id")
+            folder = self._whiteboard_dir(entry.thread_id)
+            folder.mkdir(parents=True, exist_ok=True)
+            lock_path = folder / ".append.lock"
+            with lock_path.open("a+b") as lock:
+                _lock_exclusive(lock)
+                try:
+                    stored, duplicate = plan_whiteboard_append(
+                        self.list_whiteboard(entry.thread_id), entry
+                    )
+                    if duplicate:
+                        return stored, True
+                    path = folder / f"{entry.id}.json"
+                    if path.exists():
+                        current = WhiteboardEntry.from_dict(self._read_json(path))
+                        if current.same_body(entry):
+                            return current, True
+                        raise InvalidState("whiteboard_conflict")
+                    self._write_json(path, stored.to_dict())
+                    return stored, False
+                finally:
+                    _unlock(lock)
 
-    def list_snapshots(self, thread_id: str) -> list[Snapshot]:
+    def list_snapshots(self, thread_id: str, *, include_trashed: bool = False) -> list[Snapshot]:
+        if not include_trashed:
+            self.require_live_object("thread", thread_id)
         folder = self.snaps_dir / thread_id
         if not folder.exists():
             return []
@@ -616,31 +649,53 @@ class JsonStore:
         snaps.sort(key=lambda s: s.created_at, reverse=True)
         return snaps
 
-    def save_node(self, node: KnowledgeNode) -> None:
-        self._write_json(self.nodes_dir / f"{node.id}.json", node.to_dict())
+    def save_node(self, node: KnowledgeNode, *, include_trashed: bool = False) -> None:
+        with self._locked():
+            if not include_trashed:
+                self.require_live_object("node", node.id)
+                if node.metadata.get("thread_id"):
+                    self.require_live_object("thread", node.metadata["thread_id"])
+            self._write_json(self.nodes_dir / f"{node.id}.json", node.to_dict())
 
-    def get_node(self, node_id: str) -> KnowledgeNode:
+    def get_node(self, node_id: str, *, include_trashed: bool = False) -> KnowledgeNode:
+        if not include_trashed:
+            self.require_live_object("node", node_id)
         path = self.nodes_dir / f"{node_id}.json"
         if not self._staged_exists(path):
             raise NotFound(f"Knoten nicht gefunden: {node_id}")
-        return KnowledgeNode.from_dict(self._read_json(path))
+        node = KnowledgeNode.from_dict(self._read_json(path))
+        if not include_trashed and node.metadata.get("thread_id"):
+            self.require_live_object("thread", node.metadata["thread_id"])
+        return node
 
-    def list_nodes(self) -> list[KnowledgeNode]:
+    def list_nodes(self, *, include_trashed: bool = False) -> list[KnowledgeNode]:
         nodes = [
             KnowledgeNode.from_dict(self._read_json(path))
             for path in self.nodes_dir.glob("*.json")
         ]
+        if not include_trashed:
+            hidden = self.hidden_node_ids(nodes)
+            nodes = [node for node in nodes if node.id not in hidden]
         nodes.sort(key=lambda node: (node.updated_at, node.id), reverse=True)
         return nodes
 
     def save_relation(self, relation: Relation) -> None:
-        self._write_json(self.relations_dir / f"{relation.id}.json", relation.to_dict())
+        with self._locked():
+            self.require_live_object("relation", relation.id)
+            self.require_live_node_reference(relation.source_id)
+            self.require_live_node_reference(relation.target_id)
+            self._write_json(self.relations_dir / f"{relation.id}.json", relation.to_dict())
 
-    def list_relations(self) -> list[Relation]:
+    def list_relations(self, *, include_trashed: bool = False) -> list[Relation]:
         relations = [
             Relation.from_dict(self._read_json(path))
             for path in self.relations_dir.glob("*.json")
         ]
+        if not include_trashed:
+            hidden = self.hidden_node_ids(self.list_nodes(include_trashed=True))
+            relations = [relation for relation in relations
+                         if not self.object_in_trash("relation", relation.id)
+                         and relation.source_id not in hidden and relation.target_id not in hidden]
         relations.sort(key=lambda relation: (relation.created_at, relation.id))
         return relations
 

@@ -53,35 +53,66 @@
   const kind = controls.querySelector("[data-map-kind]");
   const project = controls.querySelector("[data-map-project]");
   const count = controls.querySelector("[data-map-filter-count]");
+  const mode = controls.querySelector("[data-map-mode]");
+  const age = controls.querySelector("[data-map-age]");
+  const status = controls.querySelector("[data-map-status]");
+  const hops = controls.querySelector("[data-map-hops]");
   let strings = {};
   try { strings = JSON.parse(root.dataset.strings || "{}"); } catch (_) { /* readable control labels remain */ }
-  function filter() {
+  function filter(queryServer = true) {
     root.dispatchEvent(new CustomEvent("threaddesk:graph-filter", {detail: {
       query: query.value.trim(), kind: kind.value, project_id: project.value,
+      mode: mode.value, band: age.value, status: status.value, hops: Number(hops.value),
+      server_query: queryServer !== false,
     }}));
   }
   let inputTimer;
   query.addEventListener("input", () => { clearTimeout(inputTimer); inputTimer = setTimeout(filter, 120); });
   kind.addEventListener("change", filter); project.addEventListener("change", filter);
-  controls.addEventListener("submit", event => { event.preventDefault(); clearTimeout(inputTimer); filter(); });
+  [mode, age, status, hops].forEach(input => input.addEventListener("change", filter));
+  controls.addEventListener("submit", event => {
+    event.preventDefault(); clearTimeout(inputTimer); filter();
+    root.dispatchEvent(new CustomEvent("threaddesk:graph-search-submit"));
+  });
   controls.querySelector("[data-map-clear-filters]")?.addEventListener("click", () => {
-    query.value = ""; kind.value = ""; project.value = ""; filter(); query.focus();
+    query.value = ""; kind.value = ""; project.value = ""; age.value = ""; status.value = ""; hops.value = "0";
+    filter(); query.focus();
   });
   // Read model supplied by the renderer, avoiding a second graph request.
   root.addEventListener("threaddesk:graph-loaded", event => {
     const chosen = project.value;
+    const chosenText = project.selectedOptions[0]?.textContent;
     [...project.options].slice(1).forEach(option => option.remove());
     (event.detail?.nodes || []).filter(node => node.kind === "project").forEach(node => {
       const option = document.createElement("option");
       option.value = node.id; option.textContent = node.title; project.append(option);
     });
     if ([...project.options].some(option => option.value === chosen)) project.value = chosen;
-    else if (chosen) filter();
+    else if (chosen) {
+      const option = document.createElement("option"); option.value = chosen; option.textContent = chosenText;
+      project.append(option); project.value = chosen;
+    }
+    const selectedStatus = status.value;
+    [...status.options].slice(1).forEach(option => option.remove());
+    [...new Set((event.detail?.nodes || []).map(node => node.status))].sort().forEach(value => {
+      const option = document.createElement("option"); option.value = value; option.textContent = value; status.append(option);
+    });
+    if (selectedStatus && ![...status.options].some(option => option.value === selectedStatus)) {
+      const option = document.createElement("option"); option.value = selectedStatus; option.textContent = selectedStatus; status.append(option);
+    }
+    status.value = selectedStatus;
   });
   root.addEventListener("threaddesk:graph-filtered", event => {
     if (!count) return;
-    count.hidden = !query.value.trim() && !kind.value && !project.value;
+    count.hidden = !query.value.trim() && !kind.value && !project.value && !age.value && !status.value && !Number(hops.value);
     count.textContent = (strings["map.filtered_count"] || "{visible} / {total}")
       .replace("{visible}", String(event.detail.visible)).replace("{total}", String(event.detail.total));
+  });
+  root.addEventListener("threaddesk:graph-view-loaded", event => {
+    const filters = event.detail?.filters || {};
+    query.value = filters.query || ""; kind.value = filters.kind || "";
+    project.value = filters.project_id || ""; mode.value = filters.mode || "work";
+    age.value = filters.band || ""; status.value = filters.status || ""; hops.value = String(filters.hops || 0);
+    filter(false);
   });
 })();

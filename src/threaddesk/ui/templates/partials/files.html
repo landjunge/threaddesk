@@ -14,6 +14,8 @@
         hx-confirm="{{ t('files.confirm_remove') }}"
       >
       <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
+      <input type="hidden" name="expected_revision" value="{{ current.revision }}" />
+      <input type="hidden" name="operation_id" value="{{ mutation_id() }}" />
         <input type="hidden" name="path" value="{{ path }}" />
         <button type="submit" class="btn btn-ghost btn-compact">{{ t("files.remove") }}</button>
       </form>
@@ -30,6 +32,8 @@
     hx-swap="innerHTML"
   >
       <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
+      <input type="hidden" name="expected_revision" value="{{ current.revision }}" />
+      <input type="hidden" name="operation_id" value="{{ mutation_id() }}" />
     <input type="text" name="path" required maxlength="400" placeholder="src/app.py" />
     <button type="submit" class="btn btn-primary">{{ t("files.add") }}</button>
   </form>

@@ -258,7 +258,8 @@ def create_app(data_dir: Path, *, public_origin: str, allow_http_loopback: bool 
         sync, core, lock = stores(request.state.user)
         with lock:
             return {"projects": [{**value, 'title':core.get(value['id']).title}
-                                 for value in sync.projects()]}
+                                 for value in sync.projects()
+                                 if not core.store.object_in_trash('thread', value['id'])]}
 
     @app.post("/api/projects")
     async def create(request: Request):

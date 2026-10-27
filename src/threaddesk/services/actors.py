@@ -5,12 +5,12 @@ No secrets, no team rooms, and no cryptographic keys live here.
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from threaddesk.core.errors import InvalidState, NotFound
 from threaddesk.core.models import AGENT_TYPES, new_id
 from threaddesk.core.secrets import reject_secrets
+from threaddesk.storage.owner_writer import registry_write
 
 COLOR_TOKENS = ("ink", "moss", "clay", "sea", "plum", "sand")
 HUMAN = "human"
@@ -23,6 +23,7 @@ class ActorRegistry:
         self.store = store
         self.path = store.artifact_path(ARTIFACT)
 
+    @registry_write
     def instance_id(self) -> str:
         state = self._read()
         if not state.get("instance_id"):
@@ -43,6 +44,7 @@ class ActorRegistry:
                 return actor
         raise NotFound(f"Akteur nicht gefunden: {actor_id}")
 
+    @registry_write
     def add_human(self, name: str, color_token: str) -> dict[str, Any]:
         actor = {
             "id": new_id(),
@@ -59,6 +61,7 @@ class ActorRegistry:
         self._write(state)
         return actor
 
+    @registry_write
     def add_agent(
         self,
         name: str,
@@ -87,6 +90,7 @@ class ActorRegistry:
     def rename(self, actor_id: str, name: str) -> dict[str, Any]:
         return self._update(actor_id, name=_label(name))
 
+    @registry_write
     def recolor(self, actor_id: str, color_token: str) -> dict[str, Any]:
         actor = self.get(actor_id)
         if actor["kind"] != HUMAN:
@@ -138,6 +142,7 @@ class ActorRegistry:
             raise InvalidState("actor_unassigned")
         return person
 
+    @registry_write
     def _update(self, actor_id: str, **changes: Any) -> dict[str, Any]:
         state = self._read()
         for actor in state["actors"]:
@@ -150,9 +155,9 @@ class ActorRegistry:
         raise NotFound(f"Akteur nicht gefunden: {actor_id}")
 
     def _read(self) -> dict[str, Any]:
-        if not self.path.exists():
+        value = self.store.read_json_artifact(ARTIFACT)
+        if value is None:
             return {"version": 1, "instance_id": None, "actors": []}
-        value = json.loads(self.path.read_text(encoding="utf-8"))
         if value.get("version") != 1 or not isinstance(value.get("actors"), list):
             raise InvalidState("actors")
         value.setdefault("instance_id", None)

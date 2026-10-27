@@ -242,21 +242,24 @@ def test_user_keeps_notes_and_snapshot_across_restart(tmp_path: Path) -> None:
             ).click()
             expect(page.locator(".snap-label")).to_have_text(LABEL)
 
-            # The save can commit before restore, yet its full-workspace reply
-            # can arrive afterwards. Exercise that order with real HTTP writes.
+            # The note can commit while its reply is delayed. A restore from
+            # the older displayed revision must be rejected, keep the draft,
+            # and keep that rejection visible when the older success arrives.
             page.evaluate(r"""() => {
-                window.snapshotRestoreSwapped = false;
-                document.addEventListener('htmx:afterSwap', event => {
+                window.snapshotRestoreRejected = false;
+                window.delayedNoteFinished = false;
+                document.addEventListener('htmx:afterRequest', event => {
                     const url = event.detail?.xhr?.responseURL || '';
                     if (/\/snapshots\/[^/]+\/restore$/.test(url)) {
-                        window.snapshotRestoreSwapped = true;
+                        window.snapshotRestoreRejected = event.detail.xhr.status === 409;
                     }
+                    if (url.endsWith('/note')) window.delayedNoteFinished = true;
                 });
             }""")
 
             def delayed_note_reply(route):
                 response = route.fetch()
-                page.wait_for_function("() => window.snapshotRestoreSwapped === true")
+                page.wait_for_function("() => window.snapshotRestoreRejected === true")
                 route.fulfill(response=response)
 
             page.route("**/threads/*/note", delayed_note_reply, times=1)
@@ -268,6 +271,18 @@ def test_user_keeps_notes_and_snapshot_across_restart(tmp_path: Path) -> None:
             ).click()
             expect(notes).to_have_value(LATER)
 
+            page.locator("#snapshots").get_by_role(
+                "button", name="Laden", exact=True
+            ).click()
+            page.wait_for_function("() => window.delayedNoteFinished === true")
+            expect(page.locator('#request-state[data-state="rejected"]')).to_contain_text(
+                "Entwurf bleibt erhalten"
+            )
+            expect(notes).to_have_value(LATER)
+            # The user reloads and reviews the committed version, then restores
+            # deliberately from that fresh revision rather than an auto retry.
+            page.reload(wait_until="networkidle")
+            _open_section(page, "snapshots")
             page.locator("#snapshots").get_by_role(
                 "button", name="Laden", exact=True
             ).click()

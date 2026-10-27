@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from functools import wraps
 import re
 from typing import Any, Callable, Mapping
 
@@ -11,21 +10,13 @@ from threaddesk.core.errors import InvalidState, NotFound
 from threaddesk.core.models import now_iso
 from threaddesk.services.whiteboard import append as append_whiteboard_entry
 from threaddesk.services.whiteboard import list_entries
-from threaddesk.storage.protocols import ArtifactStore
-from threaddesk.services.module_data import locked_artifact
+from threaddesk.storage.protocols import RegistryStore
+from threaddesk.storage.owner_writer import registry_write
 
 
 MANIFEST_VERSION = 1
 MODULE_ID = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 CAPABILITIES = frozenset({"read", "write", "connector", "view", "migration"})
-
-
-def _registry_write(method):
-    @wraps(method)
-    def guarded(self, *args, **kwargs):
-        with locked_artifact(self.store, "modules.lock"):
-            return method(self, *args, **kwargs)
-    return guarded
 
 
 @dataclass(frozen=True)
@@ -129,16 +120,13 @@ class ModuleRegistry:
 
     ARTIFACT = "modules.json"
 
-    def __init__(self, store: ArtifactStore) -> None:
+    def __init__(self, store: RegistryStore) -> None:
         self.store = store
 
     def _load(self) -> dict[str, Any]:
-        path = self.store.artifact_path(self.ARTIFACT)
-        if not path.exists():
+        value = self.store.read_json_artifact(self.ARTIFACT)
+        if value is None:
             return {"schema_version": 1, "modules": {}}
-        import json
-
-        value = json.loads(path.read_text(encoding="utf-8"))
         if value.get("schema_version") != 1 or not isinstance(value.get("modules"), dict):
             raise InvalidState("module_registry")
         return value
@@ -165,7 +153,7 @@ class ModuleRegistry:
     def _missing(module_id: str) -> InstalledModule:
         raise NotFound(f"Modul nicht gefunden: {module_id}")
 
-    @_registry_write
+    @registry_write
     def install(self, manifest: ModuleManifest) -> InstalledModule:
         manifest.validate()
         state = self._load()
@@ -176,7 +164,7 @@ class ModuleRegistry:
         self._save(state)
         return installed
 
-    @_registry_write
+    @registry_write
     def update(self, manifest: ModuleManifest) -> InstalledModule:
         manifest.validate()
         state = self._load()
@@ -199,7 +187,7 @@ class ModuleRegistry:
         self._save(state)
         return installed
 
-    @_registry_write
+    @registry_write
     def set_enabled(self, module_id: str, enabled: bool, approvals: tuple[str, ...] = ()) -> InstalledModule:
         state = self._load()
         value = state["modules"].get(module_id)
@@ -214,7 +202,7 @@ class ModuleRegistry:
         self._save(state)
         return self.get(module_id)
 
-    @_registry_write
+    @registry_write
     def uninstall(self, module_id: str) -> ModuleManifest:
         state = self._load()
         value = state["modules"].pop(module_id, None)

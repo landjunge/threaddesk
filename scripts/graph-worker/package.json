@@ -1,0 +1,1 @@
+{"name":"threaddesk-graph-worker-build","version":"1.0.0","private":true,"description":"Offline runtime worker artifact; explicit maintenance build only","dependencies":{"graphology-layout-forceatlas2":"0.10.1","esbuild":"0.25.12"}}

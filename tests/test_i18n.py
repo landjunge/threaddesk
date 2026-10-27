@@ -126,7 +126,7 @@ def test_no_hardcoded_text_in_templates(template: Path) -> None:
 # Werte, die aus Python kommen, werden ueber einen zusammengesetzten Schluessel
 # uebersetzt: t("kind." ~ kind). Statisch ist davon nur das Praefix sichtbar.
 # test_every_dropdown_value_has_a_label prueft dafuer jeden moeglichen Wert.
-DYNAMIC_PREFIXES = {"kind.", "status.", "relation.", "prompt.target.",
+DYNAMIC_PREFIXES = {"map.age.", "map.mode.", "kind.", "status.", "relation.", "prompt.target.",
                     "prompt.variant.", "register.", "whiteboard.entry.",
                     "hausmeister.phase.", "room.state.", "room.role.", "return.review.", "sync.state."}
 
@@ -248,7 +248,7 @@ def test_view_language_survives_fragment_post_with_english_browser(client, conte
                    "X-ThreadDesk-View-Language": "de",
                    "X-ThreadDesk-View-Register": "expert",
                })
-    response = client.post(f"/threads/{thread.id}/note", data={"text": "persistent note"}, headers=headers)
+    response = client.post_thread_form(f"/threads/{thread.id}/note", data={"text": "persistent note"}, headers=headers)
     assert response.status_code == 200
     assert "Notiz gespeichert" in response.text
     assert _svc().get(thread.id).context.notes == "persistent note"
@@ -310,17 +310,17 @@ def test_map_hands_its_strings_to_the_browser(client) -> None:
 
 @pytest.mark.parametrize("language", i18n.LANGUAGES)
 def test_post_routes_return_localised_success_and_error(client, language) -> None:
-    created = client.post(
+    created = client.post_thread_form(
         f"/threads?lang={language}",
         data={"title": "Sprachtest", "description": ""},
     )
     assert i18n.translate("ui.created", language, title="Sprachtest") in created.text
 
-    failed = client.post(
+    failed = client.post_thread_form(
         f"/threads?lang={language}", data={"title": " ", "description": ""}
     )
     assert failed.status_code == 400
-    assert i18n.translate("ui.error", language) in failed.text
+    assert i18n.translate("ui.mutation_failed", language) in failed.text
 
 
 def test_browser_strings_are_injected_for_every_page(client) -> None:
@@ -355,6 +355,15 @@ def test_no_hardcoded_visible_server_messages() -> None:
 
 def test_no_hardcoded_visible_javascript_messages() -> None:
     sources = sorted((TEMPLATES.parent / "static").glob("*.js"))
+    # Third-party diagnostic console output is shipped unchanged with its
+    # upstream license. Exempt only the exact, checksum-verified vendor bytes;
+    # every application-owned controller still needs the user-facing catalogue.
+    import hashlib
+    import json
+    manifest = TEMPLATES.parent / "static" / "graph-vendor.json"
+    vendors = {row["file"]: row["sha256"] for row in json.loads(manifest.read_text()) if "file" in row}
+    sources = [source for source in sources
+               if vendors.get(source.name) != hashlib.sha256(source.read_bytes()).hexdigest()]
     patterns = (
         r"\.err\s*=\s*[\"'][^\"']*[A-Za-zÄÖÜäöüß]{3,}[^\"']*[\"']",
         r"\.textContent\s*=\s*[\"'][^\"']*[A-Za-zÄÖÜäöüß]{3,}[^\"']*[\"']",

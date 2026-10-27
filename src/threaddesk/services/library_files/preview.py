@@ -9,7 +9,11 @@ MAX_PREVIEW_BYTES = 256 * 1024
 def format_info(record):
     try:
         from threaddesk.services.file_formats import describe
-        return describe(record["filename"])
+        result = describe(record["filename"])
+        if Path(record["filename"]).suffix.casefold() == ".key":
+            from threaddesk.services.file_formats.keynote import validation_matches
+            result.update(external_open=validation_matches(record), content_validated=validation_matches(record))
+        return result
     except ImportError:
         media = record.get("media_type", "application/octet-stream")
         kind = media.split("/", 1)[0]

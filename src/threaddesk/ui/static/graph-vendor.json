@@ -1,0 +1,48 @@
+[
+  {
+    "package": "sigma",
+    "version": "4.0.3",
+    "license": "MIT",
+    "tarball": "https://registry.npmjs.org/sigma/-/sigma-4.0.3.tgz",
+    "integrity": "sha512-DwtnWVZMpHzgfyWwyH9bvNAV2DwSl9UZHmieLIAOdZboQAfjEGwcKNJzLQOca/vrKNiUYexVnPcNzhkNUQHdVA==",
+    "file": "sigma-4.0.3.min.js",
+    "sha256": "694694451bff0ebb4301768e14344c4601de2e52e180a655e4ceaf1644cf43b2"
+  },
+  {
+    "package": "graphology",
+    "version": "0.26.0",
+    "license": "MIT",
+    "tarball": "https://registry.npmjs.org/graphology/-/graphology-0.26.0.tgz",
+    "integrity": "sha512-8SSImzgUUYC89Z042s+0r/vMibY7GX/Emz4LDO5e7jYXhuoWfHISPFJYjpRLUSJGq6UQ6xlenvX1p/hJdfXuXg==",
+    "file": "graphology-0.26.0.min.js",
+    "sha256": "dc337efa23903f61e064c8e7e7f93a429e6855dccfc2458802b4ed30c621c087"
+  },
+  {
+    "package": "graphology-layout-forceatlas2",
+    "version": "0.10.1",
+    "license": "MIT",
+    "tarball": "https://registry.npmjs.org/graphology-layout-forceatlas2/-/graphology-layout-forceatlas2-0.10.1.tgz",
+    "integrity": "sha512-ogzBeF1FvWzjkikrIFwxhlZXvD2+wlY54lqhsrWprcdPjopM2J9HoMweUmIgwaTvY4bUYVimpSsOdvDv1gPRFQ=="
+  },
+  {
+    "package": "graphology-utils",
+    "version": "2.5.2",
+    "license": "MIT",
+    "tarball": "https://registry.npmjs.org/graphology-utils/-/graphology-utils-2.5.2.tgz",
+    "integrity": "sha512-ckHg8MXrXJkOARk56ZaSCM1g1Wihe2d6iTmz1enGOz4W/l831MBCKSayeFQfowgF8wd+PQ4rlch/56Vs/VZLDQ=="
+  },
+  {
+    "package": "events",
+    "version": "3.3.0",
+    "license": "MIT",
+    "tarball": "https://registry.npmjs.org/events/-/events-3.3.0.tgz",
+    "integrity": "sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q=="
+  },
+  {
+    "file": "forceatlas2-0.10.1.min.js",
+    "sha256": "3c50990909861156c28a79a9ac679f4c73b85c98ce2fb6e08cc61fab9179e2c4",
+    "build": "scripts/graph-worker/entry.js",
+    "esbuild": "0.25.12",
+    "lock_sha256": "897c601daaddb75d704ad31e1d3d2acad1c6a1d56ff248995332806a8fe6f568"
+  }
+]
