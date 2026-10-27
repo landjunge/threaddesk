@@ -3,18 +3,29 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+from functools import wraps
 import re
 from typing import Any, Callable, Mapping
 
 from threaddesk.core.errors import InvalidState, NotFound
+from threaddesk.core.models import now_iso
 from threaddesk.services.whiteboard import append as append_whiteboard_entry
 from threaddesk.services.whiteboard import list_entries
 from threaddesk.storage.protocols import ArtifactStore
+from threaddesk.services.module_data import locked_artifact
 
 
 MANIFEST_VERSION = 1
 MODULE_ID = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 CAPABILITIES = frozenset({"read", "write", "connector", "view", "migration"})
+
+
+def _registry_write(method):
+    @wraps(method)
+    def guarded(self, *args, **kwargs):
+        with locked_artifact(self.store, "modules.lock"):
+            return method(self, *args, **kwargs)
+    return guarded
 
 
 @dataclass(frozen=True)
@@ -30,15 +41,16 @@ class ModuleManifest:
     approvals: tuple[str, ...] = ()
     views: tuple[str, ...] = ()
     migrations: tuple[str, ...] = ()
+    commands: tuple[dict[str, Any], ...] = ()
     uninstall: str = "retain-data"
     manifest_version: int = MANIFEST_VERSION
 
     def validate(self) -> None:
         if self.manifest_version != MANIFEST_VERSION:
             raise InvalidState("module_manifest_version")
-        if not MODULE_ID.fullmatch(self.id):
+        if not isinstance(self.id, str) or len(self.id) > 128 or not MODULE_ID.fullmatch(self.id):
             raise InvalidState("module_id")
-        if not self.name.strip() or not self.version.strip():
+        if not self.name.strip() or not self.version.strip() or len(self.version) > 128:
             raise InvalidState("module_identity")
         if self.uninstall not in {"retain-data", "export-and-remove"}:
             raise InvalidState("module_uninstall_policy")
@@ -52,8 +64,11 @@ class ModuleManifest:
             self.views,
             self.migrations,
         ):
-            if len(values) != len(set(values)) or any(not item.strip() for item in values):
+            if (not isinstance(values, (tuple, list)) or any(not isinstance(item, str) or not item.strip() for item in values)
+                    or len(values) != len(set(values))):
                 raise InvalidState("module_manifest_values")
+        from threaddesk.services.module_contracts import validate_declarations
+        validate_declarations(self)
 
     @property
     def capabilities(self) -> tuple[str, ...]:
@@ -87,6 +102,7 @@ class ModuleManifest:
             approvals=tuple(value.get("approvals") or ()),
             views=tuple(value.get("views") or ()),
             migrations=tuple(value.get("migrations") or ()),
+            commands=tuple(value.get("commands") or ()),
             uninstall=str(value.get("uninstall", "retain-data")),
             manifest_version=int(value.get("manifest_version", 0)),
         )
@@ -149,6 +165,7 @@ class ModuleRegistry:
     def _missing(module_id: str) -> InstalledModule:
         raise NotFound(f"Modul nicht gefunden: {module_id}")
 
+    @_registry_write
     def install(self, manifest: ModuleManifest) -> InstalledModule:
         manifest.validate()
         state = self._load()
@@ -159,6 +176,7 @@ class ModuleRegistry:
         self._save(state)
         return installed
 
+    @_registry_write
     def update(self, manifest: ModuleManifest) -> InstalledModule:
         manifest.validate()
         state = self._load()
@@ -167,9 +185,12 @@ class ModuleRegistry:
             raise NotFound(f"Modul nicht gefunden: {manifest.id}")
         old = ModuleManifest.from_dict(current["manifest"])
         new_approvals = set(manifest.approvals) - set(old.approvals)
+        added_capabilities = any(set(getattr(manifest, name)) - set(getattr(old, name))
+                                 for name in ("read_scopes", "write_actions", "connectors", "migrations"))
+        changed_commands = manifest.commands != old.commands
         installed = InstalledModule(
             manifest=manifest,
-            enabled=bool(current.get("enabled")) and not new_approvals,
+            enabled=bool(current.get("enabled")) and not (new_approvals or added_capabilities or changed_commands),
             granted_approvals=tuple(
                 item for item in current.get("granted_approvals", ()) if item in manifest.approvals
             ),
@@ -178,6 +199,7 @@ class ModuleRegistry:
         self._save(state)
         return installed
 
+    @_registry_write
     def set_enabled(self, module_id: str, enabled: bool, approvals: tuple[str, ...] = ()) -> InstalledModule:
         state = self._load()
         value = state["modules"].get(module_id)
@@ -192,6 +214,7 @@ class ModuleRegistry:
         self._save(state)
         return self.get(module_id)
 
+    @_registry_write
     def uninstall(self, module_id: str) -> ModuleManifest:
         state = self._load()
         value = state["modules"].pop(module_id, None)
@@ -229,6 +252,7 @@ class ModuleContext:
         thread = self.__store.get_thread(thread_id)
         return {
             "id": thread.id,
+            "revision": thread.revision,
             "title": thread.title,
             "status": thread.status,
             "description": thread.description,
@@ -244,28 +268,26 @@ class ModuleContext:
         """Append one entry. Modules cannot update or delete history."""
         if "whiteboard:append" not in self.manifest.write_actions:
             raise InvalidState("module_write_action")
+        thread = self.__store.get_thread(thread_id)
         entry, duplicate = append_whiteboard_entry(self.__store, thread_id, **fields)
+        if not duplicate:
+            thread.updated_at = now_iso()
+            self.__store.save_thread(thread)
         return {"entry": entry.to_dict(), "duplicate": duplicate}
 
     def read_own_data(self) -> dict[str, Any]:
-        path = self.__store.artifact_path(f"module-{self.module_id}-data.json")
-        if not path.exists():
-            return {"schema_version": 1, "records": {}}
-        import json
+        from threaddesk.services.module_data import load
+        return load(self.__store, self.module_id)
 
-        value = json.loads(path.read_text(encoding="utf-8"))
-        if value.get("schema_version") != 1 or not isinstance(value.get("records"), dict):
-            raise InvalidState("module_data")
-        return value
-
-    def write_own_record(self, action: str, record_id: str, value: Mapping[str, Any]) -> None:
+    def write_own_record(self, action: str, record_id: str, value: Mapping[str, Any], *, expected_revision: int | None = None) -> dict | None:
         if action not in self.manifest.write_actions:
             raise InvalidState("module_write_action")
         if not MODULE_ID.fullmatch(record_id):
             raise InvalidState("module_record_id")
-        state = self.read_own_data()
-        state["records"][record_id] = dict(value)
-        self.__store.write_json_artifact(f"module-{self.module_id}-data.json", state)
+        from threaddesk.services.module_data import write_record
+        receipt = write_record(self.__store, self.module_id, record_id, value,
+                               expected_revision=expected_revision)
+        return receipt if expected_revision is not None else None
 
 
 class ModuleRuntime:
