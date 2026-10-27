@@ -58,19 +58,19 @@
       const status = await response.json();
       if (!response.ok || status.status !== 'ready' || typeof status.fingerprint !== 'string' || !status.workspace_id)
         throw Error('graph_change_status_unavailable');
-      if (!baseline) { baseline = status;show('ready'); }
-      else if (status.workspace_id !== baseline.workspace_id) {
-        if (!workspaceChanged) root.dispatchEvent(new CustomEvent('threaddesk:workspace-changed'));
+      if (!root.graphWorkspace.accept(status.workspace_id)) {
         workspaceChanged = true;pending = status;show('workspace');await apply();
-      } else if (status.fingerprint !== baseline.fingerprint || status.minute !== baseline.minute) {
+      } else if (!baseline) { baseline = status;show('ready'); }
+      else if (status.fingerprint !== baseline.fingerprint || status.minute !== baseline.minute) {
         pending = status;await apply();
       } else if (root.dataset.liveStatus === 'error') show(pending ? 'pending' : 'ready');
-      root.dispatchEvent(new CustomEvent('threaddesk:graph-workspace-checked'));
+      if (!workspaceChanged) root.dispatchEvent(new CustomEvent('threaddesk:graph-workspace-checked', {detail: {workspace_id: status.workspace_id}}));
     } catch (error) { if (error.name !== 'AbortError' || !document.hidden && !stopped) show('error'); }
     finally { clearTimeout(timeout);controller = null;running = false;schedule(); }
   }
   update.addEventListener('click', () => pending ? apply(true) : tick());
   root.addEventListener('threaddesk:graph-workspace-check', tick);
+  root.addEventListener('threaddesk:workspace-changed', () => { workspaceChanged = true; });
   root.addEventListener('input', event => { if (field(event.target)) drafts.add(event.target); });
   root.addEventListener('focusout', () => setTimeout(() => apply(), 0));
   root.addEventListener('close', () => apply(), true);

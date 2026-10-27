@@ -2,9 +2,11 @@
 (() => {
   const root = document.querySelector('[data-graph-endpoint]');
   if (!root) return;
-  let client = null, started = false, stopped = false, invalidated = false, awaitingWorkspace = false;
+  let client = null, started = false, stopped = false, invalidated = root.graphWorkspace.invalidated, awaitingWorkspace = true;
+  let graphReady = false, workspaceReady = false;
   let lastHeartbeat = 0, running = false, timer = null;
   const observations = new Map();
+  if (invalidated) { stopped = true;root.dataset.viewControlStatus = 'workspace_changed'; }
   const base = '/api/graph/view-control';
   async function request(path, body, authenticated = true) {
     const headers = {'Content-Type': 'application/json'};
@@ -56,7 +58,7 @@
     try {
       if (!client) {
         if (awaitingWorkspace) return;
-        client = await request(base + '/connect', {}, false);
+        client = await request(base + '/connect', {workspace_id: root.graphWorkspace.id}, false);
         root.dataset.viewClientId = client.client_id;lastHeartbeat = Date.now();
       }
       if (!document.hidden) {
@@ -72,6 +74,11 @@
       }
     } catch (error) {
       if (invalidated) return;
+      if (error.code === 'workspace_conflict') {
+        root.graphWorkspace.accept(null);
+        root.dispatchEvent(new CustomEvent('threaddesk:graph-workspace-check'));
+        return;
+      }
       root.dataset.viewControlStatus = 'waiting';
       if (error.code === 'view_client_denied') {
         client = null;
@@ -83,7 +90,8 @@
     } finally { running = false; if (!stopped) timer = setTimeout(tick, 1500); }
   }
   root.addEventListener('threaddesk:graph-loaded', () => {
-    if (!started) { started = true; tick(); }
+    graphReady = true;
+    if (!started && workspaceReady && !invalidated) { started = true; tick(); }
   });
   window.addEventListener('pagehide', () => { stopped = true; clearTimeout(timer); });
   root.addEventListener('threaddesk:workspace-changed', () => {
@@ -91,8 +99,11 @@
     delete root.dataset.viewClientId;
     root.dataset.viewControlStatus = 'workspace_changed';
   });
-  root.addEventListener('threaddesk:graph-workspace-checked', () => {
-    if (!invalidated) awaitingWorkspace = false;
+  root.addEventListener('threaddesk:graph-workspace-checked', event => {
+    if (!invalidated && root.graphWorkspace.accept(event.detail.workspace_id)) {
+      awaitingWorkspace = false;workspaceReady = true;
+      if (!started && graphReady) { started = true; tick(); }
+    }
   });
   window.addEventListener('pageshow', event => {
     if (event.persisted && started && stopped && !invalidated) { stopped = false; tick(); }

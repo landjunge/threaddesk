@@ -74,7 +74,8 @@ def test_real_browser_can_save_and_download_but_foreign_form_cannot_write(tmp_pa
                 assert svc.get(thread.id).context.notes == "legitimate HTMX note"
                 # The same explicit view context also accompanies fetch callers.
                 fetched = page.evaluate("""async (path) => {
-                    const data = new FormData(); data.set('text', 'legitimate HTMX note');
+                    const form = document.querySelector('#notes form[hx-post$="/note"]');
+                    const data = new FormData(form); data.set('text', 'legitimate HTMX note');
                     const response = await window.threadDeskWrite(path, {body: data});
                     return {status: response.status, text: await response.text()};
                 }""", f"/threads/{thread.id}/note")

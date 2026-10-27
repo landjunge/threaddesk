@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="/static/graph-workspace.css" />
 {% endblock %}
 {% block body %}
-<main class="map-page" tabindex="0" aria-label="{{ t('map.title') }}" data-graph-endpoint="/api/graph/v2?mode=work" data-strings='{{ map_strings|safe }}' data-actor-marks="{{ actor_marks_json }}">
+<main class="map-page" tabindex="0" aria-label="{{ t('map.title') }}" data-graph-endpoint="/api/graph/v2?mode=work" data-graph-workspace-id="{{ workspace_id }}" data-strings='{{ map_strings|safe }}' data-actor-marks="{{ actor_marks_json }}">
   <header class="map-toolbar">
     <div>
       <p class="eyebrow">{{ t("map.eyebrow") }}</p>

@@ -1,4 +1,5 @@
 use std::{
+    ffi::OsString,
     io::{BufRead, BufReader},
     path::PathBuf,
     process::{Child, Command, Stdio},
@@ -11,7 +12,14 @@ struct Backend(Mutex<Child>);
 
 /// The same workspace the rest of ThreadDesk already uses.
 fn workspace_dir() -> PathBuf {
-    let home = std::env::var_os("HOME")
+    workspace_dir_for(std::env::var_os("THREADDESK_HOME"), std::env::var_os("HOME"))
+}
+
+fn workspace_dir_for(configured: Option<OsString>, home: Option<OsString>) -> PathBuf {
+    if let Some(path) = configured.filter(|value| !value.is_empty()) {
+        return PathBuf::from(path);
+    }
+    let home = home
         .filter(|value| !value.is_empty())
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."));
@@ -71,12 +79,24 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::workspace_dir;
+    use super::{workspace_dir, workspace_dir_for};
 
     #[test]
     fn workspace_is_the_home_store() {
         let home = std::env::var_os("HOME").expect("HOME");
-        assert_eq!(workspace_dir(), std::path::PathBuf::from(home).join(".threaddesk"));
+        assert_eq!(workspace_dir(), workspace_dir_for(std::env::var_os("THREADDESK_HOME"), Some(home)));
+    }
+
+    #[test]
+    fn explicit_workspace_keeps_isolated_runs_out_of_the_home_store() {
+        assert_eq!(workspace_dir_for(Some("/private/qa/workspace".into()), Some("/owner".into())),
+                   std::path::PathBuf::from("/private/qa/workspace"));
+    }
+
+    #[test]
+    fn blank_workspace_preserves_the_default_store() {
+        assert_eq!(workspace_dir_for(Some("".into()), Some("/owner".into())),
+                   std::path::PathBuf::from("/owner/.threaddesk"));
     }
 }
 

@@ -1,6 +1,17 @@
 (() => {
   const root = document.querySelector("[data-graph-endpoint]");
   if (!root) return;
+  const workspace = root.graphWorkspace = {
+    id: root.dataset.graphWorkspaceId, invalidated: false,
+    accept(identity) {
+      if (identity && identity === this.id && !this.invalidated) return true;
+      if (!this.invalidated) {
+        this.invalidated = true;
+        root.dispatchEvent(new CustomEvent('threaddesk:workspace-changed', {detail: {workspace_id: identity}}));
+      }
+      return false;
+    },
+  };
 
   const stage = root.querySelector("[data-map-stage]");
   const world = root.querySelector("[data-map-world]");
@@ -163,14 +174,17 @@
     return toUser(rect.left + rect.width / 2, rect.top + rect.height / 2);
   };
   const zoom = (factor) => gpu ? gpu.zoom(factor) : zoomAt(factor, stageCentre());
+  const overviewCamera = () => {
+    const points = [...world.querySelectorAll(".map-node")]
+      .filter(node => node.style.display !== "none")
+      .map(node => ({...placed.get(node.dataset.nodeId), r: sizes.get(node.dataset.nodeId)}));
+    return viewport.fit(points, VIEW_W, VIEW_H);
+  };
   // Einpassen heißt einpassen: der ganze Graph muss sichtbar werden.
   const fit = () => {
     if (gpu) { gpu.fit(); return; }
     cancelFocus();
-    const points = [...world.querySelectorAll(".map-node")]
-      .filter(node => node.style.display !== "none")
-      .map(node => ({...placed.get(node.dataset.nodeId), r: sizes.get(node.dataset.nodeId)}));
-    const camera = viewport.fit(points, VIEW_W, VIEW_H);
+    const camera = overviewCamera();
     if (!camera) return;
     scale = camera.scale;
     offsetX = camera.x;
@@ -348,7 +362,11 @@
       group.addEventListener("pointerleave", () => { group.classList.remove("is-hovered"); updateLabels(); });
       if (ring) group.insertBefore(ring, glyph);
 
-      const select = (additive = false) => {
+      const select = (additive = false, userGesture = false) => {
+        const opening = userGesture && root.querySelector('[data-map-inspector]').hidden;
+        const overview = opening && overviewCamera();
+        const retainOverview = overview && Math.abs(scale - overview.scale) < 1e-6 &&
+          Math.abs(offsetX - overview.x) < 1e-6 && Math.abs(offsetY - overview.y) < 1e-6;
         if (!additive) {
           nodeLayer.querySelectorAll(".is-selected")
             .forEach((item) => item.classList.remove("is-selected"));
@@ -357,6 +375,10 @@
         selectedNodeIds = new Set([...nodeLayer.querySelectorAll(".is-selected")].map(item => item.dataset.nodeId));
         selectedFocusId = node.id;
         showDetail(node);
+        // Opening the drawer narrows the stage. Preserve an existing overview
+        // once, so its clickable shapes stay inside the stage. User zoom/pan
+        // and programmatically restored cameras retain their exact view.
+        if (retainOverview) { resizeStage(); fit(); }
         highlight();
         if (activeFilter.hops) applyFilter();
         // Selection must not move the other click targets out of the viewport.
@@ -364,7 +386,7 @@
       };
       group.addEventListener("click", (event) => {
         if (nodeDrag && nodeDrag.moved) return;
-        select(event.shiftKey);
+        select(event.shiftKey, event.isTrusted);
       });
       group.addEventListener("keydown", (event) => {
         if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
@@ -378,7 +400,7 @@
         }
         if (event.key !== "Enter" && event.key !== " ") return;
         event.preventDefault();
-        select(event.shiftKey);
+        select(event.shiftKey, event.isTrusted);
       });
       // Knoten lassen sich verschieben; erst ab 3 px gilt es als Ziehen,
       // damit der Klick zum Auswählen erhalten bleibt.
@@ -575,6 +597,7 @@
       positions: gpu ? gpu.snapshotPositions() : Object.fromEntries([...placed].map(([id, point]) => [id, {x: point.x, y: point.y, fixed: fixedIds.has(id)}])),
       selection: [...selectedNodeIds]}),
     restore: async state => {
+      if (workspace.invalidated) throw Error('workspace_conflict');
       if (!latestGraph) return;
       noteInteraction(); cancelFocus();
       const wanted = [...new Set([...Object.keys(state.positions || {}), ...(state.selection || [])])];
@@ -585,13 +608,16 @@
           body: JSON.stringify({node_ids: wanted, mode: state.filters?.mode || 'work', limit: 1000})});
         if (!response.ok) throw Error("view_graph_unavailable");
         const graph = await response.json();
+        if (!workspace.accept(graph.workspace_id)) throw Error('workspace_conflict');
         if (graph.nodes.length !== wanted.length) throw Error("view_nodes_unavailable");
         if (graph.nodes.length >= 128 && !gpuUnavailable) {
           try { await window.ThreadDeskGraphGPU.load(); } catch (_) { gpuUnavailable = true; }
         }
+        if (workspace.invalidated) throw Error('workspace_conflict');
         latestGraph = graph; serverPaging = true; pageOffset = 0; render(graph, true);
         root.dispatchEvent(new CustomEvent('threaddesk:graph-loaded', {detail: {nodes: graph.nodes, graph}}));
       }
+      if (workspace.invalidated) throw Error('workspace_conflict');
       const ids = new Set(latestGraph.nodes.map(node => node.id));
       selectedNodeIds = new Set((state.selection || []).filter(id => ids.has(id)));
       const points = Object.entries(state.positions || {}).filter(([id]) => ids.has(id));
@@ -746,12 +772,13 @@
       const graph = await response.json();
       await pageReady;
       if (ticket !== refreshTicket) return false;
+      if (!workspace.accept(graph.workspace_id)) return false;
       resizeStage();
       if (graph.nodes.length >= 128 && !gpuUnavailable) {
         try { await window.ThreadDeskGraphGPU.load(); }
         catch (_) { gpuUnavailable = true; }
       }
-      if (!canApply()) return false;
+      if (!canApply() || workspace.invalidated) return false;
       latestGraph = graph;
       serverPaging ||= graph.next_offset != null;
       const wasDrawn = initialDrawn;

@@ -633,18 +633,21 @@ def create_app() -> FastAPI:
 
     @app.get("/map", response_class=HTMLResponse)
     def map_view(request: Request) -> HTMLResponse:
+        from threaddesk.services.commands.model import workspace_identity
         lang = _language(request)
         register = _register(request)
-        return templates.TemplateResponse(request, "map.html", {
-            "request": request,
-            "lang": lang,
-            "register": register,
-            "browser_strings": _browser_strings(lang, register),
-            "map_strings": json.dumps(
-                i18n.catalog_for(lang, register), ensure_ascii=False),
-            "actor_marks_json": json.dumps(
-                ActorRegistry(_svc().store).marks(), ensure_ascii=False),
-        })
+        service = _svc()
+        try:
+            return templates.TemplateResponse(request, "map.html", {
+                "request": request, "lang": lang, "register": register,
+                "workspace_id": workspace_identity(service.store),
+                "browser_strings": _browser_strings(lang, register),
+                "map_strings": json.dumps(i18n.catalog_for(lang, register), ensure_ascii=False),
+                "actor_marks_json": json.dumps(ActorRegistry(service.store).marks(), ensure_ascii=False),
+            })
+        finally:
+            if hasattr(service.store, "connection"):
+                service.store.connection.close()
 
     @app.get("/migration", response_class=HTMLResponse)
     def migration(request: Request) -> HTMLResponse:

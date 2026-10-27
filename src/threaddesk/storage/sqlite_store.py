@@ -31,7 +31,9 @@ class SQLiteStore(SQLiteLifecycleStore, MigratedOwnerDocuments):
         return SQLiteSearchAdapter(self)
 
     def __init__(self, root: Path | None = None) -> None:
-        self.root = Path(root or Path.home() / ".threaddesk")
+        # Bind the configured workspace once, like JsonStore. System aliases
+        # are valid entry paths; internal documents still reject symlinks.
+        self.root = Path(root or Path.home() / ".threaddesk").resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self.database_path = self.root / "threaddesk.sqlite3"
         self.connection = sqlite3.connect(self.database_path)

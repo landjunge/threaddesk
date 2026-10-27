@@ -280,7 +280,7 @@ def network_checks(client, root, thread, artifacts, clients):
         assert public_notes_equal(peer.call("get_thread", {"id": thread}), "")
         assert client.call("room.sync", operation="room-sync-owner")["ok"]
         assert len(client.call("room.status")["peers"]) == 1
-    return server_sync_checks(client, root, thread)
+    return {"rooms_actual_http": True, **server_sync_checks(client, root, thread)}
 
 
 def server_sync_checks(client, root, thread):
@@ -300,6 +300,12 @@ def server_sync_checks(client, root, thread):
         revision = client.call("get_thread", {"id": thread})["revision"]
         client.call("server_sync.configure", {"thread_id": thread, "url": url, "project_id": "", "root": str(files),
             "token": token, "automatic": False, "offline_enabled": True}, operation="sync-configure", revision=revision)
+        owner_args = {"thread_id": thread, "path": str(original), "allowed": True}
+        client.call("server_sync.owner_reference", owner_args, operation="sync-owner-grant", revision=revision)
+        assert str(original) in client.call("server_sync.status", {"thread_id": thread})["owner_references"]
+        client.call("server_sync.owner_reference", owner_args, operation="sync-owner-grant", revision=revision)
+        client.call("server_sync.owner_reference", {**owner_args, "allowed": False}, operation="sync-owner-revoke", revision=revision)
+        assert str(original) not in client.call("server_sync.status", {"thread_id": thread})["owner_references"]
         first = client.call("server_sync.run", {"thread_id": thread}, operation="sync-run", revision=revision)
         assert first["state"] == "ready"
         status = client.call("server_sync.status", {"thread_id": thread})
@@ -318,7 +324,7 @@ def server_sync_checks(client, root, thread):
         assert client.call("server_sync.status", {"thread_id": thread})["status"]["mode"] == "lifecycle_metadata"
         assert digest(original.read_bytes()) == expected
     client.env.pop("THREADDESK_SYNC_ALLOW_HTTP", None)
-    return {"rooms_actual_http": True, "server_sync_actual_http": True, "original_sha256": expected,
+    return {"server_sync_actual_http": True, "explicit_local_owner_reference_readback": True, "original_sha256": expected,
             "loopback_dev_flag_process_only": True, "ui_startup_probe_and_background_workers": "lifespan disabled; not claimed tested"}
 
 

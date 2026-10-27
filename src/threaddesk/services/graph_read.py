@@ -47,6 +47,7 @@ class GraphReadService:
         return GraphChangeService(self.store).status(workspace_id=workspace_id)
 
     def query(self, base_graph, **arguments):
+        from threaddesk.services.commands.model import workspace_identity
         filters = validate_filters(arguments)
         nodes = copy.deepcopy(base_graph["nodes"])
         relations = copy.deepcopy(base_graph["relations"])
@@ -113,7 +114,7 @@ class GraphReadService:
         page = visible[start:end]
         ids = {node["id"] for node in page}
         edges = [edge for edge in relations if edge["source_id"] in ids and edge["target_id"] in ids]
-        return {"schema": "threaddesk.graph.v2", "as_of": filters["as_of"],
+        return {"schema": "threaddesk.graph.v2", "workspace_id": workspace_identity(self.store), "as_of": filters["as_of"],
                 "activity_revision": activity["revision"], "filters": filters,
                 "activity_status": activity_status, "activity_error": activity_error,
                 "nodes": page, "relations": edges[:10000],

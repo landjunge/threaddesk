@@ -47,7 +47,9 @@ jobs:
   test:
     name: Complete suite including browser, twice
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Measured first complete 0.2 suite: 600 seconds. Reserve both required
+    # runs plus setup; individual test/navigation deadlines stay unchanged.
+    timeout-minutes: 30
     env:
       PYTHONPATH: src:tests
       PYTEST_PLUGINS: http_navigation_diagnostics

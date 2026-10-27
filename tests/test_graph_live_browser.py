@@ -219,3 +219,49 @@ def test_real_profile_restore_invalidates_old_capability_and_preserves_draft_unt
     expect(root).to_have_attribute('data-live-status', 'ready', timeout=15000)
     page.wait_for_function("Boolean(document.querySelector('[data-graph-endpoint]').dataset.viewClientId)")
     assert root.get_attribute('data-view-client-id') != old_client
+
+
+def test_profile_switch_between_initial_graph_and_first_status_never_registers_old_document(live_graph):
+    page, url, _home, project, _thread, _record, *_rest = live_graph
+    backup = cli(live_graph, 'backup.create', {}, operation='initial-race-backup')
+    held, registrations = [], []
+    page.route('**/api/graph/change-status', lambda route: held.append(route))
+    page.on('request', lambda request: registrations.append(request.post_data_json)
+            if request.url.endswith('/api/graph/view-control/connect') else None)
+    page.reload(wait_until='domcontentloaded')
+    expect(page.locator('.map-node')).to_have_count(2)
+    root = page.locator('[data-graph-endpoint]')
+    displayed = root.get_attribute('data-graph-workspace-id')
+    assert page.request.get(url + '/api/graph/v2').json()['workspace_id'] == displayed
+    assert held and registrations == []
+    page.locator(f'[data-node-id="{project}"] .map-node-shape').click()
+    page.locator('[data-map-zoom-in]').click()
+    page.locator('.graph-view-tools > summary').click()
+    draft = page.locator('[data-map-view-title]');draft.fill('Preserve initial-race draft')
+    before = snapshot(page)
+    restored = page.evaluate('''async request => {
+      const body={version:1,workspace_id:request.workspace_id,command:'backup.restore',
+        operation_id:'initial-race-restore',arguments:request.arguments};
+      const response=await window.threadDeskWrite('/api/commands',{
+        headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      return {status:response.status,body:await response.json()};
+    }''', {'workspace_id': displayed, 'arguments': {'path': backup['path'], 'sha256': backup['sha256'],
+        'confirmation': 'restore_as_new_profile'}})
+    assert restored['status'] == 200 and restored['body']['ok']
+    # Deliver an actual first status response from the now-selected new
+    # profile, after the old HTML/graph has already become interactive.
+    route = held.pop(0)
+    response = route.fetch()
+    assert response.json()['workspace_id'] != displayed
+    # route.fetch and fulfill use the original real response, without a fake
+    # workspace identity or direct backend/store mutation.
+    route.fulfill(response=response)
+    page.unroute('**/api/graph/change-status')
+    expect(root).to_have_attribute('data-live-status', 'workspace')
+    expect(root).to_have_attribute('data-view-control-status', 'workspace_changed')
+    expect(draft).to_have_value('Preserve initial-race draft')
+    assert snapshot(page) == before
+    assert cli(live_graph, 'graph_view.clients', {})['clients'] == []
+    assert registrations == []
+    assert page.evaluate("document.querySelector('[data-graph-endpoint]').graphController.refresh()") is False
+    assert snapshot(page) == before and registrations == []

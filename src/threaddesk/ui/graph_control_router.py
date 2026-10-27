@@ -7,6 +7,7 @@ from starlette.concurrency import run_in_threadpool
 from threaddesk.core.errors import ManagementError
 from threaddesk.services.commands.errors import normalized
 from threaddesk.services.commands.validation import MAX_REQUEST
+from threaddesk.services.commands.model import workspace_identity
 from threaddesk.services.graph_view_control import GraphViewControlService
 
 
@@ -18,8 +19,10 @@ def graph_control_router(service_factory):
         try:
             control = GraphViewControlService(service.store)
             if action == "connect":
-                if arguments:
-                    raise ManagementError("validation_error", "No client identity is accepted on registration")
+                if set(arguments) != {"workspace_id"} or not isinstance(arguments["workspace_id"], str):
+                    raise ManagementError("validation_error", "Registration requires the displayed workspace identity")
+                if arguments["workspace_id"] != workspace_identity(service.store):
+                    raise ManagementError("workspace_conflict", "The displayed graph belongs to another workspace")
                 result = control.register()
             else:
                 allowed = {"heartbeat": set(), "pending": set(), "claim": {"operation_id"},
