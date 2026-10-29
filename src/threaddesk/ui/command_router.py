@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import json
+
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse
+from starlette.background import BackgroundTask
 from starlette.concurrency import run_in_threadpool
 
 from threaddesk.core.errors import ThreadDeskError
@@ -70,11 +72,11 @@ def command_router(service_factory):
         try:
             path = svc.store.artifact_path(name)
             digest = name.rsplit("-", 1)[1].split(".")[0]
-            from threaddesk.services.commands.artifacts import read_verified_file
-            body = read_verified_file(path, sha256=digest)
-            return Response(body, media_type="application/octet-stream", headers={"Cache-Control": "no-store",
-                "Content-Disposition": 'attachment; filename="' + name + '"',
-                "Content-Security-Policy": "default-src 'none'; sandbox"})
+            from threaddesk.services.commands.artifacts import download_file
+            captured, staging = download_file(path, digest)
+            return FileResponse(captured, filename=name, media_type="application/octet-stream",
+                                background=BackgroundTask(staging.cleanup), headers={"Cache-Control": "no-store",
+                                "Content-Security-Policy": "default-src 'none'; sandbox"})
         except ThreadDeskError as exc:
             return JSONResponse({"ok": False, "code": getattr(exc, "code", "artifact_unavailable")}, status_code=409)
         finally:

@@ -6,9 +6,11 @@ KiraBridge receiver contract. No additional speech module is needed.
 
 ## Scope and format
 
-- Portable ZIP `threaddesk.portable-backup`, version **2**, supports JSON and
-  SQLite workspaces, including their persistent library. Portable v1 remains
-  readable with its historical scope; it does not contain library files.
+- Portable ZIP `threaddesk.portable-backup`, version **3**, supports JSON and
+  SQLite workspaces, including their persistent library, declared directories
+  and inert artifact/planning link metadata. Portable v1/v2 remain readable;
+  v1 retains its historical scope without library files. The existing path is
+  extended; there is no second backup engine or new service.
 - Directory `threaddesk.workspace-backup`, version **3**, includes the library
   with the SQLite workspace snapshot. Versions 1 and 2 remain readable. Creation
   without library data still emits version 2. A current reader is required for
@@ -78,6 +80,13 @@ author authentication or a malware scan. The existing index is preserved with
 its saved status, including any honest partial/failed state; it is derived data
 that existing library commands can rebuild from verified copies.
 
+Restore first verifies the exact archived bytes. The existing JSON store may
+then reconcile a stale legacy thread revision anchor while validating models;
+the archive retains the original payload. A readback must distinguish a proven
+revision/content-anchor reconciliation from unexplained changes to business
+fields. Caretaker disablement and permission normalization are intentional
+restore changes, not omissions from the integrity manifest.
+
 Restoration opens a separate profile. It never replaces the original workspace
 or automatically resumes a transfer/import. An explicit receiver call with the
 same transfer ID can continue from the restored offset and obtain the existing
@@ -87,13 +96,44 @@ import rules. The local caretaker remains disabled after portable restoration.
 
 ## Limits and acceptance
 
-Portable archives remain bounded to **128 MiB**, including uncompressed manifest
-and data, compressed ZIP bytes, and at most **20000 archive entries**. Raw
-receiver capture also fits the remaining bounded capture budget; active WAL or
-journal overhead may therefore conservatively require more space than the
-normalized snapshot. A larger library fails explicitly; files are never silently
-omitted to fit. The directory WorkspaceBackup API retains its existing unbounded
-default with an optional library capture limit used by portable backups.
+File-backed portable archives use one-MiB streaming chunks and ZIP64. Default
+limits are **8 GiB** for uncompressed payload plus manifest and for the resulting
+ZIP, **200000 entries** including file, directory and inert-link metadata, and
+**32 MiB** for the manifest. Export, inspection and restore accept explicit lower
+budgets and reject an exceeded limit; they never omit files to fit. The legacy
+`download_backup()` bytes wrapper remains bounded to **128 MiB**; the desktop,
+command export, artifact download and restore paths use file-backed APIs.
+
+`export_backup(store, target)` verifies the finished archive and publishes without
+overwriting a destination. `inspect_backup` and `restore_backup` accept bytes,
+a regular path or a seekable stream. Path inputs are descriptor-bound and
+no-follow; restored data is validated before a separate profile is activated.
+Raw receiver capture fits the remaining capture budget; active WAL/journal
+overhead may conservatively require additional space before normalization.
+The directory WorkspaceBackup API retains its existing optional library budget.
+
+Portable v3 also includes Tool-Planung, Workflow, Zukunftsvisionen, Bilder,
+grok-runtime, handoffs and authority-live-watch. Hidden files inside declared
+artifact/planning/runtime data trees are preserved. Runtime root locks, active
+profile/port controls and disposable library staging/search projection remain
+outside the portable data scope. External thread file references remain external.
+
+Symlinks are accepted only as inert `{target: ...}` metadata within the declared
+noncanonical artifact/import/planning trees. Neither export nor restore follows
+the target, and restore never creates a symbolic link. Metadata survives reexport
+through the new profile's `.profile-info.json`. Canonical store/library links and
+root aliases remain refused. Empty declared directories are preserved. Restore
+normalizes regular file permissions to 0600 and directories to 0700; this is a
+private data restore rather than an executable system image.
+
+Regular data inventories, observed identities and comparison hashes must stay
+stable. `library-watch.json` is a declared `point_in_time` file because its poller
+updates it during long exports: a descriptor-bound stable read is hashed and
+saved, while subsequent status-only rewrites do not invalidate unrelated data.
+The manifest explicitly labels that exception. The exported source is not a
+transaction spanning independent services. Arbitrary SQLite files in historical
+artifacts are preserved as bytes, including deliberately invalid fixtures; only
+known canonical databases use their existing private snapshot/validation rules.
 
 Tests use synthetic JSON and SQLite workspaces and preserve original files.
 Acceptance covers ordinary restore, persisted receipts, resumed chunks, committed
