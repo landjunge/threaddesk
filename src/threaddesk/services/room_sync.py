@@ -196,7 +196,9 @@ class RoomBook:
                 if remote.get("room_id") != room["id"] or remote.get("instance_id") != peer["instance_id"]:
                     raise InvalidState("room_forbidden")
                 sender_role = _member_role(self._require(room["id"]), peer["instance_id"])
-                if sender_role not in ROLES or (sender_role not in PUBLISH and remote.get("entries")):
+                if sender_role not in ROLES or (
+                    sender_role not in PUBLISH and (remote.get("entries") or remote.get("lifecycle"))
+                ):
                     raise InvalidState("room_forbidden")
                 report = self.apply_bundle(remote)
                 conflicts += int(report["conflicts"])
