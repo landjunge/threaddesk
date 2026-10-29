@@ -307,6 +307,11 @@ def _apply(core, thread_id, document, *, lifecycle_resolution=False):
                 for origin in document['nodes']}
     for origin,item in document['nodes'].items():
         node = existing.get(origin)
+        # A portable projection omits local bindings. Reconstructing them even
+        # for unchanged data would rewrite native tombstoned payloads and break
+        # their restore digest. Only changed portable content needs a writer.
+        if node is not None and item == current['nodes'].get(origin):
+            continue
         if node is None:
             identifier=_local_id(thread_id,origin,'node')
             try:
@@ -338,6 +343,11 @@ def _apply(core, thread_id, document, *, lifecycle_resolution=False):
                     if (r.metadata.get('sync_origin') or _namespace(core)+':'+r.id) in current['relations']}
     for origin,item in document['relations'].items():
         relation = existing_rel.get(origin)
+        # Incident relations can be hidden by their trashed endpoint without
+        # carrying a tombstone themselves. Do not submit unchanged payloads to
+        # the live-only relation writer in either case.
+        if relation is not None and item == current['relations'].get(origin):
+            continue
         if relation is None:
             identifier=_local_id(thread_id,origin,'relation')
             if any(r.id==identifier for r in core.store.list_relations(include_trashed=True)):
@@ -397,8 +407,8 @@ def synchronize(core,thread_id,operation_id,base,document):
         for index,conflict in enumerate(conflicts):
             conflict.update(id=key+':'+str(index),thread_id=thread_id)
         _apply(core,thread_id,merged)
-        # JSON list_nodes/list_whiteboard enumerate committed directory entries,
-        # so newly staged objects are not discoverable until transaction commit.
+        # JSON list_whiteboard still enumerates committed directory entries,
+        # so newly staged contributions are not discoverable until commit.
         # The validated merge is the exact projection just applied atomically.
         result={'document':merged,'conflicts':conflicts,'state':'conflict' if conflicts else 'synced'}
         return _record(core,key,thread_id,request,result)

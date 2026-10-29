@@ -158,6 +158,12 @@ def apply(core, thread_id, document, *, phase, explicit_resolution=False):
     desired = _states(document)
     namespace = None
     for path, target in sorted(desired.items(), key=lambda item: item[0] == "thread" if phase == "after" else item[0] != "thread"):
+        # Restores must precede ordinary writers; tombstones must follow them.
+        # A new object's payload may be in this same metadata document and is
+        # intentionally unavailable until the import between these two phases.
+        if ((phase == "before" and target["state"] != "restored")
+                or (phase == "after" and target["state"] != "trashed")):
+            continue
         if path == "thread":
             kind, object_id = "thread", thread_id
         else:

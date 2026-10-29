@@ -206,16 +206,17 @@ def input_file(source, *, limit):
         raise BackupError('Backup requires bytes, a regular path or a seekable file.')
 
 
-def check_member_names(files, symlinks, directories=()):
+def check_member_names(files, symlinks, directories=(), *, legacy_case_sensitive=False):
     """No aliases, parent/file collisions or descendants of inert links."""
     seen = {}
     for name in (*files, *symlinks, *directories):
         safe_relative(name)
-        folded = name.casefold()
+        folded = name if legacy_case_sensitive else name.casefold()
         if folded in seen:
             raise BackupError('Colliding backup paths.')
         seen[folded] = name
-    leaves = {name.casefold() for name in (*files, *symlinks)}
+    leaves = {name if legacy_case_sensitive else name.casefold() for name in (*files, *symlinks)}
     for name in seen:
-        if any(parent.as_posix().casefold() in leaves for parent in PurePosixPath(name).parents if parent.as_posix() != '.'):
+        if any((parent.as_posix() if legacy_case_sensitive else parent.as_posix().casefold()) in leaves
+               for parent in PurePosixPath(name).parents if parent.as_posix() != '.'):
             raise BackupError('Overlapping backup paths.')

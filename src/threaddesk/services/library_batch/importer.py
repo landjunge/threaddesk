@@ -1,17 +1,26 @@
 """Checkpointed orchestration; CAS, graph and index are reconciled, not one transaction."""
 from __future__ import annotations
 
-from collections import Counter
 import hashlib
 import json
+from collections import Counter
 from pathlib import Path, PurePosixPath
 
 from threaddesk.core.errors import InvalidState, NotFound
 from threaddesk.core.models import new_thread, now_iso
+from threaddesk.services.library_activity import (
+    apply_change,
+    change_evidence,
+    saved_change_evidence,
+)
 from threaddesk.services.library_batch.jobs import JobStore
 from threaddesk.services.library_batch.manifest import source_key, validate
 from threaddesk.services.library_import import (
-    LibraryImportError, LibraryImporter, MAX_BATCH_BYTES, UNASSIGNED_TITLE, _hash_file,
+    MAX_BATCH_BYTES,
+    UNASSIGNED_TITLE,
+    LibraryImporter,
+    LibraryImportError,
+    _hash_file,
 )
 from threaddesk.services.library_index import LibraryIndex
 
@@ -179,14 +188,27 @@ class LibraryBatchImporter:
                 item_status = imported.status
                 preserve = item_status == "duplicate"
                 new_record = item_status == "stored"
+            # Verify and checkpoint the observation alongside the CAS publication.
+            # Metadata failures must not lose its timestamp or operation identity,
+            # and a later source version must not replace older pending evidence.
+            source_error = self._post_copy_check(path, digest, size)
+            evidence_history = saved_change_evidence(receipt or {})
+            evidence = receipt.get("activity_evidence") if unchanged else None
+            if predecessor and not source_error and evidence is None:
+                previous_record = self._previous_record(predecessor)
+                if (previous_record.get("sha256") and record["sha256"] != previous_record["sha256"]
+                        and (not unchanged or receipt.get("state") == "record_published")):
+                    evidence = change_evidence(record, previous_record, source_info, key)
+                    evidence_history.append(evidence)
             # Persist this stage before metadata/link writes, so interrupted mapping
             # is distinguishable from an already completed duplicate import.
             sources["sources"][key] = {"record_id": record["id"], "sha256": digest, "size": size,
                                        "state": "record_published", "history": history, "new_record": new_record,
                                        "predecessor_record_id": predecessor,
-                                       "recorded_at": now_iso()}
-            if unchanged and receipt.get("activity_evidence"):
-                sources["sources"][key]["activity_evidence"] = receipt["activity_evidence"]
+                                       "recorded_at": now_iso(),
+                                       "activity_evidence_history": evidence_history}
+            if evidence:
+                sources["sources"][key]["activity_evidence"] = evidence
             self.jobs.write("library-batch-sources.json", sources)
             if predecessor and new_record and not record.get("predecessor_record_id") and record["id"] != predecessor:
                 record["predecessor_record_id"] = predecessor
@@ -213,14 +235,9 @@ class LibraryBatchImporter:
                             record["logical_path"] = logical_path
             record, assignment = self._metadata(record, metadata_row, preserve_assignment=preserve)
             sources["sources"][key]["state"] = "complete"
-            source_error = self._post_copy_check(path, digest, size)
+            source_error = source_error or self._post_copy_check(path, digest, size)
             activity = None
             if predecessor and not source_error:
-                from threaddesk.services.library_activity import change_evidence, apply_change
-                previous_record = self._previous_record(predecessor)
-                if not unchanged and previous_record.get("sha256") and record["sha256"] != previous_record["sha256"]:
-                    sources["sources"][key]["activity_evidence"] = change_evidence(record, previous_record, source_info, key)
-                    self.jobs.write("library-batch-sources.json", sources)
                 evidence = sources["sources"][key].get("activity_evidence")
                 if evidence:
                     activity = apply_change(self.store, evidence)

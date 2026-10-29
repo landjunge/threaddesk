@@ -327,7 +327,10 @@ def _checked_manifest(archive, *, max_bytes=LIMIT, max_files=MAX_FILES,
         raise BackupError('Unexpected backup files.')
     if any(not _allowed(name, backend) for name in files):
         raise BackupError('Invalid backup path.')
-    check_member_names(files, symlinks, directories)
+    # v1/v2 permitted distinct-case files on case-sensitive destinations. Keep
+    # those archives readable; exclusive writes and post-copy inventory still
+    # reject aliases on a destination that cannot represent both originals.
+    check_member_names(files, symlinks, directories, legacy_case_sensitive=manifest['version'] < 3)
     for member in members:
         kind = stat.S_IFMT(member.external_attr >> 16)
         if kind not in {0, stat.S_IFREG} or member.is_dir() or member.flag_bits & 1:

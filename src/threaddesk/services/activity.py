@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 import copy
-from datetime import datetime, timezone
 import hashlib
 import json
+from datetime import datetime, timezone
 
 from threaddesk.core.errors import ManagementError
 from threaddesk.core.models import now_iso
@@ -136,8 +136,10 @@ class ActivityService:
         Ordinary activity/graph reads never call this write-side operation.
         """
         from pathlib import Path
-        from threaddesk.services.library_files.state import read_state
+
+        from threaddesk.services.library_activity import saved_change_evidence
         from threaddesk.services.library_batch.jobs import JobStore
+        from threaddesk.services.library_files.state import read_state
         if type(limit) is not int or not 1 <= limit <= 100 or type(offset) is not int or offset < 0:
             raise ManagementError("validation_error", "Invalid activity reconciliation page.")
         files = read_state(Path(self.store.workspace_path) / "library-files")
@@ -148,8 +150,7 @@ class ActivityService:
             if receipt.get("action") == "open" and receipt.get("status") == "launch_requested":
                 candidates["file-open:" + receipt["operation_id"]] = ("accessed", receipt)
         for source in sources.get("sources", {}).values():
-            evidence = source.get("activity_evidence")
-            if evidence:
+            for evidence in saved_change_evidence(source):
                 candidates["file-change:" + evidence["operation_id"]] = ("modified", evidence)
         keys = sorted(candidates)
         recorded = duplicates = failed = 0

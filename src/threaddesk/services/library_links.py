@@ -9,27 +9,40 @@ from threaddesk.services.library_import import LibraryImporter
 def sync_file_nodes(store) -> dict:
     created = updated = 0
     for record in LibraryImporter(store)._read_records():
-        record_id = record["id"]
-        # Generated document identity stays stable across rename/move/restore.
-        try:
-            node = store.get_node(record_id, include_trashed=True)
-        except NotFound:
-            node = KnowledgeNode(id=record_id, kind="document", title=record["filename"],
-                                 created_at=now_iso(), updated_at=now_iso(), source="library")
-            created += 1
-        else:
-            if node.metadata.get("library_record_id") != record_id:
-                raise ValueError("library_node_identity_conflict")
-        metadata = {**node.metadata, "library_record_id": record_id,
-                    "thread_id": record.get("thread_id"),
-                    "attachment_node_id": record.get("node_id"),
-                    "library_trashed": bool(record.get("trashed")),
-                    "trashed": bool(record.get("trashed"))}
-        if node.title != record["filename"] or node.metadata != metadata:
-            node.title, node.metadata, node.updated_at = record["filename"], metadata, now_iso()
-            store.save_node(node, include_trashed=True)
-            updated += 1
+        with store.transaction():
+            changes = _sync_file_node(store, record)
+        created += changes[0]
+        updated += changes[1]
     return {"created": created, "updated": updated}
+
+
+def _sync_file_node(store, record):
+    # Generic node trash owns this exact payload until restore. Keep the
+    # lifecycle check and projection write under the same store transaction.
+    record_id = record["id"]
+    if store.object_in_trash("node", record_id):
+        return 0, 0
+    created = updated = 0
+    # Generated document identity stays stable across rename/move/restore.
+    try:
+        node = store.get_node(record_id, include_trashed=True)
+    except NotFound:
+        node = KnowledgeNode(id=record_id, kind="document", title=record["filename"],
+                             created_at=now_iso(), updated_at=now_iso(), source="library")
+        created += 1
+    else:
+        if node.metadata.get("library_record_id") != record_id:
+            raise ValueError("library_node_identity_conflict")
+    metadata = {**node.metadata, "library_record_id": record_id,
+                "thread_id": record.get("thread_id"),
+                "attachment_node_id": record.get("node_id"),
+                "library_trashed": bool(record.get("trashed")),
+                "trashed": bool(record.get("trashed"))}
+    if node.title != record["filename"] or node.metadata != metadata:
+        node.title, node.metadata, node.updated_at = record["filename"], metadata, now_iso()
+        store.save_node(node, include_trashed=True)
+        updated += 1
+    return created, updated
 
 
 def visible_library_nodes(store, nodes):

@@ -33,7 +33,7 @@ def change(svc, args, action, data=None, *, key=None):
             thread = svc.get(key) if key else svc.current()
             if thread is None:
                 raise ManagementError("invalid_state", "Kein aktiver Thread.")
-            request.update(id=thread.id, expected_revision=thread.revision)
+            request.update(id=thread.id, expected_revision=thread.revision if expected is None else expected)
     result = manage(svc, request)
     return result
 

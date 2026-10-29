@@ -668,10 +668,21 @@ class JsonStore(JsonLifecycleStore):
             self.require_live_object("thread", node.metadata["thread_id"])
         return node
 
+    def _graph_collection_paths(self, folder: Path) -> list[Path]:
+        """Enumerate graph data from the owning transaction, including creates."""
+        names = {path.name for path in folder.glob("*.json")}
+        if self.in_transaction:
+            relative_folder = folder.relative_to(self.root)
+            names.update(Path(relative).name for relative in self._pending
+                         if Path(relative).parent == relative_folder
+                         and Path(relative).suffix == ".json")
+        return [folder / name for name in sorted(names)
+                if self._staged_exists(folder / name)]
+
     def list_nodes(self, *, include_trashed: bool = False) -> list[KnowledgeNode]:
         nodes = [
             KnowledgeNode.from_dict(self._read_json(path))
-            for path in self.nodes_dir.glob("*.json")
+            for path in self._graph_collection_paths(self.nodes_dir)
         ]
         if not include_trashed:
             hidden = self.hidden_node_ids(nodes)
@@ -689,7 +700,7 @@ class JsonStore(JsonLifecycleStore):
     def list_relations(self, *, include_trashed: bool = False) -> list[Relation]:
         relations = [
             Relation.from_dict(self._read_json(path))
-            for path in self.relations_dir.glob("*.json")
+            for path in self._graph_collection_paths(self.relations_dir)
         ]
         if not include_trashed:
             hidden = self.hidden_node_ids(self.list_nodes(include_trashed=True))
