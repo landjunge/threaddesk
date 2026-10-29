@@ -1,0 +1,156 @@
+{
+  "order_id": "codex2_backup_integration_20261029",
+  "integration_branch": "feat/remaining-plan-20261027",
+  "base_commit": "6cc3763123784aaf1ca8a33fa79da69b19480acf",
+  "source_fix": "05a7022fb63e94fa0c94bd35aa8682aff1cd0700",
+  "integration_commit": "f10fb10cbc10fa2b78acc6a0d38114af06699861",
+  "integration_method": "cherry-pick -x; no merge",
+  "review_pr": "https://github.com/landjunge/threaddesk/pull/95",
+  "source_tree_identical": true,
+  "patch_identical": true,
+  "old_backup_evidence_files_verified": 22,
+  "new_section_backup_sha256": "0051c8473d850c8d869782c495b962e4207c0bfc7a5dc66714c81cb657e376e5",
+  "new_section_backup_files_verified": 18,
+  "tests": [
+    {
+      "name": "Backup-Kompatibilitaet",
+      "tests": 190,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 140.327,
+      "modules": [
+        "tests/test_portable_backup_streaming.py",
+        "tests/test_portable_backup.py",
+        "tests/test_library_backup.py",
+        "tests/test_workspace_backup.py",
+        "tests/test_operational_commands.py"
+      ],
+      "xml_sha256": "a1dc947d2679d09336a8454a49c8160ee77388b35688cb50c8b33f8127d27bf2",
+      "log_sha256": "706cf4ddb60b649283da70832a31af896adb280c8b5b2a076a23ee571dcaabf9"
+    },
+    {
+      "name": "Schnittstellen-Regression",
+      "tests": 64,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 37.011,
+      "modules": [
+        "tests/test_http_access.py",
+        "tests/test_commands.py",
+        "tests/test_packaged_commands.py",
+        "tests/test_command_recovery.py",
+        "tests/test_command_catalog_contract.py",
+        "tests/test_data_browser.py"
+      ],
+      "xml_sha256": "8ce3713ffea5f7e0c1fae1fe828ae5fed8a64235311c90f091262071650a4ba5",
+      "log_sha256": "f6b5e488fba6c496a288d8a0cc705eca18d94aaf25a5dadee7cac5f672c1d9ae"
+    }
+  ],
+  "total_tests_passed": 254,
+  "archives_inspected": [
+    {
+      "filename": "ThreadDesk-Desktop-Vollbackup-v3.zip",
+      "version": 3,
+      "files": 28237,
+      "sha256": "7ab3bf5f7163e918b975c076c2b10b55f3f6637b946e40424c2aeb89e6ea8634",
+      "verified": true
+    },
+    {
+      "filename": "ThreadDesk-Operator-Vollbackup-v3.zip",
+      "version": 3,
+      "files": 680,
+      "sha256": "243634f279ca5e32727220964d20e1b8839809c3497de07851e33a6df19719dc",
+      "verified": true
+    },
+    {
+      "filename": "ThreadDesk-Brainstorm-Ergebnisse-TEILSICHERUNG.zip",
+      "version": 2,
+      "files": 4048,
+      "sha256": "1ce966378116478675b14734ce616b77299475b9bb27216c6015c8bf4b0918cd",
+      "verified": true
+    }
+  ],
+  "reviewed_source_files": [
+    {
+      "path": "README.md",
+      "sha256": "d678a0559b9dfff541c0896c390a2de656e48251449beea3d21f586e65358230",
+      "bytes": 31862,
+      "integrated_blob_identical": true,
+      "worktree_identical": true
+    },
+    {
+      "path": "docs/contracts/library-backup-v1.md",
+      "sha256": "c6df601e929055a5b39c0aca117a0835e8f88d3949a713bafa2ecde3de005cd8",
+      "bytes": 9582,
+      "integrated_blob_identical": true,
+      "worktree_identical": true
+    },
+    {
+      "path": "src/threaddesk/services/commands/artifacts.py",
+      "sha256": "6bf2bd8157398dcd1c9ef04406aacdf54388f96650b872d526849dcca52ccf39",
+      "bytes": 7796,
+      "integrated_blob_identical": true,
+      "worktree_identical": true
+    },
+    {
+      "path": "src/threaddesk/services/commands/operations.py",
+      "sha256": "4581bb9a9d27955c184a65c9f78688f882d8d54398663b0ca93e07781be0895a",
+      "bytes": 12023,
+      "integrated_blob_identical": true,
+      "worktree_identical": true
+    },
+    {
+      "path": "src/threaddesk/storage/portable_backup.py",
+      "sha256": "12935685e825561c28cd892b285b1eede312ff3aa7d49e8236a9be1ae72c72b4",
+      "bytes": 27356,
+      "integrated_blob_identical": true,
+      "worktree_identical": true
+    },
+    {
+      "path": "src/threaddesk/storage/portable_stream.py",
+      "sha256": "2c0c605d288300ffecd4dae36e962dee8405239553a97c4fda1bdd17f12f5618",
+      "bytes": 9874,
+      "integrated_blob_identical": true,
+      "worktree_identical": true
+    },
+    {
+      "path": "src/threaddesk/ui/command_router.py",
+      "sha256": "3675779d076969a0bb253200b1591261a7a604eef83e558168b4a888b8a657e4",
+      "bytes": 6101,
+      "integrated_blob_identical": true,
+      "worktree_identical": true
+    },
+    {
+      "path": "src/threaddesk/ui/server.py",
+      "sha256": "9ed106efaff7abb8b3c8c26136d4395a7ca1c454cfb324be37a767c2ccd43178",
+      "bytes": 46571,
+      "integrated_blob_identical": true,
+      "worktree_identical": true
+    },
+    {
+      "path": "tests/test_library_backup.py",
+      "sha256": "be6bda82868d56a33963e063a6206a053f06a9092004f948b7c83b2b16c5d60b",
+      "bytes": 20993,
+      "integrated_blob_identical": true,
+      "worktree_identical": true
+    },
+    {
+      "path": "tests/test_portable_backup_streaming.py",
+      "sha256": "87fee94d2e3f0167bf38813d635c31bac24038de5b5e8d5564f8768ea809bbd8",
+      "bytes": 32015,
+      "integrated_blob_identical": true,
+      "worktree_identical": true
+    }
+  ],
+  "platform": "Intel macOS; Python 3.12; installed Chrome with isolated temporary browser profiles",
+  "production_installation": false,
+  "service_restart": false,
+  "release": false,
+  "deployment": false,
+  "main_merge": false,
+  "originals_moved_or_deleted": false,
+  "ci": "new final PR CI is pending; old PR95 CI belongs to 6cc3763 and is not new acceptance",
+  "local_evidence_root": "/Users/landjunge/ThreadDesk-Backups/backup-integration-20261029"
+}
