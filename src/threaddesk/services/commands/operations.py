@@ -2,7 +2,16 @@
 from __future__ import annotations
 
 from threaddesk.services.commands.model import CommandSpec
-from threaddesk.services.commands.schemas import ID, TEXT, BOOL, PAGE, obj, choice, array, page
+from threaddesk.services.commands.schemas import (
+    BOOL,
+    ID,
+    PAGE,
+    TEXT,
+    array,
+    choice,
+    obj,
+    page,
+)
 
 
 def specifications():
@@ -155,10 +164,10 @@ def _original(svc, args):
 
 
 def _reset_view_delivery(root):
-    from threaddesk.storage.portable_backup import selected_profile
-    from threaddesk.storage.json_store import JsonStore
-    from threaddesk.storage.sqlite_store import SQLiteStore
     from threaddesk.services.graph_view_control import GraphViewControlService
+    from threaddesk.storage.json_store import JsonStore
+    from threaddesk.storage.portable_backup import selected_profile
+    from threaddesk.storage.sqlite_store import SQLiteStore
     path, backend = selected_profile(root)
     store = SQLiteStore(path) if backend == "sqlite" else JsonStore(path)
     try:
@@ -169,9 +178,15 @@ def _reset_view_delivery(root):
 
 
 def _backup(svc, args):
-    from threaddesk.storage.portable_backup import download_backup
-    from threaddesk.services.commands.artifacts import publish
-    return publish(svc.store, download_backup(svc.store), "zip", prefix="backup")
+    import tempfile
+    from pathlib import Path
+
+    from threaddesk.services.commands.artifacts import publish_file
+    from threaddesk.storage.portable_backup import export_backup
+    with tempfile.TemporaryDirectory(prefix='threaddesk-command-backup-') as folder:
+        path = Path(folder) / 'backup.zip'
+        summary = export_backup(svc.store, path)
+        return {**publish_file(svc.store, path), 'backup': summary}
 
 
 def _verify_backup(svc, args):
@@ -180,18 +195,22 @@ def _verify_backup(svc, args):
 
 
 def _restore_backup(svc, args):
+    from pathlib import Path
+
+    from threaddesk.core.errors import ManagementError
     from threaddesk.storage.portable_backup import restore_backup
-    from threaddesk.services.commands.artifacts import portable_bytes
-    body, summary = portable_bytes(args["path"])
-    if summary["sha256"] != args["sha256"]:
-        from threaddesk.core.errors import ManagementError
-        raise ManagementError("preview_conflict", "Backup checksum changed since preview")
-    return {"profile_path": str(restore_backup(body, _profile_root(svc))), "sha256": summary["sha256"]}
+    from threaddesk.storage.workspace_backup import BackupError
+    try:
+        restored = restore_backup(Path(args['path']), _profile_root(svc), expected_sha256=args['sha256'])
+        return {'profile_path': str(restored), 'sha256': args['sha256']}
+    except BackupError as exc:
+        raise ManagementError('preview_conflict' if 'since preview' in str(exc) else 'artifact_unavailable', str(exc)) from exc
 
 
 def _profile_root(svc):
     """Derive only from the bound store, never an unrelated global HOME."""
     from pathlib import Path
+
     from threaddesk.storage.portable_backup import selected_profile
     workspace = Path(svc.store.workspace_path).resolve()
     if workspace.parent.name == "profiles":
@@ -204,13 +223,14 @@ def _profile_root(svc):
 
 def _migration_preview(svc, args):
     from pathlib import Path
+
     from threaddesk.services.migration.preview import MigrationPreviewService
     return MigrationPreviewService(svc.store).inspect(Path(args["path"]))
 
 
 def _review(svc):
-    from threaddesk.storage.sqlite_store import SQLiteStore
     from threaddesk.services.migration.preview import MigrationReviewService
+    from threaddesk.storage.sqlite_store import SQLiteStore
     if not isinstance(svc.store, SQLiteStore):
         from threaddesk.core.errors import ManagementError
         raise ManagementError("unsupported_backend", "Reviewed migration writes require a SQLite profile")

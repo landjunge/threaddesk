@@ -3,15 +3,15 @@ from __future__ import annotations
 
 import hashlib
 import os
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
 from threaddesk.core.errors import ManagementError
 
 
 def read_verified_file(path, *, limit=128 * 1024 * 1024, sha256=None):
     """Reuse the backup reader's descriptor/path/size race protections."""
-    from threaddesk.storage.workspace_backup import _SourceTree, BackupError
+    from threaddesk.storage.workspace_backup import BackupError, _SourceTree
     path = Path(path).absolute()
     try:
         with _SourceTree(path.parent) as source:
@@ -53,20 +53,91 @@ def publish(store, body, suffix, *, prefix="export"):
 
 
 def portable_bytes(path):
-    from threaddesk.storage.portable_backup import LIMIT, inspect_backup
-    body = read_verified_file(path, limit=LIMIT)
+    from threaddesk.storage.portable_backup import LEGACY_LIMIT, inspect_backup
+    body = read_verified_file(path, limit=LEGACY_LIMIT)
     return body, inspect_backup(body)
 
 
 def verify_portable(path):
-    _, summary = portable_bytes(path)
-    return summary
+    from threaddesk.storage.portable_backup import inspect_backup
+    from threaddesk.storage.workspace_backup import BackupError
+    try:
+        return inspect_backup(Path(path))
+    except BackupError as exc:
+        raise ManagementError("artifact_unavailable", str(exc)) from exc
+
+
+def publish_file(store, source, *, prefix="backup"):
+    """Publish a large generated ZIP through the same owned artifact contract."""
+    from threaddesk.storage.portable_backup import LIMIT
+    from threaddesk.storage.portable_stream import copy_hash, input_file
+    from threaddesk.storage.workspace_backup import BackupError, _publish_new
+    temporary = None
+    try:
+        with input_file(Path(source), limit=LIMIT) as (incoming, _):
+            digest = copy_hash(incoming, limit=LIMIT)
+            name = "command-" + prefix + "-" + digest['sha256'] + ".zip"
+            target = store.artifact_path(name)
+            if target.exists() or target.is_symlink():
+                with input_file(target, limit=LIMIT) as (existing, _):
+                    if copy_hash(existing, limit=LIMIT) != digest:
+                        raise ManagementError("artifact_conflict", "Generated artifact has different contents")
+            else:
+                fd, temporary = tempfile.mkstemp(prefix=".command-artifact-", dir=target.parent)
+                with os.fdopen(fd, 'wb') as output:
+                    os.fchmod(output.fileno(), 0o600)
+                    incoming.seek(0)
+                    if copy_hash(incoming, output, limit=LIMIT) != digest:
+                        raise ManagementError("artifact_conflict", "Generated artifact changed during publication")
+                    output.flush()
+                    os.fsync(output.fileno())
+        if temporary is not None:
+            with input_file(Path(temporary), limit=LIMIT) as (captured, _):
+                if copy_hash(captured, limit=LIMIT) != digest:
+                    raise ManagementError("artifact_conflict", "Generated artifact copy failed readback")
+            try:
+                _publish_new(Path(temporary), target)
+            except FileExistsError:
+                with input_file(target, limit=LIMIT) as (existing, _):
+                    if copy_hash(existing, limit=LIMIT) != digest:
+                        raise ManagementError("artifact_conflict", "Generated artifact has different contents")
+        return {"filename": name, "path": str(target), "size": digest['size'], "sha256": digest['sha256'],
+                "download_path": "/api/command-artifacts/" + name, "executed": False}
+    except BackupError as exc:
+        raise ManagementError("artifact_unavailable", str(exc)) from exc
+    finally:
+        if temporary is not None:
+            Path(temporary).unlink(missing_ok=True)
+
+
+def download_file(path, sha256):
+    """Own an immutable checked download copy until the HTTP response completes."""
+    from threaddesk.storage.portable_backup import LIMIT
+    from threaddesk.storage.portable_stream import copy_hash, input_file
+    from threaddesk.storage.workspace_backup import BackupError
+    staging = tempfile.TemporaryDirectory(prefix='threaddesk-command-download-')
+    target = Path(staging.name) / 'download'
+    try:
+        with input_file(Path(path), limit=LIMIT) as (incoming, _), target.open('xb') as output:
+            target.chmod(0o600)
+            digest = copy_hash(incoming, output, limit=LIMIT)
+        if digest['sha256'] != sha256:
+            raise ManagementError('artifact_conflict', 'Generated artifact has different contents')
+        with input_file(target, limit=LIMIT) as (captured, _):
+            if copy_hash(captured, limit=LIMIT) != digest:
+                raise ManagementError('artifact_conflict', 'Generated download copy failed readback')
+        return target, staging
+    except (OSError, BackupError, ManagementError) as exc:
+        staging.cleanup()
+        if isinstance(exc, ManagementError):
+            raise
+        raise ManagementError('artifact_unavailable', 'The selected regular file cannot be verified') from exc
 
 
 def export(store, args):
     from threaddesk.services.knowledge_export import KnowledgeExportService
-    from threaddesk.services.knowledge_visual_export import encode_svg, encode_pdf
     from threaddesk.services.knowledge_package import KnowledgePackageService
+    from threaddesk.services.knowledge_visual_export import encode_pdf, encode_svg
     data = dict(args)
     format_name, language = data.pop("format"), data.pop("language", "de")
     service = KnowledgeExportService(store)

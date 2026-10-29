@@ -177,16 +177,29 @@ Threads, Notizen, Zwischenstände, Wissenskarte, Whiteboards und lokal gespeiche
 Empfangsbestätigungen und gespeicherte Teile angefangener Dateiübertragungen
 werden gesichert. Nach Wiederherstellung können diese Übertragungen mit ihrer
 bisherigen Kennung fortgesetzt werden. Verlinkte Dateien außerhalb von ThreadDesk bleiben
-an ihrem ursprünglichen Ort. Symbolische Links und Verzeichnisverknüpfungen im
-ausgewählten Sicherungsbestand werden mit einer Fehlermeldung abgewiesen;
-ihre Ziele werden nicht gelesen. Änderungen oder ein Austausch der Quelldateien
-während der Sicherung führen ebenfalls zum Abbruch.
+an ihrem ursprünglichen Ort. Der bestehende portable Backupweg verarbeitet große
+Dateien blockweise über temporäre Dateien. Er umfasst auch die lokalen Ordner
+`Tool-Planung`, `Workflow`, `Zukunftsvisionen`, `Bilder` und gespeicherte
+Agenten-Laufzeitdaten; versteckte Daten innerhalb dieser Fachordner bleiben erhalten.
 
-Die portable Sicherung ist auf 128 MiB und 20000 Archiveinträge begrenzt;
-Manifest und Archiv zählen mit. Eine zu große Bibliothek führt zu einer
-Fehlermeldung, nicht zu einer Sicherung mit ausgelassenen Dateien. Neue
-Bibliothekssicherungen benötigen eine aktuelle ThreadDesk-Version zum Öffnen;
-bestehende ältere Sicherungen bleiben lesbar.
+Symbolische Links in Artefakt-, Import- und Planungsordnern werden nur mit ihrer
+Zielangabe im Integritätsmanifest gespeichert. Ihre Ziele werden nie verfolgt;
+beim Wiederherstellen bleiben sie inerte Metadaten und werden nicht als Links
+angelegt. Links an kanonischen Thread-, Datenbank- und Bibliothekspfaden bleiben
+gesperrt. Leere Fachverzeichnisse werden ebenfalls wiederhergestellt. Reguläre
+Quelldateien werden über gebundene Deskriptoren und erneute Hashvergleiche geprüft;
+eine beobachtete Änderung bricht den Export ab. Der parallel fortgeschriebene
+Pollerstatus `library-watch.json` wird ausdrücklich als geprüfter Dateistand zu
+einem Zeitpunkt aufgenommen, ohne eine globale Transaktion aller Dienste zu behaupten.
+
+Die dateibasierte portable Sicherung ist standardmäßig auf 8 GiB und 200000
+Einträge einschließlich Verzeichnis-/Linkmetadaten begrenzt; das Manifest darf
+höchstens 32 MiB groß sein. Unkomprimierte Daten, Manifest und Archiv unterliegen
+der Bytegrenze. Überschreitungen führen zu einer Fehlermeldung; Dateien werden
+nicht zum Einhalten der Grenze ausgelassen. Das portable Format v3 benötigt den
+aktuellen Leser; bestehende v1/v2-Sicherungen bleiben lesbar. Der ältere
+Bytes-Hilfsaufruf ist weiterhin auf 128 MiB begrenzt, während Oberfläche und
+Fachbefehle den dateibasierten Streamingweg verwenden.
 
 Zum Wiederherstellen die Sicherung auswählen, das Öffnen bestätigen und
 **Sicherung öffnen** wählen. ThreadDesk prüft die Dateien und öffnet einen eigenen

@@ -261,6 +261,9 @@ def test_version_one_portable_backup_remains_readable(tmp_path, backend):
             bodies = {name: archive.read(name) for name in archive.namelist()}
         manifest = json.loads(bodies["manifest.json"])
         manifest["version"] = 1
+        # Real legacy archives predate all v3-only metadata fields.
+        for field in ("directories", "symlinks", "consistency"):
+            manifest.pop(field, None)
         bodies["manifest.json"] = json.dumps(manifest).encode()
         output = io.BytesIO()
         with zipfile.ZipFile(output, "w") as archive:

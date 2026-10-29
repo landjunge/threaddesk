@@ -2,33 +2,38 @@
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
 import json
 import os
-from pathlib import Path
 import tempfile
+from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Optional
 from urllib.parse import parse_qs, urlsplit
+from uuid import uuid4
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
-from threaddesk.ui.http_access import LocalHTTPAccess, require_ui_csrf, safe_return_path
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    JSONResponse,
+    RedirectResponse,
+    Response,
+)
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
-from uuid import uuid4
-from threaddesk.ui.thread_mutations import install as install_thread_mutations, rejection_response
+from starlette.background import BackgroundTask
+from starlette.concurrency import run_in_threadpool
 
 from threaddesk.api.service import ThreadService
 from threaddesk.build_info import BUILD_DESCRIPTION, BUILD_ID, BUILD_LABEL
-from threaddesk.core.errors import InvalidState, ManagementError, NotFound, ThreadDeskError
-from threaddesk.services.actors import ActorRegistry
-from threaddesk.services.hausmeister import SURFACE_KINDS, Hausmeister, live_snapshot, note_activity
-from threaddesk.services.room_sync import RoomBook
-from threaddesk.server_sync.desktop import install_routes as install_sync_routes
-from threaddesk.server_sync.store import SyncError
-from threaddesk.services.ollama_local import OllamaError
 from threaddesk.core import i18n
+from threaddesk.core.errors import (
+    InvalidState,
+    ManagementError,
+    NotFound,
+    ThreadDeskError,
+)
 from threaddesk.core.models import (
     ENTRY_TYPES,
     NODE_KINDS,
@@ -37,13 +42,18 @@ from threaddesk.core.models import (
     STATUSES,
     Thread,
 )
-from threaddesk.storage.portable_backup import base_root, selected_profile, download_backup, restore_backup, LIMIT, profiles, activate_profile
-from threaddesk.storage.workspace_backup import BackupError
-from threaddesk.storage.json_store import JsonStore
-from threaddesk.storage.sqlite_store import SQLiteStore
+from threaddesk.server_sync.desktop import install_routes as install_sync_routes
+from threaddesk.server_sync.store import SyncError
+from threaddesk.services.actors import ActorRegistry
+from threaddesk.services.hausmeister import (
+    SURFACE_KINDS,
+    Hausmeister,
+    live_snapshot,
+    note_activity,
+)
 from threaddesk.services.library_bridge import contract as library_bridge_contract
 from threaddesk.services.library_commands import execute as execute_library_command
-from threaddesk.services.library_import import LibraryImportError, LibraryImporter
+from threaddesk.services.library_import import LibraryImporter, LibraryImportError
 from threaddesk.services.migration import (
     AtomicImportError,
     BundleValidationError,
@@ -52,6 +62,22 @@ from threaddesk.services.migration import (
     MigrationPreviewService,
     MigrationReviewService,
 )
+from threaddesk.services.ollama_local import OllamaError
+from threaddesk.services.room_sync import RoomBook
+from threaddesk.storage.json_store import JsonStore
+from threaddesk.storage.portable_backup import (
+    activate_profile,
+    base_root,
+    export_backup,
+    profiles,
+    restore_backup,
+    selected_profile,
+)
+from threaddesk.storage.sqlite_store import SQLiteStore
+from threaddesk.storage.workspace_backup import BackupError
+from threaddesk.ui.http_access import LocalHTTPAccess, require_ui_csrf, safe_return_path
+from threaddesk.ui.thread_mutations import install as install_thread_mutations
+from threaddesk.ui.thread_mutations import rejection_response
 
 HERE = Path(__file__).resolve().parent
 TEMPLATES_DIR = HERE / "templates"
@@ -275,6 +301,7 @@ def create_app() -> FastAPI:
         if (request.method == "POST" and response.status_code < 400
                 and not request.url.path.startswith(("/api/library/", "/library/", "/api/commands", "/api/graph/views", "/api/graph/v2", "/api/graph/view-control"))):
             from starlette.background import BackgroundTasks
+
             from threaddesk.services.library_refresh import refresh_existing
             tasks = BackgroundTasks()
             if response.background is not None:
@@ -386,13 +413,14 @@ def create_app() -> FastAPI:
     @app.post("/data/download")
     def data_download(request: Request) -> Response:
         store = _svc().store
+        staging = tempfile.TemporaryDirectory(prefix='threaddesk-download-')
         try:
-            body = download_backup(store)
-            return Response(body, media_type="application/zip", headers={
-                "Content-Disposition": 'attachment;filename="ThreadDesk-backup.zip"',
-                "Cache-Control": "no-store",
-            })
+            path = Path(staging.name) / 'backup.zip'
+            export_backup(store, path)
+            return FileResponse(path, media_type="application/zip", filename="ThreadDesk-backup.zip",
+                                headers={"Cache-Control": "no-store"}, background=BackgroundTask(staging.cleanup))
         except BackupError:
+            staging.cleanup()
             response = data_page(request, error=i18n.translate("data.backup_error", _language(request)))
             response.status_code = 400
             return response
@@ -406,8 +434,7 @@ def create_app() -> FastAPI:
         try:
             if confirm != "yes":
                 raise BackupError("backup_confirmation")
-            body = await backup.read(LIMIT + 1)
-            restore_backup(body, base_root())
+            await run_in_threadpool(restore_backup, backup.file, base_root())
             bootstrap_profile()
             return RedirectResponse("/?restored=1", status_code=303)
         except BackupError:
@@ -1039,6 +1066,7 @@ def create_app() -> FastAPI:
 def run(host: str = "127.0.0.1", port: int = 8765, *, open_browser: bool = False) -> None:
     import threading
     import time
+
     import uvicorn
 
     def _idle() -> None:
