@@ -14,11 +14,7 @@
     const body = {version: 1, workspace_id: workspace, command, arguments: args};
     if (operation) body.operation_id = operation;
     if (revision !== null) body.expected_revision = revision;
-    const response = await window.threadDeskWrite("/api/commands", {headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
-    const data = await response.json();
-    if (!response.ok || data.ok === false) throw data;
-    if (!("result" in data)) throw new Error("result_too_large");
-    return data.result;
+    return window.threadDeskCommand(body);
   }
   const status = message => { const target = root?.querySelector("[data-trash-message]") || document.querySelector("#request-state"); if (target) { target.hidden = false; target.textContent = message; } };
   const failure = error => status(text(String(error?.code || "").includes("conflict") ? "trash.conflict" : "trash.failed"));
@@ -36,10 +32,10 @@
       title.textContent = item.title || item.filename || item.object_id;
       detail.textContent = `${text("trash.kind." + (item.kind || "file"))} · ${text("trash.deleted_at")}: ${item.deleted_at || ""}`;
       button.type = "button"; button.className = "btn"; button.textContent = text("trash.restore");
+      const operation = identity();
       button.addEventListener("click", async () => {
         button.disabled = true;
         try {
-          const operation = identity();
           const result = requestedTab === "objects"
             ? await request("trash.restore", {trash_id: item.trash_id, generation: item.generation, expected_revision: item.revision, operation_id: operation}, operation, item.revision)
             : await request("library_manage", {action: "restore", id: item.id, expected_revision: item.revision, operation_id: operation, data: {trash_generation: item.trash_generation}}, operation, item.revision);
