@@ -125,12 +125,48 @@ def conflict_view(core, thread_id):
     return result
 
 
-def resolve_document(document, path, chosen_value):
+def _missing_payloads(target, path, payloads):
+    """Fill only absent graph objects; never replace a current endpoint/edit."""
+    if (not isinstance(payloads, dict) or set(payloads) != {'nodes', 'relations'}
+            or any(not isinstance(payloads[section], dict) or len(payloads[section]) > 2000
+                   for section in ('nodes', 'relations'))):
+        raise SyncError('Incoming payload is unavailable; synchronize again before adoption',
+                        'metadata_lifecycle_conflict', 409)
+    pending = [tuple(path.removeprefix('lifecycle/').split('/', 1))]
+    while pending:
+        section, origin = pending.pop()
+        if origin in target[section]:
+            continue
+        saved = payloads.get(section, {}).get(origin)
+        required = ({'id', 'kind', 'title', 'status', 'details', 'metadata'} if section == 'nodes'
+                    else {'id', 'source', 'target', 'kind', 'source_id', 'target_id'})
+        optional = {'lifecycle', 'project_origin'} if section == 'nodes' else {'lifecycle'}
+        if not isinstance(saved, dict) or not required <= saved.keys() or saved.keys() - required - optional:
+            raise SyncError('Incoming payload is unavailable; synchronize again before adoption',
+                            'metadata_lifecycle_conflict', 409)
+        excluded = {'id', 'lifecycle', 'source_id', 'target_id'}
+        target[section][origin] = {key: deepcopy(value) for key, value in saved.items() if key not in excluded}
+        if saved.get('lifecycle') is not None:
+            expected = target['lifecycle'][section].get(origin)
+            if expected is not None and expected != saved['lifecycle']:
+                raise SyncError('Incoming payload has a different lifecycle generation', 'metadata_lifecycle_conflict', 409)
+            target['lifecycle'][section][origin] = deepcopy(saved['lifecycle'])
+        if section == 'nodes':
+            if saved.get('project_origin') is not None:
+                pending.append(('nodes', saved['project_origin']))
+        else:
+            pending.extend(('nodes', saved[key]) for key in ('source', 'target'))
+
+
+def resolve_document(document, path, chosen_value, *, payloads=None):
     actual = _states(document).get(path.removeprefix("lifecycle/"))
     if chosen_value == actual:
         return deepcopy(document)
     if chosen_value is None or chosen_value.get("state") == "purged":
         raise SyncError("Keep lifecycle history; use an explicit matching restore or local purge", "metadata_lifecycle_conflict", 409)
+    can_adopt = (chosen_value["state"] == "restored" and chosen_value["revision"] == 2
+                 and chosen_value["generation"] == ((actual["generation"] if actual else 0) + 1)
+                 and (actual is None or actual["state"] == "restored"))
     target = deepcopy(document)
     target.setdefault("lifecycle", {"thread": None, "nodes": {}, "relations": {}})
     target["format"] = FORMAT
@@ -140,14 +176,15 @@ def resolve_document(document, path, chosen_value):
     else:
         section, origin = inner.split("/", 1)
         target["lifecycle"][section][origin] = deepcopy(chosen_value)
+        if origin not in target[section]:
+            if not can_adopt:
+                raise SyncError('Missing object history requires its first matching generation', 'metadata_lifecycle_conflict', 409)
+            _missing_payloads(target, path, payloads or {})
     conflicts = guard_merge(document, target, document)
     # Explicitly adopting one previously refused delete/restore generation is
     # safe when the caller binds the entire current document digest. The same
     # transition is never inferred during automatic synchronization.
-    can_adopt = (chosen_value["state"] == "restored" and chosen_value["revision"] == 2
-                 and chosen_value["generation"] == ((actual["generation"] if actual else 0) + 1)
-                 and (actual is None or actual["state"] == "restored"))
-    if conflicts and not can_adopt:
+    if any(not (can_adopt and conflict['path'] == path) for conflict in conflicts):
         raise SyncError("Lifecycle generation cannot be adopted", "metadata_lifecycle_conflict", 409)
     return target
 
@@ -156,28 +193,25 @@ def apply(core, thread_id, document, *, phase, explicit_resolution=False):
     """Reuse TrashService mutation bodies inside metadata's existing transaction."""
     service = TrashService(core.store)
     desired = _states(document)
-    namespace = None
+    from threaddesk.server_sync.metadata import _scoped_graph
+    _, _, nodes, relations = _scoped_graph(core, thread_id)
     for path, target in sorted(desired.items(), key=lambda item: item[0] == "thread" if phase == "after" else item[0] != "thread"):
         # Restores must precede ordinary writers; tombstones must follow them.
         # A new object's payload may be in this same metadata document and is
         # intentionally unavailable until the import between these two phases.
         if ((phase == "before" and target["state"] != "restored")
-                or (phase == "after" and target["state"] != "trashed")):
+                or (phase == "after" and target["state"] not in {"trashed", "restored"})):
             continue
         if path == "thread":
             kind, object_id = "thread", thread_id
         else:
             section, origin = path.split("/", 1)
             kind = "node" if section == "nodes" else "relation"
-            items = (core.store.list_nodes(include_trashed=True) if kind == "node"
-                     else core.store.list_relations(include_trashed=True))
-            # Native origin suffixes only bind local objects from this exported
-            # namespace; the existing sync-origin binding wins for replicas.
-            if namespace is None:
-                from threaddesk.server_sync.metadata import _namespace
-                namespace = _namespace(core)
-            obj = next((item for item in items if (item.metadata.get("sync_origin") or namespace + ":" + item.id) == origin), None)
+            obj = (nodes if kind == 'node' else relations).get(origin)
             if obj is None:
+                if (phase == 'before' and explicit_resolution
+                        and target == {'generation': 1, 'revision': 2, 'state': 'restored'}):
+                    continue  # Its validated payload is imported before the after phase.
                 raise SyncError("Lifecycle original is missing", "metadata_lifecycle_conflict", 409)
             object_id = obj.id
         current = core.store.get_object_lifecycle(kind, object_id)
@@ -186,7 +220,7 @@ def apply(core, thread_id, document, *, phase, explicit_resolution=False):
         if phase == "before" and target["state"] == "restored" and current and current["state"] == "trashed":
             service._restore_in_transaction(trash_id=current["trash_id"], generation=target["generation"],
                                             expected_revision=current["revision"])
-        elif phase == "before" and target["state"] == "restored" and (current is None or current["state"] == "restored"):
+        elif target["state"] == "restored" and (current is None or current["state"] == "restored"):
             if (not explicit_resolution or target["generation"] != ((current["generation"] if current else 0) + 1)
                     or target["revision"] != 2):
                 raise SyncError("Restore requires matching generation", "metadata_lifecycle_conflict", 409)
