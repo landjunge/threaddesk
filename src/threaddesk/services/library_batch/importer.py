@@ -196,10 +196,17 @@ class LibraryBatchImporter:
             evidence = receipt.get("activity_evidence") if unchanged else None
             if predecessor and not source_error and evidence is None:
                 previous_record = self._previous_record(predecessor)
-                if (previous_record.get("sha256") and record["sha256"] != previous_record["sha256"]
-                        and (not unchanged or receipt.get("state") == "record_published")):
-                    evidence = change_evidence(record, previous_record, source_info, key)
-                    evidence_history.append(evidence)
+                # Completed mapping may still lack a verified change observation.
+                if previous_record.get("sha256") and record["sha256"] != previous_record["sha256"]:
+                    if unchanged and evidence_history:
+                        latest = evidence_history[-1]
+                        if (latest.get("record") == {"id": record["id"], "sha256": record["sha256"]}
+                                and latest.get("previous_record") == {
+                                    "id": previous_record["id"], "sha256": previous_record["sha256"]}):
+                            evidence = latest
+                    if evidence is None:
+                        evidence = change_evidence(record, previous_record, source_info, key)
+                        evidence_history.append(evidence)
             # Persist this stage before metadata/link writes, so interrupted mapping
             # is distinguishable from an already completed duplicate import.
             sources["sources"][key] = {"record_id": record["id"], "sha256": digest, "size": size,
