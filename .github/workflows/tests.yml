@@ -47,10 +47,10 @@ jobs:
   test:
     name: Complete suite including browser, twice
     runs-on: ubuntu-latest
-    # The previous whole run took 1009s; 14 new browser cases add 93.742s locally.
-    # Prior local/CI timings project ~155s more per run, plus further new cases.
-    # Budget both required runs and setup; individual deadlines/gates unchanged.
-    timeout-minutes: 45
+    # CI 41003824290 measured 1242s for the previous whole acceptance run.
+    # New cases measured 94.086s UI/observation + 3.890s conflict tests locally.
+    # Budget both runs, setup and jitter; individual deadlines/gates unchanged.
+    timeout-minutes: 55
     env:
       PYTHONPATH: src:tests
       PYTEST_PLUGINS: http_navigation_diagnostics
