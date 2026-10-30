@@ -820,18 +820,21 @@
         address.searchParams.set("offset", String(pageOffset));
         if (!activeFilter.center && selectedFocusId && activeFilter.hops) address.searchParams.set("center", selectedFocusId);
       }
-      let response, exactGraph = null;
-      if (serverPaging && Array.isArray(activeFilter.node_ids)) {
-        const arguments_ = {...activeFilter, node_ids: [...new Set(activeFilter.node_ids)], offset: pageOffset};
-        if (!arguments_.center && selectedFocusId && arguments_.hops) arguments_.center = selectedFocusId;
-        if (!arguments_.center) delete arguments_.center;
+      let response, contextGraph = null;
+      const arguments_ = {...activeFilter, offset: pageOffset,
+        ...(Array.isArray(activeFilter.node_ids) ? {node_ids: [...new Set(activeFilter.node_ids)]} : {})};
+      if (!arguments_.center && selectedFocusId && arguments_.hops) arguments_.center = selectedFocusId;
+      if (!arguments_.center) delete arguments_.center;
+      const centerContext = arguments_.center && ['query', 'kind', 'status', 'project_id', 'band'].some(key => arguments_[key]);
+      const projectContext = arguments_.project_id && ['query', 'kind', 'status', 'center', 'band'].some(key => arguments_[key]);
+      if (serverPaging && (Array.isArray(activeFilter.node_ids) || centerContext || projectContext)) {
         const hydrated = await readFilterContext({...arguments_, limit: 1000});
-        exactGraph = hydrated.wanted.length ? await readGraph({node_ids: hydrated.wanted,
+        contextGraph = hydrated.wanted.length ? await readGraph({node_ids: hydrated.wanted,
           mode: arguments_.mode, as_of: hydrated.filteredGraph.as_of, limit: 1000}) : hydrated.filteredGraph;
-        if (exactGraph.nodes.length !== hydrated.wanted.length || exactGraph.relations_truncated) throw Error("view_graph_limit");
+        if (contextGraph.nodes.length !== hydrated.wanted.length || contextGraph.relations_truncated) throw Error("view_graph_limit");
       } else response = await fetch(address, {headers: {Accept: "application/json"}, cache: "no-store"});
       if (response && !response.ok) throw new Error("graph request failed");
-      const graph = exactGraph || await response.json();
+      const graph = contextGraph || await response.json();
       await pageReady;
       if (ticket !== refreshTicket) return false;
       if (!workspace.accept(graph.workspace_id)) return false;
