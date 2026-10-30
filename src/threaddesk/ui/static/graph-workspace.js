@@ -57,7 +57,7 @@
   const age = controls.querySelector("[data-map-age]");
   const status = controls.querySelector("[data-map-status]");
   const hops = controls.querySelector("[data-map-hops]");
-  let strings = {}, center = "";
+  let strings = {}, center = "", nodeIds = null;
   try { strings = JSON.parse(root.dataset.strings || "{}"); } catch (_) { /* readable control labels remain */ }
   function filter(queryServer = true) {
     if (hops.value === "0") {
@@ -68,6 +68,7 @@
       query: query.value.trim(), kind: kind.value, project_id: project.value,
       mode: mode.value, band: age.value, status: status.value, center, hops: hops.value === "center" ? 0 : Number(hops.value),
       server_query: queryServer !== false,
+      ...(nodeIds === null ? {} : {node_ids: [...nodeIds]}),
     }}));
   }
   let inputTimer;
@@ -79,7 +80,7 @@
     root.dispatchEvent(new CustomEvent("threaddesk:graph-search-submit"));
   });
   controls.querySelector("[data-map-clear-filters]")?.addEventListener("click", () => {
-    center = "";
+    center = ""; nodeIds = null;
     hops.querySelector('option[value="center"]')?.remove();
     query.value = ""; kind.value = ""; project.value = ""; age.value = ""; status.value = ""; hops.value = "0";
     filter(); query.focus();
@@ -110,7 +111,7 @@
   });
   root.addEventListener("threaddesk:graph-filtered", event => {
     if (!count) return;
-    count.hidden = !query.value.trim() && !kind.value && !project.value && !age.value && !status.value && !center && !Number(hops.value);
+    count.hidden = !query.value.trim() && !kind.value && !project.value && !age.value && !status.value && !center && !Number(hops.value) && nodeIds === null;
     count.textContent = (strings["map.filtered_count"] || "{visible} / {total}")
       .replace("{visible}", String(event.detail.visible)).replace("{total}", String(event.detail.total));
   });
@@ -122,6 +123,7 @@
   root.addEventListener("threaddesk:graph-view-loaded", event => {
     const filters = event.detail?.filters || {};
     center = filters.center || "";
+    nodeIds = Array.isArray(filters.node_ids) ? [...filters.node_ids] : null;
     if (center) savedOption(hops, "center", strings["map.neighborhood_center"] || "Saved center only");
     else hops.querySelector('option[value="center"]')?.remove();
     savedOption(project, filters.project_id, `${strings["map.filter_project"] || "Project"}: ${filters.project_id}`);

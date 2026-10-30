@@ -1,7 +1,11 @@
 /* One filter projection for both renderers and the DOM node list. */
 window.ThreadDeskGraphFilter = (graph, filters, activity, selected) => {
-  const normalize = value => String(value || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase();
+  // Match the backend's German transliteration before stripping accents.
+  const normalize = value => String(value || '').toLowerCase()
+    .replace(/[äöüß]/g, letter => ({ä: 'ae', ö: 'oe', ü: 'ue', ß: 'ss'})[letter])
+    .normalize('NFKD').replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, ' ');
   const query = normalize(filters.query).trim(), project = filters.project_id;
+  const requested = Array.isArray(filters.node_ids) ? new Set(filters.node_ids) : null;
   const members = new Set(project ? [project] : []);
   if (project) {
     const thread = graph.nodes.find(node => node.id === project && node.kind === 'project')?.metadata?.thread_id;
@@ -29,6 +33,7 @@ window.ThreadDeskGraphFilter = (graph, filters, activity, selected) => {
     neighborhood = reached;
   }
   return new Set(graph.nodes.filter(node =>
+    (!requested || requested.has(node.id)) &&
     (!query || normalize(`${node.title} ${node.details || ''}`).includes(query)) &&
     (!filters.kind || node.kind === filters.kind) && (!project || members.has(node.id)) &&
     (!filters.status || node.status === filters.status) &&

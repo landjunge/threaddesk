@@ -194,7 +194,7 @@
 
   const showFilteredEmpty = visible => {
     empty.hidden = visible !== 0;
-    const filtered = ['query', 'kind', 'project_id', 'status', 'band', 'center'].some(key => activeFilter[key]) ||
+    const filtered = ['query', 'kind', 'project_id', 'status', 'band', 'center', 'node_ids'].some(key => activeFilter[key]) ||
       activeFilter.hops && selectedFocusId;
     empty.textContent = t(filtered ? "map.no_matches" : "map.empty");
   };
@@ -546,7 +546,8 @@
     const detail = event.detail || {};
     activeFilter = {query: String(detail.query || ""), kind: String(detail.kind || ""),
       project_id: String(detail.project_id || ""), status: String(detail.status || ""),
-      mode: detail.mode || "work", band: detail.band || "", center: String(detail.center || ""), hops: Number(detail.hops || 0)};
+      mode: detail.mode || "work", band: detail.band || "", center: String(detail.center || ""), hops: Number(detail.hops || 0),
+      ...(Array.isArray(detail.node_ids) ? {node_ids: [...detail.node_ids]} : {})};
     applyFilter();
     const selected = latestGraph?.nodes.find(node => node.id === selectedFocusId);
     if (selected) activity.details(selected);
@@ -591,6 +592,36 @@
       gpu?.stopLayout(); summary.textContent = t("map.worker_unavailable");
     });
   });
+  const readGraph = async arguments_ => {
+    const response = await window.threadDeskWrite('/api/graph/v2', {
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(arguments_)});
+    if (!response.ok) throw Error("view_graph_unavailable");
+    const graph = await response.json();
+    if (!workspace.accept(graph.workspace_id)) throw Error('workspace_conflict');
+    return graph;
+  };
+  const readFilterContext = async (filters, wanted = [], readUnfiltered = false) => {
+    let filteredGraph = null;
+    if (readUnfiltered || ['query', 'kind', 'status', 'project_id', 'band', 'center', 'node_ids'].some(key => filters[key])) {
+      filteredGraph = await readGraph(filters);
+      const includeGraph = graph => {
+        if (graph.next_offset != null || graph.relations_truncated) throw Error("view_graph_limit");
+        wanted = [...new Set([...wanted, ...graph.nodes.map(node => node.id)])];
+        if (wanted.length > 1000) throw Error("view_graph_limit");
+      };
+      includeGraph(filteredGraph);
+      const context = async arguments_ => includeGraph(await readGraph({mode: filters.mode,
+        as_of: filteredGraph.as_of, limit: 1000, ...arguments_}));
+      if (filters.center && ['query', 'kind', 'status', 'project_id', 'band', 'node_ids'].some(key => filters[key])) {
+        await context({center: filters.center, hops: filters.hops || 0});
+      }
+      if (filters.project_id && ['query', 'kind', 'status', 'center', 'band', 'node_ids'].some(key => filters[key])) {
+        await context({project_id: filters.project_id});
+      }
+    }
+    return {filteredGraph, wanted};
+  };
   root.graphController = {
     refresh: canApply => refreshGraph(false, canApply),
     interacting: () => Boolean(drag || nodeDrag || root.dataset.layoutRunning === "true"),
@@ -598,7 +629,7 @@
       x: offsetX + scale * placed.get(id).x, y: offsetY + scale * placed.get(id).y,
     } : null,
     labelMetrics: () => gpu ? gpu.labelMetrics() : null,
-    snapshot: () => ({camera: gpu ? gpu.camera() : {x: (VIEW_W / 2 - offsetX) / scale, y: (VIEW_H / 2 - offsetY) / scale, scale}, filters: {...activeFilter},
+    snapshot: () => ({camera: gpu ? gpu.camera() : {x: (VIEW_W / 2 - offsetX) / scale, y: (VIEW_H / 2 - offsetY) / scale, scale}, filters: {...activeFilter, ...(Array.isArray(activeFilter.node_ids) ? {node_ids: [...activeFilter.node_ids]} : {})},
       positions: gpu ? gpu.snapshotPositions() : Object.fromEntries([...placed].map(([id, point]) => [id, {x: point.x, y: point.y, fixed: fixedIds.has(id)}])),
       selection: [...selectedNodeIds]}),
     restore: async state => {
@@ -606,36 +637,13 @@
       if (!latestGraph) return;
       noteInteraction(); cancelFocus();
       let wanted = [...new Set([...Object.keys(state.positions || {}), ...(state.selection || [])])];
-      const readGraph = async arguments_ => {
-        const response = await window.threadDeskWrite('/api/graph/v2', {
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(arguments_)});
-        if (!response.ok) throw Error("view_graph_unavailable");
-        const graph = await response.json();
-        if (!workspace.accept(graph.workspace_id)) throw Error('workspace_conflict');
-        return graph;
-      };
       const filters = {...state.filters, mode: state.filters?.mode || 'work', limit: 1000, offset: 0};
+      if (Array.isArray(filters.node_ids)) filters.node_ids = [...new Set(filters.node_ids)];
       if (!filters.center && filters.hops && state.selection?.length) filters.center = state.selection[0];
       if (!filters.center) delete filters.center;
-      let filteredGraph = null;
-      if (['query', 'kind', 'status', 'project_id', 'band', 'center'].some(key => filters[key])) {
-        filteredGraph = await readGraph(filters);
-        const includeGraph = graph => {
-          if (graph.next_offset != null || graph.relations_truncated) throw Error("view_graph_limit");
-          wanted = [...new Set([...wanted, ...graph.nodes.map(node => node.id)])];
-          if (wanted.length > 1000) throw Error("view_graph_limit");
-        };
-        includeGraph(filteredGraph);
-        const context = async arguments_ => includeGraph(await readGraph({mode: filters.mode,
-          as_of: filteredGraph.as_of, limit: 1000, ...arguments_}));
-        if (filters.center && ['query', 'kind', 'status', 'project_id', 'band'].some(key => filters[key])) {
-          await context({center: filters.center, hops: filters.hops || 0});
-        }
-        if (filters.project_id && ['query', 'kind', 'status', 'center', 'band'].some(key => filters[key])) {
-          await context({project_id: filters.project_id});
-        }
-      }
+      const hydrated = await readFilterContext(filters, wanted,
+        Array.isArray(activeFilter.node_ids) && !Array.isArray(filters.node_ids));
+      const filteredGraph = hydrated.filteredGraph; wanted = hydrated.wanted;
       if (filteredGraph || wanted.some(id => !latestGraph.nodes.some(node => node.id === id))) {
         if (wanted.length > 1000) throw Error("view_graph_limit");
         const graph = wanted.length ? await readGraph({node_ids: wanted,
@@ -659,7 +667,9 @@
         placed.set(id, {x: point.x, y: point.y});
         if (point.fixed) fixedIds.add(id); else fixedIds.delete(id);
       });
-      activeFilter = {...activeFilter, ...state.filters};
+      delete activeFilter.node_ids;
+      activeFilter = {...activeFilter, ...state.filters,
+        ...(Array.isArray(state.filters?.node_ids) ? {node_ids: [...state.filters.node_ids]} : {})};
       const confirmFilter = () => {
         if (!filteredGraph) return;
         const visible = window.ThreadDeskGraphFilter(latestGraph, activeFilter, activity, selectedFocusId);
@@ -805,14 +815,23 @@
       const address = new URL(root.dataset.graphEndpoint, location.href);
       if (serverPaging) {
         Object.entries(activeFilter).forEach(([key, value]) => {
-          if (key !== "center" || value) address.searchParams.set(key, String(value));
+          if (key !== "node_ids" && (key !== "center" || value)) address.searchParams.set(key, String(value));
         });
         address.searchParams.set("offset", String(pageOffset));
         if (!activeFilter.center && selectedFocusId && activeFilter.hops) address.searchParams.set("center", selectedFocusId);
       }
-      const response = await fetch(address, {headers: {Accept: "application/json"}, cache: "no-store"});
-      if (!response.ok) throw new Error("graph request failed");
-      const graph = await response.json();
+      let response, exactGraph = null;
+      if (serverPaging && Array.isArray(activeFilter.node_ids)) {
+        const arguments_ = {...activeFilter, node_ids: [...new Set(activeFilter.node_ids)], offset: pageOffset};
+        if (!arguments_.center && selectedFocusId && arguments_.hops) arguments_.center = selectedFocusId;
+        if (!arguments_.center) delete arguments_.center;
+        const hydrated = await readFilterContext({...arguments_, limit: 1000});
+        exactGraph = hydrated.wanted.length ? await readGraph({node_ids: hydrated.wanted,
+          mode: arguments_.mode, as_of: hydrated.filteredGraph.as_of, limit: 1000}) : hydrated.filteredGraph;
+        if (exactGraph.nodes.length !== hydrated.wanted.length || exactGraph.relations_truncated) throw Error("view_graph_limit");
+      } else response = await fetch(address, {headers: {Accept: "application/json"}, cache: "no-store"});
+      if (response && !response.ok) throw new Error("graph request failed");
+      const graph = exactGraph || await response.json();
       await pageReady;
       if (ticket !== refreshTicket) return false;
       if (!workspace.accept(graph.workspace_id)) return false;
