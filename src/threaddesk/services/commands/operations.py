@@ -177,7 +177,7 @@ def _reset_view_delivery(root):
             store.connection.close()
 
 
-def _backup(svc, args):
+def _backup(svc, args, *, command_reservation=None):
     import tempfile
     from pathlib import Path
 
@@ -185,7 +185,7 @@ def _backup(svc, args):
     from threaddesk.storage.portable_backup import export_backup
     with tempfile.TemporaryDirectory(prefix='threaddesk-command-backup-') as folder:
         path = Path(folder) / 'backup.zip'
-        summary = export_backup(svc.store, path)
+        summary = export_backup(svc.store, path, command_reservation=command_reservation)
         return {**publish_file(svc.store, path), 'backup': summary}
 
 

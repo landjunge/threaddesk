@@ -1,6 +1,7 @@
 """Streaming portable backups; verified restore into a separate profile."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import stat
@@ -117,8 +118,68 @@ def _inherited_links(tree, inventory, direct_links, max_manifest_bytes):
     return result
 
 
+def _reservation_identity(workspace_id, reservation):
+    from threaddesk.services.commands.validation import ID, command_request_digest
+    if (not isinstance(reservation, dict) or set(reservation) != {'operation_id', 'expected_revision'}
+            or not isinstance(reservation['operation_id'], str) or not ID.fullmatch(reservation['operation_id'])
+            or reservation['expected_revision'] is not None and (
+                type(reservation['expected_revision']) is not int or reservation['expected_revision'] < 0)):
+        raise BackupError('Invalid command backup reservation binding.')
+    operation = reservation['operation_id']
+    key = 'command-' + hashlib.sha256(operation.encode()).hexdigest() + '-pending'
+    digest = command_request_digest(workspace_id, 'backup.create', {}, operation, reservation['expected_revision'])
+    return key, digest
+
+
+def _command_snapshot_boundary(store, reservation, tree, inventory):
+    """Only dispatch's exact current backup export is outside its own snapshot.
+
+    The source receipt remains durable and completes after publication. No
+    other pending operation or previous backup is inferred safe to discard.
+    """
+    if reservation is None:
+        return None, None
+    from threaddesk.services.commands.model import workspace_identity
+    workspace_id = workspace_identity(store)
+    key, digest = _reservation_identity(workspace_id, reservation)
+    def read_record(identity):
+        if isinstance(store, SQLiteStore):
+            row = store.connection.execute('SELECT payload FROM management_operations WHERE id=?', (identity,)).fetchone()
+            if row is None:
+                return None
+            if len(row[0].encode()) > 65536:
+                raise BackupError('Invalid command backup reservation record size.')
+            value = json.loads(row[0])
+        else:
+            name = 'management-operations/' + identity + '.json'
+            expected = inventory.get(name)
+            if expected is None:
+                if name in tree.directories:
+                    raise BackupError('Nonregular command backup reservation record.')
+                return None
+            value = json.loads(tree.read(name, expected, limit=65536))
+        if not isinstance(value, dict):
+            raise BackupError('Invalid command backup reservation record.')
+        return value
+    record = read_record(key)
+    fields = {'request_hash', 'recorded_at', 'state', 'result', 'error', 'kind', 'storage_operation_id'}
+    if (not isinstance(record, dict) or set(record) != fields or record['kind'] != 'command'
+            or record['state'] != 'pending' or record['storage_operation_id'] != key
+            or record['request_hash'] != digest or record['result'] is not None or record['error'] is not None
+            or not isinstance(record['recorded_at'], str) or not record['recorded_at']
+            or any(read_record(key.removesuffix('-pending') + '-' + state) is not None
+                   for state in ('complete', 'failed'))):
+        raise BackupError('Command backup reservation does not match its in-flight export.')
+    boundary = {'command': 'backup.create', **reservation, 'workspace_id': workspace_id,
+                'storage_operation_id': key, 'request_hash': digest,
+                'record_sha256': hashlib.sha256(json.dumps(record, sort_keys=True, separators=(',', ':'),
+                                                         ensure_ascii=False).encode()).hexdigest(),
+                'reason': 'own_in_flight_export', 'source_record_preserved': True}
+    return boundary, record
+
+
 def export_backup(store, target: Path, *, max_bytes=LIMIT, max_files=MAX_FILES,
-                  max_manifest_bytes=MANIFEST_LIMIT) -> dict:
+                  max_manifest_bytes=MANIFEST_LIMIT, command_reservation=None) -> dict:
     """Publish one bounded ZIP64 file, without overwriting a destination.
 
     Existing JSON stores retain their transaction/snapshot boundary. A caller
@@ -136,15 +197,15 @@ def export_backup(store, target: Path, *, max_bytes=LIMIT, max_files=MAX_FILES,
     try:
         if isinstance(store, JsonStore):
             with store.transaction():
-                return _export_backup(store, target, max_bytes, max_files, max_manifest_bytes)
-        return _export_backup(store, target, max_bytes, max_files, max_manifest_bytes)
+                return _export_backup(store, target, max_bytes, max_files, max_manifest_bytes, command_reservation)
+        return _export_backup(store, target, max_bytes, max_files, max_manifest_bytes, command_reservation)
     except BackupError:
         raise
     except (OSError, ValueError, TypeError, InvalidState, zipfile.BadZipFile) as exc:
         raise BackupError('Backup source cannot be read safely.') from exc
 
 
-def _export_backup(store, target, max_bytes, max_files, max_manifest_bytes):
+def _export_backup(store, target, max_bytes, max_files, max_manifest_bytes, command_reservation=None):
     backend = 'sqlite' if isinstance(store, SQLiteStore) else 'json'
     with tempfile.TemporaryDirectory(prefix='threaddesk-backup-') as temp:
         stage = Path(temp)
@@ -159,6 +220,10 @@ def _export_backup(store, target, max_bytes, max_files, max_manifest_bytes):
             return PurePosixPath(name).parts[0] in DATA_DIRS - {'library-files'}
         with _SourceTree(source) as tree:
             inventory, direct_links, directories = scan(tree, allowed, descend, max_entries=max_files)
+            boundary, pending_record = _command_snapshot_boundary(store, command_reservation, tree, inventory)
+            omitted = 'management-operations/' + boundary['storage_operation_id'] + '.json' if boundary else None
+            if boundary and backend == 'json' and omitted not in inventory:
+                raise BackupError('Command backup reservation file is missing from its source inventory.')
             inherited = _inherited_links(tree, inventory, direct_links, max_manifest_bytes)
             symlinks = {**inherited, **{name: {'target': row['target']} for name, row in direct_links.items()}}
             if len(inventory) + len(symlinks) + len(directories) + 1 > max_files:
@@ -175,10 +240,27 @@ def _export_backup(store, target, max_bytes, max_files, max_manifest_bytes):
                     connection = sqlite3.connect(sqlite_snapshot)
                     try:
                         store.connection.backup(connection)
+                        if boundary:
+                            key = boundary['storage_operation_id']
+                            row = connection.execute('SELECT payload FROM management_operations WHERE id=?', (key,)).fetchone()
+                            if row is None or json.loads(row[0]) != pending_record:
+                                raise BackupError('Command backup reservation changed in the private snapshot.')
+                            with connection:
+                                changes = connection.total_changes
+                                removed = connection.execute('DELETE FROM management_operations WHERE id=? AND payload=?', (key, row[0]))
+                                if removed.rowcount != 1 or connection.total_changes - changes != 1:
+                                    raise BackupError('Command backup snapshot reservation could not be isolated.')
                     finally:
                         connection.close()
+            omitted_digest = None
             with zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_DEFLATED, allowZip64=True) as archive:
                 for name, expected in inventory.items():
+                    if backend == 'json' and name == omitted:
+                        raw = tree.read(name, expected, limit=65536)
+                        if json.loads(raw) != pending_record:
+                            raise BackupError('Command backup reservation changed during capture.')
+                        omitted_digest = {'size': len(raw), 'sha256': hashlib.sha256(raw).hexdigest()}
+                        continue
                     if name in POINT_IN_TIME_FILES:
                         expected = tree.info(name)
                     with archive.open('workspace/' + name, 'w', force_zip64=True) as output:
@@ -223,7 +305,8 @@ def _export_backup(store, target, max_bytes, max_files, max_manifest_bytes):
                     if name == 'threaddesk.sqlite3' and backend == 'sqlite':
                         continue
                     with tree.open(name, expected) as incoming:
-                        if copy_hash(incoming, limit=max_bytes) != files[name]:
+                        expected_hash = omitted_digest if backend == 'json' and name == omitted else files[name]
+                        if copy_hash(incoming, limit=max_bytes) != expected_hash:
                             raise BackupError('Workspace changed during backup. Please try again.')
                 if backend == 'sqlite' and (store.connection.execute('PRAGMA data_version').fetchone()[0] != version_before
                                            or store.connection.total_changes != changes_before):
@@ -239,6 +322,8 @@ def _export_backup(store, target, max_bytes, max_files, max_manifest_bytes):
                             'backend': backend, 'files': files, 'symlinks': symlinks,
                             'directories': sorted(directories),
                             'consistency': {name: 'point_in_time' for name in POINT_IN_TIME_FILES if name in files}}
+                if boundary:
+                    manifest['snapshot_boundary'] = boundary
                 manifest_body = json.dumps(manifest, sort_keys=True).encode('utf-8')
                 if len(manifest_body) > max_manifest_bytes or total + len(manifest_body) > max_bytes:
                     raise BackupError('Backup manifest or data exceeds the size limit.')
@@ -303,6 +388,24 @@ def _checked_manifest(archive, *, max_bytes=LIMIT, max_files=MAX_FILES,
     if (manifest.get('kind') != 'threaddesk.portable-backup' or type(manifest.get('version')) is not int
             or manifest['version'] not in {1, 2, 3} or backend not in {'json', 'sqlite'} or not isinstance(files, dict)):
         raise BackupError('Unknown backup format.')
+    if 'snapshot_boundary' in manifest:
+        boundary = manifest['snapshot_boundary']
+        fields = {'command', 'operation_id', 'expected_revision', 'workspace_id', 'storage_operation_id',
+                  'request_hash', 'record_sha256', 'reason', 'source_record_preserved'}
+        if (manifest['version'] != 3 or not isinstance(boundary, dict) or set(boundary) != fields
+                or boundary['command'] != 'backup.create' or boundary['reason'] != 'own_in_flight_export'
+                or boundary['source_record_preserved'] is not True
+                or not isinstance(boundary['workspace_id'], str) or not boundary['workspace_id'].startswith('ws-')
+                or len(boundary['workspace_id']) != 35
+                or any(c not in '0123456789abcdef' for c in boundary['workspace_id'][3:])
+                or not isinstance(boundary['record_sha256'], str) or len(boundary['record_sha256']) != 64
+                or any(c not in '0123456789abcdef' for c in boundary['record_sha256'])):
+            raise BackupError('Invalid command backup snapshot boundary.')
+        key, digest = _reservation_identity(boundary['workspace_id'],
+            {name: boundary[name] for name in ('operation_id', 'expected_revision')})
+        if (boundary['storage_operation_id'] != key or boundary['request_hash'] != digest
+                or backend == 'json' and 'management-operations/' + key + '.json' in files):
+            raise BackupError('Command backup snapshot boundary does not match its archive.')
     symlinks = checked_links(manifest.get('symlinks', {}))
     directories = manifest.get('directories', [])
     if (not isinstance(directories, list) or any(not isinstance(name, str) for name in directories)
@@ -359,7 +462,8 @@ def _summary(manifest, digest, max_bytes, max_files, max_manifest_bytes):
             'point_in_time_files': sorted(manifest.get('consistency', {})),
             'limits': {'bytes': max_bytes, 'files': max_files, 'manifest_bytes': max_manifest_bytes},
             'restore_behavior': 'new_separate_profile; symlinks remain inert metadata',
-            'verification_scope': 'archive_paths_sizes_and_checksums; restore validates workspace models separately'}
+            'verification_scope': 'archive_paths_sizes_and_checksums; restore validates workspace models separately',
+            **({'snapshot_boundary': dict(manifest['snapshot_boundary'])} if 'snapshot_boundary' in manifest else {})}
 
 
 def inspect_backup(source, *, max_bytes=LIMIT, max_files=MAX_FILES,

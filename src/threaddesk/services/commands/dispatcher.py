@@ -141,7 +141,11 @@ class CommandApplication:
                 self._check_revision(spec, args, req)
                 self._save(key, digest, "pending")
             try:
-                result = self._execute(spec, args)
+                if spec.id == "backup.create":
+                    result = self._execute(spec, args, backup_reservation={
+                        "operation_id": req["operation_id"], "expected_revision": req.get("expected_revision")})
+                else:
+                    result = self._execute(spec, args)
             except Exception as exc:
                 from threaddesk.services.commands.errors import normalized
                 translated = normalized(exc)
@@ -158,9 +162,11 @@ class CommandApplication:
             response["projections"] = {"index": {key: projection[key] for key in ("status", "error") if key in projection}}
         return response
 
-    def _execute(self, spec, args):
+    def _execute(self, spec, args, *, backup_reservation=None):
         if spec.id == "command.reconcile":
             return self.reconcile(args["request"])
+        if spec.id == "backup.create":
+            return spec.handler(self.service, args, command_reservation=backup_reservation)
         return spec.handler(self.service, args)
 
     def _digest(self, req, spec, args):
