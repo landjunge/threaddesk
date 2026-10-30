@@ -19,6 +19,7 @@ NODE_KINDS = (
     "tool",
     "source",
     "workflow",
+    "whiteboard",
 )
 NODE_STATUSES = (
     "idea",

@@ -1,0 +1,189 @@
+{
+  "observed_date": "2026-10-30",
+  "direct_connected_counterpart": true,
+  "version": "0.8.0rc19",
+  "instance_id": "43066eca506a4da899072a9ae7851360",
+  "principal": "chatgpt",
+  "discovery_revision": "d613e4b8ff09855c0893100d499c216f44dc850e8b4f78a225d4e5815f10d9cf",
+  "mode": "authorized_tools",
+  "enabled": true,
+  "tool_count": 34,
+  "tools": [
+    {
+      "name": "library_receive_status",
+      "readOnly": true
+    },
+    {
+      "name": "library_search",
+      "readOnly": true
+    },
+    {
+      "name": "library_file_info",
+      "readOnly": true
+    },
+    {
+      "name": "library_receive",
+      "readOnly": false
+    },
+    {
+      "name": "knowledge_manage",
+      "readOnly": false
+    },
+    {
+      "name": "get_reentry",
+      "readOnly": true
+    },
+    {
+      "name": "record_handoff_question",
+      "readOnly": false
+    },
+    {
+      "name": "answer_handoff_question",
+      "readOnly": false
+    },
+    {
+      "name": "issue_handoff",
+      "readOnly": false
+    },
+    {
+      "name": "get_issued_handoff",
+      "readOnly": true
+    },
+    {
+      "name": "bind_handoff_run",
+      "readOnly": false
+    },
+    {
+      "name": "thread_operation_status",
+      "readOnly": true
+    },
+    {
+      "name": "thread_manage",
+      "readOnly": false
+    },
+    {
+      "name": "list_threads",
+      "readOnly": true
+    },
+    {
+      "name": "get_thread",
+      "readOnly": true
+    },
+    {
+      "name": "current_thread",
+      "readOnly": true
+    },
+    {
+      "name": "switch_thread",
+      "readOnly": false
+    },
+    {
+      "name": "add_note",
+      "readOnly": false
+    },
+    {
+      "name": "save_snapshot",
+      "readOnly": false
+    },
+    {
+      "name": "list_snapshots",
+      "readOnly": true
+    },
+    {
+      "name": "restore_snapshot",
+      "readOnly": false
+    },
+    {
+      "name": "generate_prompt",
+      "readOnly": false
+    },
+    {
+      "name": "export_handoff",
+      "readOnly": false
+    },
+    {
+      "name": "import_return",
+      "readOnly": false
+    },
+    {
+      "name": "get_return",
+      "readOnly": false
+    },
+    {
+      "name": "list_returns",
+      "readOnly": false
+    },
+    {
+      "name": "review_return",
+      "readOnly": false
+    },
+    {
+      "name": "export_grok",
+      "readOnly": false
+    },
+    {
+      "name": "export_gnom",
+      "readOnly": false
+    },
+    {
+      "name": "bind_gnom_job",
+      "readOnly": false
+    },
+    {
+      "name": "receive_gnom_callback",
+      "readOnly": false
+    },
+    {
+      "name": "list_gnom_jobs",
+      "readOnly": true
+    },
+    {
+      "name": "check_gate",
+      "readOnly": true
+    },
+    {
+      "name": "dashboard",
+      "readOnly": false
+    }
+  ],
+  "dynamic_operation": {
+    "capability": "threaddesk.manage",
+    "effect": "write",
+    "execution_class": "normal",
+    "execution_budget_seconds": null,
+    "arguments": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "arguments": {
+          "additionalProperties": true,
+          "title": "Arguments",
+          "type": "object"
+        },
+        "contract_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Contract Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "contract_sha256"
+      ],
+      "title": "ThreadDeskDynamicInput",
+      "type": "object"
+    },
+    "approval_required": false,
+    "permission_decision": {
+      "principal": "chatgpt",
+      "authorized": true,
+      "approval_required": false
+    }
+  },
+  "configured_threaddesk_pin": "770bbc9",
+  "integration_result": "Connected counterpart still consumes its pre-existing ThreadDesk snapshot. No KiraBridge configuration/code/app/terminal change was made; new endpoint not attested through this counterpart."
+}

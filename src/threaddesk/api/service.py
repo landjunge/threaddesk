@@ -85,6 +85,8 @@ class ThreadService:
         visibility = visibility.strip().lower()
         metadata = dict(metadata or {})
         reject_secrets(json.dumps(metadata, ensure_ascii=False))
+        if kind == "whiteboard":
+            raise InvalidState("Whiteboards über whiteboard.create anlegen; Graphknoten sind abgeleitete Ansichten.")
         if kind not in NODE_KINDS:
             raise InvalidState(f"Knotentyp muss einer von {', '.join(NODE_KINDS)} sein.")
         if status not in NODE_STATUSES:
@@ -117,7 +119,13 @@ class ThreadService:
         return node
 
     def get_node(self, node_id: str) -> KnowledgeNode:
-        return self.knowledge.get_node(node_id)
+        try:
+            return self.knowledge.get_node(node_id)
+        except NotFound:
+            if not node_id.startswith("wb-"):
+                raise
+        from threaddesk.services.whiteboard_lifecycle import WhiteboardService
+        return WhiteboardService(self).graph_node(node_id)
 
     def list_nodes(self) -> list[KnowledgeNode]:
         return self.knowledge.list_nodes()
@@ -126,7 +134,11 @@ class ThreadService:
         return self.knowledge.list_events()
 
     def allowed_node_transitions(self, node_id: str) -> tuple[str, ...]:
-        node = self.store.get_node(node_id)
+        try:
+            node = self.store.get_node(node_id)
+        except NotFound:
+            self.get_node(node_id)
+            return ()
         return NODE_TRANSITIONS.get(node.kind, {}).get(node.status, ())
 
     def _record_graph_event(
@@ -258,7 +270,13 @@ class ThreadService:
         return self.knowledge.list_relations()
 
     def relations_for(self, node_id: str) -> list[Relation]:
-        self.store.get_node(node_id)
+        try:
+            self.store.get_node(node_id)
+        except NotFound:
+            self.get_node(node_id)
+            graph = self.graph()
+            return [Relation.from_dict(row) for row in graph["relations"]
+                    if node_id in (row["source_id"], row["target_id"])]
         return [
             relation
             for relation in self.store.list_relations()
@@ -278,6 +296,10 @@ class ThreadService:
             for node in self.store.list_nodes()
             if (not kind or node.kind == kind) and (not status or node.status == status)
         ]
+        from threaddesk.services.whiteboard_lifecycle import WhiteboardService
+        boards = WhiteboardService(self)
+        nodes.extend(node for node in boards.graph_nodes()
+                     if (not kind or node.kind == kind) and (not status or node.status == status))
         from threaddesk.services.library_links import visible_library_nodes, library_relations
         nodes = visible_library_nodes(self.store, nodes)
         node_ids = {node.id for node in nodes}
@@ -287,6 +309,7 @@ class ThreadService:
             if relation.source_id in node_ids and relation.target_id in node_ids
         ]
         relations.extend(library_relations(self.store, nodes))
+        relations.extend(boards.graph_relations(nodes))
         return {
             "schema": "threaddesk.graph.v1",
             "nodes": [node.to_dict() for node in nodes],

@@ -230,6 +230,9 @@ def _ctx(request: Request, extra: dict | None = None) -> dict:
             pass
     snapshots = svc.snapshots(current.id) if current else []
     entries = svc.whiteboard(current.id) if current else []
+    from threaddesk.services.whiteboard_lifecycle import WhiteboardService, effective_entries
+    board = WhiteboardService(svc).get(current.id) if current else None
+    displayed_entries = effective_entries(entries)
     extra = extra or {}
     lang = _language(request)
     data = {
@@ -247,7 +250,8 @@ def _ctx(request: Request, extra: dict | None = None) -> dict:
         "prompt_preview": None,
         "error": None,
         "notice": None,
-        "whiteboard": entries,
+        "whiteboard": displayed_entries,
+        "whiteboard_state": board,
         "return_review_states": _return_review_states(svc, current, entries),
         "stand": svc.working_stand(current.id) if current else None,
         "whiteboard_types": ENTRY_TYPES,
@@ -370,6 +374,11 @@ def create_app() -> FastAPI:
 
     install_sync_routes(app, lambda: _svc(), sync_page)
     install_thread_mutations(app, lambda: _svc(), workspace, _language)
+    from threaddesk.ui.whiteboard_router import install as install_whiteboards
+    from threaddesk.services.whiteboard_lifecycle import WhiteboardService
+    install_whiteboards(app, _svc, workspace, _language,
+        lambda request: templates.TemplateResponse(request, "whiteboards.html",
+            _ctx(request, {"boards": WhiteboardService(_svc()).list(include_archived=True)})))
 
     @app.exception_handler(ThreadDeskError)
     async def _on_error(request: Request, exc: ThreadDeskError) -> Response:
@@ -778,7 +787,7 @@ def create_app() -> FastAPI:
                 "transitions_by_node": {
                     node.id: svc.allowed_node_transitions(node.id) for node in nodes
                 },
-                "node_kinds": NODE_KINDS,
+                "node_kinds": tuple(kind for kind in NODE_KINDS if kind != "whiteboard"),
                 "node_statuses": NODE_STATUSES,
                 "relation_kinds": RELATION_KINDS,
                 "active_kind": graph_data["filters"]["kind"],

@@ -1,6 +1,19 @@
 <div class="whiteboard" data-whiteboard>
   <h3 id="capture-title">{{ t("ui.capture") }}</h3>
   <p class="muted">{{ t("ui.capture_hint") }}</p>
+  <div class="inline-form" data-whiteboard-controls>
+    <span data-whiteboard-state="{{ whiteboard_state.status }}">{{ t('board.state.' ~ whiteboard_state.status) }}</span>
+    <a href="/whiteboards" class="btn btn-ghost btn-compact">{{ t('board.boards') }}</a>
+    {% if whiteboard_state.status != 'archived' %}
+    <form method="post" action="/threads/{{ current.id }}/whiteboard/{{ 'open' if whiteboard_state.state == 'closed' else 'close' }}">
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
+      <input type="hidden" name="operation_id" value="{{ mutation_id() }}" />
+      <input type="hidden" name="expected_revision" value="{{ current.revision }}" />
+      <button type="submit" class="btn btn-ghost btn-compact">{{ t('board.open') if whiteboard_state.state == 'closed' else t('board.close') }}</button>
+    </form>
+    {% endif %}
+  </div>
+  {% if whiteboard_state.status == 'open' %}
   <form
     class="whiteboard-form"
     hx-post="/threads/{{ current.id }}/whiteboard"
@@ -56,6 +69,7 @@
       <button type="submit" class="btn btn-primary" data-whiteboard-submit>{{ t("whiteboard.append") }}</button>
     </div>
   </form>
+  {% endif %}
   <div class="activity-heading">{{ t("ui.activity") }}</div>
   {% if whiteboard %}
   <ol class="whiteboard-log" tabindex="0" aria-label="{{ t('whiteboard.title') }}" data-whiteboard-log>
@@ -82,6 +96,21 @@
       <p class="return-review" data-return-review="unknown">{{ t('return.outcome_unknown') }}</p>
       {% endif %}
       <p class="whiteboard-body">{{ entry.content }}</p>
+      {% if entry.metadata.get('whiteboard_edited') %}
+      <details data-whiteboard-correction><summary>{{ t('board.corrected') }}</summary><p>{{ entry.metadata.whiteboard_edited.original_content }}</p></details>
+      {% endif %}
+      {% if whiteboard_state.status == 'open' %}
+      <details data-whiteboard-edit><summary>{{ t('board.edit') }}</summary>
+        <form method="post" action="/threads/{{ current.id }}/whiteboard/edit" hx-post="/threads/{{ current.id }}/whiteboard/edit" hx-target="#workspace" hx-swap="innerHTML" class="stack">
+          <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
+          <input type="hidden" name="operation_id" value="{{ mutation_id() }}" />
+          <input type="hidden" name="expected_revision" value="{{ current.revision }}" />
+          <input type="hidden" name="entry_id" value="{{ entry.id }}" />
+          <textarea name="content" rows="2" required maxlength="8000" aria-label="{{ t('board.edit') }}">{{ entry.content }}</textarea>
+          <button type="submit" class="btn btn-ghost btn-compact">{{ t('detail.save') }}</button>
+        </form>
+      </details>
+      {% endif %}
     </li>
     {% endfor %}
   </ol>

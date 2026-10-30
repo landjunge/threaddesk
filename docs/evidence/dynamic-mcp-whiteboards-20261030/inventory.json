@@ -1,0 +1,4246 @@
+{
+  "base_commit": "d7e30c14239bf3956c6ac85f1249cc70391fb3e1",
+  "before": {
+    "commands": 127,
+    "json_availability": {
+      "available": 119,
+      "unsupported_backend": 3,
+      "local_owner_cli_required": 5
+    }
+  },
+  "backends": {
+    "json": {
+      "commands": 141,
+      "availability": {
+        "available": 133,
+        "unsupported_backend": 3,
+        "local_owner_cli_required": 5
+      },
+      "mcp_tools": 172,
+      "mcp_discovery_bytes": 308312,
+      "entries": [
+        {
+          "id": "activity.files",
+          "module": "activity",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "activity.reconcile",
+          "module": "activity",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "actors.agent",
+          "module": "actors",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "actors.appearance",
+          "module": "actors",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "actors.human",
+          "module": "actors",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "actors.list",
+          "module": "actors",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "actors.recolor",
+          "module": "actors",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "actors.rename",
+          "module": "actors",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "add_note",
+          "module": "threads",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "answer_handoff_question",
+          "module": "handoffs",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "authority.import",
+          "module": "authority",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "backup.create",
+          "module": "backup",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "backup.restore",
+          "module": "backup",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "backup.verify",
+          "module": "backup",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "bind_gnom_job",
+          "module": "handoffs",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "bind_handoff_run",
+          "module": "handoffs",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "check_gate",
+          "module": "gate",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "command.catalog",
+          "module": "context",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "command.operation",
+          "module": "context",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "command.reconcile",
+          "module": "context",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "current_thread",
+          "module": "threads",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "dashboard",
+          "module": "threads",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "export.preview",
+          "module": "export",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "export.write",
+          "module": "export",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "export_gnom",
+          "module": "handoffs",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "export_grok",
+          "module": "handoffs",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "export_handoff",
+          "module": "handoffs",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "gate.freeze",
+          "module": "gate",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "gate.set",
+          "module": "gate",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "gate.status",
+          "module": "gate",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "generate_prompt",
+          "module": "threads",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "get_issued_handoff",
+          "module": "handoffs",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "get_reentry",
+          "module": "threads",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "get_return",
+          "module": "returns",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "get_thread",
+          "module": "threads",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph.change_status",
+          "module": "graph",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph.events",
+          "module": "graph",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph.node",
+          "module": "graph",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph.node.create",
+          "module": "graph",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "create"
+        },
+        {
+          "id": "graph.node.transition",
+          "module": "graph",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "node:id"
+        },
+        {
+          "id": "graph.node.transitions",
+          "module": "graph",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph.query",
+          "module": "graph",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph.relation.create",
+          "module": "graph",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "node:source_id"
+        },
+        {
+          "id": "graph.relations",
+          "module": "graph",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph_view.apply",
+          "module": "graph_view",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "graph_view.apply_status",
+          "module": "graph_view",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph_view.clients",
+          "module": "graph_view",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph_view.get",
+          "module": "graph_view",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph_view.list",
+          "module": "graph_view",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph_view.manage",
+          "module": "graph_view",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "graph_view.operation",
+          "module": "graph_view",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "hausmeister.enable",
+          "module": "hausmeister",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "hausmeister.enqueue",
+          "module": "hausmeister",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "thread_id"
+        },
+        {
+          "id": "hausmeister.jobs",
+          "module": "hausmeister",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "hausmeister.model",
+          "module": "hausmeister",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "hausmeister.probe",
+          "module": "hausmeister",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "hausmeister.run",
+          "module": "hausmeister",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "thread_id"
+        },
+        {
+          "id": "hausmeister.status",
+          "module": "hausmeister",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "import_return",
+          "module": "returns",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "issue_handoff",
+          "module": "handoffs",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "knowledge_manage",
+          "module": "knowledge",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "library.folder_import",
+          "module": "library",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "library.journal_resume",
+          "module": "library",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "library.journal_status",
+          "module": "library",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "library.package_import",
+          "module": "library",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "library.resume",
+          "module": "library",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "library.selected_import",
+          "module": "library",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "library_file_info",
+          "module": "library",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "library_manage",
+          "module": "library",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "library_query",
+          "module": "library",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "library_receive",
+          "module": "library",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "library_receive_status",
+          "module": "library",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "library_search",
+          "module": "library",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "list_gnom_jobs",
+          "module": "handoffs",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "list_returns",
+          "module": "returns",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "list_snapshots",
+          "module": "snapshots",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "list_threads",
+          "module": "threads",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "migration.commit",
+          "module": "migration",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "unsupported_backend",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "migration.preview",
+          "module": "migration",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "migration.recover",
+          "module": "migration",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "unsupported_backend",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "migration.stage",
+          "module": "migration",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "unsupported_backend",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "modules.enable",
+          "module": "modules",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "modules.install",
+          "module": "modules",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "modules.list",
+          "module": "modules",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "modules.uninstall",
+          "module": "modules",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "modules.update",
+          "module": "modules",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "profiles.activate",
+          "module": "profiles",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "profiles.list",
+          "module": "profiles",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "profiles.original",
+          "module": "profiles",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "prompt.preview",
+          "module": "context",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "prompts.list",
+          "module": "prompts",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "receive_gnom_callback",
+          "module": "handoffs",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "record_handoff_question",
+          "module": "handoffs",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "restore_snapshot",
+          "module": "snapshots",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "snapshot"
+        },
+        {
+          "id": "review_return",
+          "module": "returns",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "room.create",
+          "module": "room",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "room.invite",
+          "module": "room",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "room.join",
+          "module": "room",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "room.select",
+          "module": "room",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "room.status",
+          "module": "room",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "room.sync",
+          "module": "room",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "save_snapshot",
+          "module": "snapshots",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "search.configure",
+          "module": "local_search",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "local_owner_cli_required",
+          "allowed_transports": [
+            "local",
+            "cli"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "search.query",
+          "module": "local_search",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "local_owner_cli_required",
+          "allowed_transports": [
+            "local",
+            "cli"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "search.rebuild",
+          "module": "local_search",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "local_owner_cli_required",
+          "allowed_transports": [
+            "local",
+            "cli"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "search.status",
+          "module": "local_search",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "local_owner_cli_required",
+          "allowed_transports": [
+            "local",
+            "cli"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "server_sync.configure",
+          "module": "server_sync",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "thread_id"
+        },
+        {
+          "id": "server_sync.lifecycle_sync",
+          "module": "server_sync",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "thread_in_trash:thread_id"
+        },
+        {
+          "id": "server_sync.offline",
+          "module": "server_sync",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "thread_id"
+        },
+        {
+          "id": "server_sync.owner_reference",
+          "module": "server_sync",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "local_owner_cli_required",
+          "allowed_transports": [
+            "local",
+            "cli"
+          ],
+          "operation_id_required": true,
+          "revision_target": "thread_id"
+        },
+        {
+          "id": "server_sync.resolve",
+          "module": "server_sync",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "thread_in_trash:thread_id"
+        },
+        {
+          "id": "server_sync.run",
+          "module": "server_sync",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "thread_id"
+        },
+        {
+          "id": "server_sync.status",
+          "module": "server_sync",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "switch_thread",
+          "module": "threads",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "thread_manage",
+          "module": "threads",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "thread_operation_status",
+          "module": "threads",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "trash.get",
+          "module": "trash",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "trash.list",
+          "module": "trash",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "trash.move",
+          "module": "trash",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "trash.operation",
+          "module": "trash",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "trash.preview",
+          "module": "trash",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "trash.purge",
+          "module": "trash",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "trash.purge_preview",
+          "module": "trash",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "trash.resolve_sync_conflict",
+          "module": "trash",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "trash.restore",
+          "module": "trash",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "trash.sync_conflicts",
+          "module": "trash",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "whiteboard.append",
+          "module": "context",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "whiteboard.archive",
+          "module": "whiteboard",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "whiteboard.boards",
+          "module": "whiteboard",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "whiteboard.close",
+          "module": "whiteboard",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "whiteboard.create",
+          "module": "whiteboard",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "create"
+        },
+        {
+          "id": "whiteboard.delete",
+          "module": "whiteboard",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "whiteboard.delete_preview",
+          "module": "whiteboard",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "whiteboard.edit",
+          "module": "whiteboard",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "whiteboard.get",
+          "module": "whiteboard",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "whiteboard.list",
+          "module": "context",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "whiteboard.open",
+          "module": "whiteboard",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "whiteboard.rename",
+          "module": "whiteboard",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "whiteboard.restore",
+          "module": "whiteboard",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "whiteboard.stand",
+          "module": "context",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "whiteboard.unarchive",
+          "module": "whiteboard",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        }
+      ]
+    },
+    "sqlite": {
+      "commands": 141,
+      "availability": {
+        "available": 136,
+        "local_owner_cli_required": 5
+      },
+      "mcp_tools": 175,
+      "mcp_discovery_bytes": 313738,
+      "entries": [
+        {
+          "id": "activity.files",
+          "module": "activity",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "activity.reconcile",
+          "module": "activity",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "actors.agent",
+          "module": "actors",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "actors.appearance",
+          "module": "actors",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "actors.human",
+          "module": "actors",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "actors.list",
+          "module": "actors",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "actors.recolor",
+          "module": "actors",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "actors.rename",
+          "module": "actors",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "add_note",
+          "module": "threads",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "answer_handoff_question",
+          "module": "handoffs",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "authority.import",
+          "module": "authority",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "backup.create",
+          "module": "backup",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "backup.restore",
+          "module": "backup",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "backup.verify",
+          "module": "backup",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "bind_gnom_job",
+          "module": "handoffs",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "bind_handoff_run",
+          "module": "handoffs",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "check_gate",
+          "module": "gate",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "command.catalog",
+          "module": "context",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "command.operation",
+          "module": "context",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "command.reconcile",
+          "module": "context",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "current_thread",
+          "module": "threads",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "dashboard",
+          "module": "threads",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "export.preview",
+          "module": "export",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "export.write",
+          "module": "export",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "export_gnom",
+          "module": "handoffs",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "export_grok",
+          "module": "handoffs",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "export_handoff",
+          "module": "handoffs",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "gate.freeze",
+          "module": "gate",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "gate.set",
+          "module": "gate",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "gate.status",
+          "module": "gate",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "generate_prompt",
+          "module": "threads",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "get_issued_handoff",
+          "module": "handoffs",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "get_reentry",
+          "module": "threads",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "get_return",
+          "module": "returns",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "get_thread",
+          "module": "threads",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph.change_status",
+          "module": "graph",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph.events",
+          "module": "graph",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph.node",
+          "module": "graph",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph.node.create",
+          "module": "graph",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "create"
+        },
+        {
+          "id": "graph.node.transition",
+          "module": "graph",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "node:id"
+        },
+        {
+          "id": "graph.node.transitions",
+          "module": "graph",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph.query",
+          "module": "graph",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph.relation.create",
+          "module": "graph",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "node:source_id"
+        },
+        {
+          "id": "graph.relations",
+          "module": "graph",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph_view.apply",
+          "module": "graph_view",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "graph_view.apply_status",
+          "module": "graph_view",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph_view.clients",
+          "module": "graph_view",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph_view.get",
+          "module": "graph_view",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph_view.list",
+          "module": "graph_view",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "graph_view.manage",
+          "module": "graph_view",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "graph_view.operation",
+          "module": "graph_view",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "hausmeister.enable",
+          "module": "hausmeister",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "hausmeister.enqueue",
+          "module": "hausmeister",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "thread_id"
+        },
+        {
+          "id": "hausmeister.jobs",
+          "module": "hausmeister",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "hausmeister.model",
+          "module": "hausmeister",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "hausmeister.probe",
+          "module": "hausmeister",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "hausmeister.run",
+          "module": "hausmeister",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "thread_id"
+        },
+        {
+          "id": "hausmeister.status",
+          "module": "hausmeister",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "import_return",
+          "module": "returns",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "issue_handoff",
+          "module": "handoffs",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "knowledge_manage",
+          "module": "knowledge",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "library.folder_import",
+          "module": "library",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "library.journal_resume",
+          "module": "library",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "library.journal_status",
+          "module": "library",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "library.package_import",
+          "module": "library",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "library.resume",
+          "module": "library",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "library.selected_import",
+          "module": "library",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "library_file_info",
+          "module": "library",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "library_manage",
+          "module": "library",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "library_query",
+          "module": "library",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "library_receive",
+          "module": "library",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "library_receive_status",
+          "module": "library",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "library_search",
+          "module": "library",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "list_gnom_jobs",
+          "module": "handoffs",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "list_returns",
+          "module": "returns",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "list_snapshots",
+          "module": "snapshots",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "list_threads",
+          "module": "threads",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "migration.commit",
+          "module": "migration",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "migration.preview",
+          "module": "migration",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "migration.recover",
+          "module": "migration",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "migration.stage",
+          "module": "migration",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "modules.enable",
+          "module": "modules",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "modules.install",
+          "module": "modules",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "modules.list",
+          "module": "modules",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "modules.uninstall",
+          "module": "modules",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "modules.update",
+          "module": "modules",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "profiles.activate",
+          "module": "profiles",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "profiles.list",
+          "module": "profiles",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "profiles.original",
+          "module": "profiles",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "prompt.preview",
+          "module": "context",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "prompts.list",
+          "module": "prompts",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "receive_gnom_callback",
+          "module": "handoffs",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "record_handoff_question",
+          "module": "handoffs",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "restore_snapshot",
+          "module": "snapshots",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "snapshot"
+        },
+        {
+          "id": "review_return",
+          "module": "returns",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "room.create",
+          "module": "room",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "room.invite",
+          "module": "room",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "room.join",
+          "module": "room",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "room.select",
+          "module": "room",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "room.status",
+          "module": "room",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "room.sync",
+          "module": "room",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "save_snapshot",
+          "module": "snapshots",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "search.configure",
+          "module": "local_search",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "local_owner_cli_required",
+          "allowed_transports": [
+            "local",
+            "cli"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "search.query",
+          "module": "local_search",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "local_owner_cli_required",
+          "allowed_transports": [
+            "local",
+            "cli"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "search.rebuild",
+          "module": "local_search",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "local_owner_cli_required",
+          "allowed_transports": [
+            "local",
+            "cli"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "search.status",
+          "module": "local_search",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "local_owner_cli_required",
+          "allowed_transports": [
+            "local",
+            "cli"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "server_sync.configure",
+          "module": "server_sync",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "thread_id"
+        },
+        {
+          "id": "server_sync.lifecycle_sync",
+          "module": "server_sync",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "thread_in_trash:thread_id"
+        },
+        {
+          "id": "server_sync.offline",
+          "module": "server_sync",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "thread_id"
+        },
+        {
+          "id": "server_sync.owner_reference",
+          "module": "server_sync",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "local_owner_cli_required",
+          "allowed_transports": [
+            "local",
+            "cli"
+          ],
+          "operation_id_required": true,
+          "revision_target": "thread_id"
+        },
+        {
+          "id": "server_sync.resolve",
+          "module": "server_sync",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "thread_in_trash:thread_id"
+        },
+        {
+          "id": "server_sync.run",
+          "module": "server_sync",
+          "effect": "external",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "thread_id"
+        },
+        {
+          "id": "server_sync.status",
+          "module": "server_sync",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "switch_thread",
+          "module": "threads",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "thread_manage",
+          "module": "threads",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "thread_operation_status",
+          "module": "threads",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "trash.get",
+          "module": "trash",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "trash.list",
+          "module": "trash",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "trash.move",
+          "module": "trash",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "trash.operation",
+          "module": "trash",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "trash.preview",
+          "module": "trash",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "trash.purge",
+          "module": "trash",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "trash.purge_preview",
+          "module": "trash",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "trash.resolve_sync_conflict",
+          "module": "trash",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "trash.restore",
+          "module": "trash",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "trash.sync_conflicts",
+          "module": "trash",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "whiteboard.append",
+          "module": "context",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "whiteboard.archive",
+          "module": "whiteboard",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "whiteboard.boards",
+          "module": "whiteboard",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "whiteboard.close",
+          "module": "whiteboard",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "whiteboard.create",
+          "module": "whiteboard",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "create"
+        },
+        {
+          "id": "whiteboard.delete",
+          "module": "whiteboard",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "whiteboard.delete_preview",
+          "module": "whiteboard",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "whiteboard.edit",
+          "module": "whiteboard",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "whiteboard.get",
+          "module": "whiteboard",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "whiteboard.list",
+          "module": "context",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "whiteboard.open",
+          "module": "whiteboard",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "whiteboard.rename",
+          "module": "whiteboard",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        },
+        {
+          "id": "whiteboard.restore",
+          "module": "whiteboard",
+          "effect": "domain",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": null
+        },
+        {
+          "id": "whiteboard.stand",
+          "module": "context",
+          "effect": "read",
+          "scope": "workspace.read",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": false,
+          "revision_target": null
+        },
+        {
+          "id": "whiteboard.unarchive",
+          "module": "whiteboard",
+          "effect": "data",
+          "scope": "workspace.write",
+          "availability": "available",
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ],
+          "operation_id_required": true,
+          "revision_target": "id"
+        }
+      ]
+    }
+  }
+}

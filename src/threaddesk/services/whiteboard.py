@@ -58,7 +58,13 @@ def list_entries(store: Any, thread_id: str) -> list[WhiteboardEntry]:
     return store.list_whiteboard(thread_id)
 
 
-def append(
+def append(store, thread_id, **fields):
+    from threaddesk.services.whiteboard_lifecycle import require_writable
+    require_writable(store.get_thread(thread_id))
+    return _append(store, thread_id, **fields)
+
+
+def _append(
     store: Any,
     thread_id: str,
     *,
@@ -98,6 +104,19 @@ def append(
         metadata=_metadata(metadata),
     )
     return store.append_whiteboard_entry(entry)
+
+
+def _append_event(store, thread_id, **fields):
+    # Bound incoming results keep their immutable history on a closed board.
+    # Publish their new canonical thread revision atomically so live graph
+    # invalidation observes them even when no public service append runs.
+    with store.transaction():
+        entry, duplicate = _append(store, thread_id, **fields)
+        if not duplicate:
+            thread = store.get_thread(thread_id)
+            thread.updated_at = now_iso()
+            store.save_thread(thread)
+        return entry, duplicate
 
 
 def stand(store: Any, thread: Thread) -> dict[str, Any]:
@@ -257,7 +276,7 @@ def append_from_return(store: Any, payload: Mapping[str, Any]) -> dict[str, Any]
         "delivery_status": payload.get("delivery_status"),
         "review_status": payload.get("review_status"),
     }
-    entry, duplicate = append(
+    entry, duplicate = _append_event(
         store,
         thread_id,
         actor=actor,
@@ -289,7 +308,7 @@ def append_from_gnom_status(
     except NotFound:
         return None
     details = str(payload.get("details") or "").strip()
-    entry, duplicate = append(
+    entry, duplicate = _append_event(
         store,
         thread_id,
         actor="Gnom-Hub",
@@ -327,7 +346,7 @@ def append_from_decision(store: Any, item: Mapping[str, Any]) -> dict[str, Any] 
     note = str(decision.get("note") or "").strip()
     if not choice:
         return None
-    entry, duplicate = append(
+    entry, duplicate = _append_event(
         store,
         thread_id,
         actor="human",

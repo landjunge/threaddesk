@@ -124,6 +124,18 @@ def verify_owner_result(svc, command_id, arguments):
     if command_id == "graph_view.manage":
         from threaddesk.services.graph_views import GraphViewService
         verified = GraphViewService(svc.store).verify_recorded_request(arguments)
+    elif command_id in {"whiteboard.delete", "whiteboard.restore"}:
+        from threaddesk.services.trash import TrashService
+        args = deepcopy(arguments)
+        if command_id == "whiteboard.delete":
+            if args.pop("confirm_thread_move", None) is not True:
+                raise ManagementError("explicit_confirmation_required", "Owning thread move was not explicitly confirmed")
+            args["object_id"] = args.pop("id")
+            args["kind"] = "thread"
+            action = "move"
+        else:
+            action = "restore"
+        verified = TrashService(svc.store).verify_recorded_request({"action": action, **args})
     elif command_id in TRASH_ACTIONS:
         from threaddesk.services.trash import TrashService
         if not isinstance(arguments, dict) or "action" in arguments:

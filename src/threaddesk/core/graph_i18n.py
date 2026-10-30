@@ -1,6 +1,8 @@
 """Graph workspace controls; distinct from library and thread labels."""
 
 GRAPH_STRINGS = {
+    "map.whiteboard_state": {"de": "Whiteboardzustand", "en": "Whiteboard state"},
+    "map.trash_whiteboard_confirm": {"de": "Whiteboard MIT zugehörigem Thread samt Notizen in den Papierkorb verschieben?", "en": "Move this whiteboard WITH its owning thread and notes to trash?"},
     "map.fit": {"de": "Übersicht", "en": "Overview"},
     "map.inspector": {"de": "Details und Dateien", "en": "Details and files"},
     "map.inspector_close": {"de": "Seitenleiste schließen", "en": "Close sidebar"},

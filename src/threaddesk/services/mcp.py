@@ -304,18 +304,50 @@ def _public(thread: Thread) -> dict[str, Any]:
 
 
 class McpBridge:
-    def __init__(self, svc: ThreadService) -> None:
+    def __init__(self, svc: ThreadService, *, allowed_scopes=None, registry=None) -> None:
         self.svc = svc
+        # These grants come from the trusted server context, never tool input.
+        self.allowed_scopes = None if allowed_scopes is None else frozenset(allowed_scopes)
+        self.registry = registry
+        self._commands = None
+
+    @property
+    def commands(self):
+        if self._commands is None:
+            from threaddesk.services.commands import CommandApplication
+            from threaddesk.services.mcp_commands import McpCommands
+            self._commands = McpCommands(CommandApplication(
+                self.svc, allowed_scopes=self.allowed_scopes, registry=self.registry, transport="mcp"))
+        return self._commands
 
     def list_tools(self) -> list[dict[str, Any]]:
-        return TOOLS
+        if self.svc is None:  # Static compatibility inspection, without a workspace.
+            return TOOLS
+        legacy = TOOLS
+        if self.allowed_scopes is not None:
+            app = self.commands.application
+            available = {row["id"] for row in app.registry.records(app.scopes, "mcp")
+                         if row["availability"] == "available"}
+            legacy = [tool for tool in TOOLS if tool["name"] in available
+                      or tool["name"] in {"command_catalog", "command_query", "command_invoke"}]
+        from copy import deepcopy
+        return [*deepcopy(legacy), *self.commands.list_tools()]
+
+    def tools_revision(self):
+        return self.commands.revision()
 
     def call(self, name: str, arguments: dict[str, Any] | None = None) -> dict[str, Any]:
-        args = arguments or {}
+        args = {} if arguments is None else arguments
         try:
+            if self.allowed_scopes is not None and name not in {"command_catalog", "command_query", "command_invoke"} and not name.startswith("td_"):
+                app = self.commands.application
+                spec = app.registry.get(name)
+                available = app.registry.availability(spec, app.scopes, "mcp")
+                if available != "available":
+                    raise ManagementError(available, "Command is not currently available")
             result = self._dispatch(name, args)
             read_names = _READ_ONLY_TOOLS | {"library_query"}
-            if name not in read_names and name not in {"library_manage", "command_invoke"}:
+            if not name.startswith("td_") and name not in read_names and name not in {"library_manage", "command_invoke"}:
                 from threaddesk.services.library_refresh import refresh_existing
                 refresh_existing(self.svc.store)
         except ManagementError as exc:
@@ -327,9 +359,10 @@ class McpBridge:
         return {"ok": True, "isError": False, "result": result}
 
     def _dispatch(self, name: str, args: dict[str, Any]) -> Any:
+        if name.startswith("td_"):
+            return self.commands.call(name, args)
         if name in {"command_catalog", "command_query", "command_invoke"}:
-            from threaddesk.services.commands import CommandApplication
-            application = CommandApplication(self.svc, transport="mcp")
+            application = self.commands.application
             if name == "command_catalog":
                 from threaddesk.services.command_tools import TOOLS as command_tools
                 from threaddesk.services.commands.validation import validate

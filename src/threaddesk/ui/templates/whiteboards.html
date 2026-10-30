@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block body %}
+<main class="panel migration-center" data-whiteboards-page>
+  <header class="panel-head"><div><h1>{{ t('board.boards') }}</h1><p>{{ t('board.shared_thread') }}</p></div></header>
+  <form class="inline-form" method="post" action="/whiteboards" data-whiteboard-create>
+    <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
+    <input type="hidden" name="operation_id" value="{{ mutation_id() }}" />
+    <input type="hidden" name="expected_revision" value="0" />
+    <input type="text" name="title" required maxlength="160" aria-label="{{ t('list.title_label') }}" />
+    <button class="btn btn-primary" type="submit">{{ t('board.create') }}</button>
+  </form>
+  <ul class="thread-items">
+  {% for board in boards %}
+    <li data-whiteboard-id="{{ board.id }}" data-whiteboard-status="{{ board.status }}">
+      <a href="{{ board.ui_path }}">{{ board.title }}</a>
+      <span>{{ t('board.state.' ~ board.status) }}</span>
+      <form method="post" action="/threads/{{ board.id }}/whiteboard/{{ 'unarchive' if board.status == 'archived' else 'open' }}" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
+        <input type="hidden" name="operation_id" value="{{ mutation_id() }}" />
+        <input type="hidden" name="expected_revision" value="{{ board.revision }}" />
+        <button class="btn btn-ghost" type="submit">{{ t('board.unarchive') if board.status == 'archived' else t('board.open') }}</button>
+      </form>
+    </li>
+  {% else %}<li>{{ t('whiteboard.empty') }}</li>{% endfor %}
+  </ul>
+  <a href="/trash">{{ t('trash.title') }}</a>
+</main>
+{% endblock %}
