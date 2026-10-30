@@ -356,6 +356,12 @@ def _apply(core, thread_id, document, *, lifecycle_resolution=False):
     _, _, existing, existing_rel = _scoped_graph(core, thread_id)
     from threaddesk.server_sync.lifecycle import apply as apply_lifecycle
     apply_lifecycle(core, thread_id, document, phase='before', explicit_resolution=lifecycle_resolution)
+    # Child lifecycle transitions leave their owner's retained payload intact,
+    # including when the owner itself remains in the trash.
+    sections = ('thread', 'nodes', 'relations', 'whiteboard')
+    if _hash({key: document[key] for key in sections}) == _hash({key: current[key] for key in sections}):
+        apply_lifecycle(core, thread_id, document, phase='after', explicit_resolution=lifecycle_resolution)
+        return
     thread = core.get(thread_id)
     previous = deepcopy(thread.context)
     previous.extra['server_sync_previous_metadata'] = current
