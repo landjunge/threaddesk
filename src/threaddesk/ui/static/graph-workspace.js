@@ -57,12 +57,16 @@
   const age = controls.querySelector("[data-map-age]");
   const status = controls.querySelector("[data-map-status]");
   const hops = controls.querySelector("[data-map-hops]");
-  let strings = {};
+  let strings = {}, center = "";
   try { strings = JSON.parse(root.dataset.strings || "{}"); } catch (_) { /* readable control labels remain */ }
   function filter(queryServer = true) {
+    if (hops.value === "0") {
+      center = "";
+      hops.querySelector('option[value="center"]')?.remove();
+    }
     root.dispatchEvent(new CustomEvent("threaddesk:graph-filter", {detail: {
       query: query.value.trim(), kind: kind.value, project_id: project.value,
-      mode: mode.value, band: age.value, status: status.value, hops: Number(hops.value),
+      mode: mode.value, band: age.value, status: status.value, center, hops: hops.value === "center" ? 0 : Number(hops.value),
       server_query: queryServer !== false,
     }}));
   }
@@ -75,6 +79,8 @@
     root.dispatchEvent(new CustomEvent("threaddesk:graph-search-submit"));
   });
   controls.querySelector("[data-map-clear-filters]")?.addEventListener("click", () => {
+    center = "";
+    hops.querySelector('option[value="center"]')?.remove();
     query.value = ""; kind.value = ""; project.value = ""; age.value = ""; status.value = ""; hops.value = "0";
     filter(); query.focus();
   });
@@ -104,15 +110,26 @@
   });
   root.addEventListener("threaddesk:graph-filtered", event => {
     if (!count) return;
-    count.hidden = !query.value.trim() && !kind.value && !project.value && !age.value && !status.value && !Number(hops.value);
+    count.hidden = !query.value.trim() && !kind.value && !project.value && !age.value && !status.value && !center && !Number(hops.value);
     count.textContent = (strings["map.filtered_count"] || "{visible} / {total}")
       .replace("{visible}", String(event.detail.visible)).replace("{total}", String(event.detail.total));
   });
+  function savedOption(select, value, label) {
+    if (!value || [...select.options].some(option => option.value === value)) return;
+    const option = document.createElement("option");
+    option.value = value; option.textContent = label; select.append(option);
+  }
   root.addEventListener("threaddesk:graph-view-loaded", event => {
     const filters = event.detail?.filters || {};
+    center = filters.center || "";
+    if (center) savedOption(hops, "center", strings["map.neighborhood_center"] || "Saved center only");
+    else hops.querySelector('option[value="center"]')?.remove();
+    savedOption(project, filters.project_id, `${strings["map.filter_project"] || "Project"}: ${filters.project_id}`);
+    savedOption(status, filters.status, strings[`status.${filters.status}`] || filters.status);
     query.value = filters.query || ""; kind.value = filters.kind || "";
     project.value = filters.project_id || ""; mode.value = filters.mode || "work";
-    age.value = filters.band || ""; status.value = filters.status || ""; hops.value = String(filters.hops || 0);
+    age.value = filters.band || ""; status.value = filters.status || "";
+    hops.value = center && !filters.hops ? "center" : String(filters.hops || 0);
     filter(false);
   });
 })();

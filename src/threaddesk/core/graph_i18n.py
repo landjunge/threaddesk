@@ -40,6 +40,7 @@ GRAPH_STRINGS = {
     "map.all_statuses": {"de": "Alle Status", "en": "All statuses"},
     "map.neighborhood": {"de": "Nachbarschaft der Auswahl", "en": "Selection neighborhood"},
     "map.neighborhood_all": {"de": "Gesamter Graph", "en": "Whole graph"},
+    "map.neighborhood_center": {"de": "Nur gespeicherter Mittelpunkt", "en": "Saved center only"},
     "map.neighborhood_one": {"de": "Ein Schritt", "en": "One step"},
     "map.neighborhood_two": {"de": "Zwei Schritte", "en": "Two steps"},
     "map.list": {"de": "Liste", "en": "List"},

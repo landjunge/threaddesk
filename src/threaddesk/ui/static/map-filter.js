@@ -18,7 +18,8 @@ window.ThreadDeskGraphFilter = (graph, filters, activity, selected) => {
       changed = members.size !== previous;
     }
   }
-  let neighborhood = new Set(selected ? [selected] : []);
+  const center = filters.center || (filters.hops ? selected : null);
+  let neighborhood = new Set(center ? [center] : []);
   for (let step = 0; step < filters.hops && neighborhood.size; step++) {
     const reached = new Set(neighborhood);
     graph.relations.forEach(edge => {
@@ -32,5 +33,5 @@ window.ThreadDeskGraphFilter = (graph, filters, activity, selected) => {
     (!filters.kind || node.kind === filters.kind) && (!project || members.has(node.id)) &&
     (!filters.status || node.status === filters.status) &&
     (!filters.band || activity.current(node).band === filters.band) &&
-    (!filters.hops || !selected || neighborhood.has(node.id))).map(node => node.id));
+    (!center || neighborhood.has(node.id))).map(node => node.id));
 };

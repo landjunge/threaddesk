@@ -89,7 +89,7 @@
   ["pointerdown", "click", "keydown", "wheel", "input"].forEach(name =>
     root.addEventListener(name, noteInteraction, {capture: true, passive: true}));
   let applyFilter = () => {};
-  let activeFilter = {query: "", kind: "", project_id: "", status: "", mode: "work", band: "", hops: 0};
+  let activeFilter = {query: "", kind: "", project_id: "", status: "", mode: "work", band: "", center: "", hops: 0};
   let fixedIds = new Set();
   const showDetail = window.ThreadDeskGraphInspector(root, t, activity, id => fixedIds.has(id));
   let pendingSearchFocus = false;
@@ -192,11 +192,17 @@
     applyTransform();
   };
 
+  const showFilteredEmpty = visible => {
+    empty.hidden = visible !== 0;
+    const filtered = ['query', 'kind', 'project_id', 'status', 'band', 'center'].some(key => activeFilter[key]) ||
+      activeFilter.hops && selectedFocusId;
+    empty.textContent = t(filtered ? "map.no_matches" : "map.empty");
+  };
   const filterWithoutSVG = graph => {
     activity.update(graph, activeFilter.mode);
     const visible = window.ThreadDeskGraphFilter(graph, activeFilter, activity, selectedFocusId);
     if (gpu) gpu.filter(visible);
-    empty.hidden = visible.size !== 0;
+    showFilteredEmpty(visible.size);
     root.dispatchEvent(new CustomEvent("threaddesk:graph-filtered", {
       bubbles: true, detail: {visible: visible.size, total: graph.nodes.length, ids: [...visible]},
     }));
@@ -470,8 +476,7 @@
       edges.forEach(({path, relation}) => {
         path.style.display = visible.has(relation.source_id) && visible.has(relation.target_id) ? "" : "none";
       });
-      empty.hidden = visible.size !== 0;
-      empty.textContent = activeFilter.query || activeFilter.kind || activeFilter.project_id || activeFilter.status || activeFilter.band ? t("map.no_matches") : t("map.empty");
+      showFilteredEmpty(visible.size);
       updateFocusControl();
       updateLabels();
       root.dispatchEvent(new CustomEvent("threaddesk:graph-filtered", {
@@ -541,7 +546,7 @@
     const detail = event.detail || {};
     activeFilter = {query: String(detail.query || ""), kind: String(detail.kind || ""),
       project_id: String(detail.project_id || ""), status: String(detail.status || ""),
-      mode: detail.mode || "work", band: detail.band || "", hops: Number(detail.hops || 0)};
+      mode: detail.mode || "work", band: detail.band || "", center: String(detail.center || ""), hops: Number(detail.hops || 0)};
     applyFilter();
     const selected = latestGraph?.nodes.find(node => node.id === selectedFocusId);
     if (selected) activity.details(selected);
@@ -600,16 +605,43 @@
       if (workspace.invalidated) throw Error('workspace_conflict');
       if (!latestGraph) return;
       noteInteraction(); cancelFocus();
-      const wanted = [...new Set([...Object.keys(state.positions || {}), ...(state.selection || [])])];
-      if (wanted.some(id => !latestGraph.nodes.some(node => node.id === id))) {
-        if (wanted.length > 1000) throw Error("view_graph_limit");
+      let wanted = [...new Set([...Object.keys(state.positions || {}), ...(state.selection || [])])];
+      const readGraph = async arguments_ => {
         const response = await window.threadDeskWrite('/api/graph/v2', {
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({node_ids: wanted, mode: state.filters?.mode || 'work', limit: 1000})});
+          body: JSON.stringify(arguments_)});
         if (!response.ok) throw Error("view_graph_unavailable");
         const graph = await response.json();
         if (!workspace.accept(graph.workspace_id)) throw Error('workspace_conflict');
-        if (graph.nodes.length !== wanted.length) throw Error("view_nodes_unavailable");
+        return graph;
+      };
+      const filters = {...state.filters, mode: state.filters?.mode || 'work', limit: 1000, offset: 0};
+      if (!filters.center && filters.hops && state.selection?.length) filters.center = state.selection[0];
+      if (!filters.center) delete filters.center;
+      let filteredGraph = null;
+      if (['query', 'kind', 'status', 'project_id', 'band', 'center'].some(key => filters[key])) {
+        filteredGraph = await readGraph(filters);
+        const includeGraph = graph => {
+          if (graph.next_offset != null || graph.relations_truncated) throw Error("view_graph_limit");
+          wanted = [...new Set([...wanted, ...graph.nodes.map(node => node.id)])];
+          if (wanted.length > 1000) throw Error("view_graph_limit");
+        };
+        includeGraph(filteredGraph);
+        const context = async arguments_ => includeGraph(await readGraph({mode: filters.mode,
+          as_of: filteredGraph.as_of, limit: 1000, ...arguments_}));
+        if (filters.center && ['query', 'kind', 'status', 'project_id', 'band'].some(key => filters[key])) {
+          await context({center: filters.center, hops: filters.hops || 0});
+        }
+        if (filters.project_id && ['query', 'kind', 'status', 'center', 'band'].some(key => filters[key])) {
+          await context({project_id: filters.project_id});
+        }
+      }
+      if (filteredGraph || wanted.some(id => !latestGraph.nodes.some(node => node.id === id))) {
+        if (wanted.length > 1000) throw Error("view_graph_limit");
+        const graph = wanted.length ? await readGraph({node_ids: wanted,
+          mode: state.filters?.mode || 'work', as_of: filteredGraph?.as_of, limit: 1000}) : filteredGraph;
+        if (wanted.length && graph.nodes.length !== wanted.length) throw Error("view_nodes_unavailable");
+        if (filteredGraph && graph.relations_truncated) throw Error("view_graph_limit");
         if (graph.nodes.length >= 128 && !gpuUnavailable) {
           try { await window.ThreadDeskGraphGPU.load(); } catch (_) { gpuUnavailable = true; }
         }
@@ -620,6 +652,7 @@
       if (workspace.invalidated) throw Error('workspace_conflict');
       const ids = new Set(latestGraph.nodes.map(node => node.id));
       selectedNodeIds = new Set((state.selection || []).filter(id => ids.has(id)));
+      selectedFocusId = selectedNodeIds.values().next().value || null;
       const points = Object.entries(state.positions || {}).filter(([id]) => ids.has(id));
       if (gpu) placed = new Map(Object.entries(gpu.snapshotPositions()));
       points.forEach(([id, point]) => {
@@ -627,7 +660,14 @@
         if (point.fixed) fixedIds.add(id); else fixedIds.delete(id);
       });
       activeFilter = {...activeFilter, ...state.filters};
-      if (gpu) { gpu.restore(state); applyFilter(); return; }
+      const confirmFilter = () => {
+        if (!filteredGraph) return;
+        const visible = window.ThreadDeskGraphFilter(latestGraph, activeFilter, activity, selectedFocusId);
+        if (visible.size !== filteredGraph.nodes.length || filteredGraph.nodes.some(node => !visible.has(node.id))) {
+          throw Error("view_filter_mismatch");
+        }
+      };
+      if (gpu) { gpu.restore(state); applyFilter(); confirmFilter(); return; }
       render(latestGraph, true);
       world.querySelectorAll(".is-selected").forEach(item => item.classList.remove("is-selected"));
       let additive = false;
@@ -639,6 +679,7 @@
       scale = clamp(state.camera.scale);
       offsetX = VIEW_W / 2 - state.camera.x * scale; offsetY = VIEW_H / 2 - state.camera.y * scale;
       applyTransform();
+      confirmFilter();
     },
   };
   // One bounded correction catches a late native WINDOW resize before input.
@@ -763,9 +804,11 @@
     try {
       const address = new URL(root.dataset.graphEndpoint, location.href);
       if (serverPaging) {
-        Object.entries(activeFilter).forEach(([key, value]) => address.searchParams.set(key, String(value)));
+        Object.entries(activeFilter).forEach(([key, value]) => {
+          if (key !== "center" || value) address.searchParams.set(key, String(value));
+        });
         address.searchParams.set("offset", String(pageOffset));
-        if (selectedFocusId && activeFilter.hops) address.searchParams.set("center", selectedFocusId);
+        if (!activeFilter.center && selectedFocusId && activeFilter.hops) address.searchParams.set("center", selectedFocusId);
       }
       const response = await fetch(address, {headers: {Accept: "application/json"}, cache: "no-store"});
       if (!response.ok) throw new Error("graph request failed");
