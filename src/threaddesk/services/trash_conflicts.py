@@ -27,9 +27,12 @@ class TrashConflictReview:
 
     def _conflict_object_digest(self, thread_id):
         try:
-            return _hash(self.service._object("thread", thread_id))
+            obj = self.service._object("thread", thread_id)
         except NotFound:
             return _hash(self.store.get_object_lifecycle("thread", thread_id))
+        contributions = sorted((entry.to_dict() for entry in self.store.list_whiteboard(
+            thread_id, include_trashed=True)), key=lambda entry: entry["id"])
+        return _hash({"thread": obj, "whiteboard": contributions})
 
     def resolve(self, *, conflict_id, expected_object_digest, choice, operation_id):
         _id(conflict_id)
