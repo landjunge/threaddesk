@@ -345,6 +345,32 @@ class LibraryIndex:
             }
 
     def _replace(self, payload):
+        if payload.get("backend") == "sqlite" and self.database.path.is_file():
+            # Rebuilds release their data transaction before publishing JSON.
+            # A newer worker may already have committed another generation.
+            # Bind this publication to the current token while holding the same
+            # SQLite writer reservation used by all index rebuilds/processes.
+            with self.database.connect(write=True) as db:
+                try:
+                    current = db.execute(
+                        "SELECT value FROM metadata WHERE key='generation'"
+                    ).fetchone()
+                except sqlite3.OperationalError:
+                    # A failed/legacy projection may not have metadata yet.
+                    # Preserve its failure marker so runtime repair can rebuild
+                    # it, but never publish unverified ready results.
+                    if payload.get("status") in {"ready", "partial"}:
+                        raise
+                    current = None
+                if current is not None and current[0] != payload.get("generation"):
+                    return
+                if current is None and payload.get("status") in {"ready", "partial"}:
+                    return
+                self._write_manifest(payload)
+            return
+        self._write_manifest(payload)
+
+    def _write_manifest(self, payload):
         if self.root.is_symlink() or self.path.is_symlink():
             raise OSError("index_unsafe_path")
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
