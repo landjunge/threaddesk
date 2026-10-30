@@ -1,0 +1,23 @@
+{
+  "source_commit": "5f38c8d2142c32cddf84a7309ddba76702e3b52a",
+  "workflow_run": 41107585251,
+  "url": "https://github.com/landjunge/threaddesk/actions/runs/41107585251",
+  "result": "failed_first_complete_run; repeat_not_executed",
+  "tests": 2518,
+  "failures": 5,
+  "errors": 0,
+  "skipped": 0,
+  "duration_seconds": 1409.588,
+  "failed_cases": [
+    "tests.test_characterization::test_cli_and_mcp_publish_the_current_command_and_tool_contracts",
+    "tests.test_i18n::test_languages_differ_where_they_should",
+    "tests.test_i18n::test_template_keys_exist[partials/whiteboard.html]",
+    "tests.test_i18n::test_template_keys_exist[whiteboards.html]",
+    "tests.test_i18n::test_every_dropdown_value_has_a_label"
+  ],
+  "correction_scope": [
+    "Retain exact legacy MCP contract; separately verify current authorized dynamic tools and explicit deletion bindings.",
+    "Complete the new whiteboard DE/EN labels and dynamic state-label coverage without weakening existing translation guards."
+  ],
+  "new_complete_ci_required": true
+}

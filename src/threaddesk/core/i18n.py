@@ -615,7 +615,7 @@ CATALOG: dict[str, dict[str, str]] = {
     "notes.mic": {"de": "Mikrofon", "en": "Microphone"},
     "notes.mic_stop": {"de": "Stopp", "en": "Stop"},
     "notes.save": {"de": "Notiz speichern", "en": "Save note"},
-    'board.boards': {"de": 'Whiteboards', "en": 'Whiteboards'},
+    'board.boards': {"de": 'Whiteboard-Übersicht', "en": 'Whiteboards'},
     'board.shared_thread': {"de": 'Ein Whiteboard gehört zu einem Thread. Name, Archiv und Papierkorb gelten gemeinsam.', "en": 'A whiteboard belongs to one thread. Name, archive and trash apply to both.'},
     'board.create': {"de": 'Whiteboard erstellen', "en": 'Create whiteboard'},
     'board.open': {"de": 'Whiteboard öffnen', "en": 'Open whiteboard'},
@@ -751,6 +751,7 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "No threads. Create one above.",
     },
     # --- Knotenarten (Auswahlmenues) ---
+    "kind.whiteboard": {"de": "Whiteboard", "en": "Whiteboard"},
     "kind.project": {
         "de": "Projekt",
         "en": "Project",
