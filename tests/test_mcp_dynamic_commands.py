@@ -11,6 +11,7 @@ import sys
 from threading import Thread
 
 from jsonschema import Draft202012Validator
+from referencing import Registry
 import pytest
 
 from threaddesk.api.service import ThreadService
@@ -85,6 +86,101 @@ def test_future_registration_appears_in_same_bridge_and_reuses_the_dispatcher(se
     assert result["result"]["result"] == {"received": "known"}
     assert result["result"]["result_digest"]
     assert invoke(bridge, spec.id, {"token": "other"})["code"] == "validation_error"
+
+
+_REF_SCHEMA = {"type": "object", "properties": {"value": {"$ref": "#/$defs/text"}},
+               "required": ["value"], "additionalProperties": False,
+               "$defs": {"text": {"type": "string", "const": "ok"}}}
+
+
+@pytest.mark.parametrize("identifier", [None, "", "#", "own.json", "https://schema.example.test/own.json", "https://schema.example.test/own.json#"])
+def test_domain_fragment_refs_keep_their_resource_root_and_source_identity(service, identifier):
+    schema = deepcopy(_REF_SCHEMA)
+    if identifier is not None:
+        schema["$id"] = identifier
+    _assert_resource_schema(service, schema, {"value": "ok"}, {"value": "wrong"})
+
+
+@pytest.mark.parametrize("reference", ["root", "anchor", "dynamic_anchor", "nested_resource"])
+def test_recursive_anchor_and_nested_resource_refs_keep_domain_scope(service, reference):
+    if reference == "root":
+        schema = obj({"value": {"const": "ok"}, "next": {"$ref": "#"}}, ("value",))
+        valid, invalid = {"value": "ok", "next": {"value": "ok"}}, {"value": "ok", "next": {"value": "wrong"}}
+    elif reference == "anchor":
+        schema = deepcopy(_REF_SCHEMA)
+        schema["$defs"]["text"]["$anchor"] = "text"
+        schema["properties"]["value"] = {"$ref": "#text"}
+        valid, invalid = {"value": "ok"}, {"value": "wrong"}
+    elif reference == "dynamic_anchor":
+        schema = {"$dynamicAnchor": "node", **obj({"value": {"const": "ok"}, "next": {"$dynamicRef": "#node"}}, ("value",))}
+        valid, invalid = {"value": "ok", "next": {"value": "ok"}}, {"value": "ok", "next": {"value": "wrong"}}
+    else:
+        schema = {"$id": "https://schema.example.test/outer.json", **obj({"item": {"$ref": "inner.json"}}, ("item",)),
+                  "$defs": {"inner": {"$id": "inner.json", **deepcopy(_REF_SCHEMA)}}}
+        valid, invalid = {"item": {"value": "ok"}}, {"item": {"value": "wrong"}}
+    _assert_resource_schema(service, schema, valid, invalid)
+
+
+def _assert_resource_schema(service, schema, valid, invalid):
+    source = deepcopy(schema)
+    calls = []
+    spec = CommandSpec("future.ref", "future", "Resource references", schema,
+                       lambda svc, args: calls.append(args) or args)
+    registry = CommandRegistry(service.store, [spec])
+    direct = CommandApplication(service, registry=registry, transport="mcp")
+    assert direct.call({"version": 1, "workspace_id": direct.workspace_id, "command": spec.id, "arguments": valid})["result"] == valid
+    calls.clear()
+    bridge = McpBridge(service, registry=registry)
+    tool = next(tool for tool in bridge.list_tools() if tool["name"] == tool_name(spec.id))
+    public = tool["inputSchema"]
+    Draft202012Validator.check_schema(public)
+    validator = Draft202012Validator(public, registry=Registry())
+    validator.validate({"workspace_id": direct.workspace_id, "arguments": valid})
+    assert list(validator.iter_errors({"workspace_id": direct.workspace_id, "arguments": invalid}))
+    assert invoke(bridge, spec.id, valid)["result"]["result"] == valid
+    assert invoke(bridge, spec.id, invalid)["code"] == "validation_error"
+    assert calls == [valid]
+    assert spec.schema == source and tool["_meta"]["threaddesk"]["input_schema"] == source
+    assert bridge.list_tools()[-1]["inputSchema"] == public
+    if source.get("$id") not in (None, "", "#"):
+        assert public["properties"]["arguments"]["$id"] == source["$id"]
+
+
+@pytest.mark.parametrize("identifier", [None, "https://schema.example.test/native.json"])
+def test_lifted_native_bindings_resolve_refs_in_the_same_domain_resource(service, identifier):
+    schema = deepcopy(_REF_SCHEMA)
+    schema["properties"].update(operation_id={"$ref": "#/$defs/operation"}, expected_revision={"$ref": "#/$defs/revision"})
+    schema["$defs"].update(operation={"const": "native-ref-operation"}, revision={"const": 0})
+    schema["required"].extend(["operation_id", "expected_revision"])
+    if identifier is not None:
+        schema["$id"] = identifier
+    source = deepcopy(schema)
+    spec = CommandSpec("future.native", "future", "Native resource references", schema, lambda svc, args: args,
+                       effect="domain", native_contract=True)
+    bridge = McpBridge(service, registry=CommandRegistry(service.store, [spec]))
+    tool = bridge.list_tools()[-1]
+    payload = {"workspace_id": bridge.commands.application.workspace_id, "arguments": {"value": "ok"},
+               "operation_id": "native-ref-operation", "expected_revision": 0}
+    Draft202012Validator(tool["inputSchema"], registry=Registry()).validate(payload)
+    assert bridge.call(tool_name(spec.id), payload)["result"]["result"] == {
+        "value": "ok", "operation_id": "native-ref-operation", "expected_revision": 0}
+    assert bridge.call(tool_name(spec.id), {**payload, "operation_id": "wrong"})["code"] == "validation_error"
+    assert bridge.call(tool_name(spec.id), {**payload, "expected_revision": 1})["code"] == "validation_error"
+    assert spec.schema == source
+
+
+def test_external_schema_refs_are_rejected_without_network_or_handler_execution(service, monkeypatch):
+    def refuse_network(*args, **kwargs):
+        pytest.fail("Schema validation attempted network access")
+    monkeypatch.setattr("socket.socket.connect", refuse_network)
+    calls = []
+    spec = CommandSpec("future.external", "future", "External ref must fail", obj({
+        "value": {"$ref": "https://schema.example.test/must-not-be-fetched.json"}}, ("value",)),
+        lambda svc, args: calls.append(args))
+    bridge = McpBridge(service, registry=CommandRegistry(service.store, [spec]))
+    result = invoke(bridge, spec.id, {"value": "ok"})
+    assert result["isError"] and not result["ok"]
+    assert calls == []
 
 
 def test_native_create_then_whiteboard_write_replay_conflict_and_independent_readback(service):

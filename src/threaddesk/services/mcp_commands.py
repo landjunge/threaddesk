@@ -27,6 +27,11 @@ def tool_name(command_id):
 
 def input_schema(spec):
     domain = deepcopy(spec.schema)
+    # A nested schema without its own resource identity would resolve #/$defs,
+    # #anchors and recursive # references against the MCP envelope. Preserve its
+    # original resource root, including any source-owned $id and anchor scope.
+    if domain.get("$id") in (None, "", "#"):
+        domain["$id"] = "urn:threaddesk:mcp-command:" + hashlib.sha256(spec.id.encode()).hexdigest()
     fields = {"workspace_id": TEXT, "arguments": domain,
               "operation_id": ID, "expected_revision": REV,
               "catalog_revision": TEXT, "result_offset": REV,
@@ -43,7 +48,8 @@ def input_schema(spec):
             for field in ("operation_id", "expected_revision"):
                 if field not in domain.get("properties", {}):
                     continue
-                fields[field] = deepcopy(domain["properties"][field])
+                # Keep references in a lifted field in the domain resource too.
+                fields[field] = {"$ref": domain["$id"].removesuffix("#") + "#/properties/" + field}
                 if field in domain.get("required", []):
                     domain["required"].remove(field)
                     if field not in required:

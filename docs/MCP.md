@@ -16,7 +16,12 @@ Beispiel für einen MCP-Client:
 {
   "mcpServers": {
     "threaddesk": {
-      "command": "/Users/landjunge/threaddesk/.venv/bin/threaddesk-mcp"
+      "command": "/Applications/ThreadDesk.app/Contents/Resources/bin/ThreadDeskServer",
+      "args": ["--mcp"],
+      "env": {
+        "THREADDESK_HOME": "/absoluter/autorisierter/workspace",
+        "THREADDESK_STORAGE": "json"
+      }
     }
   }
 }
@@ -76,6 +81,12 @@ installiertes Paket erhält dadurch keine neue Fähigkeit. KiraBridge-App,
 Terminalsteuerung und Prozesskonfiguration werden von ThreadDesk nicht verändert.
 Ob ein bestehender KiraBridge-Prozess diesen neuen Endpunkt bereits verwendet,
 muss separat mit dessen tatsächlichem Quellpin und einem Aufruf geprüft werden.
+
+Eine laufende MCP-Sitzung bleibt an den beim Start ausgewählten Workspace
+gebunden. `profiles.activate` oder `backup.restore` ändern die Profilauswahl für
+neue Verbindungen; sie lenken bestehende Operationsbelege und Revisionen nicht
+still auf andere Daten um. Nach einem Profilwechsel neu verbinden und die neue
+Workspace-ID aus frischer Discovery lesen.
 
 ## Bestehende Zugänge
 

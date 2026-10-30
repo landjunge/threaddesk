@@ -17,7 +17,7 @@
         "local_owner_cli_required": 5
       },
       "mcp_tools": 172,
-      "mcp_discovery_bytes": 308312,
+      "mcp_discovery_bytes": 323894,
       "entries": [
         {
           "id": "activity.files",
@@ -2133,7 +2133,7 @@
         "local_owner_cli_required": 5
       },
       "mcp_tools": 175,
-      "mcp_discovery_bytes": 313738,
+      "mcp_discovery_bytes": 329626,
       "entries": [
         {
           "id": "activity.files",

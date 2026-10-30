@@ -60,6 +60,15 @@ und ins äußere Schema übernommen. Optionale Kopien im Fachobjekt bleiben erla
 abweichende Werte werden durch die bestehende Anwendung abgewiesen. Die übrigen
 Fachbedingungen bleiben bestehen, auch bedingte Regeln und Modulschemaeinschränkungen.
 
+Das eingebettete Fachschema bleibt eine eigene JSON-Schema-Ressource, damit
+lokale `$ref`-Fragmente, Rootrekursion, Anker und dynamische Anker weiterhin auf
+seine ursprüngliche Wurzel zeigen. Eine vorhandene ressourcenbenennende `$id`
+bleibt erhalten. Für anonyme Schemas einschließlich leerer `$id` oder `#` erhält
+die veröffentlichte Kopie eine stabile synthetische URN; Quellschema und
+Quellmetadaten bleiben unverändert. Ins Envelope gehobene native Feldschemas
+referenzieren dieselbe Fachressource. Die bestehende Validierung bleibt ohne
+externen Schemaabruf; eine externe Referenz erteilt keinen Netzwerkzugriff.
+
 `_meta.threaddesk` enthält den vollständigen öffentlichen Commandvertrag,
 insbesondere unverändertes Quellschema, Command-ID, Scope, Wirkung,
 Revisionsziel, erforderliche Operation, Backend-/Transportgrenzen,
