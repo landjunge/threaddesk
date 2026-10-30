@@ -241,8 +241,14 @@ class RoomBook:
 
     def apply_bundle(self, bundle: Any) -> dict[str, int]:
         """Validate every row before changing any thread or whiteboard."""
-        from threaddesk.services.trash_sync import (ROOM_SCHEMA, apply_room_lifecycle,
-            record_conflict, validate_room_lifecycle, conflict_is_resolved)
+        from threaddesk.services.trash_sync import (
+            ROOM_SCHEMA,
+            apply_room_lifecycle,
+            conflict_is_resolved,
+            record_conflict,
+            validate_room_lifecycle,
+            validate_room_scope,
+        )
         if not isinstance(bundle, dict) or bundle.get("schema") not in {SCHEMA, ROOM_SCHEMA}:
             raise InvalidState("room_bundle")
         lifecycle = validate_room_lifecycle(bundle.get("lifecycle", []))
@@ -283,6 +289,17 @@ class RoomBook:
             if entry.room_id != room_id:
                 raise InvalidState("room_bundle")
             incoming.append(entry)
+        # A peer may introduce a new room thread, but cannot add its own scope
+        # proof to an existing private thread or a thread belonging to a
+        # different room. Check the original local state before any bundle row
+        # or lifecycle record can change it.
+        # JSON legacy reads can stage revision-anchor normalization. Roll all
+        # such observations back if any later content OR lifecycle scope fails.
+        # End this unit before the existing trash/merge transactions and index
+        # refreshes rather than nesting their mutations in a new transaction.
+        with self.store.transaction():
+            validate_room_scope(self.store, room_id, lifecycle,
+                                (entry.thread_id for entry in incoming))
         lifecycle_conflicts = apply_room_lifecycle(self.store, room_id, lifecycle)
         generations = {item["thread_id"]: item for item in lifecycle}
         accepted = []

@@ -16,6 +16,29 @@ from threaddesk.storage.operation_results import result_object
 ROOM_SCHEMA = "threaddesk.room.v2"
 
 
+def room_thread_owned(store, thread_id, room_id):
+    """Only retained local contributions establish a room's thread scope."""
+    try:
+        return any(entry.room_id == room_id for entry in
+                   store.list_whiteboard(thread_id, include_trashed=True))
+    except NotFound:
+        return False
+
+
+def validate_room_scope(store, room_id, records, thread_ids=()):
+    """Preflight original local scope; the caller owns observation rollback."""
+    for thread_id in sorted(set(thread_ids)):
+        try:
+            store.get_thread(thread_id, include_trashed=True)
+        except NotFound:
+            continue  # A new remote room thread may receive a local shell.
+        if not room_thread_owned(store, thread_id, room_id):
+            raise InvalidState("room_thread_scope")
+    for incoming in records:
+        if not room_thread_owned(store, incoming["thread_id"], room_id):
+            raise InvalidState("room_lifecycle_scope")
+
+
 def content_digest(store, thread_id, room_id):
     thread = store.get_thread(thread_id, include_trashed=True)
     payload = thread.to_dict()
@@ -61,8 +84,7 @@ def export_room_lifecycle(store, room_id):
     for thread_id, entry in sorted(latest.items()):
         # Only room-owned contributions establish a sharing scope.
         try:
-            entries = store.list_whiteboard(thread_id, include_trashed=True)
-            if not any(item.room_id == room_id for item in entries):
+            if not room_thread_owned(store, thread_id, room_id):
                 continue
             digest = content_digest(store, thread_id, room_id)
         except NotFound:
@@ -94,6 +116,11 @@ def validate_room_lifecycle(value):
 
 
 def apply_room_lifecycle(store, room_id, records):
+    # The authenticated room, not a peer's digest or accompanying bundle rows,
+    # must already own a local contribution. Include retained contributions so
+    # legitimate trash/restore history keeps its scope. Preflight every target
+    # before any operation (including replay shortcuts or conflict receipts).
+    validate_room_scope(store, room_id, records)
     conflicts = 0
     service = TrashService(store)
     for incoming in records:
