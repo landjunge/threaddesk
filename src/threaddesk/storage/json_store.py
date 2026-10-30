@@ -600,7 +600,7 @@ class JsonStore(JsonLifecycleStore):
             return []
         entries = [
             WhiteboardEntry.from_dict(self._read_json(path))
-            for path in folder.glob("*.json")
+            for path in self._graph_collection_paths(folder)
         ]
         entries.sort(key=lambda entry: (entry.created_at, entry.ordinal, entry.id))
         return entries

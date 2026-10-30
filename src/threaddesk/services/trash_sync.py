@@ -25,18 +25,45 @@ def room_thread_owned(store, thread_id, room_id):
         return False
 
 
+def room_thread_missing(store, thread_id):
+    """A purged or otherwise retained local history is never a fresh import."""
+    try:
+        store.get_thread(thread_id, include_trashed=True)
+    except NotFound:
+        return store.get_object_lifecycle('thread', thread_id) is None
+    return False
+
+
+def first_room_restore(incoming):
+    return (incoming['state'] == 'restored' and incoming['generation'] == 1
+            and incoming['revision'] == 2)
+
+
 def validate_room_scope(store, room_id, records, thread_ids=()):
     """Preflight original local scope; the caller owns observation rollback."""
-    for thread_id in sorted(set(thread_ids)):
+    thread_ids = set(thread_ids)
+    for thread_id in sorted(thread_ids):
         try:
             store.get_thread(thread_id, include_trashed=True)
         except NotFound:
             continue  # A new remote room thread may receive a local shell.
         if not room_thread_owned(store, thread_id, room_id):
             raise InvalidState("room_thread_scope")
+    missing = set()
     for incoming in records:
-        if not room_thread_owned(store, incoming["thread_id"], room_id):
-            raise InvalidState("room_lifecycle_scope")
+        identity = incoming['thread_id']
+        if room_thread_owned(store, identity, room_id):
+            continue
+        if room_thread_missing(store, identity):
+            # An impossible first restore cannot authorize accompanying rows.
+            # Higher unknown generations are deferred for explicit review.
+            if (identity in thread_ids and incoming['state'] == 'restored'
+                    and incoming['generation'] == 1 and incoming['revision'] != 2):
+                raise InvalidState('room_lifecycle_scope')
+            missing.add(identity)
+            continue
+        raise InvalidState("room_lifecycle_scope")
+    return missing
 
 
 def content_digest(store, thread_id, room_id):
@@ -120,11 +147,13 @@ def apply_room_lifecycle(store, room_id, records):
     # must already own a local contribution. Include retained contributions so
     # legitimate trash/restore history keeps its scope. Preflight every target
     # before any operation (including replay shortcuts or conflict receipts).
-    validate_room_scope(store, room_id, records)
+    missing = validate_room_scope(store, room_id, records)
     conflicts = 0
     service = TrashService(store)
     for incoming in records:
         thread_id = incoming["thread_id"]
+        if thread_id in missing:
+            continue  # No received payload or local history may be changed.
         latest = store.get_object_lifecycle("thread", thread_id)
         if latest and incoming["generation"] == latest["generation"] and incoming["state"] == latest["state"]:
             continue

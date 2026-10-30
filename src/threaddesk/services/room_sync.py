@@ -245,6 +245,7 @@ class RoomBook:
             ROOM_SCHEMA,
             apply_room_lifecycle,
             conflict_is_resolved,
+            first_room_restore,
             record_conflict,
             validate_room_lifecycle,
             validate_room_scope,
@@ -298,13 +299,23 @@ class RoomBook:
         # End this unit before the existing trash/merge transactions and index
         # refreshes rather than nesting their mutations in a new transaction.
         with self.store.transaction():
-            validate_room_scope(self.store, room_id, lifecycle,
-                                (entry.thread_id for entry in incoming))
+            missing = validate_room_scope(self.store, room_id, lifecycle,
+                                          (entry.thread_id for entry in incoming))
         lifecycle_conflicts = apply_room_lifecycle(self.store, room_id, lifecycle)
         generations = {item["thread_id"]: item for item in lifecycle}
+        for item in lifecycle:
+            if item['thread_id'] in missing and item['state'] == 'restored' and not first_room_restore(item):
+                key = record_conflict(self.store, thread_id=item['thread_id'], source='room:' + room_id,
+                    reason='restore_without_matching_generation', incoming=item)
+                lifecycle_conflicts += not conflict_is_resolved(self.store, key)
         accepted = []
+        first_imports = {}
         blocked = set()
         for entry in incoming:
+            if entry.thread_id in missing:
+                if first_room_restore(generations[entry.thread_id]):
+                    first_imports.setdefault(entry.thread_id, []).append(entry)
+                continue  # Do not create payloads under missing tombstones.
             latest = self.store.get_object_lifecycle("thread", entry.thread_id)
             declared = generations.get(entry.thread_id)
             if latest and (latest["state"] != "restored" or declared is None
@@ -319,11 +330,51 @@ class RoomBook:
                 continue
             self._shell(entry.thread_id, titles.get(entry.thread_id, ""))
             accepted.append(entry)
-        if not accepted:
-            return {"added": 0, "kept": 0, "conflicts": lifecycle_conflicts}
-        result = merge_whiteboard(self.store, accepted)
+        result = merge_whiteboard(self.store, accepted, preserve_content_hash=True) if accepted else {'added': 0, 'kept': 0, 'conflicts': 0}
+        for identity, entries in first_imports.items():
+            try:
+                imported = self._receive_first_restore(room_id, generations[identity], entries, titles.get(identity, ''))
+                for key in ('added', 'kept', 'conflicts'):
+                    result[key] += imported[key]
+            except InvalidState as exc:
+                # A digest or concurrently changed local scope never grants
+                # permission, and need not prevent unrelated room entries.
+                key = record_conflict(self.store, thread_id=identity, source='room:' + room_id,
+                    reason=getattr(exc, 'code', 'room_lifecycle_scope'), incoming=generations[identity])
+                lifecycle_conflicts += not conflict_is_resolved(self.store, key)
         result["conflicts"] += lifecycle_conflicts
         return result
+
+    def _receive_first_restore(self, room_id, incoming, entries, title):
+        """Import a genuinely new public shell and its first history atomically."""
+        from threaddesk.core.errors import ManagementError
+        from threaddesk.services.trash import TrashService, _hash
+        from threaddesk.services.trash_sync import (
+            content_digest,
+            first_room_restore,
+            room_thread_missing,
+        )
+        if not first_room_restore(incoming):
+            raise InvalidState('room_lifecycle_scope')
+        service = TrashService(self.store)
+        operation = 'room_initial_restore_' + _hash([room_id, incoming])
+        request = {'action': 'initial_room_restore', 'room_id': room_id, 'incoming': incoming}
+        def apply():
+            if not room_thread_missing(self.store, incoming['thread_id']):
+                raise InvalidState('room_lifecycle_scope')
+            self._shell(incoming['thread_id'], title)
+            merged = merge_whiteboard(self.store, entries, preserve_content_hash=True)
+            if content_digest(self.store, incoming['thread_id'], room_id) != incoming['content_digest']:
+                raise ManagementError('concurrent_content_change', 'Initial room payload does not match its history.')
+            thread = self.store.get_thread(incoming['thread_id'])
+            moved = service._move_in_transaction(kind='thread', object_id=thread.id,
+                expected_revision=thread.revision, actor='authenticated_room_initial_history')['entry']
+            restored = service._restore_in_transaction(trash_id=moved['trash_id'], generation=1, expected_revision=1)
+            return {**merged, **restored}
+        result = service._operation(operation, request, apply)
+        if result.get('duplicate'):
+            return {'added': 0, 'kept': len(entries), 'conflicts': 0}
+        return {key: result[key] for key in ('added', 'kept', 'conflicts')}
 
     def serve_pull(self, instance_id: str, token: str, room_id: str) -> dict[str, Any]:
         self._trusted(instance_id, token, room_id)
