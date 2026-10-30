@@ -1,6 +1,6 @@
 """Versioned SQLite schema for ThreadDesk's local workspace."""
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 TABLES = (
     "threads",
@@ -15,6 +15,7 @@ TABLES = (
     "whiteboard_entries",
     "management_operations",
     "issued_handoffs",
+    "trash_entries",
 )
 
 V1_SCHEMA_SQL = """
@@ -149,12 +150,27 @@ CREATE TABLE IF NOT EXISTS issued_handoffs (
 """
 SCHEMA_SQL += ISSUED_HANDOFFS_SQL
 
+TRASH_SQL = """
+CREATE TABLE IF NOT EXISTS trash_entries (
+    id TEXT PRIMARY KEY,
+    kind TEXT NOT NULL,
+    object_id TEXT NOT NULL,
+    generation INTEGER NOT NULL,
+    state TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    UNIQUE(kind, object_id, generation)
+);
+CREATE INDEX IF NOT EXISTS idx_trash_object ON trash_entries(kind, object_id, generation DESC);
+"""
+SCHEMA_SQL += TRASH_SQL
+
 MIGRATIONS = {
     2: SOURCE_RECORDS_SQL,
     3: ARTIFACTS_SQL,
     4: WHITEBOARD_SQL,
     5: MANAGEMENT_SQL,
     6: ISSUED_HANDOFFS_SQL,
+    7: TRASH_SQL,
 }
 
 FTS_SQL = """

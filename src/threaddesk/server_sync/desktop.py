@@ -14,12 +14,13 @@ from urllib.parse import urlsplit
 from fastapi import HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 
-from threaddesk.core.errors import InvalidState
+from threaddesk.core.errors import InvalidState, ManagementError, NotFound
 from threaddesk.server_sync.store import SyncError, _id
 from threaddesk.server_sync.identity import (recover_binding_device_id, recover_binding_bases,
     recover_binding_transfers, validate_retired_transfers)
 
 _BOOK_LOCK = threading.RLock()
+_BOOK_MUTATIONS = threading.local()
 _RUN_LOCKS = {}
 
 
@@ -76,15 +77,58 @@ class BindingBook:
         if self.root.is_symlink():
             raise InvalidState('Unsafe sync directory')
 
+    @contextmanager
+    def _mutation(self, thread_id):
+        """Serialize one private binding's read/modify/write across processes."""
+        from threaddesk.storage.json_store import _lock_exclusive, _unlock
+
+        identity = _id(thread_id)
+        no_follow = getattr(os, 'O_NOFOLLOW', None)
+        if not no_follow:
+            raise InvalidState('Safe sync configuration locking is unavailable on this platform')
+        key = (os.getpid(), threading.get_ident(), str(self.root.resolve()), identity)
+        with _BOOK_LOCK:
+            held = getattr(_BOOK_MUTATIONS, 'held', None)
+            if held is None:
+                held = _BOOK_MUTATIONS.held = set()
+            if key in held:
+                yield
+                return
+            if self.root.is_symlink():
+                raise InvalidState('Unsafe sync configuration')
+            self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
+            self.root.chmod(0o700)
+            descriptor = os.open(self.root / ('.' + identity + '.config.lock'),
+                                 os.O_RDWR | os.O_CREAT | no_follow
+                                 | getattr(os, 'O_NONBLOCK', 0), 0o600)
+            with os.fdopen(descriptor, 'r+b') as lock:
+                info = os.fstat(lock.fileno())
+                if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
+                        or os.name != 'nt' and info.st_mode & 0o077):
+                    raise InvalidState('Unsafe sync configuration lock')
+                _lock_exclusive(lock)
+                held.add(key)
+                try:
+                    yield
+                finally:
+                    held.remove(key)
+                    _unlock(lock)
+
     def load(self, thread_id):
         with _BOOK_LOCK:
             return _read(self.root / (_id(thread_id) + '.json'))
 
     def view(self, thread_id):
+        from threaddesk.server_sync.lifecycle import conflict_view
+        thread = self.core.store.get_thread(thread_id, include_trashed=True)
+        trashed = self.core.store.object_in_trash('thread', thread_id)
+        lifecycle = self.core.store.get_object_lifecycle('thread', thread_id)
+        common = {'thread_revision':thread.revision, 'trashed':trashed,
+                  'lifecycle':lifecycle, 'local_metadata_conflicts':conflict_view(self.core, thread_id)}
         config = self.load(thread_id)
         if not config:
-            references = list(self.core.get(thread_id).context.files)
-            return {'configured': False, 'status': {'state': 'unconfigured'},
+            references = list(thread.context.files)
+            return {**common, 'configured': False, 'status': {'state': 'blocked' if trashed else 'unconfigured'},
                     'owner_references':references,'owner_references_text':'\n'.join(references)}
         public = {k:v for k,v in config.items() if k != 'token'}
         public['owner_references_text'] = '\n'.join(config.get('owner_references',[]))
@@ -93,21 +137,13 @@ class BindingBook:
         public['token_configured'] = bool(config.get('token'))
         status = _read(self.root / (thread_id + '.status.json'))
         public['status'] = status if status and status.get('config_id') == config['config_id'] else {'state':'pending'}
-        from threaddesk.server_sync.metadata import export_document, list_conflicts
-        conflicts = list_conflicts(self.core,thread_id)
-        public['local_metadata_conflicts'] = []
-        if conflicts:
-            document = export_document(self.core,thread_id)
-            for conflict in conflicts:
-                current = document
-                for part in conflict['path'].split('/'):
-                    current = current.get(part,{'$missing':True}) if isinstance(current,dict) else {'$missing':True}
-                public['local_metadata_conflicts'].append({**conflict,'expected_current':current,
-                    'operation_id':secrets.token_hex(16)})
-        return public
+        if trashed:
+            public['status'] = {**public['status'], 'state':'blocked'}
+        return {**public, **common}
 
     def save(self, thread_id, *, url, project_id, root, token, approved_roots=(), owner_references=None, automatic=True, offline_enabled=False):
         _id(thread_id)
+        self.core.store.get_thread(thread_id)
         origin = check_origin(url)
         selected = Path(root).expanduser()
         if selected.is_symlink() or not selected.is_dir():
@@ -125,7 +161,7 @@ class BindingBook:
                     or self.workspace.is_relative_to(path) or path.is_relative_to(self.workspace)):
                 raise InvalidState('Do not grant the home, filesystem or ThreadDesk workspace as a dependency root')
             approved.append(str(path))
-        with _BOOK_LOCK,ExitStack() as migration:
+        with self._mutation(thread_id),ExitStack() as migration:
             old = self.load(thread_id) or {}
             if old and old.get('root')!=str(selected):
                 run_lock=_RUN_LOCKS.setdefault((str(self.workspace),thread_id),threading.Lock())
@@ -172,7 +208,7 @@ class BindingBook:
             return config
 
     def update(self, thread_id, fields, *, config_id=None):
-        with _BOOK_LOCK:
+        with self._mutation(thread_id):
             config = self.load(thread_id)
             if not config or config_id and config['config_id'] != config_id:
                 return
@@ -196,7 +232,7 @@ class BindingBook:
 def record_owner_reference(core, thread_id, path, *, allowed=True):
     """Only explicit protected local file actions may amend source authority."""
     book = BindingBook(core)
-    with _BOOK_LOCK:
+    with book._mutation(thread_id):
         config = book.load(thread_id)
         if not config:
             return
@@ -238,7 +274,13 @@ class DesktopSyncManager:
                         break
                     config = book.load(tid)
                     if config and config.get('automatic'):
-                        self.run_once(core, tid)
+                        try:
+                            if core.store.object_in_trash('thread', tid):
+                                self.reconcile_lifecycle(core, tid)
+                            else:
+                                self.run_once(core, tid)
+                        except (ManagementError, NotFound):
+                            continue
             except Exception:
                 # Each bound run records its bounded error; workspace selection
                 # errors retry on the next loop without starting any other task.
@@ -249,6 +291,7 @@ class DesktopSyncManager:
             self.stop_event.wait(5)
 
     def run_once(self, core, thread_id):
+        core.store.get_thread(thread_id)
         import httpx
         from threaddesk.server_sync.client import SyncClient
         from threaddesk.server_sync.metadata import MetadataReplica
@@ -292,8 +335,8 @@ class DesktopSyncManager:
                     response = http.put('/api/projects/'+pid+'/offline', json={'enabled':config['offline_enabled']})
                     response.raise_for_status()
                     book.update(thread_id, {'offline_pending':False}, config_id=config['config_id'])
-                identity = config['url']+'\0'+pid+'\0'+hashlib.sha256(config['token'].encode()).hexdigest()
-                state = book.root / 'replicas' / thread_id / hashlib.sha256(identity.encode()).hexdigest()
+                from threaddesk.server_sync.lifecycle_sync import replica_state
+                identity, state = replica_state(book, thread_id, {**config, 'project_id':pid})
                 file_state = state / 'files' / hashlib.sha256(str(Path(config['root']).resolve()).encode()).hexdigest()
                 replica = MetadataReplica(core, thread_id, state/'metadata', remote_identity=identity)
                 if bootstrap is not None:
@@ -333,6 +376,10 @@ class DesktopSyncManager:
                 replica.close()
             lock.release()
 
+    def reconcile_lifecycle(self, core, thread_id):
+        from threaddesk.server_sync.lifecycle_sync import synchronize_lifecycle
+        return synchronize_lifecycle(core, thread_id)
+
 
 def install_routes(app, service_factory, render):
     manager = DesktopSyncManager(service_factory)
@@ -354,20 +401,21 @@ def install_routes(app, service_factory, render):
     @app.get('/threads/{thread_id}/server-sync')
     def sync_page(thread_id: str, request: Request):
         with worker_service() as core:
-            core.get(thread_id)
-            return render(request, {'sync_binding':BindingBook(core).view(thread_id)})
+            core.store.get_thread(thread_id, include_trashed=True)
+            return render(request, {'sync_binding':BindingBook(core).view(thread_id),
+                                    'lifecycle_operation_id':secrets.token_hex(16)})
 
     @app.get('/api/threads/{thread_id}/server-sync')
     def sync_status(thread_id: str):
         with worker_service() as core:
-            core.get(thread_id)
+            core.store.get_thread(thread_id, include_trashed=True)
             return BindingBook(core).view(thread_id)
 
     def perform_action(thread_id, request, form):
         with worker_service() as core:
-            core.get(thread_id)
-            book = BindingBook(core)
             action = form.get('action')
+            core.store.get_thread(thread_id, include_trashed=action in {'resolve_local', 'lifecycle_sync'})
+            book = BindingBook(core)
             if action == 'configure':
                 book.save(thread_id,url=str(form.get('url','')),project_id=str(form.get('project_id','')).strip(),
                           root=str(form.get('root','')),token=str(form.get('token','')),
@@ -390,9 +438,19 @@ def install_routes(app, service_factory, render):
                 except ValueError as exc:
                     raise HTTPException(400,'Invalid conflict value') from exc
                 resolve_conflict(core,thread_id,str(form.get('conflict_id','')),expected,chosen,str(form.get('operation_id','')))
+            elif action == 'lifecycle_sync':
+                from threaddesk.services.commands import CommandApplication
+                try:
+                    expected = int(form.get('expected_revision', ''))
+                except ValueError as exc:
+                    raise HTTPException(400, 'Invalid revision') from exc
+                application = CommandApplication(core, transport='http')
+                application.call({'version':1, 'workspace_id':application.workspace_id,
+                    'command':'server_sync.lifecycle_sync', 'arguments':{'thread_id':thread_id},
+                    'expected_revision':expected, 'operation_id':str(form.get('operation_id',''))})
             else:
                 raise HTTPException(400,'Unsupported sync action')
-            return render(request, {'sync_binding':book.view(thread_id)})
+            return render(request, {'sync_binding':book.view(thread_id), 'lifecycle_operation_id':secrets.token_hex(16)})
 
     @app.post('/threads/{thread_id}/server-sync')
     async def sync_action(thread_id: str, request: Request):

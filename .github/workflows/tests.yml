@@ -47,7 +47,10 @@ jobs:
   test:
     name: Complete suite including browser, twice
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # CI 41003824290 measured 1242s for the previous whole acceptance run.
+    # New cases measured 94.086s UI/observation + 3.890s conflict tests locally.
+    # Budget both runs, setup and jitter; individual deadlines/gates unchanged.
+    timeout-minutes: 55
     env:
       PYTHONPATH: src:tests
       PYTEST_PLUGINS: http_navigation_diagnostics
@@ -86,12 +89,9 @@ jobs:
           PY
       - name: Check JavaScript
         run: |
-          node --check src/threaddesk/ui/static/map.js
-          node --check src/threaddesk/ui/static/map-layout.js
-          node --check src/threaddesk/ui/static/map-viewport.js
-          node --check src/threaddesk/ui/static/graph-workspace.js
-          node --check src/threaddesk/ui/static/app.js
-          node --check src/threaddesk/ui/static/graph-files.js
+          for script in src/threaddesk/ui/static/*.js; do
+            node --check "$script"
+          done
       - name: Test results
         if: always()
         uses: actions/upload-artifact@v4

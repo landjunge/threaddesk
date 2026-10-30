@@ -148,7 +148,7 @@ def descriptor(filename: str) -> dict:
     family, mime, adapter, preview, external = FORMATS.get(
         suffix, ("unknown", "application/octet-stream", "metadata", "metadata", False)
     )
-    return {
+    result = {
         "suffix": suffix,
         "format": family,
         "media_type": mime,
@@ -160,6 +160,11 @@ def descriptor(filename: str) -> dict:
         "adapter": adapter,
         "index_reason": "" if adapter != "metadata" else "metadata_only",
     }
+    if suffix == ".key":
+        result.update(external_open=False, external_open_condition="validated_keynote_iwa_zip_v1",
+                      import_condition="validated_keynote_iwa_zip_v1", content_validation_required=True,
+                      directory_package_supported=False)
+    return result
 
 # Preserve previously accepted library suffixes alongside the shared registry.
 _register(".bmp", "image", "image/bmp", preview="image")

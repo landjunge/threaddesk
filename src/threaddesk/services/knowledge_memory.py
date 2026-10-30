@@ -205,7 +205,7 @@ def manage(svc, arguments):
         ).encode()
     ).hexdigest()
     try:
-        with svc.store.transaction():
+        with svc.bus.defer_until_commit(), svc.store.transaction():
             saved = svc.store.get_management_operation(args["operation_id"])
             if saved:
                 if saved["request_hash"] != digest:

@@ -7,6 +7,30 @@
     {% endfor %}
   </select></label>
   <label>{{ t('map.filter_project') }}<select data-map-project><option value="">{{ t('map.all_projects') }}</option></select></label>
+  <details class="graph-view-tools">
+    <summary>{{ t('map.view_options') }}</summary>
+    <div class="graph-view-options">
+      <label>{{ t('map.color_mode') }}<select data-map-mode>
+        {% for mode in ('work', 'modified', 'accessed', 'status') %}<option value="{{ mode }}">{{ t('map.mode.' ~ mode) }}</option>{% endfor %}
+      </select></label>
+      <label>{{ t('map.age') }}<select data-map-age><option value="">{{ t('map.age.all') }}</option>
+        {% for band in ('24h', '7d', '30d', '90d', 'older', 'unknown') %}<option value="{{ band }}">{{ t('map.age.' ~ band) }}</option>{% endfor %}
+      </select></label>
+      <label>{{ t('map.filter_status') }}<select data-map-status><option value="">{{ t('map.all_statuses') }}</option></select></label>
+      <label>{{ t('map.neighborhood') }}<select data-map-hops>
+        <option value="0">{{ t('map.neighborhood_all') }}</option><option value="1">{{ t('map.neighborhood_one') }}</option><option value="2">{{ t('map.neighborhood_two') }}</option>
+      </select></label>
+      <label>{{ t('map.views') }}<select data-map-view><option value="">{{ t('map.view_choose') }}</option></select></label>
+      <label>{{ t('map.view_title') }}<input data-map-view-title maxlength="160" autocomplete="off" /></label>
+      <div class="graph-view-buttons">
+        <button class="btn btn-ghost" type="button" data-map-arrange disabled>{{ t('map.arrange') }}</button>
+        <button class="btn btn-ghost" type="button" data-map-view-save>{{ t('map.view_save') }}</button>
+        <button class="btn btn-ghost" type="button" data-map-view-load>{{ t('map.view_load') }}</button>
+        <button class="btn btn-ghost" type="button" data-map-view-delete>{{ t('map.view_delete') }}</button>
+      </div>
+      <p data-map-view-message role="status" hidden></p>
+    </div>
+  </details>
   <button class="btn btn-ghost" type="button" data-map-clear-filters>{{ t('map.clear_filters') }}</button>
   <output data-map-filter-count class="graph-filter-count" aria-live="polite" hidden></output>
 </form>

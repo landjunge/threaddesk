@@ -1,6 +1,17 @@
 (() => {
   const root = document.querySelector("[data-graph-endpoint]");
   if (!root) return;
+  const workspace = root.graphWorkspace = {
+    id: root.dataset.graphWorkspaceId, invalidated: false,
+    accept(identity) {
+      if (identity && identity === this.id && !this.invalidated) return true;
+      if (!this.invalidated) {
+        this.invalidated = true;
+        root.dispatchEvent(new CustomEvent('threaddesk:workspace-changed', {detail: {workspace_id: identity}}));
+      }
+      return false;
+    },
+  };
 
   const stage = root.querySelector("[data-map-stage]");
   const world = root.querySelector("[data-map-world]");
@@ -35,6 +46,7 @@
     }
     return text;
   };
+  const activity = window.ThreadDeskMapActivity(root, t);
   const viewport = window.ThreadDeskMapViewport;
   const MIN_SCALE = 0.04;
   const MAX_SCALE = 4;
@@ -42,70 +54,9 @@
   let VIEW_H = Math.max(1, stage.clientHeight);
   canvas.setAttribute("viewBox", `0 0 ${VIEW_W} ${VIEW_H}`);
 
-  // ---------------------------------------------------------------- Sprache
-  // Form trägt den Typ, Farbe den Zustand. Farbe ist nie das einzige Signal:
-  // jeder Knoten hat zusätzlich Form, Glyphe und Beschriftung.
-  const SHAPE = {
-    project: "circle", agent: "circle", person: "circle",
-    task: "rect",
-    decision: "doc", result: "doc", document: "doc",
-    tool: "hex", source: "hex", workflow: "hex",
-  };
-  const TONE = {
-    confirmed: "good", accepted: "good", verified: "good", active: "good",
-    done: "good",
-    proposed: "wait", review: "wait", waiting: "wait", ready: "wait",
-    assigned: "wait", candidate: "wait", idea: "wait",
-    blocked: "risk", rejected: "risk",
-    paused: "idle", archived: "idle", superseded: "idle",
-    delivered: "fresh", unverified: "fresh", in_progress: "fresh",
-    rework: "fresh",
-  };
-  // Gerichtete Beziehungen bekommen eine Spitze, unsichere eine gestrichelte
-  // Linie. Die Stärke bleibt überall ein Haarstrich; Bedeutung liegt in Farbe.
-  const EDGE = {
-    contains:    {tone: "soft",  width: 1, dash: null,    arrow: false, flow: false},
-    depends_on:  {tone: "bold",  width: 1, dash: null,    arrow: true,  flow: false},
-    blocks:      {tone: "risk",  width: 1, dash: null,    arrow: true,  flow: false},
-    assigned_to: {tone: "soft",  width: 1, dash: "7 6",   arrow: true,  flow: false},
-    produced:    {tone: "fresh", width: 1, dash: null,    arrow: true,  flow: true},
-    follows:     {tone: "fresh", width: 1, dash: null,    arrow: true,  flow: true},
-    supports:    {tone: "good",  width: 1, dash: null,    arrow: true,  flow: false},
-    references:  {tone: "soft",  width: 1, dash: "3 7",   arrow: false, flow: false},
-    related_to:  {tone: "soft",  width: 1, dash: "3 7",   arrow: false, flow: false},
-  };
-  const GLYPH = {
-    project: "M-9-7h7l2 3h9v11h-18z",
-    task: "M-8 0l5 5 10-10",
-    decision: "M0-9l9 9-9 9-9-9z",
-    result: "M-9 3l6 6 12-14",
-    person: "M0-4a4 4 0 100-8 4 4 0 000 8zM-8 9a8 8 0 0116 0z",
-    agent: "M-8-6h16v11h-16zM-4 9h8M0-11v5",
-    document: "M-6-9h8l4 4v14h-12z",
-    tool: "M6-9l-5 5 3 3 5-5a5 5 0 01-8 6l-6 6 3 3 6-6a5 5 0 016-8z",
-    source: "M0-9a9 9 0 100 18 9 9 0 000-18zM-9 0h18M0-9c5 5 5 13 0 18",
-    workflow: "M-9-5h7v10h11M6-9l4 4-4 4",
-  };
-  const SIZE = {circle: 34, rect: [64, 24], doc: [50, 32], hex: 34};
-  // Der Bauplan verlangt: Farbe ist nie das einzige Signal. Jeder Zustand
-  // bekommt daher zusätzlich eine kleine Marke am Knoten.
-  const MARK = {
-    good:  "M-3.5 0l2.5 2.5 4.5-5",
-    wait:  "M0-3.2a3.2 3.2 0 100 6.4 3.2 3.2 0 000-6.4",
-    fresh: "M-4 1c1.6-3 3-3 4 0s2.4 3 4 0",
-    risk:  "M0-4.5v5M0 3.4v.2",
-    idle:  "M-2-3.4v6.8M2-3.4v6.8",
-  };
-  const MARK_AT = {circle: [24, -24], hex: [24, -22], rect: [58, -28], doc: [44, -34]};
-
-  const shapeOf = (node) => SHAPE[node.kind] || "circle";
-  const toneOf = (node) => TONE[node.status] || "idle";
-  const radiusOf = (node) => {
-    const shape = shapeOf(node);
-    if (shape === "rect") return Math.hypot(...SIZE.rect);
-    if (shape === "doc") return Math.hypot(...SIZE.doc);
-    return SIZE[shape];
-  };
+  const shapes = window.ThreadDeskMapShapes(() => ({width: VIEW_W, height: VIEW_H}));
+  const {SHAPE, TONE, EDGE, GLYPH, SIZE, MARK, MARK_AT, shapeOf, toneOf, radiusOf,
+    el, outline, caption, defs, backdrop, edgePath} = shapes;
 
   // ---------------------------------------------------------------- Layout
   // Bestätigte Beziehungen ordnen eine ruhige, lesbare Anfangsansicht.
@@ -113,124 +64,6 @@
   const layout = (nodes, relations, previous = new Map()) =>
     window.ThreadDeskMapLayout(nodes, relations,
       {width: VIEW_W, height: VIEW_H, radiusOf, previous});
-
-  // ---------------------------------------------------------------- Zeichnen
-  const el = (name, attrs = {}) => {
-    const node = document.createElementNS(svgNS, name);
-    Object.entries(attrs).forEach(([key, value]) => {
-      if (value !== null && value !== undefined) node.setAttribute(key, value);
-    });
-    return node;
-  };
-
-  const outline = (node) => {
-    const shape = shapeOf(node);
-    if (shape === "rect") {
-      const [w, h] = SIZE.rect;
-      return el("rect", {x: -w, y: -h, width: w * 2, height: h * 2, rx: 8});
-    }
-    if (shape === "doc") {
-      const [w, h] = SIZE.doc;
-      const fold = 16;
-      return el("path", {d: `M${-w} ${-h}H${w - fold}L${w} ${-h + fold}V${h}H${-w}Z`});
-    }
-    if (shape === "hex") {
-      const r = SIZE.hex;
-      const points = [];
-      for (let i = 0; i < 6; i += 1) {
-        const a = (Math.PI / 3) * i - Math.PI / 6;
-        points.push(`${(Math.cos(a) * r).toFixed(1)},${(Math.sin(a) * r).toFixed(1)}`);
-      }
-      return el("polygon", {points: points.join(" ")});
-    }
-    return el("circle", {r: SIZE.circle});
-  };
-
-  // Beschriftung unter den Knoten, damit nichts abgeschnitten wird.
-  const caption = (title) => {
-    const group = el("g", {class: "map-label"});
-    group.appendChild(el("rect", {class: "map-label-hit", fill: "transparent", "pointer-events": "all"}));
-    const words = title.split(/\s+/).flatMap(word => word.match(/.{1,24}/g) || []);
-    const lines = [];
-    let line = "";
-    words.forEach(word => {
-      const candidate = line ? `${line} ${word}` : word;
-      if (candidate.length > 24 && line) { lines.push(line); line = word; }
-      else line = candidate;
-    });
-    if (line) lines.push(line);
-    if (lines.length > 2) lines[1] = `${lines[1].slice(0, 23)}…`;
-    lines.slice(0, 2).forEach((text, index) => {
-      const item = el("text", {"text-anchor": "middle", y: index * 16});
-      item.textContent = text;
-      group.appendChild(item);
-    });
-    const fullTitle = el("title");
-    fullTitle.textContent = title;
-    group.appendChild(fullTitle);
-    return group;
-  };
-
-  const defs = () => {
-    const box = el("defs");
-    box.innerHTML = `
-      <radialGradient id="map-vignette" cx="50%" cy="45%" r="72%">
-        <stop offset="0%" stop-color="#0d2029"/>
-        <stop offset="60%" stop-color="#070f14"/>
-        <stop offset="100%" stop-color="#03060a"/>
-      </radialGradient>
-      <pattern id="map-grid" width="46" height="46" patternUnits="userSpaceOnUse">
-        <path d="M46 0H0V46" fill="none" stroke="#142a33" stroke-width="1"/>
-      </pattern>
-      <filter id="map-glow" x="-70%" y="-70%" width="240%" height="240%">
-        <feGaussianBlur stdDeviation="7" result="blur"/>
-        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-      </filter>
-      <filter id="map-edge-glow" x="-40%" y="-40%" width="180%" height="180%">
-        <feGaussianBlur stdDeviation="2.2" result="blur"/>
-        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-      </filter>`;
-    ["soft", "bold", "good", "fresh", "risk"].forEach((tone) => {
-      const marker = el("marker", {
-        id: `map-arrow-${tone}`, class: `map-arrow map-arrow-${tone}`,
-        viewBox: "0 0 10 10", refX: "9", refY: "5",
-        markerWidth: "5.5", markerHeight: "5.5", orient: "auto-start-reverse",
-      });
-      marker.appendChild(el("path", {d: "M0 1l8 4-8 4z"}));
-      box.appendChild(marker);
-    });
-    return box;
-  };
-
-  const backdrop = () => {
-    const group = el("g", {class: "map-backdrop", "aria-hidden": "true"});
-    const pad = 800;
-    group.appendChild(el("rect", {
-      x: -pad, y: -pad, width: VIEW_W + pad * 2, height: VIEW_H + pad * 2,
-      fill: "url(#map-vignette)",
-    }));
-    group.appendChild(el("rect", {
-      x: -pad, y: -pad, width: VIEW_W + pad * 2, height: VIEW_H + pad * 2,
-      fill: "url(#map-grid)", opacity: "0.5",
-    }));
-    return group;
-  };
-
-  // Kante endet am Rand der Form, damit die Spitze nicht im Knoten steckt.
-  const edgePath = (from, to, fromR, toR) => {
-    const dx = to.x - from.x;
-    const dy = to.y - from.y;
-    const dist = Math.hypot(dx, dy) || 1;
-    const ux = dx / dist;
-    const uy = dy / dist;
-    const x1 = from.x + ux * (fromR + 3);
-    const y1 = from.y + uy * (fromR + 3);
-    const x2 = to.x - ux * (toR + 9);
-    const y2 = to.y - uy * (toR + 9);
-    const mx = (x1 + x2) / 2 - (y2 - y1) * 0.12;
-    const my = (y1 + y2) / 2 + (x2 - x1) * 0.12;
-    return `M${x1.toFixed(1)} ${y1.toFixed(1)}Q${mx.toFixed(1)} ${my.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`;
-  };
 
   let scale = 1;
   let offsetX = 0;
@@ -242,6 +75,8 @@
   let updateLabels = () => {};
   let invalidateLabelWidths = () => {};
   let initialDrawn = false, latestGraph = null;
+  let serverPaging = false, pageOffset = 0;
+  let gpu = null, gpuUnavailable = false;
   let startupDeadline = 0, startupTimer = null;
   let layoutWindow = {width: window.innerWidth, height: window.innerHeight};
   const windowGeometryChanged = () => window.innerWidth !== layoutWindow.width ||
@@ -254,17 +89,26 @@
   ["pointerdown", "click", "keydown", "wheel", "input"].forEach(name =>
     root.addEventListener(name, noteInteraction, {capture: true, passive: true}));
   let applyFilter = () => {};
-  let activeFilter = {query: "", kind: "", project_id: ""};
+  let activeFilter = {query: "", kind: "", project_id: "", status: "", mode: "work", band: "", center: "", hops: 0};
+  let fixedIds = new Set();
+  const showDetail = window.ThreadDeskGraphInspector(root, t, activity, id => fixedIds.has(id));
+  let pendingSearchFocus = false;
   let focusTicket = 0;
   const cancelFocus = () => {
     focusTicket += 1;
     root.classList.remove("is-focusing");
   };
   let selectedFocusId = null;
+  let selectedNodeIds = new Set();
+  const orderedSelection = () => {
+    const selection = [...selectedNodeIds].filter(id => id !== selectedFocusId);
+    if (selectedNodeIds.has(selectedFocusId)) selection.push(selectedFocusId);
+    return selection;
+  };
   const focusSelectionControl = root.querySelector("[data-map-focus-selection]");
   const updateFocusControl = () => {
     if (!focusSelectionControl) return;
-    const selected = [...world.querySelectorAll(".is-selected[data-node-id]")]
+    const selected = gpu ? gpu.selection().length > 0 : [...world.querySelectorAll(".is-selected[data-node-id]")]
       .some(node => node.style.display !== "none");
     focusSelectionControl.disabled = !selected;
     focusSelectionControl.setAttribute("aria-disabled", String(!selected));
@@ -334,14 +178,18 @@
     const rect = stage.getBoundingClientRect();
     return toUser(rect.left + rect.width / 2, rect.top + rect.height / 2);
   };
-  const zoom = (factor) => zoomAt(factor, stageCentre());
-  // Einpassen heißt einpassen: der ganze Graph muss sichtbar werden.
-  const fit = () => {
-    cancelFocus();
+  const zoom = (factor) => gpu ? gpu.zoom(factor) : zoomAt(factor, stageCentre());
+  const overviewCamera = () => {
     const points = [...world.querySelectorAll(".map-node")]
       .filter(node => node.style.display !== "none")
       .map(node => ({...placed.get(node.dataset.nodeId), r: sizes.get(node.dataset.nodeId)}));
-    const camera = viewport.fit(points, VIEW_W, VIEW_H);
+    return viewport.fit(points, VIEW_W, VIEW_H);
+  };
+  // Einpassen heißt einpassen: der ganze Graph muss sichtbar werden.
+  const fit = () => {
+    if (gpu) { gpu.fit(); return; }
+    cancelFocus();
+    const camera = overviewCamera();
     if (!camera) return;
     scale = camera.scale;
     offsetX = camera.x;
@@ -349,8 +197,82 @@
     applyTransform();
   };
 
+  const showFilteredEmpty = visible => {
+    empty.hidden = visible !== 0;
+    const filtered = ['query', 'kind', 'project_id', 'status', 'band', 'center', 'node_ids'].some(key => activeFilter[key]) ||
+      activeFilter.hops && selectedFocusId;
+    empty.textContent = t(filtered ? "map.no_matches" : "map.empty");
+  };
+  const filterWithoutSVG = graph => {
+    activity.update(graph, activeFilter.mode);
+    const visible = window.ThreadDeskGraphFilter(graph, activeFilter, activity, selectedFocusId);
+    if (gpu) gpu.filter(visible);
+    showFilteredEmpty(visible.size);
+    root.dispatchEvent(new CustomEvent("threaddesk:graph-filtered", {
+      bubbles: true, detail: {visible: visible.size, total: graph.nodes.length, ids: [...visible]},
+    }));
+    updateFocusControl();
+  };
+  const renderFallback = graph => {
+    if (gpu) { gpu.destroy(); gpu = null; }
+    root.dataset.renderer = "list"; canvas.hidden = true; world.replaceChildren();
+    summary.textContent = t("map.gpu_fallback");
+    placed = layout(graph.nodes, graph.relations, placed);
+    applyFilter = () => filterWithoutSVG(graph); applyFilter();
+    const button = root.querySelector("[data-map-list-toggle]");
+    if (root.querySelector("[data-map-node-list]").hidden) button.click();
+    button.disabled = true;
+    root.querySelector("[data-map-arrange]").disabled = true;
+  };
+  const renderGPU = (graph, refreshing) => {
+    const previous = gpu ? {camera: gpu.camera(), positions: gpu.snapshotPositions(), selection: orderedSelection()} :
+      placed.size ? {camera: {x: (VIEW_W / 2 - offsetX) / scale, y: (VIEW_H / 2 - offsetY) / scale, scale},
+        positions: Object.fromEntries([...placed].map(([id, point]) => [id, {x: point.x, y: point.y, fixed: fixedIds.has(id)}])),
+        selection: orderedSelection()} : null;
+    if (previous) placed = new Map(Object.entries(previous.positions));
+    if (gpu) { gpu.destroy(); gpu = null; }
+    root.dataset.renderer = "sigma"; canvas.hidden = true; world.replaceChildren();
+    summary.textContent = t("map.nodes_relations", {nodes: graph.counts.nodes, relations: graph.counts.relations});
+    placed = layout(graph.nodes, graph.relations, placed);
+    activity.update(graph, activeFilter.mode);
+    try {
+      gpu = window.ThreadDeskGraphGPU.create(root, graph, placed, {
+        fixed: id => fixedIds.has(id),
+        color: node => activeFilter.mode === "status" ? getComputedStyle(root).getPropertyValue(`--tone-${toneOf(node)}`).trim() : activity.color(node),
+        select: node => { selectedFocusId = node.id; selectedNodeIds = new Set(gpu.selection()); showDetail(node); updateFocusControl(); if (activeFilter.hops) applyFilter(); },
+        fallback: () => { gpuUnavailable = true; renderFallback(latestGraph); },
+      });
+      root.querySelector("[data-map-arrange]").disabled = false;
+      applyFilter = () => filterWithoutSVG(graph);
+      if (previous && refreshing) gpu.restore(previous);
+      applyFilter();
+      if (!refreshing) {
+        const params = new URLSearchParams(location.search);
+        const wanted = graph.nodes.find(node => node.id === params.get("node") ||
+          params.get("thread") && node.metadata?.thread_id === params.get("thread"));
+        if (wanted) { gpu.select(wanted.id); gpu.focus(wanted.id); }
+      }
+    } catch (_) { gpuUnavailable = true; renderFallback(graph); }
+  };
   const render = (graph, refreshing = false, initialReflow = false) => {
-    const selectedIds = refreshing ? [...world.querySelectorAll(".is-selected[data-node-id]")].map(item => item.dataset.nodeId) : [];
+    const ids = new Set(graph.nodes.map(node => node.id));
+    selectedNodeIds = new Set([...selectedNodeIds].filter(id => ids.has(id)));
+    if (selectedFocusId && !ids.has(selectedFocusId)) {
+      selectedFocusId = null;
+      detailTitle.textContent = t("map.no_selection"); detailText.textContent = t("map.pick_hint"); detailMeta.hidden = true;
+      root.querySelector("[data-map-detail-activity]").textContent = "";
+      root.querySelector("[data-map-fix-selected]").disabled = true;
+      root.querySelector("[data-map-trash]").hidden = true;
+      root.dispatchEvent(new CustomEvent("threaddesk:node-selected", {detail: {id: null}}));
+    }
+    if (graph.nodes.length >= 128) {
+      if (gpuUnavailable) renderFallback(graph); else renderGPU(graph, refreshing);
+      return;
+    }
+    if (gpu) { gpu.destroy(); gpu = null; }
+    root.dataset.renderer = "svg"; canvas.hidden = false;
+    root.querySelector("[data-map-arrange]").disabled = true;
+    const selectedIds = refreshing ? [...selectedNodeIds] : [];
     const previousPositions = placed;
     updateLabels = () => {};
     world.replaceChildren();
@@ -360,6 +282,7 @@
     summary.textContent = t("map.nodes_relations", {
       nodes: graph.counts.nodes, relations: graph.counts.relations,
     });
+    activity.update(graph, activeFilter.mode);
     if (!refreshing || initialReflow) {
       // The summary itself may wrap and change the available stage height.
       resizeStage();
@@ -398,46 +321,6 @@
       edges.push({path, relation, style});
     });
 
-    const showDetail = (node, notify = true) => {
-      if (notify) root.dispatchEvent(new CustomEvent("threaddesk:node-selected", {detail: {id: node.id, thread_id: node.metadata?.thread_id}}));
-      detailTitle.textContent = node.title;
-      detailText.textContent = node.details || t("map.no_details");
-      detailMeta.hidden = false;
-      detailMeta.replaceChildren();
-      [[t("map.field_kind"), node.kind],
-       [t("map.field_status"), node.status],
-       [t("map.field_source"), node.source],
-       [t("map.field_visibility"), node.visibility],
-       [t("map.field_revision"), node.revision]]
-        .forEach(([term, value]) => {
-          const item = document.createElement("div");
-          const dt = document.createElement("dt");
-          const dd = document.createElement("dd");
-          dt.textContent = term;
-          dd.textContent = value;
-          item.append(dt, dd);
-          detailMeta.appendChild(item);
-        });
-      const threadId = node.metadata && node.metadata.thread_id;
-      if (typeof threadId === "string" && threadId && !/[/?#]/.test(threadId)) {
-        const item = document.createElement("div");
-        const link = document.createElement("a");
-        link.href = `/?thread=${encodeURIComponent(threadId)}&node=${encodeURIComponent(node.id)}`;
-        link.textContent = t("map.open_thread");
-        link.setAttribute("data-map-thread", threadId);
-        link.addEventListener("click", async event => {
-          if (event.button || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
-          event.preventDefault();
-          try {
-            const response = await window.threadDeskWrite(`/threads/${encodeURIComponent(threadId)}/switch`);
-            if (!response.ok) throw new Error("switch_rejected");
-            location.assign(link.href);
-          } catch (_) { requestState("browser.save_uncertain", true); }
-        });
-        item.appendChild(link);
-        detailMeta.appendChild(item);
-      }
-    };
 
     graph.nodes.forEach((node) => {
       const point = placed.get(node.id);
@@ -447,7 +330,7 @@
       const group = el("g", {
         class: `map-node map-node-${shapeOf(node)} map-tone-${tone}${ai ? " is-ai" : ""}`,
         transform: `translate(${point.x.toFixed(1)} ${point.y.toFixed(1)})`,
-        tabindex: "0", role: "button",
+        tabindex: "-1", role: "button",
         "data-status": node.status, "data-kind": node.kind, "data-tone": tone,
         "data-node-id": node.id,
         "aria-label": `${node.title}, ${node.kind}, ${node.status}`,
@@ -482,36 +365,58 @@
       const title = el("title");
       title.textContent = node.title;
       group.appendChild(title);
+      group.dataset.fixed = String(fixedIds.has(node.id));
+      activity.decorate(group, node);
       group.addEventListener("focus", () => updateLabels());
       group.addEventListener("blur", () => updateLabels());
       group.addEventListener("pointerenter", () => { group.classList.add("is-hovered"); updateLabels(); });
       group.addEventListener("pointerleave", () => { group.classList.remove("is-hovered"); updateLabels(); });
       if (ring) group.insertBefore(ring, glyph);
 
-      const select = (additive = false) => {
+      const select = (additive = false, userGesture = false) => {
+        const opening = userGesture && root.querySelector('[data-map-inspector]').hidden;
+        const overview = opening && overviewCamera();
+        const retainOverview = overview && Math.abs(scale - overview.scale) < 1e-6 &&
+          Math.abs(offsetX - overview.x) < 1e-6 && Math.abs(offsetY - overview.y) < 1e-6;
         if (!additive) {
           nodeLayer.querySelectorAll(".is-selected")
             .forEach((item) => item.classList.remove("is-selected"));
         }
         group.classList.toggle("is-selected");
+        selectedNodeIds = new Set([...nodeLayer.querySelectorAll(".is-selected")].map(item => item.dataset.nodeId));
         selectedFocusId = node.id;
         showDetail(node);
+        // Opening the drawer narrows the stage. Preserve an existing overview
+        // once, so its clickable shapes stay inside the stage. User zoom/pan
+        // and programmatically restored cameras retain their exact view.
+        if (retainOverview) { resizeStage(); fit(); }
         highlight();
+        if (activeFilter.hops) applyFilter();
         // Selection must not move the other click targets out of the viewport.
         // Explicit deep-link navigation below still focuses its destination.
       };
       group.addEventListener("click", (event) => {
         if (nodeDrag && nodeDrag.moved) return;
-        select(event.shiftKey);
+        select(event.shiftKey, event.isTrusted);
       });
       group.addEventListener("keydown", (event) => {
+        if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
+          event.preventDefault();
+          const nodes = [...nodeLayer.querySelectorAll(".map-node")].filter(item => item.style.display !== "none");
+          const index = nodes.indexOf(group);
+          const next = event.key === "Home" ? 0 : event.key === "End" ? nodes.length - 1 :
+            (index + (["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : -1) + nodes.length) % nodes.length;
+          nodes.forEach(item => item.tabIndex = -1); nodes[next].tabIndex = 0; nodes[next].focus();
+          return;
+        }
         if (event.key !== "Enter" && event.key !== " ") return;
         event.preventDefault();
-        select(event.shiftKey);
+        select(event.shiftKey, event.isTrusted);
       });
       // Knoten lassen sich verschieben; erst ab 3 px gilt es als Ziehen,
       // damit der Klick zum Auswählen erhalten bleibt.
       group.addEventListener("pointerdown", (event) => {
+        if (fixedIds.has(node.id)) return;
         nodeDrag = {
           id: node.id, group, moved: false,
           start: toUser(event.clientX, event.clientY),
@@ -553,97 +458,34 @@
       updateLabels();
     };
 
-    const labelItems = [...nodeLayer.querySelectorAll(".map-node")].map((group, order) => {
-      const label = group.querySelector(".map-label");
-      const texts = [...label.querySelectorAll("text")];
-      return {group, label, texts, hit: group.querySelector(".map-node-hit"),
-        labelHit: label.querySelector(".map-label-hit"), order, widths: new Map()};
+    const labels = window.ThreadDeskMapLabels(nodeLayer, {
+      shapes, viewport, positions: () => placed,
+      dimensions: () => ({width: VIEW_W, height: VIEW_H}),
+      camera: () => ({scale, offsetX, offsetY}),
     });
-    invalidateLabelWidths = () => labelItems.forEach(item => item.widths.clear());
-    updateLabels = () => {
-      const candidates = labelItems.filter(item => item.group.style.display !== "none")
-        .map(item => {
-          const {group, label, texts, order, widths} = item;
-          const important = group.classList.contains("is-selected") ||
-            group.classList.contains("is-hovered") || document.activeElement === group;
-          const font = important ? 16 : 14;
-          texts.forEach((text, index) => {
-            text.style.fontSize = `${font}px`;
-            text.setAttribute("y", index * (font + 4));
-          });
-          const type = getComputedStyle(texts[0] || label);
-          const metricKey = `${font}|${type.fontFamily}|${type.fontWeight}|${type.fontStyle}|${type.fontStretch}|${type.letterSpacing}`;
-          if (!widths.has(metricKey)) widths.set(metricKey,
-            Math.min(VIEW_W - 24, Math.max(1, ...texts.map(text => text.getComputedTextLength()))));
-          const point = placed.get(group.dataset.nodeId);
-          const shape = SHAPE[group.dataset.kind] || "circle";
-          const dimensions = Array.isArray(SIZE[shape]) ? SIZE[shape] : [SIZE[shape], SIZE[shape]];
-          return {...item, font, width: widths.get(metricKey), height: Math.max(1, texts.length) * (font + 4),
-            x: offsetX + scale * point.x, y: offsetY + scale * point.y,
-            radius: dimensions[1] * scale,
-            halfWidth: dimensions[0] * scale, halfHeight: dimensions[1] * scale,
-            priority: important ? 3 : group.classList.contains("is-near") ? 2 :
-              group.dataset.kind === "project" ? 1 : 0};
-        });
-      viewport.labels(candidates, VIEW_W, VIEW_H).forEach(item => {
-        item.label.style.display = item.visible ? "" : "none";
-        item.label.dataset.screenFontSize = String(item.font);
-        item.label.setAttribute("transform",
-          `translate(${item.shiftX / scale} ${item.baseline / scale}) scale(${1 / scale})`);
-        // The empty space between a displaced caption and its shape must stay
-        // clickable for other nodes. Two exact regions avoid an invisible wall.
-        const halfWidth = item.halfWidth / scale, halfHeight = item.halfHeight / scale;
-        Object.entries({x: -halfWidth, y: -halfHeight, width: halfWidth * 2, height: halfHeight * 2})
-          .forEach(([key, value]) => item.hit.setAttribute(key, value));
-        Object.entries({x: -item.width / 2, y: -item.font,
-          width: item.width, height: item.height})
-          .forEach(([key, value]) => item.labelHit.setAttribute(key, value));
-      });
-    };
+    updateLabels = labels.update; invalidateLabelWidths = labels.invalidate;
     applyFilter = () => {
-      const normalize = value => String(value || "").normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
-      const query = normalize(activeFilter.query).trim();
-      const project = activeFilter.project_id;
-      const members = new Set(project ? [project] : []);
-      if (project) {
-        const projectThread = graph.nodes.find(node => node.id === project &&
-          node.kind === "project")?.metadata?.thread_id;
-        graph.nodes.forEach(node => {
-          if (node.metadata?.project_id === project ||
-              node.metadata?.project_ids?.includes(project) ||
-              (projectThread && node.metadata?.thread_id === projectThread)) members.add(node.id);
-        });
-        let changed = true;
-        while (changed) {
-          changed = false;
-          graph.relations.forEach(relation => {
-            if (relation.kind === "contains" && members.has(relation.source_id) &&
-                !members.has(relation.target_id)) {
-              members.add(relation.target_id); changed = true;
-            }
-          });
-        }
-      }
-      const visible = new Set();
+      activity.update(graph, activeFilter.mode);
+      const visible = window.ThreadDeskGraphFilter(graph, activeFilter, activity, selectedFocusId);
       graph.nodes.forEach(node => {
-        const matches = (!query || normalize(`${node.title} ${node.details || ""}`).includes(query)) &&
-          (!activeFilter.kind || node.kind === activeFilter.kind) && (!project || members.has(node.id));
+        const matches = visible.has(node.id);
         const group = nodeLayer.querySelector(`[data-node-id="${CSS.escape(node.id)}"]`);
+        activity.decorate(group, node);
         group.style.display = matches ? "" : "none";
-        group.setAttribute("tabindex", matches ? "0" : "-1");
+        group.setAttribute("tabindex", "-1");
         group.setAttribute("aria-hidden", String(!matches));
         if (matches) visible.add(node.id);
       });
+      const keyboardTarget = (selectedFocusId && visible.has(selectedFocusId)) ? selectedFocusId : [...visible][0];
+      if (keyboardTarget) nodeLayer.querySelector(`[data-node-id="${CSS.escape(keyboardTarget)}"]`).setAttribute("tabindex", "0");
       edges.forEach(({path, relation}) => {
         path.style.display = visible.has(relation.source_id) && visible.has(relation.target_id) ? "" : "none";
       });
-      empty.hidden = visible.size !== 0;
-      empty.textContent = query || activeFilter.kind || project ? t("map.no_matches") : t("map.empty");
+      showFilteredEmpty(visible.size);
       updateFocusControl();
       updateLabels();
       root.dispatchEvent(new CustomEvent("threaddesk:graph-filtered", {
-        bubbles: true, detail: {visible: visible.size, total: graph.nodes.length},
+        bubbles: true, detail: {visible: visible.size, total: graph.nodes.length, ids: [...visible]},
       }));
     };
     applyFilter();
@@ -656,8 +498,8 @@
       nodeDrag.moved = true;
       const now = toUser(event.clientX, event.clientY);
       const point = placed.get(nodeDrag.id);
-      point.x = nodeDrag.origin.x + (now.x - nodeDrag.start.x);
-      point.y = nodeDrag.origin.y + (now.y - nodeDrag.start.y);
+      point.x = nodeDrag.origin.x + (now.x - nodeDrag.start.x) / scale;
+      point.y = nodeDrag.origin.y + (now.y - nodeDrag.start.y) / scale;
       nodeDrag.group.setAttribute(
         "transform", `translate(${point.x.toFixed(1)} ${point.y.toFixed(1)})`);
       redrawEdges();
@@ -695,6 +537,7 @@
       });
       if (chosen.length) {
         selectedFocusId = chosen[0].id;
+        selectedNodeIds = new Set(chosen.map(node => node.id));
         showDetail(chosen[0]);
         highlight();
         const point = placed.get(chosen[0].id);
@@ -707,9 +550,166 @@
     noteInteraction();
     const detail = event.detail || {};
     activeFilter = {query: String(detail.query || ""), kind: String(detail.kind || ""),
-      project_id: String(detail.project_id || "")};
+      project_id: String(detail.project_id || ""), status: String(detail.status || ""),
+      mode: detail.mode || "work", band: detail.band || "", center: String(detail.center || ""), hops: Number(detail.hops || 0),
+      ...(Array.isArray(detail.node_ids) ? {node_ids: [...detail.node_ids]} : {})};
     applyFilter();
+    const selected = latestGraph?.nodes.find(node => node.id === selectedFocusId);
+    if (selected) activity.details(selected);
+    if (serverPaging && detail.server_query !== false) { pageOffset = 0; refreshGraph(); }
   });
+  root.addEventListener("threaddesk:graph-select-request", event => {
+    const id = event.detail?.id;
+    if (gpu) { gpu.select(id, Boolean(event.detail?.additive)); return; }
+    if (root.dataset.renderer === "list") {
+      const node = latestGraph?.nodes.find(item => item.id === id);
+      if (node) {
+        if (!event.detail?.additive) selectedNodeIds.clear();
+        selectedNodeIds.add(id); selectedFocusId = id; showDetail(node);
+      }
+      return;
+    }
+    const group = [...world.querySelectorAll("[data-node-id]")].find(item => item.dataset.nodeId === id);
+    group?.dispatchEvent(new MouseEvent("click", {bubbles: true, shiftKey: Boolean(event.detail?.additive)}));
+  });
+  const focusFirstMatch = () => {
+    if (gpu) {
+      const ids = window.ThreadDeskGraphFilter(latestGraph, activeFilter, activity, selectedFocusId);
+      if (ids.size) gpu.focus([...ids][0]);
+      return;
+    }
+    const group = [...world.querySelectorAll("[data-node-id]")].find(item => item.style.display !== "none");
+    if (group) { scale = Math.max(1, scale); focusOn(placed.get(group.dataset.nodeId)); }
+  };
+  root.addEventListener("threaddesk:graph-search-submit", () => {
+    if (serverPaging) pendingSearchFocus = true; else focusFirstMatch();
+  });
+  root.querySelector("[data-map-fix-selected]")?.addEventListener("click", () => {
+    if (!selectedFocusId) return;
+    if (fixedIds.has(selectedFocusId)) fixedIds.delete(selectedFocusId); else fixedIds.add(selectedFocusId);
+    const group = world.querySelector(`[data-node-id="${CSS.escape(selectedFocusId)}"]`);
+    if (group) group.dataset.fixed = String(fixedIds.has(selectedFocusId));
+    if (gpu) { gpu.stopLayout(); applyFilter(); }
+    root.querySelector("[data-map-fix-selected]").textContent = t(fixedIds.has(selectedFocusId) ? "map.unfix_selected" : "map.fix_selected");
+  });
+  root.querySelector("[data-map-arrange]")?.addEventListener("click", () => {
+    gpu?.arrange().catch(() => {
+      gpu?.stopLayout(); summary.textContent = t("map.worker_unavailable");
+    });
+  });
+  const readGraph = async arguments_ => {
+    const response = await window.threadDeskWrite('/api/graph/v2', {
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(arguments_)});
+    if (!response.ok) throw Error("view_graph_unavailable");
+    const graph = await response.json();
+    if (!workspace.accept(graph.workspace_id)) throw Error('workspace_conflict');
+    return graph;
+  };
+  const readFilterContext = async (filters, wanted = [], readUnfiltered = false) => {
+    let filteredGraph = null;
+    if (readUnfiltered || ['query', 'kind', 'status', 'project_id', 'band', 'center', 'node_ids'].some(key => filters[key])) {
+      filteredGraph = await readGraph(filters);
+      const includeGraph = graph => {
+        if (graph.next_offset != null || graph.relations_truncated) throw Error("view_graph_limit");
+        wanted = [...new Set([...wanted, ...graph.nodes.map(node => node.id)])];
+        if (wanted.length > 1000) throw Error("view_graph_limit");
+      };
+      includeGraph(filteredGraph);
+      const context = async arguments_ => includeGraph(await readGraph({mode: filters.mode,
+        as_of: filteredGraph.as_of, limit: 1000, ...arguments_}));
+      if (filters.center && ['query', 'kind', 'status', 'project_id', 'band', 'node_ids'].some(key => filters[key])) {
+        await context({center: filters.center, hops: filters.hops || 0});
+      }
+      if (filters.project_id && ['query', 'kind', 'status', 'center', 'band', 'node_ids'].some(key => filters[key])) {
+        await context({project_id: filters.project_id});
+      }
+    }
+    return {filteredGraph, wanted};
+  };
+  root.graphController = {
+    refresh: canApply => refreshGraph(false, canApply),
+    interacting: () => Boolean(drag || nodeDrag || root.dataset.layoutRunning === "true"),
+    nodePoint: id => gpu ? gpu.point(id) : placed.has(id) ? {
+      x: offsetX + scale * placed.get(id).x, y: offsetY + scale * placed.get(id).y,
+    } : null,
+    labelMetrics: () => gpu ? gpu.labelMetrics() : null,
+    snapshot: () => ({camera: gpu ? gpu.camera() : {x: (VIEW_W / 2 - offsetX) / scale, y: (VIEW_H / 2 - offsetY) / scale, scale}, filters: {...activeFilter, center: activeFilter.center || (activeFilter.hops ? selectedFocusId || "" : ""), ...(Array.isArray(activeFilter.node_ids) ? {node_ids: [...activeFilter.node_ids]} : {})},
+      positions: gpu ? gpu.snapshotPositions() : Object.fromEntries([...placed].map(([id, point]) => [id, {x: point.x, y: point.y, fixed: fixedIds.has(id)}])),
+      selection: orderedSelection()}),
+    restore: async state => {
+      if (workspace.invalidated) throw Error('workspace_conflict');
+      if (!latestGraph) return;
+      noteInteraction(); cancelFocus();
+      let wanted = [...new Set([...Object.keys(state.positions || {}), ...(state.selection || [])])];
+      const filters = {...state.filters, mode: state.filters?.mode || 'work', limit: 1000, offset: 0};
+      if (Array.isArray(filters.node_ids)) filters.node_ids = [...new Set(filters.node_ids)];
+      if (!filters.center && filters.hops && state.selection?.length) filters.center = state.selection[state.selection.length - 1];
+      if (!filters.center) delete filters.center;
+      const hydrated = await readFilterContext(filters, wanted,
+        Array.isArray(activeFilter.node_ids) && !Array.isArray(filters.node_ids));
+      const filteredGraph = hydrated.filteredGraph; wanted = hydrated.wanted;
+      if (filteredGraph || wanted.some(id => !latestGraph.nodes.some(node => node.id === id))) {
+        if (wanted.length > 1000) throw Error("view_graph_limit");
+        const graph = wanted.length ? await readGraph({node_ids: wanted,
+          mode: state.filters?.mode || 'work', as_of: filteredGraph?.as_of, limit: 1000}) : filteredGraph;
+        if (wanted.length && graph.nodes.length !== wanted.length) throw Error("view_nodes_unavailable");
+        if (filteredGraph && graph.relations_truncated) throw Error("view_graph_limit");
+        if (graph.nodes.length >= 128 && !gpuUnavailable) {
+          try { await window.ThreadDeskGraphGPU.load(); } catch (_) { gpuUnavailable = true; }
+        }
+        if (workspace.invalidated) throw Error('workspace_conflict');
+        latestGraph = graph; serverPaging = true; pageOffset = 0; render(graph, true);
+        root.dispatchEvent(new CustomEvent('threaddesk:graph-loaded', {detail: {nodes: graph.nodes, graph}}));
+      }
+      if (workspace.invalidated) throw Error('workspace_conflict');
+      const ids = new Set(latestGraph.nodes.map(node => node.id));
+      selectedNodeIds = new Set((state.selection || []).filter(id => ids.has(id)));
+      selectedFocusId = [...selectedNodeIds].pop() || null;
+      const points = Object.entries(state.positions || {}).filter(([id]) => ids.has(id));
+      if (gpu) placed = new Map(Object.entries(gpu.snapshotPositions()));
+      points.forEach(([id, point]) => {
+        placed.set(id, {x: point.x, y: point.y});
+        if (point.fixed) fixedIds.add(id); else fixedIds.delete(id);
+      });
+      delete activeFilter.node_ids;
+      activeFilter = {...activeFilter, ...state.filters,
+        ...(Array.isArray(state.filters?.node_ids) ? {node_ids: [...state.filters.node_ids]} : {})};
+      const confirmFilter = () => {
+        if (!filteredGraph) return;
+        const visible = window.ThreadDeskGraphFilter(latestGraph, activeFilter, activity, selectedFocusId);
+        if (visible.size !== filteredGraph.nodes.length || filteredGraph.nodes.some(node => !visible.has(node.id))) {
+          throw Error("view_filter_mismatch");
+        }
+      };
+      if (gpu) {
+        const renderer = gpu;
+        renderer.restore(state); applyFilter(); confirmFilter();
+        if (workspace.invalidated) throw Error('workspace_conflict');
+        if (gpu !== renderer) throw Error('view_renderer_changed');
+        root.dispatchEvent(new CustomEvent('threaddesk:graph-view-loaded', {detail: state}));
+        await renderer.restoreCamera(state.camera, () => {
+          if (workspace.invalidated) throw Error('workspace_conflict');
+          if (gpu !== renderer) throw Error('view_renderer_changed');
+        });
+        confirmFilter(); return;
+      }
+      render(latestGraph, true);
+      world.querySelectorAll(".is-selected").forEach(item => item.classList.remove("is-selected"));
+      let additive = false;
+      for (const id of state.selection || []) {
+        if (!ids.has(id)) continue;
+        root.dispatchEvent(new CustomEvent("threaddesk:graph-select-request", {detail: {id, additive}}));
+        additive = true;
+      }
+      scale = clamp(state.camera.scale);
+      offsetX = VIEW_W / 2 - state.camera.x * scale; offsetY = VIEW_H / 2 - state.camera.y * scale;
+      applyTransform();
+      confirmFilter();
+      if (workspace.invalidated) throw Error('workspace_conflict');
+      root.dispatchEvent(new CustomEvent('threaddesk:graph-view-loaded', {detail: state}));
+    },
+  };
   // One bounded correction catches a late native WINDOW resize before input.
   // Our own header/inspector changes only preserve camera and positions.
   const scheduleStartupCorrection = () => {
@@ -729,6 +729,7 @@
     }, 180);
   };
   const resizeStage = () => {
+    if (gpu) return;
     const width = Math.max(1, stage.clientWidth);
     const height = Math.max(1, stage.clientHeight);
     if (width === VIEW_W && height === VIEW_H) return;
@@ -749,6 +750,7 @@
   root.querySelector("[data-map-zoom-out]").addEventListener("click", () => zoom(1 / 1.25));
   root.querySelector("[data-map-reset]").addEventListener("click", fit);
   focusSelectionControl?.addEventListener("click", () => {
+    if (gpu) { const ids = gpu.selection(); if (ids.length) gpu.focus(ids[0]); return; }
     const selected = [...world.querySelectorAll(".is-selected[data-node-id]")]
       .filter(node => node.style.display !== "none");
     const target = selected.find(node => node.dataset.nodeId === selectedFocusId) || selected[0];
@@ -758,13 +760,14 @@
   });
   updateFocusControl();
   stage.addEventListener("wheel", (event) => {
+    if (gpu) return;
     event.preventDefault();
     zoomAt(event.deltaY < 0 ? 1.12 : 1 / 1.12, toUser(event.clientX, event.clientY));
   }, {passive: false});
 
   const DRAG_THRESHOLD = 3;
   stage.addEventListener("pointerdown", (event) => {
-    if (nodeDrag) return;
+    if (gpu || nodeDrag) return;
     cancelFocus();
     drag = {
       x: event.clientX, y: event.clientY, offsetX, offsetY,
@@ -824,31 +827,68 @@
   const pageReady = viewport.ready(stage);
   pageReady.catch(() => {}); // the request path below presents the error state
   let refreshTicket = 0;
-  async function refreshGraph() {
+  async function refreshGraph(fitPage = false, canApply = () => true) {
     const ticket = ++refreshTicket;
     try {
-      const response = await fetch(root.dataset.graphEndpoint, {headers: {Accept: "application/json"}, cache: "no-store"});
-      if (!response.ok) throw new Error("graph request failed");
-      const graph = await response.json();
+      const address = new URL(root.dataset.graphEndpoint, location.href);
+      if (serverPaging) {
+        Object.entries(activeFilter).forEach(([key, value]) => {
+          if (key !== "node_ids" && (key !== "center" || value)) address.searchParams.set(key, String(value));
+        });
+        address.searchParams.set("offset", String(pageOffset));
+        if (!activeFilter.center && selectedFocusId && activeFilter.hops) address.searchParams.set("center", selectedFocusId);
+      }
+      let response, contextGraph = null;
+      const arguments_ = {...activeFilter, offset: pageOffset,
+        ...(Array.isArray(activeFilter.node_ids) ? {node_ids: [...new Set(activeFilter.node_ids)]} : {})};
+      if (!arguments_.center && selectedFocusId && arguments_.hops) arguments_.center = selectedFocusId;
+      if (!arguments_.center) delete arguments_.center;
+      const centerContext = arguments_.center && ['query', 'kind', 'status', 'project_id', 'band'].some(key => arguments_[key]);
+      const projectContext = arguments_.project_id && ['query', 'kind', 'status', 'center', 'band'].some(key => arguments_[key]);
+      if (serverPaging && (Array.isArray(activeFilter.node_ids) || centerContext || projectContext)) {
+        const hydrated = await readFilterContext({...arguments_, limit: 1000});
+        contextGraph = hydrated.wanted.length ? await readGraph({node_ids: hydrated.wanted,
+          mode: arguments_.mode, as_of: hydrated.filteredGraph.as_of, limit: 1000}) : hydrated.filteredGraph;
+        if (contextGraph.nodes.length !== hydrated.wanted.length || contextGraph.relations_truncated) throw Error("view_graph_limit");
+      } else response = await fetch(address, {headers: {Accept: "application/json"}, cache: "no-store"});
+      if (response && !response.ok) throw new Error("graph request failed");
+      const graph = contextGraph || await response.json();
       await pageReady;
-      if (ticket !== refreshTicket) return;
+      if (ticket !== refreshTicket) return false;
+      if (!workspace.accept(graph.workspace_id)) return false;
       resizeStage();
+      if (graph.nodes.length >= 128 && !gpuUnavailable) {
+        try { await window.ThreadDeskGraphGPU.load(); }
+        catch (_) { gpuUnavailable = true; }
+      }
+      if (!canApply() || workspace.invalidated) return false;
       latestGraph = graph;
+      serverPaging ||= graph.next_offset != null;
       const wasDrawn = initialDrawn;
       render(graph, wasDrawn);
+      if (fitPage) fit();
+      if (pendingSearchFocus) { pendingSearchFocus = false; focusFirstMatch(); }
       if (!wasDrawn) {
         initialDrawn = true;
         startupDeadline = performance.now() + 2500;
       }
       error.hidden = true;
       root.dispatchEvent(new CustomEvent("threaddesk:graph-loaded", {
-        bubbles: true, detail: {nodes: graph.nodes},
+        bubbles: true, detail: {nodes: graph.nodes, graph},
       }));
-    } catch (_) { if (ticket === refreshTicket) error.hidden = false; }
+      return true;
+    } catch (_) { if (ticket === refreshTicket) error.hidden = false; return false; }
   }
   document.addEventListener("threaddesk:library-changed", () => {
     noteInteraction();
     refreshGraph();
+  });
+  root.querySelector("[data-map-graph-next]")?.addEventListener("click", () => {
+    if (latestGraph?.next_offset == null) return;
+    pageOffset = latestGraph.next_offset; refreshGraph(true);
+  });
+  root.querySelector("[data-map-graph-previous]")?.addEventListener("click", () => {
+    pageOffset = Math.max(0, pageOffset - (latestGraph?.filters?.limit || 1000)); refreshGraph(true);
   });
   refreshGraph();
 })();

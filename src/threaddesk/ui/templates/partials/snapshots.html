@@ -9,6 +9,8 @@
     hx-swap="innerHTML"
   >
       <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
+      <input type="hidden" name="expected_revision" value="{{ current.revision }}" />
+      <input type="hidden" name="operation_id" value="{{ mutation_id() }}" />
     <input type="text" name="label" data-snapshot-label maxlength="120" placeholder="{{ t('snapshots.label_placeholder') }}" />
     <button type="submit" class="btn btn-primary">{{ t("snapshots.save") }}</button>
   </form>
@@ -27,6 +29,8 @@
         hx-confirm="{{ t('snapshots.confirm_restore') }}"
       >
       <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
+      <input type="hidden" name="expected_revision" value="{{ current.revision }}" />
+      <input type="hidden" name="operation_id" value="{{ mutation_id() }}" />
         <button type="submit" class="btn btn-ghost">{{ t("snapshots.load") }}</button>
       </form>
     </li>

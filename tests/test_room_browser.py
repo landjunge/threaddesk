@@ -283,19 +283,23 @@ def test_team_room_real_browser(tmp_path, storage):
 
             pair_via_ui(a, b, left.url, "Browser Leseraum", "read_only")
             expect(b.locator("[data-room-members]")).to_contain_text("Nur lesen")
-            add_entry(a, thread_a, "Nur lesen von A", True)
+            # The receiver has no scope for the new room on existing Room1
+            # threads. Use a genuinely new remote thread for this read-only room.
+            reader_thread = create_thread(a, "Browser Leseraumthread")
+            add_entry(a, reader_thread, "Nur lesen von A", True)
             synchronize(b)
+            select_thread(b, reader_thread)
             expect(b.locator("[data-whiteboard-log]")).to_contain_text("Nur lesen von A")
             expect(b.locator("[data-room-share]")).to_be_disabled()
-            rejected = b.request.post(right.url + f"/threads/{thread_a}/whiteboard", form={
+            rejected = b.request.post(right.url + f"/threads/{reader_thread}/whiteboard", form={
                 "actor": "Synthetic reader", "actor_type": "human", "entry_type": "note",
                 "content": "Verbotene Freigabe", "in_room": "1",
             })
             assert rejected.status == 403
-            add_entry(b, thread_a, "Leser darf nicht senden", False)
+            add_entry(b, reader_thread, "Leser darf nicht senden", False)
             synchronize(a)
             synchronize(b)
-            assert "Leser darf nicht senden" not in [entry.content for entry in left.store().list_whiteboard(thread_a)]
+            assert "Leser darf nicht senden" not in [entry.content for entry in left.store().list_whiteboard(reader_thread)]
 
             left.stop()
             right.stop()

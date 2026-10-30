@@ -212,7 +212,7 @@ def test_knowledge_list_can_create_nodes_and_relations(
 
     created = client.post(
         "/knowledge/nodes",
-        data={"kind": "project", "title": "ThreadDesk", "status": "active"},
+        data={"kind": "project", "title": "ThreadDesk", "status": "active", "operation_id": "ui-node-create", "expected_revision": 0},
         follow_redirects=False,
     )
     assert created.status_code == 303
@@ -226,6 +226,9 @@ def test_knowledge_list_can_create_nodes_and_relations(
             "source_id": project.id,
             "target_id": task.id,
             "kind": "contains",
+            "operation_id": "ui-relation-create",
+            "expected_revision": project.revision,
+            "expected_target_revision": task.revision,
         },
         follow_redirects=False,
     )

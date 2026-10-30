@@ -69,7 +69,7 @@ def test_thread_and_map_link_both_ways(home: Path) -> None:
     assert missing.status_code == 200
 
     page = client.get("/map")
-    assert 'data-graph-endpoint="/api/graph"' in page.text
+    assert 'data-graph-endpoint="/api/graph/v2?mode=work"' in page.text
     assert "data-actor-marks=" in page.text
 
 

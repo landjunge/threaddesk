@@ -16,6 +16,8 @@
       hx-swap="innerHTML"
     >
       <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}" />
+      <input type="hidden" name="expected_revision" value="0" />
+      <input type="hidden" name="operation_id" value="{{ mutation_id() }}" />
       <label class="field">
         <span>{{ t("list.title_label") }}</span>
         <input type="text" name="title" data-new-title required maxlength="160" placeholder="{{ t('list.new_thread_placeholder') }}" />
@@ -37,6 +39,7 @@
         data-thread-id="{{ t.id }}"
         data-thread-index="{{ loop.index }}"
         hx-post="/threads/{{ t.id }}/switch"
+        hx-vals='{{ {"operation_id": mutation_id(), "expected_revision": t.revision}|tojson }}'
         hx-target="#workspace"
         hx-swap="innerHTML"
       >

@@ -82,3 +82,30 @@ WebGL2-Probe und Runtimefehler führen zu klarer Meldung plus zugänglicher List
 Nur ThreadDesk wird umgesetzt. Die vollständige ChatGPT-Bedienbarkeit über vorhandene KiraBridge wird anhand realer Discovery und Befehlsaufrufe abgenommen. Wo das vorhandene Bridge-Protokoll eine fachliche Write-Funktion nicht transportieren kann, ist das eine externe Integrationsabhängigkeit; nicht durch unzulässige Readannotation, direkten DB-Zugriff oder heimliche KiraBridge-Änderung umgehen.
 
 Entscheidungsvorlage: Sigma4/Graphology/Worker als Zielkandidat, klarer Zeitmodus mit belastbarem Aktivitätsmodell, zuerst gute2D-Übersicht und Listenparität. Bundleumfang, tatsächliche WKWebView/WebGL2-Leistung und Palette sind vor Umsetzungsgate offen. Keine Demo-/Cloudgrafik, neuen Benutzerkonten oder bezahlten Fremddienste erforderlich.
+
+## Gemessene Entscheidung und Umsetzung · 27. Oktober 2026
+
+Der begrenzte Vergleich wurde mit lokalen, SHA-512-verifizierten npm-Archiven und denselben synthetischen 100/1.000/10.000-Knoten-Grunddaten durchgeführt; zusätzlich dichter Graph, Stern und isolierte Komponenten mit langen Labels. Tatsächlich benutzt wurden Chromium und ein eigenes natives `WKWebView`-Fenster auf dem Intel-Mac mit macOS 15.7.4, Pixelratio 2 und vier gemeldeten logischen CPUs. Die Zahlen sind einzelne lokale Messläufe, keine garantierten Produktgrenzen oder Energie-/Speicherzertifizierung. Parallel laufende Entwicklungsprüfungen können die Laufzeiten beeinflussen. WKWebView stellt keinen vergleichbaren JavaScript-Heapwert bereit; dort wurde kein Speicherwert erfunden.
+
+| Nativer WKWebView-Kandidat | Erste nutzbare Sicht | p95 Pan/Zoom | Auswahl |
+| --- | ---: | ---: | ---: |
+| Sigma 4.0.3, 1.000 sparsame Knoten | 480 ms | 21 ms | 33 ms |
+| Sigma 4.0.3, 10.000 sparsame Knoten | 1.096 ms | 39 ms | 236 ms |
+| Sigma 4.0.3, dichter 1.000er | 661 ms | 38 ms | 126 ms |
+| Cytoscape 3.34.4, 1.000 sparsame Knoten | 2.128 ms | 70 ms | 26 ms |
+| Cytoscape 3.34.4, 10.000 sparsame Knoten | 10.670 ms | 366 ms | 116 ms |
+| Alte SVG-Baseline `1199c8b`, 1.000 Knoten | nicht isoliert ermittelt | gesamter Messablauf überschreitet 35 s | nicht erfolgreich abgeschlossen |
+
+Das 35-Sekunden-Limit der SVG-Probe gilt für den gesamten Messablauf aus Laden und mehreren Kameraaktionen; daraus folgt keine isolierte Startzeit. Einige erste SVG-Proben überlappten die Weiterentwicklung und dienen deshalb nicht als feste Quellbaseline. Die gesonderte `1199c8b`-Probe und die tatsächliche neue Produktionsansicht sind getrennt bezeichnet.
+
+Der allererste kalte Sigma-Kandidatenstart mit 100 Knoten dauerte nativ 10,605 Sekunden; dieser Ausreißer bleibt im Beleg. Die tatsächliche neue ThreadDesk-Ansicht mit 1.000 Knoten und 999 Kanten erreichte nach zusätzlichen Status-/Form-/Labelregeln 4,873 Sekunden bis zur Graphnutzbarkeit, p95 30 ms, Auswahl 40 ms und 88 sichtbare kollisionsbegrenzt ausgewählte Labels. Der selektierte Titel hat 16 Pixel, normale Labels 14. **Das ursprüngliche 2-Sekunden-Startziel ist damit nicht vollständig erreicht.** Eine pauschale 10k-Abnahme folgt ebenso wenig aus dem schnellen Kandidaten; die produktive v2-Abfrage bleibt auf höchstens 1.000 Knoten je Seite begrenzt.
+
+Entschieden und implementiert: Sigma 4.0.3 und Graphology 0.26.0 ab 128 Knoten. Kleinere Karten behalten die tatsächlich abgenommene lesbare SVG-Ansicht. Das ist ein begrenzter SVG-Pfad für kleine Karten und ein GPU-Pfad für größere Daten, kein zweiter Fachgraph. Layout, Filter, Auswahl, Inspektor und gespeicherte Ansichten verwenden denselben Zustand. Eigene kleine Module trennen SVG-Formen, Beschriftung, GPU-Renderer, Aktivitätsdarstellung, Filter, Inspektor und Views. Die Standard-Sigma-Labelauswahl allein war visuell unzureichend; ein begrenztes Bildschirmraster verhindert Beschriftungsüberlappung. Beim Wechsel 127 → 128 → 127 bleiben überlebende Mehrfachauswahlen erhalten.
+
+WebGL2-Ausfall und tatsächlicher `WEBGL_lose_context` wurden gegen die bedienbare DOM-Liste geprüft. Es gibt dann keinen teuren großen SVG-Fallback. Die Liste paginiert mit 50 Einträgen und öffnet denselben Inspektor. Die Kamera-/Viewgrenzen sind auch nach starkem Zoomen speicherbar. Zwei schnelle Layoutklicks bei verzögertem Scriptladen starten höchstens einen Worker, der nach der Berechnung beendet ist.
+
+ForceAtlas2 0.10.1 wurde nativ im echten Worker geprüft: 1.000 Knoten änderten ihre Position, laufender Zustand, Stop und Kill sind bestätigt. Produktiv startet das Layout nur ausdrücklich, mit Barnes–Hut und 1,5 Sekunden Budget auf einer separaten Graphkopie. Der Endstand wird einmal übernommen; fixierte und ausgefilterte Positionen bleiben erhalten. Damit entsteht auch bei Reduced Motion keine dekorative Dauersimulation.
+
+Runtimeumfang: Sigma-UMD 391.628 Bytes, Graphology-UMD 73.629 Bytes, Worker-Supervisor 12,5 KiB. Alle Dateien liegen lokal. `graph-vendor.json` enthält exakte Pins, npm-Integrität, SHA-256 der ausgelieferten Dateien und den Build-Lockhash. `GRAPH-VENDOR-LICENSES.txt` erhält MIT-Texte für Sigma, Graphology, ForceAtlas2, Graphology Utils und Events. Der reproduzierbare Wartungsweg ist `scripts/vendor_graph.py`; normaler Betrieb benötigt weder npm noch ein CDN.
+
+Primärquellen wurden erneut gelesen: [Sigma Browserbundle](https://www.sigmajs.org/reference/browser-bundle/), [Sigma Formen](https://www.sigmajs.org/how-to/nodes/shapes/), [Graphology ForceAtlas2 und Worker](https://graphology.github.io/standard-library/layout-forceatlas2.html), [Cytoscape-Dokumentation](https://js.cytoscape.org/). Der technische Vertrag für Aktivität, Fehlerzustände und gespeicherte Ansichten steht in [graph-activity-v1](../contracts/graph-activity-v1.md). Private synthetische Messartefakte liegen beim ausführenden Team; finale Quell-/Paket-/Runtimeabnahme bleibt ein eigener Releasebeleg.

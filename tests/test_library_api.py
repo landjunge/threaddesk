@@ -178,8 +178,9 @@ def test_source_refresh_has_definite_replay_and_readback(library, monkeypatch):
 def test_format_capabilities_do_not_hide_import_guards(library):
     app, *_ = library
     formats = {row["suffix"]: row for row in app.call({"action": "formats"})}
-    assert not formats[".key"]["import_allowed"]
-    assert formats[".key"]["import_error"] == "secret_name"
+    assert formats[".key"]["import_allowed"] and formats[".key"]["content_validation_required"]
+    assert formats[".key"]["import_condition"] == "validated_keynote_iwa_zip_v1"
+    assert not formats[".key"]["external_open"] and not formats[".key"]["directory_package_supported"]
     assert not formats[".exe"]["import_allowed"]
     assert formats[".pdf"]["import_allowed"]
     assert formats[".py"]["import_allowed"] and not formats[".py"]["external_open"]

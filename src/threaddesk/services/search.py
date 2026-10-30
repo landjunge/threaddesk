@@ -173,6 +173,12 @@ class SearchService:
                 try:
                     doc = self.adapter.read(exact_id)
                     page.source_bytes += doc.source_bytes
+                except SearchError as exc:
+                    if str(exc) == "source_in_trash":
+                        continue
+                    page.source_bytes += RECORD_BYTES + 16384
+                    page.reasons.append("source_unreadable_or_over_limit")
+                    continue
                 except Exception:
                     # Parsing/validation can fail after a full bounded read.
                     # Reserve its worst-case source cost, not zero bytes.

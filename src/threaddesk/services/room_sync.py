@@ -196,7 +196,9 @@ class RoomBook:
                 if remote.get("room_id") != room["id"] or remote.get("instance_id") != peer["instance_id"]:
                     raise InvalidState("room_forbidden")
                 sender_role = _member_role(self._require(room["id"]), peer["instance_id"])
-                if sender_role not in ROLES or (sender_role not in PUBLISH and remote.get("entries")):
+                if sender_role not in ROLES or (
+                    sender_role not in PUBLISH and (remote.get("entries") or remote.get("lifecycle"))
+                ):
                     raise InvalidState("room_forbidden")
                 report = self.apply_bundle(remote)
                 conflicts += int(report["conflicts"])
@@ -219,6 +221,8 @@ class RoomBook:
         room = self._require(room_id)
         if self._role(room) not in PUBLISH:
             return _empty_bundle(room_id, self.instance_id())
+        from threaddesk.services.trash_sync import ROOM_SCHEMA, export_room_lifecycle
+        lifecycle = export_room_lifecycle(self.store, room_id)
         entries, threads = [], []
         seen: set[str] = set()
         for thread in self.store.list_threads(include_archived=True):
@@ -230,14 +234,27 @@ class RoomBook:
                 threads.append({"id": thread.id, "title": thread.title})
                 seen.add(thread.id)
         return {
-            "schema": SCHEMA, "room_id": room_id, "instance_id": self.instance_id(),
+            "schema": ROOM_SCHEMA if lifecycle else SCHEMA, "room_id": room_id, "instance_id": self.instance_id(),
             "entries": entries, "threads": threads,
+            **({"lifecycle": lifecycle} if lifecycle else {}),
         }
 
     def apply_bundle(self, bundle: Any) -> dict[str, int]:
         """Validate every row before changing any thread or whiteboard."""
-        if not isinstance(bundle, dict) or bundle.get("schema") != SCHEMA:
+        from threaddesk.services.trash_sync import (
+            ROOM_SCHEMA,
+            apply_room_lifecycle,
+            conflict_is_resolved,
+            first_room_restore,
+            record_conflict,
+            validate_room_lifecycle,
+            validate_room_scope,
+        )
+        if not isinstance(bundle, dict) or bundle.get("schema") not in {SCHEMA, ROOM_SCHEMA}:
             raise InvalidState("room_bundle")
+        lifecycle = validate_room_lifecycle(bundle.get("lifecycle", []))
+        if bundle["schema"] == SCHEMA and lifecycle:
+            raise InvalidState("room_lifecycle_requires_v2")
         room_id = bundle.get("room_id")
         if not _safe_id(room_id):
             raise InvalidState("room_bundle")
@@ -273,11 +290,91 @@ class RoomBook:
             if entry.room_id != room_id:
                 raise InvalidState("room_bundle")
             incoming.append(entry)
+        # A peer may introduce a new room thread, but cannot add its own scope
+        # proof to an existing private thread or a thread belonging to a
+        # different room. Check the original local state before any bundle row
+        # or lifecycle record can change it.
+        # JSON legacy reads can stage revision-anchor normalization. Roll all
+        # such observations back if any later content OR lifecycle scope fails.
+        # End this unit before the existing trash/merge transactions and index
+        # refreshes rather than nesting their mutations in a new transaction.
+        with self.store.transaction():
+            missing = validate_room_scope(self.store, room_id, lifecycle,
+                                          (entry.thread_id for entry in incoming))
+        lifecycle_conflicts = apply_room_lifecycle(self.store, room_id, lifecycle)
+        generations = {item["thread_id"]: item for item in lifecycle}
+        for item in lifecycle:
+            if item['thread_id'] in missing and item['state'] == 'restored' and not first_room_restore(item):
+                key = record_conflict(self.store, thread_id=item['thread_id'], source='room:' + room_id,
+                    reason='restore_without_matching_generation', incoming=item)
+                lifecycle_conflicts += not conflict_is_resolved(self.store, key)
+        accepted = []
+        first_imports = {}
+        blocked = set()
         for entry in incoming:
+            if entry.thread_id in missing:
+                if first_room_restore(generations[entry.thread_id]):
+                    first_imports.setdefault(entry.thread_id, []).append(entry)
+                continue  # Do not create payloads under missing tombstones.
+            latest = self.store.get_object_lifecycle("thread", entry.thread_id)
+            declared = generations.get(entry.thread_id)
+            if latest and (latest["state"] != "restored" or declared is None
+                           or declared["generation"] != latest["generation"]
+                           or declared["state"] != "restored"):
+                if entry.thread_id not in blocked:
+                    key = record_conflict(self.store, thread_id=entry.thread_id, source="room:" + room_id,
+                                    reason="late_room_data_after_lifecycle_change",
+                                    incoming={"schema": bundle["schema"], "entry_ids": sorted(e.id for e in incoming if e.thread_id == entry.thread_id)})
+                    lifecycle_conflicts += not conflict_is_resolved(self.store, key)
+                    blocked.add(entry.thread_id)
+                continue
             self._shell(entry.thread_id, titles.get(entry.thread_id, ""))
-        if not incoming:
-            return {"added": 0, "kept": 0, "conflicts": 0}
-        return merge_whiteboard(self.store, incoming)
+            accepted.append(entry)
+        result = merge_whiteboard(self.store, accepted, preserve_content_hash=True) if accepted else {'added': 0, 'kept': 0, 'conflicts': 0}
+        for identity, entries in first_imports.items():
+            try:
+                imported = self._receive_first_restore(room_id, generations[identity], entries, titles.get(identity, ''))
+                for key in ('added', 'kept', 'conflicts'):
+                    result[key] += imported[key]
+            except InvalidState as exc:
+                # A digest or concurrently changed local scope never grants
+                # permission, and need not prevent unrelated room entries.
+                key = record_conflict(self.store, thread_id=identity, source='room:' + room_id,
+                    reason=getattr(exc, 'code', 'room_lifecycle_scope'), incoming=generations[identity])
+                lifecycle_conflicts += not conflict_is_resolved(self.store, key)
+        result["conflicts"] += lifecycle_conflicts
+        return result
+
+    def _receive_first_restore(self, room_id, incoming, entries, title):
+        """Import a genuinely new public shell and its first history atomically."""
+        from threaddesk.core.errors import ManagementError
+        from threaddesk.services.trash import TrashService, _hash
+        from threaddesk.services.trash_sync import (
+            content_digest,
+            first_room_restore,
+            room_thread_missing,
+        )
+        if not first_room_restore(incoming):
+            raise InvalidState('room_lifecycle_scope')
+        service = TrashService(self.store)
+        operation = 'room_initial_restore_' + _hash([room_id, incoming])
+        request = {'action': 'initial_room_restore', 'room_id': room_id, 'incoming': incoming}
+        def apply():
+            if not room_thread_missing(self.store, incoming['thread_id']):
+                raise InvalidState('room_lifecycle_scope')
+            self._shell(incoming['thread_id'], title)
+            merged = merge_whiteboard(self.store, entries, preserve_content_hash=True)
+            if content_digest(self.store, incoming['thread_id'], room_id) != incoming['content_digest']:
+                raise ManagementError('concurrent_content_change', 'Initial room payload does not match its history.')
+            thread = self.store.get_thread(incoming['thread_id'])
+            moved = service._move_in_transaction(kind='thread', object_id=thread.id,
+                expected_revision=thread.revision, actor='authenticated_room_initial_history')['entry']
+            restored = service._restore_in_transaction(trash_id=moved['trash_id'], generation=1, expected_revision=1)
+            return {**merged, **restored}
+        result = service._operation(operation, request, apply)
+        if result.get('duplicate'):
+            return {'added': 0, 'kept': len(entries), 'conflicts': 0}
+        return {key: result[key] for key in ('added', 'kept', 'conflicts')}
 
     def serve_pull(self, instance_id: str, token: str, room_id: str) -> dict[str, Any]:
         self._trusted(instance_id, token, room_id)

@@ -19,6 +19,7 @@ from threaddesk.server_sync.store import SyncError, validate_path
 
 FORMAT = 'threaddesk.metadata.v1'
 MAX_DOCUMENT_BYTES = 1024 * 1024
+MAX_HISTORY_PAYLOAD_BYTES = MAX_DOCUMENT_BYTES
 MISSING = {'$missing': True}
 
 
@@ -62,7 +63,11 @@ def _empty():
 
 
 def validate_document(document):
-    if not isinstance(document, dict) or set(document) != {'format','thread','nodes','relations','whiteboard'} or document['format'] != FORMAT:
+    from threaddesk.server_sync.lifecycle import FORMAT as LIFECYCLE_FORMAT, validate as validate_lifecycle
+    expected = {'format','thread','nodes','relations','whiteboard'}
+    if isinstance(document, dict) and document.get('format') == LIFECYCLE_FORMAT:
+        expected.add('lifecycle')
+    if not isinstance(document, dict) or set(document) != expected or document['format'] not in {FORMAT, LIFECYCLE_FORMAT}:
         raise SyncError('Invalid metadata document', 'invalid_metadata')
     encoded = _canonical(document)
     if len(encoded.encode()) > MAX_DOCUMENT_BYTES:
@@ -111,6 +116,8 @@ def validate_document(document):
     for origin in [thread.get('project_origin')]+[n.get('project_origin') for n in document['nodes'].values()]:
         if origin is not None and (origin not in document['nodes'] or document['nodes'][origin]['kind']!='project'):
             raise SyncError('Portable project origin must reference a project in this document')
+    if "lifecycle" in document:
+        validate_lifecycle(document["lifecycle"], document)
     return deepcopy(document)
 
 
@@ -159,21 +166,23 @@ def _namespace(core):
     return namespace
 
 
-def export_document(core, thread_id):
-    thread = core.get(thread_id)
-    ns = _namespace(core)
-    doc = _empty()
-    doc['thread'] = {'title':thread.title,'description':thread.description,'status':thread.status,
-                     'notes':thread.context.notes,'prompts':deepcopy(thread.context.prompts),
-                     'files':sorted({p for p in thread.context.files if _portable(p) is not None})}
-    all_nodes = [n for n in core.store.list_nodes() if n.kind in {'task','project'}]
+def _scoped_graph(core, thread_id):
+    """Bind portable origins only after selecting this thread's native graph.
+
+    Separate replicas may legitimately use the same portable origin with
+    different native IDs. Explicitly shared native project objects remain
+    shared; a workspace-global origin lookup must never substitute a replica
+    belonging to another thread for an object in this selected graph.
+    """
+    thread = core.store.get_thread(thread_id, include_trashed=True)
+    all_nodes = [n for n in core.store.list_nodes(include_trashed=True) if n.kind in {'task','project'}]
     organization=thread.context.extra.get('organization') or {}
     project_id=organization.get('project_id') or thread.context.extra.get('project_id')
     selected = {n.id:n for n in all_nodes if n.metadata.get('thread_id')==thread.id or n.id in
                 {thread.context.extra.get('task_id'),project_id}}
     if project_id in selected and selected[project_id].kind=='project':
         selected.update({n.id:n for n in all_nodes if n.metadata.get('project_id')==project_id})
-    relations = core.store.list_relations()
+    relations = core.store.list_relations(include_trashed=True)
     for _ in range(len(all_nodes)+1):
         before = len(selected)
         # A task's explicit owner is a related project even when the thread
@@ -185,19 +194,42 @@ def export_document(core, thread_id):
                 selected.update({n.id:n for n in all_nodes if n.id==relation.target_id})
         if len(selected)==before:
             break
-    origins = {i:n.metadata.get('sync_origin') or ns+':'+i for i,n in selected.items()}
-    for node_id,node in selected.items():
+    relations = [relation for relation in relations
+                 if relation.source_id in selected and relation.target_id in selected
+                 and relation.kind in {'contains','depends_on','related_to','blocks','references'}]
+    namespace = _namespace(core)
+
+    def by_origin(items):
+        result = {}
+        for item in items:
+            origin = _origin(item.metadata.get('sync_origin') or namespace + ':' + item.id)
+            if origin in result and result[origin].id != item.id:
+                raise SyncError('Distinct project objects share one portable origin', 'metadata_scope', 409)
+            result[origin] = item
+        return result
+
+    return thread, project_id, by_origin(selected.values()), by_origin(relations)
+
+
+def export_document(core, thread_id):
+    thread, project_id, nodes, relations = _scoped_graph(core, thread_id)
+    ns = _namespace(core)
+    doc = _empty()
+    doc['thread'] = {'title':thread.title,'description':thread.description,'status':thread.status,
+                     'notes':thread.context.notes,'prompts':deepcopy(thread.context.prompts),
+                     'files':sorted({p for p in thread.context.files if _portable(p) is not None})}
+    selected = {node.id: node for node in nodes.values()}
+    origins = {node.id: origin for origin, node in nodes.items()}
+    for origin,node in nodes.items():
         metadata = {k:deepcopy(v) for k,v in node.metadata.items() if k not in {'thread_id','project_id','sync_origin'}}
         owner=node.metadata.get('project_id')
         owner_origin=origins.get(owner) if owner in selected and selected[owner].kind=='project' else None
-        doc['nodes'][origins[node_id]] = {'kind':node.kind,'title':node.title,'status':node.status,'details':node.details,'metadata':metadata,
+        doc['nodes'][origin] = {'kind':node.kind,'title':node.title,'status':node.status,'details':node.details,'metadata':metadata,
                                         'project_origin':owner_origin}
     doc['thread']['project_origin']=origins.get(project_id) if project_id in selected and selected[project_id].kind=='project' else None
-    for relation in relations:
-        if relation.source_id in selected and relation.target_id in selected and relation.kind in {'contains','depends_on','related_to','blocks','references'}:
-            origin = relation.metadata.get('sync_origin') or ns+':'+relation.id
-            doc['relations'][origin] = {'source':origins[relation.source_id],'target':origins[relation.target_id],'kind':relation.kind}
-    for entry in core.store.list_whiteboard(thread.id):
+    for origin,relation in relations.items():
+        doc['relations'][origin] = {'source':origins[relation.source_id],'target':origins[relation.target_id],'kind':relation.kind}
+    for entry in core.store.list_whiteboard(thread.id, include_trashed=True):
         origin = entry.metadata.get('sync_origin') or ns+':'+entry.id
         metadata = {k:deepcopy(v) for k,v in entry.metadata.items() if k!='sync_origin'}
         # Preserve addressing as inert origin metadata, never a dispatch request.
@@ -206,11 +238,16 @@ def export_document(core, thread_id):
                 metadata.setdefault('original_'+key,getattr(entry,key))
         doc['whiteboard'][origin] = {'actor':entry.actor,'actor_type':entry.actor_type,'created_at':entry.created_at,
                                     'entry_type':entry.entry_type,'content':entry.content,'metadata':metadata}
+    from threaddesk.server_sync.lifecycle import FORMAT as LIFECYCLE_FORMAT, export as export_lifecycle
+    relation_origins = {relation.id: origin for origin, relation in relations.items()}
+    lifecycle = export_lifecycle(core.store, thread.id, origins, relation_origins)
+    if lifecycle:
+        doc.update(format=LIFECYCLE_FORMAT, lifecycle=lifecycle)
     return validate_document(doc)
 
 
 def _flatten(document):
-    fields = {}
+    fields = {"lifecycle": document["lifecycle"]} if "lifecycle" in document else {}
     for key,value in document['thread'].items():
         fields['thread/'+key] = value
     for section in ('nodes','relations'):
@@ -226,7 +263,10 @@ def _unflatten(fields):
     doc = _empty()
     for path,value in fields.items():
         section,*parts = path.split('/')
-        if section in {'thread','whiteboard'}:
+        if section == 'lifecycle':
+            from threaddesk.server_sync.lifecycle import FORMAT as LIFECYCLE_FORMAT
+            doc.update(format=LIFECYCLE_FORMAT, lifecycle=deepcopy(value))
+        elif section in {'thread','whiteboard'}:
             doc[section][parts[0]] = deepcopy(value)
         else:
             doc[section].setdefault(parts[0],{})[parts[1]] = deepcopy(value)
@@ -235,6 +275,10 @@ def _unflatten(fields):
 
 def merge_documents(base, incoming, current):
     """3-way leaf merge; absence never deletes and both concurrent values journal."""
+    from threaddesk.server_sync.lifecycle import guard_merge
+    lifecycle_conflicts = guard_merge(base, incoming, current)
+    if lifecycle_conflicts:
+        return deepcopy(current), lifecycle_conflicts
     b,l,r = map(_flatten,(base,incoming,current))
     merged,conflicts = deepcopy(r),[]
     for path in sorted(set(b)|set(l)|set(r)):
@@ -261,10 +305,62 @@ def _local_id(thread_id, origin, kind):
     return hashlib.sha256((thread_id+'\0'+kind+'\0'+origin).encode()).hexdigest()[:24]
 
 
-def _apply(core, thread_id, document):
+def _restored_history_payloads(core, thread_id, current, incoming, conflicts):
+    """Retain one bounded, ID-attributed copy of new adoption dependencies.
+
+    The automatic merge still refuses restored history. Its existing receipt
+    must retain the missing payload for a later explicit choice, including only
+    relation endpoints/project owners needed by that choice. Native object
+    shapes let the existing purge receipt reducer identify these copies.
+    """
+    pending = []
+    for conflict in conflicts:
+        target = conflict['incoming']
+        parts = conflict['path'].split('/', 2)
+        if (len(parts) == 3 and parts[0] == 'lifecycle' and parts[1] in {'nodes', 'relations'}
+                and target == {'generation': 1, 'revision': 2, 'state': 'restored'}
+                and parts[2] not in current[parts[1]]):
+            pending.append((parts[1], parts[2]))
+    if not pending:
+        return {}
+    _, _, scoped_nodes, _ = _scoped_graph(core, thread_id)
+    existing = {origin: node.id for origin, node in scoped_nodes.items()}
+    result = {'nodes': {}, 'relations': {}}
+    lifecycle = incoming.get('lifecycle') or {}
+    while pending:
+        section, origin = pending.pop()
+        if origin in current[section] or origin in result[section]:
+            continue
+        item = deepcopy(incoming[section][origin])
+        item['id'] = _local_id(thread_id, origin, 'node' if section == 'nodes' else 'relation')
+        if origin in lifecycle.get(section, {}):
+            item['lifecycle'] = deepcopy(lifecycle[section][origin])
+        result[section][origin] = item
+        if section == 'nodes':
+            if item.get('project_origin') is not None:
+                pending.append(('nodes', item['project_origin']))
+        else:
+            for endpoint in ('source', 'target'):
+                item[endpoint + '_id'] = existing.get(item[endpoint]) or _local_id(thread_id, item[endpoint], 'node')
+                pending.append(('nodes', item[endpoint]))
+    if len(_canonical(result).encode()) > MAX_HISTORY_PAYLOAD_BYTES:
+        raise SyncError('Restored-history payload exceeds its explicit 1 MiB limit', 'metadata_too_large', 413)
+    return result
+
+
+def _apply(core, thread_id, document, *, lifecycle_resolution=False):
     """Caller owns the core transaction. Never invoke task/agent command services."""
     current = export_document(core,thread_id)
     if current == document:
+        return
+    _, _, existing, existing_rel = _scoped_graph(core, thread_id)
+    from threaddesk.server_sync.lifecycle import apply as apply_lifecycle
+    apply_lifecycle(core, thread_id, document, phase='before', explicit_resolution=lifecycle_resolution)
+    # Child lifecycle transitions leave their owner's retained payload intact,
+    # including when the owner itself remains in the trash.
+    sections = ('thread', 'nodes', 'relations', 'whiteboard')
+    if _hash({key: document[key] for key in sections}) == _hash({key: current[key] for key in sections}):
+        apply_lifecycle(core, thread_id, document, phase='after', explicit_resolution=lifecycle_resolution)
         return
     thread = core.get(thread_id)
     previous = deepcopy(thread.context)
@@ -280,16 +376,19 @@ def _apply(core, thread_id, document):
     # File grants do not cross replicas. Keep local originals; new references are inert relative names.
     if 'files' in fields:
         thread.context.files = list(dict.fromkeys(thread.context.files+fields['files']))
-    existing = {n.metadata.get('sync_origin') or _namespace(core)+':'+n.id:n for n in core.store.list_nodes()
-                if (n.metadata.get('sync_origin') or _namespace(core)+':'+n.id) in current['nodes']}
     node_ids = {origin:existing[origin].id if origin in existing else _local_id(thread_id,origin,'node')
                 for origin in document['nodes']}
     for origin,item in document['nodes'].items():
         node = existing.get(origin)
+        # A portable projection omits local bindings. Reconstructing them even
+        # for unchanged data would rewrite native tombstoned payloads and break
+        # their restore digest. Only changed portable content needs a writer.
+        if node is not None and item == current['nodes'].get(origin):
+            continue
         if node is None:
             identifier=_local_id(thread_id,origin,'node')
             try:
-                core.store.get_node(identifier)
+                core.store.get_node(identifier, include_trashed=True)
             except NotFound:
                 pass
             else:
@@ -313,13 +412,16 @@ def _apply(core, thread_id, document):
         thread.context.extra['organization']=organization
         if 'project_id' in thread.context.extra:
             thread.context.extra['project_id']=organization['project_id']
-    existing_rel = {r.metadata.get('sync_origin') or _namespace(core)+':'+r.id:r for r in core.store.list_relations()
-                    if (r.metadata.get('sync_origin') or _namespace(core)+':'+r.id) in current['relations']}
     for origin,item in document['relations'].items():
         relation = existing_rel.get(origin)
+        # Incident relations can be hidden by their trashed endpoint without
+        # carrying a tombstone themselves. Do not submit unchanged payloads to
+        # the live-only relation writer in either case.
+        if relation is not None and item == current['relations'].get(origin):
+            continue
         if relation is None:
             identifier=_local_id(thread_id,origin,'relation')
-            if any(r.id==identifier for r in core.store.list_relations()):
+            if any(r.id==identifier for r in core.store.list_relations(include_trashed=True)):
                 raise SyncError('Replica relation identifier now belongs outside this project scope',
                                 'metadata_scope',409)
             relation=Relation(identifier,node_ids[item['source']],node_ids[item['target']],item['kind'],now_iso(),source='metadata-replica',metadata={'sync_origin':origin})
@@ -339,6 +441,7 @@ def _apply(core, thread_id, document):
         core.store.append_whiteboard_entry(entry)
     thread.updated_at=now_iso()
     core.store.save_thread(thread)
+    apply_lifecycle(core, thread_id, document, phase='after', explicit_resolution=lifecycle_resolution)
 
 
 def _journal_id(thread_id, operation_id):
@@ -372,18 +475,21 @@ def synchronize(core,thread_id,operation_id,base,document):
             return replay
         current=export_document(core,thread_id)
         merged,conflicts=merge_documents(request['base'],request['document'],current)
+        payloads = _restored_history_payloads(core, thread_id, current, request['document'], conflicts)
         for index,conflict in enumerate(conflicts):
             conflict.update(id=key+':'+str(index),thread_id=thread_id)
         _apply(core,thread_id,merged)
-        # JSON list_nodes/list_whiteboard enumerate committed directory entries,
-        # so newly staged objects are not discoverable until transaction commit.
+        # JSON list_whiteboard still enumerates committed directory entries,
+        # so newly staged contributions are not discoverable until commit.
         # The validated merge is the exact projection just applied atomically.
         result={'document':merged,'conflicts':conflicts,'state':'conflict' if conflicts else 'synced'}
+        if payloads:
+            result['restored_history_payloads'] = payloads
         return _record(core,key,thread_id,request,result)
 
 
 def list_conflicts(core,thread_id):
-    core.get(thread_id)
+    core.store.get_thread(thread_id, include_trashed=True)
     records=[r for r in core.store.list_management_operations() if r.get('thread_id')==thread_id and r.get('kind','').startswith('metadata_')]
     resolved={r['result'].get('resolved_conflict') for r in records if r.get('kind')=='metadata_resolve'}
     return [deepcopy(c) for r in records for c in r['result'].get('conflicts',[]) if c['id'] not in resolved]
@@ -408,11 +514,20 @@ def resolve_conflict(core,thread_id,conflict_id,expected_current,chosen_value,op
         doc=export_document(core,thread_id)
         flat=_flatten(doc)
         path=conflict['path']
-        actual=flat.get(path,MISSING)
+        from threaddesk.server_sync.lifecycle import conflict_value, resolve_document
+        actual=conflict_value(doc,path) if path.startswith('lifecycle/') else flat.get(path,MISSING)
         if actual != expected_current:
             raise SyncError('Metadata changed; reload conflict before resolving','metadata_conflict',409)
         if chosen_value not in (conflict['incoming'],conflict['current']) or chosen_value==MISSING:
             raise SyncError('Choose an existing non-deleted conflict value')
+        if path.startswith('lifecycle/'):
+            owner = core.store.get_management_operation(conflict_id.rsplit(':', 1)[0]) or {}
+            payloads = (owner.get('result', {}).get('restored_history_payloads', {})
+                        if owner.get('kind') == 'metadata_sync' and owner.get('thread_id') == thread_id else {})
+            resolved=validate_document(resolve_document(doc,path,chosen_value,payloads=payloads))
+            _apply(core,thread_id,resolved,lifecycle_resolution=True)
+            return _record(core,key,thread_id,request,{'document':resolved,
+                           'resolved_conflict':conflict_id,'conflicts':[],'state':'synced'},kind='resolve')
         if path.startswith('whiteboard/') and chosen_value!=actual:
             raise SyncError('Whiteboards are append-only; add a correction instead','immutable_whiteboard',409)
         flat[path]=deepcopy(chosen_value)
@@ -425,7 +540,7 @@ def resolve_conflict(core,thread_id,conflict_id,expected_current,chosen_value,op
 class MetadataReplica:
     """Explicit existing local core/thread binding with durable uncertain-request replay."""
     def __init__(self,core,thread_id,checkpoint_dir:Path,*,remote_identity:str):
-        core.get(thread_id)
+        core.store.get_thread(thread_id, include_trashed=True)
         self.core,self.thread_id=core,thread_id
         directory=Path(checkpoint_dir).absolute()
         if directory.is_symlink():

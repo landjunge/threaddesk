@@ -112,6 +112,7 @@ def test_declared_scope_returns_thread_text_and_whiteboard_order(store) -> None:
     assert result.ok is True
     assert result.value["thread"] == {
         "id": thread_id,
+        "revision": store._thread.revision + 2,
         "title": "Projektakte",
         "status": "idea",
         "description": "Gemeinsamer Stand",

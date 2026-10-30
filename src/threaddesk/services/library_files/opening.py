@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 
 from threaddesk.core.models import now_iso
+from threaddesk.core.errors import ThreadDeskError
 from threaddesk.services.library_files import state, validation
 from threaddesk.services.library_files.launch_services import default_application
 from threaddesk.services.library_files.preview import format_info
@@ -97,6 +98,8 @@ def open_file(service, record_id, *, operation_id, expected_revision):
             state.fail("external_open_blocked", "Dieser Dateityp wird nicht automatisch an ein Programm übergeben.")
         target, created = _named_copy(service, record, document)
         try:
+            from threaddesk.services.file_formats.keynote import require_validated_keynote
+            require_validated_keynote(record, target)
             handler = (service.handler_resolver or default_application)(target)
             if (not isinstance(handler, str) or not handler.endswith(".app")
                     or not Path(handler).is_absolute()
@@ -130,4 +133,16 @@ def open_file(service, record_id, *, operation_id, expected_revision):
         saved = document["operations"][operation_id]
         saved["result"].update(status=status, error=error, completed_at=now_iso())
         state.write_state(service.root, document)
-        return dict(saved["result"])
+        result = dict(saved["result"])
+    from threaddesk.services.library_activity import opened
+    result["activity"] = opened(service.store, result)
+    try:
+        with service.store.transaction():
+            document = state.read_state(service.root)
+            document["operations"][operation_id]["result"]["activity"] = result["activity"]
+            state.write_state(service.root, document)
+    except (OSError, ValueError, ThreadDeskError):
+        # The earlier launch receipt is already durable. A derived annotation
+        # failure cannot turn that confirmed request into an apparent rollback.
+        result["activity_receipt_status"] = "pending"
+    return result

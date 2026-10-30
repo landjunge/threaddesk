@@ -23,7 +23,8 @@
       const queue = [root.id]; seen.add(root.id);
       for (let index = 0; index < queue.length; index += 1) {
         const id = queue[index]; order.push(byId.get(id));
-        [...neighbors.get(id)].sort().forEach(next => {
+        [...neighbors.get(id)].sort((a, b) =>
+          byId.get(a).title.localeCompare(byId.get(b).title) || a.localeCompare(b)).forEach(next => {
           if (!seen.has(next)) { seen.add(next); queue.push(next); }
         });
       }

@@ -12,6 +12,50 @@ window.threadDeskWrite = (path, options = {}) => {
   headers.set("X-ThreadDesk-CSRF", document.querySelector('meta[name="threaddesk-csrf"]').content);
   return fetch(target, {...options, method: options.method || "POST", headers});
 };
+// Read the existing command result protocol without changing or repeating a
+// write's identity. Offsets count Python Unicode codepoints, not UTF-16 units.
+window.threadDeskCommand = async request => {
+  const original = JSON.parse(JSON.stringify(request));
+  const fail = code => { throw Object.assign(new Error(code), {code}); };
+  if (original.result_offset) fail("invalid_result_page");
+  const parts = [], encoder = new TextEncoder();
+  const maxBytes = 32 * 1024 * 1024;
+  let offset = 0, bytes = 0, pinned = null;
+  for (let pages = 0; pages < 8192; pages++) {
+    const body = pinned ? {...original, result_offset: offset, result_digest: pinned.result_digest,
+      catalog_revision: pinned.catalog_revision,
+      ...(pinned.snapshot_at === undefined ? {} : {snapshot_at: pinned.snapshot_at})} : original;
+    const response = await window.threadDeskWrite("/api/commands", {
+      headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+    const data = await response.json();
+    if (!response.ok || data.ok === false) throw data;
+    if (data.schema !== "threaddesk.command-result.v1" || data.workspace_id !== original.workspace_id ||
+        data.command !== original.command || !/^[a-f0-9]{64}$/.test(data.result_digest || "")) fail("invalid_result_page");
+    if (!pinned && Object.prototype.hasOwnProperty.call(data, "result")) return data.result;
+    if (!pinned) pinned = data;
+    if (data.result_digest !== pinned.result_digest || data.catalog_revision !== pinned.catalog_revision ||
+        data.snapshot_at !== pinned.snapshot_at) fail("result_changed");
+    if (data.encoding !== "json-text-codepoint-pages" || typeof data.result_page !== "string" ||
+        data.offset !== offset || !Number.isSafeInteger(data.total) || data.total !== pinned.total ||
+        data.total < 1) fail("invalid_result_page");
+    if (data.total > maxBytes) fail("result_too_large");
+    const following = offset + Array.from(data.result_page).length;
+    if (following <= offset || following > data.total ||
+        data.next_offset !== (following === data.total ? null : following)) fail("invalid_result_page");
+    bytes += encoder.encode(data.result_page).length;
+    if (bytes > maxBytes) fail("result_too_large");
+    parts.push(data.result_page);
+    if (data.next_offset === null) {
+      const text = parts.join("");
+      const digest = await crypto.subtle.digest("SHA-256", encoder.encode(text));
+      const hex = Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, "0")).join("");
+      if (hex !== pinned.result_digest) fail("result_changed");
+      return JSON.parse(text);
+    }
+    offset = following;
+  }
+  fail("result_too_large");
+};
 document.addEventListener("htmx:configRequest", event => {
   const reading = event.detail.verb?.toLowerCase() === "get";
   const target = new URL(event.detail.path, location.href);
@@ -327,6 +371,13 @@ document.body.addEventListener("htmx:beforeSwap", event => {
   if (supersededWorkspaceResponse(event)) event.detail.shouldSwap = false;
 });
 function requestFailure(event) {
+  const rejected = event.detail?.xhr?.getResponseHeader("X-ThreadDesk-Mutation-Error");
+  if (rejected) {
+    requestState(rejected, true);
+    const node = document.getElementById("request-state");
+    if (node) node.dataset.state = "rejected";
+    return;
+  }
   if (event.detail?.requestConfig?.verb?.toLowerCase() === "get") requestState("browser.request_failed", true);
   else requestState("browser.save_uncertain", true);
 }

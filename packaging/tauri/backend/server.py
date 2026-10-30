@@ -9,6 +9,10 @@ from packaging_desktop_entry import running_server, self_test
 
 
 def main() -> int:
+    from threaddesk.ui.packaged_commands import dispatch
+    command_result = dispatch(sys.argv[1:])
+    if command_result is not None:
+        return command_result
     if len(sys.argv) == 3 and sys.argv[1] == "--library-command":
         from threaddesk.ui.cli import main as library_cli
         return library_cli(["library", "--request", sys.argv[2]])

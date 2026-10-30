@@ -11,6 +11,8 @@
     {% block page_styles %}{% endblock %}
     <script src="/static/networkpunkt.js" defer></script>
     <script src="/static/app.js" defer></script>
+    <script src="/static/trash.js" defer></script>
+    <script src="/static/knowledge-commands.js" defer></script>
     <script src="/static/htmx.min.js" defer></script>
     <script src="/static/alpine.min.js" defer></script>
   </head>
@@ -30,6 +32,7 @@
             <a href="/knowledge" class="btn btn-ghost btn-compact"{% if request.url.path == '/knowledge' %} aria-current="page"{% endif %}>{{ t("nav.knowledge") }}</a>
             <a href="/data" class="btn btn-ghost btn-compact"{% if request.url.path == '/data' %} aria-current="page"{% endif %}>{{ t("data.nav") }}</a>
             <a href="/map" class="btn btn-ghost btn-compact"{% if request.url.path == '/map' %} aria-current="page"{% endif %}>{{ t("nav.map") }}</a>
+            <a href="/trash" class="btn btn-ghost btn-compact"{% if request.url.path == '/trash' %} aria-current="page"{% endif %}>{{ t("trash.title") }}</a>
           </nav>
           <details class="np-disclosure preferences" data-disclosure="preferences">
             <summary>{{ lang|upper }} · {{ t('register.' ~ register) }}</summary>

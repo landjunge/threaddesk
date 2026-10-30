@@ -228,6 +228,7 @@ overwrite fallback.
 | Return inbox / Nutzerentscheidung | `import_return`, `list_returns`, `get_return`, `review_return` | No |
 | Existing Gnom binding / callback | `bind_gnom_job`, `receive_gnom_callback`, `list_gnom_jobs` | No |
 | Local gate / board | `check_gate`, `dashboard` | No; ThreadDesk LocalGate is not the TollGate product |
+| Shared commands / Gemeinsame Befehle | read-only `command_catalog`, read-only `command_query`, explicit `command_invoke` | No implicit agent start; current scope/backend/transport checks and durable operation status. See [command contract](contracts/commands-v1.md). |
 
 ## Issued handoff and bound return / Ausgestellte Übergabe und Rückgabe (M2)
 

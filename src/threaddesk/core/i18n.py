@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from threaddesk.core.graph_i18n import GRAPH_STRINGS
 from threaddesk.core.library_i18n import FILE_STRINGS
+from threaddesk.core.trash_i18n import TRASH_STRINGS
 
 LANGUAGES = ("de", "en")
 DEFAULT_LANGUAGE = "de"
@@ -372,6 +373,10 @@ CATALOG: dict[str, dict[str, str]] = {
     # --- Arbeitsflaeche ---
     "ui.saving": {"de": "Speichere…", "en": "Saving…"},
     "ui.error": {"de": "Das hat nicht funktioniert. Bitte Eingabe prüfen.", "en": "That did not work. Please check your input."},
+    "ui.mutation_conflict": {"de": "Zwischenzeitlich geändert. Dein Entwurf bleibt erhalten und wurde nicht gespeichert. Lade den aktuellen Stand und vergleiche beide Fassungen.", "en": "Changed in the meantime. Your draft is retained and was not saved. Load the current version and compare both copies."},
+    "ui.mutation_precondition": {"de": "Diese Ansicht ist veraltet. Dein Entwurf bleibt erhalten. Lade den aktuellen Stand vor dem Speichern.", "en": "This view is out of date. Your draft is retained. Load the current version before saving."},
+    "ui.mutation_failed": {"de": "Änderung abgelehnt. Dein Entwurf bleibt erhalten. Bitte Eingabe prüfen.", "en": "Change rejected. Your draft is retained. Please check your input."},
+    "ui.mutation_legacy_delete": {"de": "Alte dauerhafte Löschung gesperrt. trash.move verwenden; endgültiges Löschen erfordert den Vorschau- und Bestätigungsvertrag von trash.purge.", "en": "Legacy permanent deletion is disabled. Use trash.move; permanent deletion requires the preview and confirmation contract of trash.purge."},
     "ui.created": {"de": "Angelegt: {title}", "en": "Created: {title}"},
     "ui.note_saved": {"de": "Notiz gespeichert", "en": "Note saved"},
     "ui.whiteboard_saved": {"de": "Beitrag angehängt", "en": "Entry appended"},
@@ -1255,6 +1260,7 @@ CATALOG: dict[str, dict[str, str]] = {
 
 CATALOG.update(FILE_STRINGS)
 CATALOG.update(GRAPH_STRINGS)
+CATALOG.update(TRASH_STRINGS)
 
 
 def normalise(language: str | None) -> str:

@@ -445,7 +445,7 @@ def test_empty_housekeeper_order_stays_visible_on_the_desk(
 
     monkeypatch.setenv("THREADDESK_HOME", str(tmp_path))
     client = TestClient(create_app())
-    created = client.post("/threads", data={"title": "Hausmeister", "description": ""})
+    created = client.post_thread_form("/threads", data={"title": "Hausmeister", "description": ""})
     assert created.status_code == 200
     turned = client.post("/hausmeister/toggle", data={"enabled": "1"})
     assert turned.status_code == 200

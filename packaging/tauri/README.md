@@ -1,8 +1,8 @@
-# ThreadDesk 0.1.2 (Tauri, Intel macOS)
+# ThreadDesk 0.2.0 (Tauri, Intel macOS)
 
 This release candidate bundles the existing local-first ThreadDesk Python HTTP server with an independent Tauri WebKit window. It does **not** require a Python installation on target machines.
 
-The window opens the existing workspace at `~/.threaddesk`. It does not create a second store or migrate one. There is no auto-update endpoint and no remote service. Version 0.1.2 is ad-hoc signed only.
+The window opens the existing workspace at `~/.threaddesk` or the explicitly selected profile. There is no auto-update endpoint. The local application works offline; optional room/server sync remains explicitly configured. Local builds are ad-hoc signed.
 
 To build on an x86_64 macOS host:
 

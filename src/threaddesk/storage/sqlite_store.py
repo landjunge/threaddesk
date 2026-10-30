@@ -6,6 +6,7 @@ from contextlib import contextmanager
 import json
 from pathlib import Path
 import sqlite3
+import threading
 from typing import Any, Iterator, Mapping
 
 from threaddesk.core.errors import InvalidState, ManagementError, NotFound
@@ -19,16 +20,20 @@ from threaddesk.core.models import (
     plan_whiteboard_append,
 )
 from threaddesk.core.provenance import SourceRecord
+from threaddesk.storage.lifecycle import SQLiteLifecycleStore
+from threaddesk.storage.owner_documents import MigratedOwnerDocuments
 from threaddesk.storage.schema import FTS_SQL, MIGRATIONS, SCHEMA_SQL, SCHEMA_VERSION
 
 
-class SQLiteStore:
+class SQLiteStore(SQLiteLifecycleStore, MigratedOwnerDocuments):
     def search_adapter(self):
         from threaddesk.storage.search_sqlite import SQLiteSearchAdapter
         return SQLiteSearchAdapter(self)
 
     def __init__(self, root: Path | None = None) -> None:
-        self.root = Path(root or Path.home() / ".threaddesk")
+        # Bind the configured workspace once, like JsonStore. System aliases
+        # are valid entry paths; internal documents still reject symlinks.
+        self.root = Path(root or Path.home() / ".threaddesk").resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self.database_path = self.root / "threaddesk.sqlite3"
         self.connection = sqlite3.connect(self.database_path)
@@ -65,17 +70,26 @@ class SQLiteStore:
             pass
         self.connection.commit()
         self._transaction_depth = 0
+        self._transaction_owner: int | None = None
 
     @property
     def workspace_path(self) -> Path:
         return self.root
 
+    @property
+    def in_transaction(self) -> bool:
+        """A SQLite connection's transaction may only be joined by its owner."""
+        return bool(self._transaction_depth) and self._transaction_owner == threading.get_ident()
+
     @contextmanager
     def transaction(self) -> Iterator[None]:
         if self._transaction_depth:
+            if self._transaction_owner != threading.get_ident():
+                raise RuntimeError("SQLite transaction belongs to another thread.")
             raise RuntimeError("Verschachtelte Transaktionen werden nicht unterstützt.")
-        self._transaction_depth = 1
         self.connection.execute("BEGIN IMMEDIATE")
+        self._transaction_depth = 1
+        self._transaction_owner = threading.get_ident()
         try:
             yield
         except BaseException:
@@ -85,6 +99,7 @@ class SQLiteStore:
             self.connection.commit()
         finally:
             self._transaction_depth = 0
+            self._transaction_owner = None
 
     def _commit(self) -> None:
         if not self._transaction_depth:
@@ -107,6 +122,16 @@ class SQLiteStore:
     def write_json_artifact(self, name: str, data: Mapping[str, Any]) -> Path:
         return self.write_text_artifact(name, json.dumps(dict(data), ensure_ascii=False, indent=2) + "\n")
 
+    def read_json_artifact(self, name: str) -> dict[str, Any] | None:
+        """Filesystem artifacts are immediate, outside SQLite rollback."""
+        try:
+            value = json.loads(self.artifact_path(name).read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return None
+        if not isinstance(value, dict):
+            raise InvalidState("artifact_json_object")
+        return value
+
     def write_text_artifact(self, name: str, text: str) -> Path:
         path = self.artifact_path(name)
         temporary = path.with_suffix(path.suffix + ".tmp")
@@ -114,7 +139,7 @@ class SQLiteStore:
         temporary.replace(path)
         return path
 
-    def list_threads(self, include_archived: bool = False) -> list[Thread]:
+    def list_threads(self, include_archived: bool = False, *, include_trashed: bool = False) -> list[Thread]:
         sql = "SELECT payload FROM threads"
         values: tuple[str, ...] = ()
         if not include_archived:
@@ -122,16 +147,21 @@ class SQLiteStore:
             values = ("archived",)
         rows = self.connection.execute(sql, values).fetchall()
         items = [Thread.from_dict(self._load(row)) for row in rows]
+        if not include_trashed:
+            items = [item for item in items if not self.object_in_trash("thread", item.id)]
         items.sort(key=lambda item: (item.updated_at, item.id), reverse=True)
         return items
 
-    def get_thread(self, thread_id: str) -> Thread:
+    def get_thread(self, thread_id: str, *, include_trashed: bool = False) -> Thread:
+        if not include_trashed:
+            self.require_live_object("thread", thread_id)
         row = self.connection.execute("SELECT payload FROM threads WHERE id = ?", (thread_id,)).fetchone()
         if row is None:
             raise NotFound(f"Thread nicht gefunden: {thread_id}")
         return Thread.from_dict(self._load(row))
 
     def save_thread(self, thread: Thread) -> None:
+        self.require_live_object("thread", thread.id)
         if not self._transaction_depth:
             with self.transaction():
                 self.save_thread(thread)
@@ -193,6 +223,11 @@ class SQLiteStore:
         self._commit()
 
     def save_snapshot(self, snap: Snapshot) -> None:
+        if not self._transaction_depth:
+            with self.transaction():
+                self.save_snapshot(snap)
+            return
+        self.require_live_object("thread", snap.thread_id)
         self.connection.execute(
             "INSERT OR REPLACE INTO snapshots(id,thread_id,created_at,payload) VALUES (?,?,?,?)",
             (snap.id, snap.thread_id, snap.created_at, self._dump(snap.to_dict())),
@@ -203,16 +238,20 @@ class SQLiteStore:
         row = self.connection.execute("SELECT payload FROM snapshots WHERE id = ?", (snap_id,)).fetchone()
         if row is None:
             raise NotFound(f"Snapshot nicht gefunden: {snap_id}")
-        return Snapshot.from_dict(self._load(row))
+        snap = Snapshot.from_dict(self._load(row))
+        self.require_live_object("thread", snap.thread_id)
+        return snap
 
-    def list_snapshots(self, thread_id: str) -> list[Snapshot]:
+    def list_snapshots(self, thread_id: str, *, include_trashed: bool = False) -> list[Snapshot]:
+        if not include_trashed:
+            self.require_live_object("thread", thread_id)
         rows = self.connection.execute("SELECT payload FROM snapshots WHERE thread_id = ?", (thread_id,)).fetchall()
         items = [Snapshot.from_dict(self._load(row)) for row in rows]
         items.sort(key=lambda item: item.created_at, reverse=True)
         return items
 
-    def list_whiteboard(self, thread_id: str) -> list[WhiteboardEntry]:
-        self.get_thread(thread_id)
+    def list_whiteboard(self, thread_id: str, *, include_trashed: bool = False) -> list[WhiteboardEntry]:
+        self.get_thread(thread_id, include_trashed=include_trashed)
         rows = self.connection.execute(
             "SELECT payload FROM whiteboard_entries WHERE thread_id = ?",
             (thread_id,),
@@ -235,33 +274,60 @@ class SQLiteStore:
         )
         return stored, False
 
-    def save_node(self, node: KnowledgeNode) -> None:
+    def save_node(self, node: KnowledgeNode, *, include_trashed: bool = False) -> None:
+        if not self._transaction_depth:
+            with self.transaction():
+                self.save_node(node, include_trashed=include_trashed)
+            return
+        if not include_trashed:
+            self.require_live_object("node", node.id)
+            if node.metadata.get("thread_id"):
+                self.require_live_object("thread", node.metadata["thread_id"])
         self.connection.execute(
             "INSERT OR REPLACE INTO nodes(id,kind,status,updated_at,payload) VALUES (?,?,?,?,?)",
             (node.id, node.kind, node.status, node.updated_at, self._dump(node.to_dict())),
         )
         self._commit()
 
-    def get_node(self, node_id: str) -> KnowledgeNode:
+    def get_node(self, node_id: str, *, include_trashed: bool = False) -> KnowledgeNode:
+        if not include_trashed:
+            self.require_live_object("node", node_id)
         row = self.connection.execute("SELECT payload FROM nodes WHERE id = ?", (node_id,)).fetchone()
         if row is None:
             raise NotFound(f"Knoten nicht gefunden: {node_id}")
-        return KnowledgeNode.from_dict(self._load(row))
+        node = KnowledgeNode.from_dict(self._load(row))
+        if not include_trashed and node.metadata.get("thread_id"):
+            self.require_live_object("thread", node.metadata["thread_id"])
+        return node
 
-    def list_nodes(self) -> list[KnowledgeNode]:
+    def list_nodes(self, *, include_trashed: bool = False) -> list[KnowledgeNode]:
         items = [KnowledgeNode.from_dict(self._load(row)) for row in self.connection.execute("SELECT payload FROM nodes")]
+        if not include_trashed:
+            hidden = self.hidden_node_ids(items)
+            items = [item for item in items if item.id not in hidden]
         items.sort(key=lambda item: (item.updated_at, item.id), reverse=True)
         return items
 
     def save_relation(self, relation: Relation) -> None:
+        if not self._transaction_depth:
+            with self.transaction():
+                self.save_relation(relation)
+            return
+        self.require_live_object("relation", relation.id)
+        self.require_live_node_reference(relation.source_id)
+        self.require_live_node_reference(relation.target_id)
         self.connection.execute(
             "INSERT OR REPLACE INTO relations(id,source_id,target_id,kind,created_at,payload) VALUES (?,?,?,?,?,?)",
             (relation.id, relation.source_id, relation.target_id, relation.kind, relation.created_at, self._dump(relation.to_dict())),
         )
         self._commit()
 
-    def list_relations(self) -> list[Relation]:
+    def list_relations(self, *, include_trashed: bool = False) -> list[Relation]:
         items = [Relation.from_dict(self._load(row)) for row in self.connection.execute("SELECT payload FROM relations")]
+        if not include_trashed:
+            hidden = self.hidden_node_ids(self.list_nodes(include_trashed=True))
+            items = [item for item in items if not self.object_in_trash("relation", item.id)
+                     and item.source_id not in hidden and item.target_id not in hidden]
         items.sort(key=lambda item: (item.created_at, item.id))
         return items
 

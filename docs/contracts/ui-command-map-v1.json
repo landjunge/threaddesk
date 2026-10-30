@@ -1,0 +1,4496 @@
+{
+  "schema": "threaddesk.ui-command-map.v1",
+  "version": 1,
+  "created_on": "2026-10-27",
+  "scope": {
+    "application": "ThreadDesk desktop local HTTP UI",
+    "sources": [
+      "src/threaddesk/server_sync/desktop.py",
+      "src/threaddesk/ui/command_router.py",
+      "src/threaddesk/ui/graph_control_router.py",
+      "src/threaddesk/ui/knowledge_mutations.py",
+      "src/threaddesk/ui/library_router.py",
+      "src/threaddesk/ui/server.py",
+      "src/threaddesk/ui/thread_mutations.py"
+    ],
+    "workshop": "explicitly_excluded_by_user",
+    "excluded": [
+      "separate server-sync peer server application routes",
+      "CLI-only functions without a desktop UI action",
+      "third-party vendored renderer code"
+    ],
+    "source_commit": "81d617a654d029edd889fc7d0aea3a7b8f81a70c",
+    "working_tree": "uncommitted implementation/review state; not an installed-app or bridge proof"
+  },
+  "evidence_policy": {
+    "route_inventory": "AST source inspection including dynamic route table and installed router modules",
+    "forms": "all action/hx-post/hx-get targets from first-party HTML templates matched to route+method",
+    "registry": "actual CommandRegistry.records on isolated temporary empty JSON workspace; module-provided user commands are not inferred",
+    "tests": "existing relevant test file references; not an assertion that every listed route was executed in this documentation review",
+    "bridge_proof": "not_yet_proven on every row; root must attach real authorized transport task and readback evidence separately",
+    "no_product_edits_by_inventory_agent": true
+  },
+  "registry_snapshot": {
+    "command_count": 127,
+    "command_ids": [
+      "activity.files",
+      "activity.reconcile",
+      "actors.agent",
+      "actors.appearance",
+      "actors.human",
+      "actors.list",
+      "actors.recolor",
+      "actors.rename",
+      "add_note",
+      "answer_handoff_question",
+      "backup.create",
+      "backup.restore",
+      "backup.verify",
+      "bind_gnom_job",
+      "bind_handoff_run",
+      "check_gate",
+      "command.catalog",
+      "command.operation",
+      "command.reconcile",
+      "current_thread",
+      "dashboard",
+      "export.preview",
+      "export.write",
+      "export_gnom",
+      "export_grok",
+      "export_handoff",
+      "gate.freeze",
+      "gate.set",
+      "gate.status",
+      "generate_prompt",
+      "get_issued_handoff",
+      "get_reentry",
+      "get_return",
+      "get_thread",
+      "graph.change_status",
+      "graph.events",
+      "graph.node",
+      "graph.node.create",
+      "graph.node.transition",
+      "graph.node.transitions",
+      "graph.query",
+      "graph.relation.create",
+      "graph.relations",
+      "graph_view.apply",
+      "graph_view.apply_status",
+      "graph_view.clients",
+      "graph_view.get",
+      "graph_view.list",
+      "graph_view.manage",
+      "graph_view.operation",
+      "hausmeister.enable",
+      "hausmeister.enqueue",
+      "hausmeister.jobs",
+      "hausmeister.model",
+      "hausmeister.probe",
+      "hausmeister.run",
+      "hausmeister.status",
+      "import_return",
+      "issue_handoff",
+      "knowledge_manage",
+      "library.folder_import",
+      "library.journal_resume",
+      "library.journal_status",
+      "library.package_import",
+      "library.resume",
+      "library.selected_import",
+      "library_file_info",
+      "library_manage",
+      "library_query",
+      "library_receive",
+      "library_receive_status",
+      "library_search",
+      "list_gnom_jobs",
+      "list_returns",
+      "list_snapshots",
+      "list_threads",
+      "migration.commit",
+      "migration.preview",
+      "migration.recover",
+      "migration.stage",
+      "modules.enable",
+      "modules.install",
+      "modules.list",
+      "modules.uninstall",
+      "modules.update",
+      "profiles.activate",
+      "profiles.list",
+      "profiles.original",
+      "prompt.preview",
+      "receive_gnom_callback",
+      "record_handoff_question",
+      "restore_snapshot",
+      "review_return",
+      "room.create",
+      "room.invite",
+      "room.join",
+      "room.select",
+      "room.status",
+      "room.sync",
+      "save_snapshot",
+      "search.configure",
+      "search.query",
+      "search.rebuild",
+      "search.status",
+      "server_sync.configure",
+      "server_sync.lifecycle_sync",
+      "server_sync.offline",
+      "server_sync.owner_reference",
+      "server_sync.resolve",
+      "server_sync.run",
+      "server_sync.status",
+      "switch_thread",
+      "thread_manage",
+      "thread_operation_status",
+      "trash.get",
+      "trash.list",
+      "trash.move",
+      "trash.operation",
+      "trash.preview",
+      "trash.purge",
+      "trash.purge_preview",
+      "trash.resolve_sync_conflict",
+      "trash.restore",
+      "trash.sync_conflicts",
+      "whiteboard.append",
+      "whiteboard.list",
+      "whiteboard.stand"
+    ]
+  },
+  "summary": {
+    "route_method_count": 81,
+    "matched_html_form_targets": 45,
+    "classification_counts": {
+      "presentation": 11,
+      "domain_query": 11,
+      "domain_action": 44,
+      "shared_command_transport": 2,
+      "artifact_delivery": 3,
+      "client_transport": 5,
+      "locale_preference": 1,
+      "narrative_register_preference": 1,
+      "peer_transport": 3
+    },
+    "missing_command_ids": [],
+    "client_action_groups": 8
+  },
+  "routes": [
+    {
+      "id": "GET /threads/{thread_id}/server-sync",
+      "method": "GET",
+      "route": "/threads/{thread_id}/server-sync",
+      "domain": "server_sync",
+      "classification": "presentation",
+      "source": {
+        "file": "src/threaddesk/server_sync/desktop.py",
+        "line": 364,
+        "handler": "sync_page"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "BindingBook.view"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "server_sync.status",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_server_sync_desktop.py",
+        "tests/test_server_sync_desktop_async.py",
+        "tests/test_trash_sync_desktop.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Read/status and explicit lifecycle reconciliation remain accessible for trashed bound threads; normal configure/run/offline remain blocked."
+      ]
+    },
+    {
+      "id": "GET /api/threads/{thread_id}/server-sync",
+      "method": "GET",
+      "route": "/api/threads/{thread_id}/server-sync",
+      "domain": "server_sync",
+      "classification": "domain_query",
+      "source": {
+        "file": "src/threaddesk/server_sync/desktop.py",
+        "line": 371,
+        "handler": "sync_status"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "BindingBook.view"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "server_sync.status",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_server_sync_desktop.py",
+        "tests/test_server_sync_desktop_async.py",
+        "tests/test_trash_sync_desktop.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Read/status and explicit lifecycle reconciliation remain accessible for trashed bound threads; normal configure/run/offline remain blocked."
+      ]
+    },
+    {
+      "id": "POST /threads/{thread_id}/server-sync",
+      "method": "POST",
+      "route": "/threads/{thread_id}/server-sync",
+      "domain": "server_sync",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/server_sync/desktop.py",
+        "line": 418,
+        "handler": "sync_action"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/server_sync.html",
+          "line": 17,
+          "method": "POST",
+          "action": "/threads/{{ current.id }}/server-sync"
+        },
+        {
+          "file": "src/threaddesk/ui/templates/server_sync.html",
+          "line": 25,
+          "method": "POST",
+          "action": "/threads/{{ current.id }}/server-sync"
+        },
+        {
+          "file": "src/threaddesk/ui/templates/server_sync.html",
+          "line": 28,
+          "method": "POST",
+          "action": "/threads/{{ current.id }}/server-sync"
+        },
+        {
+          "file": "src/threaddesk/ui/templates/server_sync.html",
+          "line": 34,
+          "method": "POST",
+          "action": "/threads/{{ current.id }}/server-sync"
+        },
+        {
+          "file": "src/threaddesk/ui/templates/server_sync.html",
+          "line": 42,
+          "method": "POST",
+          "action": "/threads/{{ current.id }}/server-sync"
+        }
+      ],
+      "domain_logic": [
+        "BindingBook.save/update",
+        "DesktopSyncManager.run_once/reconcile_lifecycle",
+        "metadata.resolve_conflict"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "server_sync.configure",
+          "selector": "action=configure",
+          "sequence": [
+            "server_sync.configure",
+            "server_sync.run"
+          ],
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "server_sync.run",
+          "selector": "action=sync",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "server_sync.offline",
+          "selector": "action=offline",
+          "sequence": [
+            "server_sync.offline",
+            "server_sync.run"
+          ],
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "server_sync.resolve",
+          "selector": "action=resolve_local",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "server_sync.lifecycle_sync",
+          "selector": "action=lifecycle_sync",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_server_sync_desktop.py",
+        "tests/test_server_sync_desktop_async.py",
+        "tests/test_trash_sync_desktop.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Configure/offline forms additionally run sync; shared commands expose the same steps explicitly. Local lifecycle conflict requires the exact document/revision contract."
+      ]
+    },
+    {
+      "id": "GET /api/commands/catalog",
+      "method": "GET",
+      "route": "/api/commands/catalog",
+      "domain": "commands",
+      "classification": "shared_command_transport",
+      "source": {
+        "file": "src/threaddesk/ui/command_router.py",
+        "line": 34,
+        "handler": "catalog"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "CommandApplication.catalog"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "command.catalog",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_commands.py",
+        "tests/test_command_catalog_contract.py",
+        "tests/test_command_reconciliation.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /api/commands",
+      "method": "POST",
+      "route": "/api/commands",
+      "domain": "commands",
+      "classification": "shared_command_transport",
+      "source": {
+        "file": "src/threaddesk/ui/command_router.py",
+        "line": 50,
+        "handler": "invoke"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "CommandApplication.call"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "$request.command",
+          "dynamic_registry_dispatch": true
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_commands.py",
+        "tests/test_command_catalog_contract.py",
+        "tests/test_command_reconciliation.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Registry/schema/scope/workspace/operation/revision gates apply. This route does not assert success for every command."
+      ]
+    },
+    {
+      "id": "GET /api/command-artifacts/{name}",
+      "method": "GET",
+      "route": "/api/command-artifacts/{name}",
+      "domain": "commands",
+      "classification": "artifact_delivery",
+      "source": {
+        "file": "src/threaddesk/ui/command_router.py",
+        "line": 65,
+        "handler": "artifact"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "commands.artifacts.read_verified_file"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "backup.create",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "export.write",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_commands.py",
+        "tests/test_command_catalog_contract.py",
+        "tests/test_command_reconciliation.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Readback of exact hash-named artifact bytes; no arbitrary file-read command."
+      ]
+    },
+    {
+      "id": "GET /api/graph/v2",
+      "method": "GET",
+      "route": "/api/graph/v2",
+      "domain": "graph",
+      "classification": "domain_query",
+      "source": {
+        "file": "src/threaddesk/ui/command_router.py",
+        "line": 85,
+        "handler": "graph"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "ThreadService.graph",
+        "GraphReadService.query"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "graph.query",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_knowledge_graph.py",
+        "tests/test_graph_workspace_browser.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Legacy /api/graph supplies the unpaginated graph; v2 uses the shared bounded graph query."
+      ]
+    },
+    {
+      "id": "GET /api/graph/change-status",
+      "method": "GET",
+      "route": "/api/graph/change-status",
+      "domain": "graph",
+      "classification": "domain_query",
+      "source": {
+        "file": "src/threaddesk/ui/command_router.py",
+        "line": 96,
+        "handler": "change_status"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "GraphReadService.change_status"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "graph.change_status",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_knowledge_graph.py",
+        "tests/test_graph_workspace_browser.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /api/graph/v2",
+      "method": "POST",
+      "route": "/api/graph/v2",
+      "domain": "graph",
+      "classification": "domain_query",
+      "source": {
+        "file": "src/threaddesk/ui/command_router.py",
+        "line": 100,
+        "handler": "graph_selection"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "ThreadService.graph",
+        "GraphReadService.query"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "graph.query",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_knowledge_graph.py",
+        "tests/test_graph_workspace_browser.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Legacy /api/graph supplies the unpaginated graph; v2 uses the shared bounded graph query."
+      ]
+    },
+    {
+      "id": "GET /api/graph/views",
+      "method": "GET",
+      "route": "/api/graph/views",
+      "domain": "graph_views",
+      "classification": "domain_query",
+      "source": {
+        "file": "src/threaddesk/ui/command_router.py",
+        "line": 107,
+        "handler": "views"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "GraphViewService.list"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "graph_view.list",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_graph_view_control.py",
+        "tests/test_graph_view_control_browser.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "GET /api/graph/views/{identity}",
+      "method": "GET",
+      "route": "/api/graph/views/{identity}",
+      "domain": "graph_views",
+      "classification": "domain_query",
+      "source": {
+        "file": "src/threaddesk/ui/command_router.py",
+        "line": 111,
+        "handler": "view"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "GraphViewService.get"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "graph_view.get",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_graph_view_control.py",
+        "tests/test_graph_view_control_browser.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /api/graph/views",
+      "method": "POST",
+      "route": "/api/graph/views",
+      "domain": "graph_views",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/command_router.py",
+        "line": 115,
+        "handler": "manage_view"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "GraphViewService.manage"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "graph_view.manage",
+          "action": "save",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "graph_view.manage",
+          "action": "delete",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_graph_view_control.py",
+        "tests/test_graph_view_control_browser.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /api/graph/view-control/connect",
+      "method": "POST",
+      "route": "/api/graph/view-control/connect",
+      "domain": "graph_views",
+      "classification": "client_transport",
+      "source": {
+        "file": "src/threaddesk/ui/graph_control_router.py",
+        "line": 59,
+        "handler": "connect"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "GraphViewControlService.register"
+      ],
+      "command_bindings": [],
+      "mapping_status": "classified_non_domain",
+      "tests": [
+        "tests/test_graph_view_control.py",
+        "tests/test_graph_view_control_browser.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Capability-token browser delivery/heartbeat/claim/ack mechanism; operator commands are graph_view.clients/apply/apply_status. No general remote client-impersonation command."
+      ]
+    },
+    {
+      "id": "GET /api/graph/view-control/{client_id}/pending",
+      "method": "GET",
+      "route": "/api/graph/view-control/{client_id}/pending",
+      "domain": "graph_views",
+      "classification": "client_transport",
+      "source": {
+        "file": "src/threaddesk/ui/graph_control_router.py",
+        "line": 66,
+        "handler": "pending"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "GraphViewControlService.pending"
+      ],
+      "command_bindings": [],
+      "mapping_status": "classified_non_domain",
+      "tests": [
+        "tests/test_graph_view_control.py",
+        "tests/test_graph_view_control_browser.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Capability-token browser delivery/heartbeat/claim/ack mechanism; operator commands are graph_view.clients/apply/apply_status. No general remote client-impersonation command."
+      ]
+    },
+    {
+      "id": "POST /api/graph/view-control/{client_id}/{action}",
+      "method": "POST",
+      "route": "/api/graph/view-control/{client_id}/{action}",
+      "domain": "graph_views",
+      "classification": "client_transport",
+      "source": {
+        "file": "src/threaddesk/ui/graph_control_router.py",
+        "line": 70,
+        "handler": "write"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "GraphViewControlService.heartbeat/claim/acknowledge"
+      ],
+      "command_bindings": [],
+      "mapping_status": "classified_non_domain",
+      "tests": [
+        "tests/test_graph_view_control.py",
+        "tests/test_graph_view_control_browser.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Capability-token browser delivery/heartbeat/claim/ack mechanism; operator commands are graph_view.clients/apply/apply_status. No general remote client-impersonation command."
+      ]
+    },
+    {
+      "id": "POST /knowledge/nodes",
+      "method": "POST",
+      "route": "/knowledge/nodes",
+      "domain": "graph",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/knowledge_mutations.py",
+        "line": 48,
+        "handler": "create"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/knowledge.html",
+          "line": 31,
+          "method": "POST",
+          "action": "/knowledge/nodes"
+        }
+      ],
+      "domain_logic": [
+        "ThreadService.create_node"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "graph.node.create",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_knowledge_graph.py",
+        "tests/test_graph_workspace_browser.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /knowledge/relations",
+      "method": "POST",
+      "route": "/knowledge/relations",
+      "domain": "graph",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/knowledge_mutations.py",
+        "line": 49,
+        "handler": "connect"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/knowledge.html",
+          "line": 43,
+          "method": "POST",
+          "action": "/knowledge/relations"
+        }
+      ],
+      "domain_logic": [
+        "ThreadService.connect"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "graph.relation.create",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_knowledge_graph.py",
+        "tests/test_graph_workspace_browser.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /knowledge/nodes/{node_id}/transition",
+      "method": "POST",
+      "route": "/knowledge/nodes/{node_id}/transition",
+      "domain": "graph",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/knowledge_mutations.py",
+        "line": 50,
+        "handler": "transition"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/knowledge.html",
+          "line": 77,
+          "method": "POST",
+          "action": "/knowledge/nodes/{{ node.id }}/transition"
+        }
+      ],
+      "domain_logic": [
+        "ThreadService.transition_node"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "graph.node.transition",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_knowledge_graph.py",
+        "tests/test_graph_workspace_browser.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "GET /api/library/query",
+      "method": "GET",
+      "route": "/api/library/query",
+      "domain": "library",
+      "classification": "domain_query",
+      "source": {
+        "file": "src/threaddesk/ui/library_router.py",
+        "line": 27,
+        "handler": "query"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "LibraryApplication.call(read_only=True)"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "library_query",
+          "action": "formats",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "import_status",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "info",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "list",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "operation",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "preview",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "search",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "sources",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "status",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_library_api.py",
+        "tests/test_library_import.py",
+        "tests/test_graph_files_browser.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /api/library/command",
+      "method": "POST",
+      "route": "/api/library/command",
+      "domain": "library",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/library_router.py",
+        "line": 46,
+        "handler": "command"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "LibraryApplication.call"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "library_manage",
+          "action": "assign",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_manage",
+          "action": "copy",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_manage",
+          "action": "import",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_manage",
+          "action": "move",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_manage",
+          "action": "open",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_manage",
+          "action": "refresh_sources",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_manage",
+          "action": "reindex",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_manage",
+          "action": "rename",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_manage",
+          "action": "restore",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_manage",
+          "action": "resume",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_manage",
+          "action": "trash",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "formats",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "import_status",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "info",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "list",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "operation",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "preview",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "search",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "sources",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "status",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_library_api.py",
+        "tests/test_library_import.py",
+        "tests/test_graph_files_browser.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "GET /api/library/content/{record_id}",
+      "method": "GET",
+      "route": "/api/library/content/{record_id}",
+      "domain": "library",
+      "classification": "artifact_delivery",
+      "source": {
+        "file": "src/threaddesk/ui/library_router.py",
+        "line": 62,
+        "handler": "content"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "LibraryFileService.preview",
+        "LibraryImporter.open_record"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "library_query",
+          "action": "preview",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_file_info",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_library_api.py",
+        "tests/test_library_import.py",
+        "tests/test_graph_files_browser.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Sandboxed image/audio/video bytes after preview/type/integrity checks; metadata preview and content URL use the same stored record."
+      ]
+    },
+    {
+      "id": "GET /",
+      "method": "GET",
+      "route": "/",
+      "domain": "presentation",
+      "classification": "presentation",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 366,
+        "handler": "index"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "ui.server._ctx",
+        "ThreadService.list/current/whiteboard/working_stand/actors/gate",
+        "LibraryImporter.for_thread",
+        "RoomBook.view",
+        "Hausmeister.status"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "list_threads",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "current_thread",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "get_thread",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "whiteboard.list",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "whiteboard.stand",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "actors.list",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "gate.status",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "room.status",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "hausmeister.status",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "list",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_ui_server.py",
+        "tests/test_design_browser.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Desktop composition; library_query uses action=list with thread_id. The HTML page is not an independent domain mutation."
+      ]
+    },
+    {
+      "id": "GET /data",
+      "method": "GET",
+      "route": "/data",
+      "domain": "presentation",
+      "classification": "presentation",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 377,
+        "handler": "data_view"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "portable_backup.profiles/selected_profile"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "profiles.list",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_ui_server.py",
+        "tests/test_design_browser.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "GET /trash",
+      "method": "GET",
+      "route": "/trash",
+      "domain": "presentation",
+      "classification": "presentation",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 381,
+        "handler": "trash_view"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "templates.trash.html"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "trash.list",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "list",
+          "arguments": {
+            "include_trashed": true
+          },
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_ui_server.py",
+        "tests/test_design_browser.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /data/download",
+      "method": "POST",
+      "route": "/data/download",
+      "domain": "backup_profiles",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 387,
+        "handler": "data_download"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/data.html",
+          "line": 19,
+          "method": "POST",
+          "action": "/data/download"
+        }
+      ],
+      "domain_logic": [
+        "portable_backup.download_backup"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "backup.create",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_portable_backup.py",
+        "tests/test_data_browser.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "HTTP returns bytes directly; shared command produces a verified artifact locator, then artifact delivery."
+      ]
+    },
+    {
+      "id": "POST /data/restore",
+      "method": "POST",
+      "route": "/data/restore",
+      "domain": "backup_profiles",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 404,
+        "handler": "data_restore"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/data.html",
+          "line": 26,
+          "method": "POST",
+          "action": "/data/restore"
+        }
+      ],
+      "domain_logic": [
+        "portable_backup.restore_backup",
+        "ui.server.bootstrap_profile"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "backup.verify",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "backup.restore",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_portable_backup.py",
+        "tests/test_data_browser.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "UI multipart bytes/confirm=yes translate to verified local path, sha256 and explicit restore_as_new_profile confirmation."
+      ]
+    },
+    {
+      "id": "POST /data/profile",
+      "method": "POST",
+      "route": "/data/profile",
+      "domain": "backup_profiles",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 421,
+        "handler": "data_profile"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/data.html",
+          "line": 38,
+          "method": "POST",
+          "action": "/data/profile"
+        }
+      ],
+      "domain_logic": [
+        "portable_backup.activate_profile",
+        "ui.server.bootstrap_profile"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "profiles.activate",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_portable_backup.py",
+        "tests/test_data_browser.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "GET /library",
+      "method": "GET",
+      "route": "/library",
+      "domain": "library",
+      "classification": "presentation",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 438,
+        "handler": "library_view"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "LibraryImporter.catalog"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "library_query",
+          "action": "status",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "list",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "formats",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library.journal_status",
+          "arguments": {
+            "collection": "failures"
+          },
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library.journal_status",
+          "arguments": {
+            "collection": "pending"
+          },
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library.journal_status",
+          "arguments": {
+            "collection": "outstanding"
+          },
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_library_api.py",
+        "tests/test_library_import.py",
+        "tests/test_graph_files_browser.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Status/list/formats are separate bounded reads. Historical journal failures/pending/outstanding use library.journal_status; batch import_status is a separate operation-bound read."
+      ]
+    },
+    {
+      "id": "POST /library/folder",
+      "method": "POST",
+      "route": "/library/folder",
+      "domain": "library",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 458,
+        "handler": "library_folder"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/library_import.html",
+          "line": 14,
+          "method": "POST",
+          "action": "/library/folder"
+        }
+      ],
+      "domain_logic": [
+        "LibraryImporter.import_tree"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "library.folder_import",
+          "arguments": {
+            "path": "explicit local source folder"
+          },
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_library_api.py",
+        "tests/test_library_import.py",
+        "tests/test_graph_files_browser.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Preserves the legacy relative-path assignment semantics; library_manage(import,data.source) is a distinct explicit batch/inbox workflow."
+      ]
+    },
+    {
+      "id": "POST /library/files",
+      "method": "POST",
+      "route": "/library/files",
+      "domain": "library",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 466,
+        "handler": "library_files"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/library_import.html",
+          "line": 21,
+          "method": "POST",
+          "action": "/library/files"
+        }
+      ],
+      "domain_logic": [
+        "LibraryImporter.import_files"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "library.selected_import",
+          "arguments": {
+            "files": "[{name,path,sha256}]"
+          },
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_library_api.py",
+        "tests/test_library_import.py",
+        "tests/test_graph_files_browser.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Multipart upload is transport; shared selected_import uses bounded descriptor-verified private input snapshots. library_receive(begin/append/commit) supplies a separate resumable byte transport."
+      ]
+    },
+    {
+      "id": "POST /library/package",
+      "method": "POST",
+      "route": "/library/package",
+      "domain": "library",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 495,
+        "handler": "library_package"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/library_import.html",
+          "line": 28,
+          "method": "POST",
+          "action": "/library/package"
+        }
+      ],
+      "domain_logic": [
+        "LibraryImporter.import_zip_package"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "library.package_import",
+          "arguments": {
+            "path": "local ZIP package",
+            "sha256": "exact reviewed input hash"
+          },
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_library_api.py",
+        "tests/test_library_import.py",
+        "tests/test_graph_files_browser.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "ZIP package expansion through the existing safe package importer; differs from retaining an archive as one managed file. Shared adapter snapshots verified bytes privately first."
+      ]
+    },
+    {
+      "id": "POST /library/command",
+      "method": "POST",
+      "route": "/library/command",
+      "domain": "library",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 517,
+        "handler": "library_command"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/library_import.html",
+          "line": 36,
+          "method": "POST",
+          "action": "/library/command"
+        }
+      ],
+      "domain_logic": [
+        "library_commands.execute",
+        "LibraryIndex.search",
+        "LibraryImporter.reassign"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "library_query",
+          "action": "search",
+          "selector": "find/search text",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "info",
+          "selector": "open text selects file for HTTP delivery",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_manage",
+          "action": "assign",
+          "selector": "organize text after unique title→ID resolution",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_library_api.py",
+        "tests/test_library_import.py",
+        "tests/test_graph_files_browser.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Natural-language parser/SpeechRecognition are input adapters. Text open selects/downloads a file; external Mac application launch is the separate library_manage(open) action."
+      ]
+    },
+    {
+      "id": "GET /library/bridge",
+      "method": "GET",
+      "route": "/library/bridge",
+      "domain": "library",
+      "classification": "client_transport",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 544,
+        "handler": "library_bridge"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "library_bridge.contract"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "command.catalog",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_library_api.py",
+        "tests/test_library_import.py",
+        "tests/test_graph_files_browser.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Descriptive compatibility metadata; current shared catalogue describes commands, not a write/Bridgeproof."
+      ]
+    },
+    {
+      "id": "POST /library/resume",
+      "method": "POST",
+      "route": "/library/resume",
+      "domain": "library",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 548,
+        "handler": "library_resume"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/library_import.html",
+          "line": 67,
+          "method": "POST",
+          "action": "/library/resume"
+        }
+      ],
+      "domain_logic": [
+        "LibraryImporter.resume"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "library.journal_resume",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_library_api.py",
+        "tests/test_library_import.py",
+        "tests/test_graph_files_browser.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Existing legacy journal source; library.resume(import_operation_id) separately resumes new batch jobs."
+      ]
+    },
+    {
+      "id": "GET /library/files/{record_id}",
+      "method": "GET",
+      "route": "/library/files/{record_id}",
+      "domain": "library",
+      "classification": "artifact_delivery",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 556,
+        "handler": "library_open"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "LibraryImporter.open_record"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "library_file_info",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "info",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_library_api.py",
+        "tests/test_library_import.py",
+        "tests/test_graph_files_browser.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Verified stored-file download; no Mac application launch. Locator and byte delivery are different transport steps."
+      ]
+    },
+    {
+      "id": "POST /data/original",
+      "method": "POST",
+      "route": "/data/original",
+      "domain": "backup_profiles",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 572,
+        "handler": "data_original"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/data.html",
+          "line": 10,
+          "method": "POST",
+          "action": "/data/original"
+        }
+      ],
+      "domain_logic": [
+        "active-profile.json selection removal",
+        "ui.server.bootstrap_profile"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "profiles.original",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_portable_backup.py",
+        "tests/test_data_browser.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /lang/{code}",
+      "method": "POST",
+      "route": "/lang/{code}",
+      "domain": "presentation",
+      "classification": "locale_preference",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 578,
+        "handler": "switch_language"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/base.html",
+          "line": 42,
+          "method": "POST",
+          "action": "/lang/{{ code }}"
+        }
+      ],
+      "domain_logic": [
+        "i18n.normalise_language",
+        "language cookie"
+      ],
+      "command_bindings": [],
+      "mapping_status": "classified_non_domain",
+      "tests": [
+        "tests/test_ui_server.py",
+        "tests/test_design_browser.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Browser-local display language, not a workspace business action. Export language is explicit in export.write."
+      ]
+    },
+    {
+      "id": "POST /mode/{value}",
+      "method": "POST",
+      "route": "/mode/{value}",
+      "domain": "presentation",
+      "classification": "narrative_register_preference",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 589,
+        "handler": "switch_register"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/base.html",
+          "line": 52,
+          "method": "POST",
+          "action": "/mode/{{ value }}"
+        }
+      ],
+      "domain_logic": [
+        "i18n.normalise_register",
+        "register cookie"
+      ],
+      "command_bindings": [],
+      "mapping_status": "classified_non_domain",
+      "tests": [
+        "tests/test_ui_server.py",
+        "tests/test_design_browser.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Browser-local wording preference, not a workspace business action."
+      ]
+    },
+    {
+      "id": "GET /api/graph",
+      "method": "GET",
+      "route": "/api/graph",
+      "domain": "graph",
+      "classification": "domain_query",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 600,
+        "handler": "graph"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "ThreadService.graph",
+        "GraphReadService.query"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "graph.query",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_knowledge_graph.py",
+        "tests/test_graph_workspace_browser.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Legacy /api/graph supplies the unpaginated graph; v2 uses the shared bounded graph query."
+      ]
+    },
+    {
+      "id": "GET /api/threads/{thread_id}",
+      "method": "GET",
+      "route": "/api/threads/{thread_id}",
+      "domain": "context",
+      "classification": "domain_query",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 604,
+        "handler": "api_thread"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "ThreadService.get",
+        "ThreadService.working_stand"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "get_thread",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "get_reentry",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "whiteboard.stand",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_module_whiteboard.py",
+        "tests/test_ui_server.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "UI bundles raw thread context and working stand; command reads retain their public untrusted-data wrappers and separate bounded context/knowledge fields."
+      ]
+    },
+    {
+      "id": "GET /api/threads/{thread_id}/whiteboard",
+      "method": "GET",
+      "route": "/api/threads/{thread_id}/whiteboard",
+      "domain": "context",
+      "classification": "domain_query",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 610,
+        "handler": "api_whiteboard"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "ThreadService.whiteboard"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "whiteboard.list",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_module_whiteboard.py",
+        "tests/test_ui_server.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /api/threads/{thread_id}/whiteboard",
+      "method": "POST",
+      "route": "/api/threads/{thread_id}/whiteboard",
+      "domain": "context",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 619,
+        "handler": "api_append_whiteboard"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "ThreadService.append_whiteboard"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "whiteboard.append",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_module_whiteboard.py",
+        "tests/test_ui_server.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "HTML form additionally resolves an explicitly chosen room and next_step metadata. Shared command requires its durable operation/revision envelope."
+      ]
+    },
+    {
+      "id": "GET /api/threads/{thread_id}/stand",
+      "method": "GET",
+      "route": "/api/threads/{thread_id}/stand",
+      "domain": "context",
+      "classification": "domain_query",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 631,
+        "handler": "api_stand"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "ThreadService.working_stand"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "whiteboard.stand",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_module_whiteboard.py",
+        "tests/test_ui_server.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "GET /map",
+      "method": "GET",
+      "route": "/map",
+      "domain": "presentation",
+      "classification": "presentation",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 635,
+        "handler": "map_view"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "templates.map.html"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "graph.query",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "graph.change_status",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_ui_server.py",
+        "tests/test_design_browser.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "GET /migration",
+      "method": "GET",
+      "route": "/migration",
+      "domain": "presentation",
+      "classification": "presentation",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 650,
+        "handler": "migration"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "templates.migration.html"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "migration.preview",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_ui_server.py",
+        "tests/test_design_browser.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /api/migration/dry-run",
+      "method": "POST",
+      "route": "/api/migration/dry-run",
+      "domain": "migration",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 659,
+        "handler": "migration_dry_run"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "MigrationReviewService.stage / MigrationPreviewService.inspect"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "migration.stage",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "migration.preview",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_migration_browser.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Immutable reviewed local bundle path replaces multipart upload; stage/commit/recover require SQLite, inspect also supports JSON."
+      ]
+    },
+    {
+      "id": "POST /api/migration/confirm",
+      "method": "POST",
+      "route": "/api/migration/confirm",
+      "domain": "migration",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 685,
+        "handler": "migration_confirm"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "MigrationReviewService.commit"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "migration.commit",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_migration_browser.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Immutable reviewed local bundle path replaces multipart upload; stage/commit/recover require SQLite, inspect also supports JSON."
+      ]
+    },
+    {
+      "id": "POST /api/migration/recover",
+      "method": "POST",
+      "route": "/api/migration/recover",
+      "domain": "migration",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 711,
+        "handler": "migration_recover"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "MigrationReviewService.recover"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "migration.recover",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_migration_browser.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Immutable reviewed local bundle path replaces multipart upload; stage/commit/recover require SQLite, inspect also supports JSON."
+      ]
+    },
+    {
+      "id": "GET /knowledge",
+      "method": "GET",
+      "route": "/knowledge",
+      "domain": "presentation",
+      "classification": "presentation",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 723,
+        "handler": "knowledge"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/knowledge.html",
+          "line": 13,
+          "method": "GET",
+          "action": "/knowledge"
+        }
+      ],
+      "domain_logic": [
+        "ThreadService.graph/list_nodes/list_relations/allowed_node_transitions"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "graph.query",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "graph.relations",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "graph.node.transitions",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_ui_server.py",
+        "tests/test_design_browser.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "GET /partials/threads",
+      "method": "GET",
+      "route": "/partials/threads",
+      "domain": "presentation",
+      "classification": "presentation",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 763,
+        "handler": "partial_threads"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "ui.server._ctx"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "list_threads",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "current_thread",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_ui_server.py",
+        "tests/test_design_browser.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "GET /partials/main",
+      "method": "GET",
+      "route": "/partials/main",
+      "domain": "presentation",
+      "classification": "presentation",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 769,
+        "handler": "partial_main"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "ui.server._ctx"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "get_thread",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "whiteboard.list",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "whiteboard.stand",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "library_query",
+          "action": "list",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_ui_server.py",
+        "tests/test_design_browser.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "GET /partials/gate",
+      "method": "GET",
+      "route": "/partials/gate",
+      "domain": "presentation",
+      "classification": "presentation",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 775,
+        "handler": "partial_gate"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "ThreadService.gate"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "gate.status",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_ui_server.py",
+        "tests/test_design_browser.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /threads/{thread_id}/whiteboard",
+      "method": "POST",
+      "route": "/threads/{thread_id}/whiteboard",
+      "domain": "context",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 779,
+        "handler": "append_whiteboard_form"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/whiteboard.html",
+          "line": 4,
+          "method": "POST",
+          "action": "/threads/{{ current.id }}/whiteboard"
+        }
+      ],
+      "domain_logic": [
+        "ThreadService.append_whiteboard"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "whiteboard.append",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_module_whiteboard.py",
+        "tests/test_ui_server.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "HTML form additionally resolves an explicitly chosen room and next_step metadata. Shared command requires its durable operation/revision envelope."
+      ]
+    },
+    {
+      "id": "POST /hausmeister/toggle",
+      "method": "POST",
+      "route": "/hausmeister/toggle",
+      "domain": "hausmeister",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 823,
+        "handler": "hausmeister_toggle"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/hausmeister.html",
+          "line": 11,
+          "method": "POST",
+          "action": "/hausmeister/toggle"
+        }
+      ],
+      "domain_logic": [
+        "Hausmeister.set_enabled"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "hausmeister.enable",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_operational_commands.py",
+        "tests/test_ui_server.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /hausmeister/model",
+      "method": "POST",
+      "route": "/hausmeister/model",
+      "domain": "hausmeister",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 830,
+        "handler": "hausmeister_model"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/hausmeister.html",
+          "line": 18,
+          "method": "POST",
+          "action": "/hausmeister/model"
+        }
+      ],
+      "domain_logic": [
+        "Hausmeister.set_model"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "hausmeister.model",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_operational_commands.py",
+        "tests/test_ui_server.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /threads/{thread_id}/hausmeister",
+      "method": "POST",
+      "route": "/threads/{thread_id}/hausmeister",
+      "domain": "hausmeister",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 841,
+        "handler": "hausmeister_run"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/hausmeister.html",
+          "line": 34,
+          "method": "POST",
+          "action": "/threads/{{ current.id }}/hausmeister"
+        }
+      ],
+      "domain_logic": [
+        "Hausmeister.enqueue/run_now"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "hausmeister.enqueue",
+          "selector": "mode=later",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "hausmeister.run",
+          "selector": "mode=now",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_operational_commands.py",
+        "tests/test_ui_server.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /hausmeister/activity",
+      "method": "POST",
+      "route": "/hausmeister/activity",
+      "domain": "hausmeister",
+      "classification": "client_transport",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 864,
+        "handler": "hausmeister_activity"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "hausmeister.note_activity"
+      ],
+      "command_bindings": [],
+      "mapping_status": "classified_non_domain",
+      "tests": [
+        "tests/test_operational_commands.py",
+        "tests/test_ui_server.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Throttled browser surface-activity ping; not file work, operator dispatch or remote agent evidence."
+      ]
+    },
+    {
+      "id": "POST /rooms",
+      "method": "POST",
+      "route": "/rooms",
+      "domain": "rooms",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 888,
+        "handler": "create_room"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/room.html",
+          "line": 8,
+          "method": "POST",
+          "action": "/rooms"
+        }
+      ],
+      "domain_logic": [
+        "RoomBook.create_room"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "room.create",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_room_browser.py",
+        "tests/test_trash_sync.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /rooms/select",
+      "method": "POST",
+      "route": "/rooms/select",
+      "domain": "rooms",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 896,
+        "handler": "select_room"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/room.html",
+          "line": 14,
+          "method": "POST",
+          "action": "/rooms/select"
+        }
+      ],
+      "domain_logic": [
+        "RoomBook.select_room"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "room.select",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_room_browser.py",
+        "tests/test_trash_sync.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /rooms/invite",
+      "method": "POST",
+      "route": "/rooms/invite",
+      "domain": "rooms",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 904,
+        "handler": "invite_room"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/room.html",
+          "line": 38,
+          "method": "POST",
+          "action": "/rooms/invite"
+        }
+      ],
+      "domain_logic": [
+        "RoomBook.invite"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "room.invite",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_room_browser.py",
+        "tests/test_trash_sync.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /rooms/join",
+      "method": "POST",
+      "route": "/rooms/join",
+      "domain": "rooms",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 912,
+        "handler": "join_room"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/room.html",
+          "line": 29,
+          "method": "POST",
+          "action": "/rooms/join"
+        }
+      ],
+      "domain_logic": [
+        "RoomBook.join"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "room.join",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_room_browser.py",
+        "tests/test_trash_sync.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Join explicitly supplies peer_base and own_base instead of deriving browser request.base_url."
+      ]
+    },
+    {
+      "id": "POST /rooms/sync",
+      "method": "POST",
+      "route": "/rooms/sync",
+      "domain": "rooms",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 926,
+        "handler": "sync_room"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/room.html",
+          "line": 59,
+          "method": "POST",
+          "action": "/rooms/sync"
+        }
+      ],
+      "domain_logic": [
+        "RoomBook.sync"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "room.sync",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_room_browser.py",
+        "tests/test_trash_sync.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /api/rooms/pair",
+      "method": "POST",
+      "route": "/api/rooms/pair",
+      "domain": "rooms",
+      "classification": "peer_transport",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 934,
+        "handler": "pair_room"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "RoomBook.accept"
+      ],
+      "command_bindings": [],
+      "mapping_status": "classified_non_domain",
+      "tests": [
+        "tests/test_room_browser.py",
+        "tests/test_trash_sync.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Authenticated peer protocol, not an operator command or KiraBridge authority bypass. Operator create/invite/join/sync use room.* commands."
+      ]
+    },
+    {
+      "id": "POST /api/rooms/pull",
+      "method": "POST",
+      "route": "/api/rooms/pull",
+      "domain": "rooms",
+      "classification": "peer_transport",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 952,
+        "handler": "pull_room"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "RoomBook.serve_pull"
+      ],
+      "command_bindings": [],
+      "mapping_status": "classified_non_domain",
+      "tests": [
+        "tests/test_room_browser.py",
+        "tests/test_trash_sync.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Authenticated peer protocol, not an operator command or KiraBridge authority bypass. Operator create/invite/join/sync use room.* commands."
+      ]
+    },
+    {
+      "id": "POST /api/rooms/push",
+      "method": "POST",
+      "route": "/api/rooms/push",
+      "domain": "rooms",
+      "classification": "peer_transport",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 969,
+        "handler": "push_room"
+      },
+      "form_sources": [],
+      "domain_logic": [
+        "RoomBook.serve_push"
+      ],
+      "command_bindings": [],
+      "mapping_status": "classified_non_domain",
+      "tests": [
+        "tests/test_room_browser.py",
+        "tests/test_trash_sync.py",
+        "tests/test_operational_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Authenticated peer protocol, not an operator command or KiraBridge authority bypass. Operator create/invite/join/sync use room.* commands."
+      ]
+    },
+    {
+      "id": "POST /threads/{thread_id}/prompt",
+      "method": "POST",
+      "route": "/threads/{thread_id}/prompt",
+      "domain": "context",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 985,
+        "handler": "preview_prompt"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/prompt.html",
+          "line": 4,
+          "method": "POST",
+          "action": "/threads/{{ current.id }}/prompt"
+        }
+      ],
+      "domain_logic": [
+        "ThreadService.prompt"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "prompt.preview",
+          "selector": "save=false",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "generate_prompt",
+          "selector": "save=true",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_module_whiteboard.py",
+        "tests/test_ui_server.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Preview is read-only. The save path keeps its separate explicit mutation operation/revision."
+      ]
+    },
+    {
+      "id": "POST /threads/{thread_id}/handoff",
+      "method": "POST",
+      "route": "/threads/{thread_id}/handoff",
+      "domain": "context",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 1000,
+        "handler": "write_handoff"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/packet.html",
+          "line": 5,
+          "method": "POST",
+          "action": "/threads/{{ current.id }}/handoff"
+        }
+      ],
+      "domain_logic": [
+        "ThreadService.handoff"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "export_handoff",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_module_whiteboard.py",
+        "tests/test_ui_server.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /threads/{thread_id}/gnom",
+      "method": "POST",
+      "route": "/threads/{thread_id}/gnom",
+      "domain": "context",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 1008,
+        "handler": "write_gnom"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/packet.html",
+          "line": 13,
+          "method": "POST",
+          "action": "/threads/{{ current.id }}/gnom"
+        }
+      ],
+      "domain_logic": [
+        "ThreadService.gnom"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "export_gnom",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_module_whiteboard.py",
+        "tests/test_ui_server.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /threads/{thread_id}/grok",
+      "method": "POST",
+      "route": "/threads/{thread_id}/grok",
+      "domain": "context",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 1016,
+        "handler": "write_grok"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/packet.html",
+          "line": 21,
+          "method": "POST",
+          "action": "/threads/{{ current.id }}/grok"
+        }
+      ],
+      "domain_logic": [
+        "ThreadService.grok"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "export_grok",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_module_whiteboard.py",
+        "tests/test_ui_server.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /gate/freeze",
+      "method": "POST",
+      "route": "/gate/freeze",
+      "domain": "context",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/server.py",
+        "line": 1025,
+        "handler": "freeze_gate"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/gate.html",
+          "line": 22,
+          "method": "POST",
+          "action": "/gate/freeze"
+        }
+      ],
+      "domain_logic": [
+        "ThreadService.gate_freeze"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "gate.freeze",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_module_whiteboard.py",
+        "tests/test_ui_server.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": []
+    },
+    {
+      "id": "POST /snapshots/{snap_id}/restore",
+      "method": "POST",
+      "route": "/snapshots/{snap_id}/restore",
+      "domain": "threads",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/thread_mutations.py",
+        "line": 15,
+        "handler": "endpoint(restore_snapshot)"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/snapshots.html",
+          "line": 25,
+          "method": "POST",
+          "action": "/snapshots/{{ s.id }}/restore"
+        }
+      ],
+      "domain_logic": [
+        "thread_management.manage"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "thread_manage",
+          "action": "restore_snapshot",
+          "data_fields": {},
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_thread_management.py",
+        "tests/test_thread_conflict_browser.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Uses the existing revision-bound durable thread-management action."
+      ]
+    },
+    {
+      "id": "POST /threads",
+      "method": "POST",
+      "route": "/threads",
+      "domain": "threads",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/thread_mutations.py",
+        "line": 15,
+        "handler": "endpoint(create)"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/thread_list.html",
+          "line": 10,
+          "method": "POST",
+          "action": "/threads"
+        }
+      ],
+      "domain_logic": [
+        "thread_management.manage"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "thread_manage",
+          "action": "create",
+          "data_fields": {
+            "title": "title",
+            "description": "description"
+          },
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_thread_management.py",
+        "tests/test_thread_conflict_browser.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Uses the existing revision-bound durable thread-management action."
+      ]
+    },
+    {
+      "id": "POST /threads/{thread_id}/archive",
+      "method": "POST",
+      "route": "/threads/{thread_id}/archive",
+      "domain": "threads",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/thread_mutations.py",
+        "line": 15,
+        "handler": "endpoint(archive)"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/thread_detail.html",
+          "line": 38,
+          "method": "POST",
+          "action": "/threads/{{ current.id }}/archive"
+        }
+      ],
+      "domain_logic": [
+        "thread_management.manage"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "thread_manage",
+          "action": "archive",
+          "data_fields": {},
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_thread_management.py",
+        "tests/test_thread_conflict_browser.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Uses the existing revision-bound durable thread-management action."
+      ]
+    },
+    {
+      "id": "POST /threads/{thread_id}/describe",
+      "method": "POST",
+      "route": "/threads/{thread_id}/describe",
+      "domain": "threads",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/thread_mutations.py",
+        "line": 15,
+        "handler": "endpoint(update)"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/thread_detail.html",
+          "line": 75,
+          "method": "POST",
+          "action": "/threads/{{ current.id }}/describe"
+        }
+      ],
+      "domain_logic": [
+        "thread_management.manage"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "thread_manage",
+          "action": "update",
+          "data_fields": {
+            "description": "text"
+          },
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_thread_management.py",
+        "tests/test_thread_conflict_browser.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Uses the existing revision-bound durable thread-management action."
+      ]
+    },
+    {
+      "id": "POST /threads/{thread_id}/files",
+      "method": "POST",
+      "route": "/threads/{thread_id}/files",
+      "domain": "threads",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/thread_mutations.py",
+        "line": 15,
+        "handler": "endpoint(add_file)"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/files.html",
+          "line": 28,
+          "method": "POST",
+          "action": "/threads/{{ current.id }}/files"
+        }
+      ],
+      "domain_logic": [
+        "thread_management.manage",
+        "desktop.record_owner_reference"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "thread_manage",
+          "action": "add_file",
+          "data_fields": {
+            "path": "path"
+          },
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "server_sync.owner_reference",
+          "arguments": {
+            "allowed": true
+          },
+          "transport_boundary": "local_cli_only",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_thread_management.py",
+        "tests/test_thread_conflict_browser.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Uses the existing revision-bound durable thread-management action.",
+        "UI separately amends explicit owner file authority after the thread mutation. The shared owner-reference command is deliberately local/CLI-only, not HTTP/MCP."
+      ]
+    },
+    {
+      "id": "POST /threads/{thread_id}/files/remove",
+      "method": "POST",
+      "route": "/threads/{thread_id}/files/remove",
+      "domain": "threads",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/thread_mutations.py",
+        "line": 15,
+        "handler": "endpoint(remove_file)"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/files.html",
+          "line": 10,
+          "method": "POST",
+          "action": "/threads/{{ current.id }}/files/remove"
+        }
+      ],
+      "domain_logic": [
+        "thread_management.manage",
+        "desktop.record_owner_reference"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "thread_manage",
+          "action": "remove_file",
+          "data_fields": {
+            "path": "path"
+          },
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        },
+        {
+          "command_id": "server_sync.owner_reference",
+          "arguments": {
+            "allowed": false
+          },
+          "transport_boundary": "local_cli_only",
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_thread_management.py",
+        "tests/test_thread_conflict_browser.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Uses the existing revision-bound durable thread-management action.",
+        "UI separately amends explicit owner file authority after the thread mutation. The shared owner-reference command is deliberately local/CLI-only, not HTTP/MCP."
+      ]
+    },
+    {
+      "id": "POST /threads/{thread_id}/note",
+      "method": "POST",
+      "route": "/threads/{thread_id}/note",
+      "domain": "threads",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/thread_mutations.py",
+        "line": 15,
+        "handler": "endpoint(set_note)"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/notes.html",
+          "line": 7,
+          "method": "POST",
+          "action": "/threads/{{ current.id }}/note"
+        }
+      ],
+      "domain_logic": [
+        "thread_management.manage"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "thread_manage",
+          "action": "set_note",
+          "data_fields": {
+            "text": "text",
+            "append": "append"
+          },
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_thread_management.py",
+        "tests/test_thread_conflict_browser.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Uses the existing revision-bound durable thread-management action."
+      ]
+    },
+    {
+      "id": "POST /threads/{thread_id}/rename",
+      "method": "POST",
+      "route": "/threads/{thread_id}/rename",
+      "domain": "threads",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/thread_mutations.py",
+        "line": 15,
+        "handler": "endpoint(update)"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/thread_detail.html",
+          "line": 16,
+          "method": "POST",
+          "action": "/threads/{{ current.id }}/rename"
+        }
+      ],
+      "domain_logic": [
+        "thread_management.manage"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "thread_manage",
+          "action": "update",
+          "data_fields": {
+            "title": "title"
+          },
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_thread_management.py",
+        "tests/test_thread_conflict_browser.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Uses the existing revision-bound durable thread-management action."
+      ]
+    },
+    {
+      "id": "POST /threads/{thread_id}/snapshot",
+      "method": "POST",
+      "route": "/threads/{thread_id}/snapshot",
+      "domain": "threads",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/thread_mutations.py",
+        "line": 15,
+        "handler": "endpoint(snapshot)"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/snapshots.html",
+          "line": 5,
+          "method": "POST",
+          "action": "/threads/{{ current.id }}/snapshot"
+        }
+      ],
+      "domain_logic": [
+        "thread_management.manage"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "thread_manage",
+          "action": "snapshot",
+          "data_fields": {
+            "label": "label"
+          },
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_thread_management.py",
+        "tests/test_thread_conflict_browser.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Uses the existing revision-bound durable thread-management action."
+      ]
+    },
+    {
+      "id": "POST /threads/{thread_id}/status",
+      "method": "POST",
+      "route": "/threads/{thread_id}/status",
+      "domain": "threads",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/thread_mutations.py",
+        "line": 15,
+        "handler": "endpoint(update)"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/thread_detail.html",
+          "line": 55,
+          "method": "POST",
+          "action": "/threads/{{ current.id }}/status"
+        }
+      ],
+      "domain_logic": [
+        "thread_management.manage"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "thread_manage",
+          "action": "update",
+          "data_fields": {
+            "status": "status"
+          },
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_thread_management.py",
+        "tests/test_thread_conflict_browser.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Uses the existing revision-bound durable thread-management action."
+      ]
+    },
+    {
+      "id": "POST /threads/{thread_id}/switch",
+      "method": "POST",
+      "route": "/threads/{thread_id}/switch",
+      "domain": "threads",
+      "classification": "domain_action",
+      "source": {
+        "file": "src/threaddesk/ui/thread_mutations.py",
+        "line": 15,
+        "handler": "endpoint(switch)"
+      },
+      "form_sources": [
+        {
+          "file": "src/threaddesk/ui/templates/partials/thread_list.html",
+          "line": 36,
+          "method": "POST",
+          "action": "/threads/{{ t.id }}/switch"
+        }
+      ],
+      "domain_logic": [
+        "thread_management.manage"
+      ],
+      "command_bindings": [
+        {
+          "command_id": "thread_manage",
+          "action": "switch",
+          "data_fields": {},
+          "registry_present": true,
+          "allowed_transports": [
+            "local",
+            "cli",
+            "http",
+            "mcp"
+          ]
+        }
+      ],
+      "mapping_status": "mapped",
+      "tests": [
+        "tests/test_thread_management.py",
+        "tests/test_thread_conflict_browser.py",
+        "tests/test_commands.py"
+      ],
+      "bridge_proof": "not_yet_proven",
+      "notes": [
+        "Uses the existing revision-bound durable thread-management action."
+      ]
+    }
+  ],
+  "client_actions": [
+    {
+      "id": "graph.filters_and_selection",
+      "routes": [
+        "GET /api/graph/v2",
+        "POST /api/graph/v2"
+      ],
+      "commands": [
+        {
+          "command_id": "graph.query"
+        }
+      ],
+      "sources": [
+        "src/threaddesk/ui/static/map-filter.js",
+        "src/threaddesk/ui/static/graph-workspace.js"
+      ],
+      "domain": "graph",
+      "classification": "domain_query",
+      "bridge_proof": "not_yet_proven",
+      "tests": [
+        "tests/test_knowledge_graph.py",
+        "tests/test_graph_workspace_browser.py",
+        "tests/test_commands.py"
+      ]
+    },
+    {
+      "id": "graph.file_list_search_preview",
+      "routes": [
+        "GET /api/library/query"
+      ],
+      "commands": [
+        {
+          "command_id": "library_query",
+          "action": "list"
+        },
+        {
+          "command_id": "library_query",
+          "action": "search"
+        },
+        {
+          "command_id": "library_query",
+          "action": "info"
+        },
+        {
+          "command_id": "library_query",
+          "action": "preview"
+        },
+        {
+          "command_id": "library_query",
+          "action": "operation"
+        }
+      ],
+      "sources": [
+        "src/threaddesk/ui/static/graph-files.js",
+        "src/threaddesk/ui/static/graph-inspector.js"
+      ],
+      "domain": "library",
+      "classification": "domain_query",
+      "bridge_proof": "not_yet_proven",
+      "tests": [
+        "tests/test_library_api.py",
+        "tests/test_library_import.py",
+        "tests/test_graph_files_browser.py",
+        "tests/test_operational_commands.py"
+      ]
+    },
+    {
+      "id": "graph.file_management",
+      "routes": [
+        "POST /api/library/command"
+      ],
+      "commands": [
+        {
+          "command_id": "library_manage",
+          "action": "open"
+        },
+        {
+          "command_id": "library_manage",
+          "action": "rename"
+        },
+        {
+          "command_id": "library_manage",
+          "action": "copy"
+        },
+        {
+          "command_id": "library_manage",
+          "action": "move"
+        },
+        {
+          "command_id": "library_manage",
+          "action": "assign"
+        },
+        {
+          "command_id": "library_manage",
+          "action": "trash"
+        },
+        {
+          "command_id": "library_manage",
+          "action": "restore"
+        }
+      ],
+      "sources": [
+        "src/threaddesk/ui/templates/partials/graph_files.html",
+        "src/threaddesk/ui/static/graph-files.js"
+      ],
+      "domain": "library",
+      "classification": "domain_action",
+      "bridge_proof": "not_yet_proven",
+      "tests": [
+        "tests/test_library_api.py",
+        "tests/test_library_import.py",
+        "tests/test_graph_files_browser.py",
+        "tests/test_operational_commands.py"
+      ]
+    },
+    {
+      "id": "trash.objects_move_and_restore",
+      "routes": [
+        "POST /api/commands"
+      ],
+      "commands": [
+        {
+          "command_id": "trash.move"
+        },
+        {
+          "command_id": "trash.restore"
+        },
+        {
+          "command_id": "trash.get"
+        },
+        {
+          "command_id": "trash.list"
+        }
+      ],
+      "sources": [
+        "src/threaddesk/ui/static/trash.js",
+        "src/threaddesk/ui/templates/trash.html",
+        "src/threaddesk/ui/templates/partials/thread_detail.html",
+        "src/threaddesk/ui/templates/knowledge.html"
+      ],
+      "domain": "trash",
+      "classification": "domain_action",
+      "bridge_proof": "not_yet_proven",
+      "tests": [
+        "tests/test_trash_browser.py",
+        "tests/test_trash_lifecycle.py",
+        "tests/test_purge_receipts.py"
+      ]
+    },
+    {
+      "id": "trash.files_restore",
+      "routes": [
+        "POST /api/commands"
+      ],
+      "commands": [
+        {
+          "command_id": "library_manage",
+          "action": "restore"
+        },
+        {
+          "command_id": "library_query",
+          "action": "list"
+        },
+        {
+          "command_id": "library_query",
+          "action": "info"
+        }
+      ],
+      "sources": [
+        "src/threaddesk/ui/static/trash.js"
+      ],
+      "domain": "trash",
+      "classification": "domain_action",
+      "bridge_proof": "not_yet_proven",
+      "tests": [
+        "tests/test_trash_browser.py",
+        "tests/test_trash_lifecycle.py",
+        "tests/test_purge_receipts.py"
+      ]
+    },
+    {
+      "id": "graph.saved_views",
+      "routes": [
+        "GET /api/graph/views",
+        "GET /api/graph/views/{identity}",
+        "POST /api/graph/views"
+      ],
+      "commands": [
+        {
+          "command_id": "graph_view.list"
+        },
+        {
+          "command_id": "graph_view.get"
+        },
+        {
+          "command_id": "graph_view.manage",
+          "action": "save"
+        },
+        {
+          "command_id": "graph_view.manage",
+          "action": "delete"
+        }
+      ],
+      "sources": [
+        "src/threaddesk/ui/static/graph-views.js",
+        "src/threaddesk/ui/templates/partials/graph_controls.html"
+      ],
+      "domain": "graph_views",
+      "classification": "domain_action",
+      "bridge_proof": "not_yet_proven",
+      "tests": [
+        "tests/test_graph_view_control.py",
+        "tests/test_graph_view_control_browser.py"
+      ]
+    },
+    {
+      "id": "graph.pan_zoom_fit_layout_renderer",
+      "routes": [
+        "GET /map"
+      ],
+      "commands": [
+        {
+          "command_id": "graph_view.manage",
+          "action": "save"
+        },
+        {
+          "command_id": "graph_view.apply"
+        },
+        {
+          "command_id": "graph_view.apply_status"
+        }
+      ],
+      "sources": [
+        "src/threaddesk/ui/static/map.js",
+        "src/threaddesk/ui/static/map-viewport.js",
+        "src/threaddesk/ui/static/map-layout.js",
+        "src/threaddesk/ui/static/map-gpu.js"
+      ],
+      "domain": "presentation",
+      "classification": "client_rendering",
+      "notes": [
+        "Manual camera/render/layout controls are browser operations. Persist/apply a validated saved state through the named domain commands; delivery requires the live authorized client and observed acknowledgement."
+      ],
+      "bridge_proof": "not_yet_proven",
+      "tests": [
+        "tests/test_ui_server.py",
+        "tests/test_design_browser.py"
+      ]
+    },
+    {
+      "id": "library.speech_input",
+      "routes": [
+        "POST /library/command"
+      ],
+      "commands": [],
+      "sources": [
+        "src/threaddesk/ui/static/library-command.js"
+      ],
+      "domain": "presentation",
+      "classification": "client_input",
+      "notes": [
+        "SpeechRecognition is optional browser input; structured library commands are the semantic action interface."
+      ],
+      "bridge_proof": "not_yet_proven",
+      "tests": [
+        "tests/test_ui_server.py",
+        "tests/test_design_browser.py"
+      ]
+    }
+  ],
+  "framework_surfaces": [
+    {
+      "route": "GET /openapi.json",
+      "classification": "client_transport",
+      "note": "FastAPI schema transport; docs/redoc pages are disabled.",
+      "bridge_proof": "not_yet_proven"
+    },
+    {
+      "route": "GET /static/{path:path}",
+      "classification": "client_rendering",
+      "note": "Mounted first-party/vendored assets, not workspace business operations.",
+      "bridge_proof": "not_yet_proven"
+    }
+  ]
+}

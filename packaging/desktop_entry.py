@@ -83,6 +83,10 @@ def self_test() -> int:
 
 
 def main() -> int:
+    from threaddesk.ui.packaged_commands import dispatch
+    command_result = dispatch(sys.argv[1:])
+    if command_result is not None:
+        return command_result
     if len(sys.argv) == 3 and sys.argv[1] == "--library-command":
         from threaddesk.ui.cli import main as library_cli
         return library_cli(["library", "--request", sys.argv[2]])

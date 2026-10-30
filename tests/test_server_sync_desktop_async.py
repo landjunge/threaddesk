@@ -66,9 +66,9 @@ def routes(tmp_path,backend):
             store.connection=BoundConnection(store.connection)
             connections.append(store.connection)
         original=store.get_thread
-        def owned_get(thread_id):
+        def owned_get(thread_id, **options):
             assert threading.get_ident()==owner,'Core crossed worker threads'
-            return original(thread_id)
+            return original(thread_id, **options)
         store.get_thread=owned_get
         return ThreadService(store)
 

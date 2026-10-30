@@ -7,6 +7,7 @@ from typing import Callable
 
 from threaddesk.storage.json_store import JsonStore
 from threaddesk.storage.sqlite_store import SQLiteStore
+from threaddesk.storage.owner_documents import read_owner_documents
 
 
 class MigrationError(RuntimeError):
@@ -14,22 +15,24 @@ class MigrationError(RuntimeError):
 
 
 def _read(source: JsonStore) -> dict:
-    threads = source.list_threads(include_archived=True)
+    threads = source.list_threads(include_archived=True, include_trashed=True)
     return {
         "threads": threads,
-        "snapshots": [snap for thread in threads for snap in source.list_snapshots(thread.id)],
-        "nodes": source.list_nodes(),
-        "relations": source.list_relations(),
+        "snapshots": [snap for thread in threads for snap in source.list_snapshots(thread.id, include_trashed=True)],
+        "nodes": source.list_nodes(include_trashed=True),
+        "relations": source.list_relations(include_trashed=True),
+        "trash_entries": source.list_trash_entries(),
         "events": source.list_graph_events(),
         "source_records": source.list_source_records(),
         "whiteboard": [
             entry
             for thread in threads
-            for entry in source.list_whiteboard(thread.id)
+            for entry in source.list_whiteboard(thread.id, include_trashed=True)
         ],
         "management_operations": source.list_management_operations(),
         "issued_handoffs": source.list_issued_handoffs(),
         "current_id": source.get_current_id(),
+        "owner_documents": read_owner_documents(source),
     }
 
 
@@ -69,6 +72,8 @@ def migrate_json_store(
             "whiteboard",
             "management_operations",
             "issued_handoffs",
+            "trash_entries",
+            "owner_documents",
         )
     ):
         raise MigrationError("SQLite-Ziel enthält bereits einen anderen Bestand.")
@@ -94,9 +99,13 @@ def migrate_json_store(
             for record in incoming["source_records"]:
                 target.save_source_record(record)
             for receipt in incoming["management_operations"]:
-                target.save_management_operation(receipt["result"]["operation_id"], receipt)
+                target.save_management_operation(receipt.get("storage_operation_id") or receipt["result"]["operation_id"], receipt)
             for issued in incoming["issued_handoffs"]:
                 target.save_issued_handoff(issued["handoff"]["handoff_id"], issued)
+            # Import lifecycle last so hidden payloads can first retain their IDs.
+            for entry in incoming["trash_entries"]:
+                target.save_trash_entry(entry)
+            target.save_migrated_owner_documents(incoming["owner_documents"])
             target.set_current_id(incoming["current_id"])
             if fault:
                 fault("before_commit")

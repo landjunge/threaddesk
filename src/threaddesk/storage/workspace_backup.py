@@ -291,7 +291,7 @@ def _cleanup_owned(root: Path, identity: tuple | None) -> None:
 
 
 class WorkspaceBackup:
-    ARTIFACT_EXCLUDES = {"threaddesk.sqlite3", "threaddesk.sqlite3-wal", "threaddesk.sqlite3-shm"}
+    ARTIFACT_EXCLUDES = {"threaddesk.sqlite3", "threaddesk.sqlite3-wal", "threaddesk.sqlite3-shm", "graph-view-control.json"}
 
     def __init__(
         self,

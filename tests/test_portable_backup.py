@@ -307,7 +307,8 @@ def test_nonportable_json_filename_is_refused_instead_of_silently_omitted():
     ('artifacts/é.txt', 'artifacts/e\u0301.txt'),
     ('artifacts/Folder/a.txt', 'artifacts/folder/b.txt'),
 ])
-def test_actual_filesystem_aliases_never_publish_an_incomplete_manifest(tmp_path, extra_names):
+@pytest.mark.parametrize('version', [1, 2, 3])
+def test_actual_filesystem_aliases_never_publish_an_incomplete_manifest(tmp_path, extra_names, version):
     import hashlib
 
     # Probe this actual destination filesystem. No universal normalization or
@@ -331,6 +332,10 @@ def test_actual_filesystem_aliases_never_publish_an_incomplete_manifest(tmp_path
     with zipfile.ZipFile(io.BytesIO(download_backup(store))) as original:
         files = {name: original.read(name) for name in original.namelist()}
     manifest = json.loads(files['manifest.json'])
+    manifest['version'] = version
+    if version < 3:
+        for field in ('symlinks', 'directories', 'consistency'):
+            manifest.pop(field, None)
     contents = {extra_names[0]: b'UPPER', extra_names[1]: b'lower'}
     for name, body in contents.items():
         files['workspace/' + name] = body
@@ -341,7 +346,10 @@ def test_actual_filesystem_aliases_never_publish_an_incomplete_manifest(tmp_path
         for name, body in files.items():
             archive.writestr(name, body)
     root = tmp_path / 'target'
-    if can_coexist:
+    # v3 deliberately rejects complete leaf case aliases on every host. Legacy
+    # archives retain their original representability check on the destination.
+    strict_collision = version == 3 and len({name.casefold() for name in extra_names}) != len(extra_names)
+    if can_coexist and not strict_collision:
         restored = restore_backup(output.getvalue(), root)
         for name, body in contents.items():
             assert (restored / name).read_bytes() == body

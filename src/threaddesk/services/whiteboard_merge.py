@@ -57,7 +57,7 @@ def merge_stores(target: Any, source: Any) -> dict[str, int]:
     return {"added": added, "kept": kept, "conflicts": conflicts}
 
 
-def merge_whiteboard(target: Any, incoming: list[WhiteboardEntry]) -> dict[str, int]:
+def merge_whiteboard(target: Any, incoming: list[WhiteboardEntry], *, preserve_content_hash=False) -> dict[str, int]:
     added = 0
     kept = 0
     conflicts = 0
@@ -84,7 +84,7 @@ def merge_whiteboard(target: Any, incoming: list[WhiteboardEntry]) -> dict[str, 
             else:
                 kept += 1
             continue
-        stored = _copy(entry, incoming_hash)
+        stored = _copy(entry, incoming_hash, preserve_content_hash=preserve_content_hash)
         target.append_whiteboard_entry(stored)
         added += 1
     return {"added": added, "kept": kept, "conflicts": conflicts}
@@ -255,8 +255,8 @@ def _text_hash(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
-def _copy(entry: WhiteboardEntry, digest: str) -> WhiteboardEntry:
+def _copy(entry: WhiteboardEntry, digest: str, *, preserve_content_hash=False) -> WhiteboardEntry:
     copied = WhiteboardEntry.from_dict(entry.to_dict())
-    copied.content_hash = entry.content_hash or digest
+    copied.content_hash = entry.content_hash if preserve_content_hash else entry.content_hash or digest
     copied.ordinal = 0
     return copied

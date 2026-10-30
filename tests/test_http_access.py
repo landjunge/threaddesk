@@ -63,7 +63,8 @@ def test_real_form_and_json_header_routes_accept_only_bound_csrf(desk):
     assert client.post("/threads", data={"title": "no session"}).status_code == 403
     csrf = bootstrap(client)
     assert client.post("/threads", data={"title": "no csrf"}).status_code == 403
-    response = client.post("/threads", data={"title": "valid", "csrf_token": csrf})
+    response = client.post("/threads", data={"title": "valid", "csrf_token": csrf,
+                                              "operation_id": "csrf-create", "expected_revision": 0})
     assert response.status_code == 200
     thread = svc.current()
     assert thread.title == "valid"
@@ -81,16 +82,20 @@ def test_all_unsafe_ui_routes_enforce_boundary_before_body_or_side_effect(desk):
     svc, app = desk
     client = raw(app)
     csrf = bootstrap(client)
-    routes = [route for route in app.routes if "POST" in (getattr(route, "methods", set()) or set())]
-    assert len(routes) == 48  # Existing routes, library routes and one protected project-sync action.
+    # Recent FastAPI versions retain included routers as deferred objects;
+    # OpenAPI resolves both those routes and directly installed form routes.
+    routes = [path for path, methods in app.openapi()["paths"].items() if "post" in methods]
+    assert {"/api/commands", "/api/graph/v2", "/api/graph/views",
+            "/api/graph/view-control/connect", "/threads"} <= set(routes)
+    assert len(routes) >= 48
     for route in routes:
-        if route.path in MACHINE_PATHS:
+        if route in MACHINE_PATHS:
             continue
-        path = re.sub(r"\{[^}]+\}", "missing", route.path)
+        path = re.sub(r"\{[^}]+\}", "missing", route)
         response = client.post(path, content=b"not a valid body", headers={
             "Origin": "http://attacker.invalid", "X-ThreadDesk-CSRF": csrf,
         })
-        assert response.status_code == 403, route.path
+        assert response.status_code == 403, route
         assert response.json()["error"] == "foreign_origin"
     assert not svc.list(True)
 
@@ -105,7 +110,8 @@ def test_get_preview_cannot_switch_and_preference_redirect_stays_local(desk):
     assert response.status_code == 200
     assert svc.current().id == other.id
     assert 'value="Selected"' in response.text
-    updated = client.post(f"/threads/{selected.id}/note", data={"text": "preview edited", "csrf_token": csrf})
+    updated = client.post(f"/threads/{selected.id}/note", data={"text": "preview edited", "csrf_token": csrf,
+                                                               "operation_id": "csrf-preview-edit", "expected_revision": selected.revision})
     assert updated.status_code == 200 and "preview edited" in updated.text
     assert 'value="Selected"' in updated.text
     assert svc.current().id == other.id  # Reading/editing the preview is not a global selection command.
@@ -145,7 +151,8 @@ def test_process_restart_does_not_replay_or_accept_old_cookie(desk):
     assert not svc.list(True)
     fresh = bootstrap(restarted)
     assert fresh != csrf
-    assert restarted.post("/threads", data={"title": "new", "csrf_token": fresh}).status_code == 200
+    assert restarted.post("/threads", data={"title": "new", "csrf_token": fresh,
+                                             "operation_id": "csrf-restarted-create", "expected_revision": 0}).status_code == 200
 
 
 def test_signed_but_expired_session_is_not_accepted(desk):

@@ -92,9 +92,11 @@ class JsonSearchAdapter:
                     or not isinstance(data["incarnation"], str) or len(data["incarnation"]) > 128):
                 raise ValueError("invalid search state")
             info = self.store.threads_dir.stat()
+            lifecycle = self.root / "trash"
+            lifecycle_stamp = str(lifecycle.stat().st_mtime_ns) if lifecycle.exists() else "0"
             return {**data, "status": "scan_only" if enabled else "disabled",
                     "generation": "%s:%s:%s:%s" % (data["incarnation"], info.st_ino,
-                                                     info.st_mtime_ns, info.st_ctime_ns)}
+                                                     info.st_mtime_ns, str(info.st_ctime_ns) + ":" + lifecycle_stamp)}
         except Exception:
             return {"enabled": False, "status": "unavailable", "generation": "",
                     "reason": "search_state_invalid"}
@@ -136,6 +138,8 @@ class JsonSearchAdapter:
 
     def read(self, exact_id):
         identifier(exact_id)
+        if self.store.object_in_trash("thread", exact_id):
+            raise SearchError("source_in_trash")
         if self._source is None:
             self._source = source_tree(self.root).__enter__()
         data, size = read_json(self.root, "threads/%s.json" % exact_id, reader=self._source)
