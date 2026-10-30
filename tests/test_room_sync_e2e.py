@@ -344,14 +344,18 @@ def test_two_live_servers_sync_a_room(tmp_path: Path) -> None:
         code_ro = _field(invited, "data-room-code").split()[-1]
         joined = _request(URL_B, "/rooms/join", {"code": code_ro, "base_url": URL_A})
         assert "Nur lesen" in joined
-        _request(URL_A, f"/threads/{thread_a}/whiteboard", {
+        # A fresh room does not authorize rebinding an existing foreign-room
+        # thread. Exercise a genuinely new read-only room thread instead.
+        _request(URL_A, "/threads", {"title": "Leseraum Seite A", "description": ""})
+        reader_thread = _thread_id(home_a, "Leseraum Seite A")
+        _request(URL_A, f"/threads/{reader_thread}/whiteboard", {
             "actor": "Ada", "actor_type": "human", "entry_type": "note",
             "content": "leseraum-von-a", "next_step": "", "in_room": "1",
         })
         _request(URL_B, "/rooms/sync", {})
         assert "leseraum-von-a" in _contents(home_b)
         with pytest.raises(AssertionError, match="-> 403"):
-            _request(URL_B, f"/threads/{thread_b}/whiteboard", {
+            _request(URL_B, f"/threads/{reader_thread}/whiteboard", {
                 "actor": "Bea", "actor_type": "human", "entry_type": "note",
                 "content": "leseraum-von-b", "next_step": "", "in_room": "1",
             })
