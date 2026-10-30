@@ -47,10 +47,10 @@ jobs:
   test:
     name: Complete suite including browser, twice
     runs-on: ubuntu-latest
-    # Previous complete CI runs: 670s/665s. The 32 new saved-filter
-    # browser cases measured 201.984s alone, plus 20 new core cases.
-    # Budget both required runs and setup; individual deadlines stay unchanged.
-    timeout-minutes: 35
+    # CI 40990321313 measured 1003s for the first expanded complete run.
+    # Twice that plus 52s setup leaves only 42s at 35min for JS/upload/jitter.
+    # Budget both required runs; individual deadlines and gates stay unchanged.
+    timeout-minutes: 40
     env:
       PYTHONPATH: src:tests
       PYTEST_PLUGINS: http_navigation_diagnostics
