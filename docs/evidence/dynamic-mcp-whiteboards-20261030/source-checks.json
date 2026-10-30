@@ -1,0 +1,404 @@
+{
+  "endpoint": "source",
+  "checks": [
+    {
+      "backend": "json",
+      "passed": true,
+      "tools": 172,
+      "registered_available": 133,
+      "graph_states": [
+        {
+          "state": "closed",
+          "node_id": "wb-a6f239aa74ec",
+          "revision": 6
+        },
+        {
+          "state": "open",
+          "node_id": "wb-a6f239aa74ec",
+          "revision": 7
+        },
+        {
+          "state": "archived",
+          "node_id": "wb-a6f239aa74ec",
+          "revision": 8
+        },
+        {
+          "state": "open",
+          "node_id": "wb-a6f239aa74ec",
+          "revision": 9
+        },
+        {
+          "state": "open",
+          "node_id": "wb-a6f239aa74ec",
+          "revision": 9
+        }
+      ],
+      "receipts": [
+        {
+          "command": "whiteboard.create",
+          "result_digest": "62eb70e436e264643f3cea9afa738352c4ce383a7ffde8fba0ba265ba2caafd3",
+          "operation_id": "qa-create",
+          "duplicate": false
+        },
+        {
+          "command": "whiteboard.create",
+          "result_digest": "62eb70e436e264643f3cea9afa738352c4ce383a7ffde8fba0ba265ba2caafd3",
+          "operation_id": "qa-create",
+          "duplicate": true
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "2664ff5dd5b8e31f0352c561eac10a78874542fe4a61f7275cfe96f6c47a4962"
+        },
+        {
+          "command": "whiteboard.append",
+          "result_digest": "8c9bc8694f744273f1cc199f4114ddb2acf3fb3c0a8a0eb974941a2305699cdf",
+          "operation_id": "qa-whiteboard-append",
+          "duplicate": false
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "d90591b7941442b5545327cfe92829e086fe29be1fc1a01c88f139f98058f693"
+        },
+        {
+          "command": "whiteboard.edit",
+          "result_digest": "6b2103cdde9a7ccb9b940a31c94c99d97d7f62d64a40edab0117b68c03369126",
+          "operation_id": "qa-whiteboard-edit",
+          "duplicate": false
+        },
+        {
+          "command": "whiteboard.list",
+          "result_digest": "b68e29694ec1cc452f79af314a26ceb56dfabe6083f86318b87ea7175aaf029d"
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "1747a0b20e1b275350eb2a76ce0c248d58fc7c7ca030155bd3eed4f1c663b3b1"
+        },
+        {
+          "command": "whiteboard.rename",
+          "result_digest": "69c611643ba0c4f91b97f5578fa20b3091e0f26795a02af3f8391cf268a063be",
+          "operation_id": "qa-whiteboard-rename",
+          "duplicate": false
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "b85e81dd9b50948acc429185c711326659d1cd1263fe3d3ff26401a86866394f"
+        },
+        {
+          "command": "whiteboard.close",
+          "result_digest": "91dfeaff581011b3179f48ea3f5519fb04dcfc2a10c670810d3a0a5e80a8a1a8",
+          "operation_id": "qa-whiteboard-close",
+          "duplicate": false
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "643f73dc79d8182d0bee7b7ac31f49177889e3d64f978e00700d1d933a600fb3"
+        },
+        {
+          "command": "graph.query",
+          "result_digest": "88b9f5e497cd7d8bf19e72c5b124a2509d0fd8183ad57f9086437ad991e92e11"
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "643f73dc79d8182d0bee7b7ac31f49177889e3d64f978e00700d1d933a600fb3"
+        },
+        {
+          "command": "whiteboard.open",
+          "result_digest": "087d26ac2dce21cc36cf01091e78b6150c258ace579ed9c3d1d0c92f0949bcf7",
+          "operation_id": "qa-whiteboard-open",
+          "duplicate": false
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "93af0a8076d98347ca5df1685811d03e20375dc2e571f052b777dc1082926e59"
+        },
+        {
+          "command": "graph.query",
+          "result_digest": "9e61845683193931215829e1f446f23d3da170f06c7ae7c21a261e17667ad3fa"
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "93af0a8076d98347ca5df1685811d03e20375dc2e571f052b777dc1082926e59"
+        },
+        {
+          "command": "whiteboard.archive",
+          "result_digest": "96d1badea4eb058ebfa445c87eb368c0bcb9bef7f1327ca107726cc92ec6b9e0",
+          "operation_id": "qa-whiteboard-archive",
+          "duplicate": false
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "13ca263cda6599b56a5d9773a57d4293f2926e06fa081f3b8e392a96d086f8a4"
+        },
+        {
+          "command": "graph.query",
+          "result_digest": "05910ea2657187e01e1ed29d0546a937859c810c4b91e6ab6590ec3d524a17ef"
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "13ca263cda6599b56a5d9773a57d4293f2926e06fa081f3b8e392a96d086f8a4"
+        },
+        {
+          "command": "whiteboard.unarchive",
+          "result_digest": "beb777b54bf1b6bf1ccc0129c2bd53c0b434a8b2f00a78d33d39679771b4364c",
+          "operation_id": "qa-whiteboard-unarchive",
+          "duplicate": false
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "de2689b00bb8b92002ccf5620861a6df18c2e5a23666212f538fcb09ef9723c7"
+        },
+        {
+          "command": "graph.query",
+          "result_digest": "5d426f227ae19ebbaab2c24a0eb84d57e178867c47cec988dc3379a2453debeb"
+        },
+        {
+          "command": "whiteboard.delete_preview",
+          "result_digest": "bf459ba5277eaebc4fe99827d8de18baf6bd2a761bdaea7d88fcef6f420bc1a9"
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "de2689b00bb8b92002ccf5620861a6df18c2e5a23666212f538fcb09ef9723c7"
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "de2689b00bb8b92002ccf5620861a6df18c2e5a23666212f538fcb09ef9723c7"
+        },
+        {
+          "command": "whiteboard.delete",
+          "result_digest": "5f47d1b58d2754147ede421ed7aea55dcff632d1716688f6c9cb03d8132f4f7f",
+          "operation_id": "qa-whiteboard-delete",
+          "duplicate": false
+        },
+        {
+          "command": "graph.query",
+          "result_digest": "643b51f4fd414aba15e1af32f286bbb944d1ef66a0820d7d6fc3602ba57640f8"
+        },
+        {
+          "command": "trash.purge_preview",
+          "result_digest": "a720ab1eb4c0b1cb60e34b526a3a2788def41a6c397f484fe1f057f5c66ef737"
+        },
+        {
+          "command": "whiteboard.restore",
+          "result_digest": "fb4427333561d86a6d6d552fa2a3f31f1e59c63aa643be5bfe8168f9ec164a8b",
+          "operation_id": "qa-restore",
+          "duplicate": false
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "de2689b00bb8b92002ccf5620861a6df18c2e5a23666212f538fcb09ef9723c7"
+        },
+        {
+          "command": "graph.query",
+          "result_digest": "794377501858b264993094153189040600c7f39dc59585d2cfa8943e4b5ede5d"
+        },
+        {
+          "command": "whiteboard.list",
+          "result_digest": "b68e29694ec1cc452f79af314a26ceb56dfabe6083f86318b87ea7175aaf029d"
+        }
+      ],
+      "purge_without_approval": "rejected",
+      "restore_ids": "preserved"
+    },
+    {
+      "backend": "sqlite",
+      "passed": true,
+      "tools": 175,
+      "registered_available": 136,
+      "graph_states": [
+        {
+          "state": "closed",
+          "node_id": "wb-cd467dd3512f",
+          "revision": 6
+        },
+        {
+          "state": "open",
+          "node_id": "wb-cd467dd3512f",
+          "revision": 7
+        },
+        {
+          "state": "archived",
+          "node_id": "wb-cd467dd3512f",
+          "revision": 8
+        },
+        {
+          "state": "open",
+          "node_id": "wb-cd467dd3512f",
+          "revision": 9
+        },
+        {
+          "state": "open",
+          "node_id": "wb-cd467dd3512f",
+          "revision": 9
+        }
+      ],
+      "receipts": [
+        {
+          "command": "whiteboard.create",
+          "result_digest": "cb66ab7c941d4426be6d8b2cfef567ebc5d9047f4d8fe89c02e0798bfe3a7135",
+          "operation_id": "qa-create",
+          "duplicate": false
+        },
+        {
+          "command": "whiteboard.create",
+          "result_digest": "cb66ab7c941d4426be6d8b2cfef567ebc5d9047f4d8fe89c02e0798bfe3a7135",
+          "operation_id": "qa-create",
+          "duplicate": true
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "1ac7dd86940eed8c8bcd22eb51693b5392faf0237d0ac7c069a7258a2d490731"
+        },
+        {
+          "command": "whiteboard.append",
+          "result_digest": "739ad46694f9e3c801f1f05a5e0cf617e38f4c7b3cc505b8cffb8d6b608f6472",
+          "operation_id": "qa-whiteboard-append",
+          "duplicate": false
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "c6008931181e69af92157718cf7543024256df6fbed36d0562a795707ed1e8e3"
+        },
+        {
+          "command": "whiteboard.edit",
+          "result_digest": "3acea3a95ea6a9e59f5309ede128d2cca10a21d9326f3c372080d4265deb7b08",
+          "operation_id": "qa-whiteboard-edit",
+          "duplicate": false
+        },
+        {
+          "command": "whiteboard.list",
+          "result_digest": "8429f4639e4c269cc39ff1d330f44492b58ab7c5907ab2f6f747b97e558f6410"
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "4afde91ee579a9b024791711a4616f0234ba19f2d214caa3124634020d4d0a34"
+        },
+        {
+          "command": "whiteboard.rename",
+          "result_digest": "062ae70ab5200524d21556599e040f21f5e3a28952a73609055c22b5e0a991f0",
+          "operation_id": "qa-whiteboard-rename",
+          "duplicate": false
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "0fb147d0fa6a35f50cba91f456e3c30dcfcd419e7ff4608768f8fb99f9bd8e37"
+        },
+        {
+          "command": "whiteboard.close",
+          "result_digest": "a8434a22399b25c69155830956360d117e3dc3dfae5b8b93c41e76d77f97d312",
+          "operation_id": "qa-whiteboard-close",
+          "duplicate": false
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "4488f8df31c491ad3cfb06ed3360df6640bdd63b68085fe6c4efa1942d4b50da"
+        },
+        {
+          "command": "graph.query",
+          "result_digest": "c8b4bd32d2ffa8329e53dfdf86fe2c667e2820350053825cc8f9a6bc87bb4824"
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "4488f8df31c491ad3cfb06ed3360df6640bdd63b68085fe6c4efa1942d4b50da"
+        },
+        {
+          "command": "whiteboard.open",
+          "result_digest": "caccb8790cc6cfc1952f51093667243badc44a5df1d3489296d64e49da1b6a43",
+          "operation_id": "qa-whiteboard-open",
+          "duplicate": false
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "6b5f27dfbdd9d318f267f6960a34cec86e0526e6fccb0a654a9f7db8ed943481"
+        },
+        {
+          "command": "graph.query",
+          "result_digest": "39e5b5cd59597f068446db52017434ad9cec6a76a2f0f1448138e3ac7563fcb3"
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "6b5f27dfbdd9d318f267f6960a34cec86e0526e6fccb0a654a9f7db8ed943481"
+        },
+        {
+          "command": "whiteboard.archive",
+          "result_digest": "a5326f2301bc1eb981c24509f6c6b8998e65da2bbae755ef7567151366585f29",
+          "operation_id": "qa-whiteboard-archive",
+          "duplicate": false
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "d093aab7ca5985fe60672d01651062b34783573e7495cf10b3463154fc2962d6"
+        },
+        {
+          "command": "graph.query",
+          "result_digest": "aea43f747edbd949e5df47621b0ba7bebcf3024915b34f90130e3664416696b7"
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "d093aab7ca5985fe60672d01651062b34783573e7495cf10b3463154fc2962d6"
+        },
+        {
+          "command": "whiteboard.unarchive",
+          "result_digest": "c60d9a11ce267ff8b0a8cc0c6f54b1fc534ac44900ce2ace72471c0dd7bc8407",
+          "operation_id": "qa-whiteboard-unarchive",
+          "duplicate": false
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "a37a40670c7af070002ac0ce5a50e98d52650e81ecc575fed4df87860fdf6949"
+        },
+        {
+          "command": "graph.query",
+          "result_digest": "8fdae3bd0e96f1de535b4e3b25968719cd32f58efe31eae6d6052a5728aac74c"
+        },
+        {
+          "command": "whiteboard.delete_preview",
+          "result_digest": "99d68de148490c8dbbb3a37e772df6b16282c586fab10a9c3f605bd620d9f316"
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "a37a40670c7af070002ac0ce5a50e98d52650e81ecc575fed4df87860fdf6949"
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "a37a40670c7af070002ac0ce5a50e98d52650e81ecc575fed4df87860fdf6949"
+        },
+        {
+          "command": "whiteboard.delete",
+          "result_digest": "71121e03d830f77f5695d05d679bc5117025779cfd6309bca505309b87e4acf0",
+          "operation_id": "qa-whiteboard-delete",
+          "duplicate": false
+        },
+        {
+          "command": "graph.query",
+          "result_digest": "25be578b741c5bc758a2bdfd179c6c9b4531f7faf8a39901293be5a2443b0efb"
+        },
+        {
+          "command": "trash.purge_preview",
+          "result_digest": "724207d6d5eb035d1abea57bbe547004047f4dd575cd58af0293ee06da6f1b45"
+        },
+        {
+          "command": "whiteboard.restore",
+          "result_digest": "41357e2d4307c72f65cd675766ca355148554479b616c555c8008dd1a676a8aa",
+          "operation_id": "qa-restore",
+          "duplicate": false
+        },
+        {
+          "command": "whiteboard.get",
+          "result_digest": "a37a40670c7af070002ac0ce5a50e98d52650e81ecc575fed4df87860fdf6949"
+        },
+        {
+          "command": "graph.query",
+          "result_digest": "093e3f739f8bfc0307573ddb2ada7e7b7c28f1da809b6af1ae3c6e3b3a86d4e2"
+        },
+        {
+          "command": "whiteboard.list",
+          "result_digest": "8429f4639e4c269cc39ff1d330f44492b58ab7c5907ab2f6f747b97e558f6410"
+        }
+      ],
+      "purge_without_approval": "rejected",
+      "restore_ids": "preserved"
+    }
+  ],
+  "kirabridge": "not controlled or modified; standalone MCP proof only"
+}

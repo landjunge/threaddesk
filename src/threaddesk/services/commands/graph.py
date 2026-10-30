@@ -23,7 +23,7 @@ def specifications():
     yield spec("graph.node.transitions", obj({"id": ID}, ("id",)),
                lambda svc, a: {"id": a["id"], "transitions": svc.allowed_node_transitions(a["id"])})
     from threaddesk.core.models import NODE_KINDS, NODE_STATUSES, RELATION_KINDS, VISIBILITIES
-    create = {"kind": choice(*NODE_KINDS), "title": {**TEXT, "minLength": 1},
+    create = {"kind": choice(*(kind for kind in NODE_KINDS if kind != "whiteboard")), "title": {**TEXT, "minLength": 1},
               "status": choice(*NODE_STATUSES), "details": TEXT, "source": TEXT,
               "visibility": choice(*VISIBILITIES), "metadata": {"type": "object"}}
     yield spec("graph.node.create", obj(create, ("kind", "title")),

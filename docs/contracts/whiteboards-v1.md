@@ -1,0 +1,31 @@
+# Whiteboards: Threadlog, Zustände und MCP
+
+Ein Whiteboard verwendet genau den vorhandenen Thread und dessen append-only Beitragslog. `id`/`thread_id` bleiben dieselbe stabile Thread-ID; es gibt keine zweite Whiteboard-Datenbank. Name, Beschreibung, Archiv und Papierkorb gehören zum gemeinsamen Thread. Ein bestehendes Log wird ohne Datenmigration oder Änderung seiner Beiträge erkannt. Leere bisher unbenutzte Threads erhalten durch ausdrückliches Erstellen, Öffnen oder Schließen einen Boardmarker.
+
+Die Befehlsregistry registriert `whiteboard.boards`, `whiteboard.get`, `whiteboard.create`, `whiteboard.open`, `whiteboard.close`, `whiteboard.rename`, `whiteboard.edit`, `whiteboard.archive`, `whiteboard.unarchive`, `whiteboard.delete_preview`, `whiteboard.delete` und `whiteboard.restore`. Die vorhandenen `whiteboard.list`, `whiteboard.stand` und `whiteboard.append` bleiben bestehen. Der dynamische MCP-Adapter entdeckt diese Deklarationen mit demselben Schema, Scope und Revisionsvertrag; keine unabhängige Toolliste wird gepflegt. Alle Mutationen verlangen eine dauerhafte `operation_id`; Änderungen am Thread zusätzlich seine aktuelle `expected_revision`, Erstellung Revision 0. Für Papierkorbwiederherstellung gilt stattdessen die Revision der konkreten Trashgeneration.
+
+## Öffnen, Schließen und Bearbeiten
+
+`open` speichert `context.extra.whiteboard.state=open` und wählt den Thread aus. `close` speichert `closed`; neue öffentliche Beiträge und Korrekturen werden bis zum Wiederöffnen abgewiesen. Diese Werte beschreiben einen gespeicherten fachlichen Zustand. Sie beweisen keine Öffnung oder Schließung eines Betriebssystemfensters und keinen UI-ACK einer Gegenstelle. `whiteboard.get` liefert den lokalen UI-Pfad und nennt `visibility_evidence=saved_state_only`. ThreadDesk bietet die Bedienung selbst über `/whiteboards` und den Verlauf im Schreibtisch; KiraBridge bleibt unverändert.
+
+Bereits gebundene eingehende Rückgaben, Jobstatus und Reviewentscheidungen werden auch bei geschlossenem Board im ursprünglichen Verlauf aufbewahrt. Schließen verwirft keine später eintreffenden Belege und beendet keine laufende externe Arbeit.
+
+`edit` verlangt die ID eines ursprünglichen Beitrags. Es hängt einen Korrektureintrag mit Verweis auf das Original und die vorherige Korrektur an. Gespeicherte Originalbytes, Actor-, Return- und Roombindungen bleiben erhalten. `whiteboard.list` liefert weiterhin den vollständigen unveränderten Verlauf. Die ThreadDesk-Ansicht zeigt die letzte verkettete Korrektur und macht das Original aufklappbar. Veraltete Revisionen werden abgewiesen; die HTMX-Bearbeitung erhält den eingegebenen Entwurf bei einem Konflikt.
+
+`rename` benennt Board und zugehörigen Thread gemeinsam um. `archive` archiviert beide; `unarchive` stellt den Thread mit seinem bisherigen gespeicherten Boardzustand wieder her. Weder Umbenennung noch Zustandswechsel zählen als Dateiaktivität.
+
+## Papierkorb und endgültiges Löschen
+
+`whiteboard.delete_preview` verwendet die vorhandene Thread-Papierkorbvorschau und zeigt die betroffenen Beiträge, Notizen, Verweise sowie erhaltenen Originaldateien. `whiteboard.delete` ist ausschließlich reversibel: Der gesamte zugehörige Thread wird verborgen. Wegen dieses gemeinsamen Umfangs ist das Pflichtfeld `confirm_thread_move=true` notwendig; ohne diese ausdrückliche Bindung erfolgt keine Mutation. Die UI benennt beim Boardknoten ausdrücklich das gemeinsame Verschieben von Whiteboard, Thread und Notizen.
+
+`whiteboard.restore` verwendet `trash_id`, `generation`, Trashrevision und die dauerhafte Operation des bestehenden Trashvertrags. Board-, Beitrags- und Graphbeziehungsidentitäten bleiben erhalten. Bei verlorener äußerer Antwort können `command.operation` und `command.reconcile` den exakten bereits bestätigten Trash-Ownerbeleg übernehmen, ohne dessen Wirkung zu wiederholen.
+
+Endgültiges Löschen bleibt ausschließlich `trash.purge`: aktuelle Ampel/Blocker, konkrete Vorschau, Referenzdigest, exakte Bestätigung und Autorisierung müssen vorhanden sein. Ein Whiteboard-Delete stellt dafür keine Freigabe dar. Originaldateien werden nicht pauschal kaskadiert. Der [Papierkorbvertrag](trash-v1.md) bleibt maßgeblich.
+
+## Graphprojektion und Nachweisgrenzen
+
+Der vorhandene Graph projiziert Boards mit Beiträgen oder explizitem Boardmarker als Knoten `wb-<thread_id>` vom Typ `whiteboard`. Titel, Threadrevision, Beitragszahl sowie `whiteboard_state` und `whiteboard_status` stammen jeweils aus dem aktuellen Thread/Log. Der allgemeine Graphstatus lautet `active`, `paused` oder `archived`; der Inspector zeigt zusätzlich den präzisen Boardzustand. Bestehende KnowledgeNodes desselben Threads werden mit stabil abgeleiteten `references`-Beziehungen verbunden. Trash verbirgt die Projektion; Restore erzeugt dieselben IDs erneut. Die vorhandene Graphänderungsbeobachtung aktualisiert offene Ansichten nach den kanonischen Threadänderungen.
+
+Projektionsknoten werden nicht als neue persistierte KnowledgeNodes gespeichert. Bestehende Exporte kanonischer KnowledgeNodes enthalten diese abgeleiteten Knoten daher nicht als eigenständige gespeicherte Objekte; die Thread-/Whiteboarddaten bleiben im vorhandenen Backup-/Exportvertrag erhalten. `graph.node` und `graph.node.transitions` können sie lesen; Fachänderungen erfolgen über die Whiteboardbefehle. `graph.node.create` bietet den abgeleiteten Typ nicht als unabhängige Erstellung an. Bereits gespeicherte KnowledgeNodes mit `wb-` im Namen behalten Vorrang. Eine exakte importierte ID-Kollision mit `wb-<thread_id>` führt zu einem ausdrücklichen `graph_projection_conflict` mit den betroffenen IDs; sie wird weder überschrieben noch still doppelt dargestellt.
+
+Gezielte Tests: `tests/test_whiteboard_lifecycle.py` prüft JSON und SQLite einschließlich Replay, Konflikten, unveränderten Originalen, geschlossenem Schreibschutz, historischem Rückgabeneingang, explizitem gemeinsamen Löschumfang, Trash-Owner-Reconciliation und stabiler Wiederherstellung. `tests/test_whiteboard_lifecycle_browser.py` prüft echte ThreadDesk-UI-Bedienung, erhaltene Bearbeitungsentwürfe und die Aktualisierung einer gleichzeitig geöffneten Graphansicht. Diese lokalen Tests beweisen keine Autorisierung oder sichtbare Ausführung in einem nicht getesteten KiraBridge-Principal.

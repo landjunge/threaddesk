@@ -21,7 +21,7 @@ TEMPLATE_FILES = sorted(TEMPLATES.rglob("*.html"))
 SAME_IN_BOTH = {
     "threaddesk", "thread", "desk", "netzwerkpunkt", "gnom", "gnom-hub-v1",
     "grok", "codex", "notion", "github", "mcp", "json", "csv", "svg", "pdf",
-    "snapshot", "snapshots", "handoff", "id", "td", "esc", "enter", "shift",
+    "snapshot", "snapshots", "handoff", "whiteboard", "id", "td", "esc", "enter", "shift",
     "tab", "ok", "api", "ui", "cli", "url", "http", "https",
     "gate", "frozen", "cooldown", "prompt", "label", "optional", "status",
     "generic", "detailed", "short", "steps", "agent", "paket", "packet",
@@ -127,7 +127,7 @@ def test_no_hardcoded_text_in_templates(template: Path) -> None:
 # uebersetzt: t("kind." ~ kind). Statisch ist davon nur das Praefix sichtbar.
 # test_every_dropdown_value_has_a_label prueft dafuer jeden moeglichen Wert.
 DYNAMIC_PREFIXES = {"map.age.", "map.mode.", "kind.", "status.", "relation.", "prompt.target.",
-                    "prompt.variant.", "register.", "whiteboard.entry.",
+                    "prompt.variant.", "register.", "whiteboard.entry.", "board.state.",
                     "hausmeister.phase.", "room.state.", "room.role.", "return.review.", "sync.state."}
 
 
@@ -158,6 +158,7 @@ def test_every_dropdown_value_has_a_label() -> None:
         "prompt.target": ("gnom", "grok", "generic"),
         "prompt.variant": ("detailed", "short", "steps", "agent"),
         "whiteboard.entry": models.ENTRY_TYPES,
+        "board.state": ("open", "closed", "archived"),
         "sync.state": ('unconfigured','pending','syncing','metadata_only','blocked','ready','conflict','disconnected'),
     }
     missing = [f"{prefix}.{value}"

@@ -41,7 +41,8 @@ class LifecycleStore:
                 newest[key] = item
         hidden = {key for key, item in newest.items() if item["state"] in {"trashed", "purged"}}
         return {node.id for node in nodes if ("node", node.id) in hidden
-                or ("thread", node.metadata.get("thread_id")) in hidden}
+                or (isinstance(node.metadata.get("thread_id"), str)
+                    and ("thread", node.metadata["thread_id"]) in hidden)}
 
     def require_live_node_reference(self, node_id: str) -> None:
         self.require_live_object("node", node_id)

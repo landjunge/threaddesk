@@ -8,9 +8,11 @@ window.ThreadDeskGraphInspector = (root, t, activity, isFixed) => {
       detailTitle.textContent = node.title;
       const trash = root.querySelector('[data-map-trash]');
       trash.hidden = false;
-      trash.dataset.trashObject = node.metadata?.library_record_id || node.id;
-      trash.dataset.trashKind = node.metadata?.library_record_id ? 'file' : 'node';
-      trash.dataset.trashConfirm = t(node.metadata?.library_record_id ? 'map.trash_file_confirm' : 'map.trash_confirm');
+      const board = node.kind === "whiteboard" && node.source === "threaddesk.whiteboard" &&
+        typeof node.metadata?.thread_id === "string" && node.id === "wb-" + node.metadata.thread_id;
+      trash.dataset.trashObject = board ? node.metadata.thread_id : node.metadata?.library_record_id || node.id;
+      trash.dataset.trashKind = board ? 'thread' : node.metadata?.library_record_id ? 'file' : 'node';
+      trash.dataset.trashConfirm = t(board ? 'map.trash_whiteboard_confirm' : node.metadata?.library_record_id ? 'map.trash_file_confirm' : 'map.trash_confirm');
       trash.dataset.trashRevision = String(node.revision);
       trash.disabled = Boolean(node.metadata?.library_record_id);
       if (node.metadata?.library_record_id) {
@@ -45,6 +47,12 @@ window.ThreadDeskGraphInspector = (root, t, activity, isFixed) => {
           item.append(dt, dd);
           detailMeta.appendChild(item);
         });
+      if (board) {
+        const state = document.createElement("p");
+        state.dataset.mapWhiteboardState = node.metadata.whiteboard_status;
+        state.textContent = t("map.whiteboard_state") + ": " + node.metadata.whiteboard_status;
+        detailMeta.appendChild(state);
+      }
       const threadId = node.metadata && node.metadata.thread_id;
       if (typeof threadId === "string" && threadId && !/[/?#]/.test(threadId)) {
         const item = document.createElement("div");
