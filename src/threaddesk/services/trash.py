@@ -155,7 +155,7 @@ class TrashService:
             references["whiteboard"] = [s.id for s in self.store.list_whiteboard(object_id, include_trashed=True)]
             references["nodes"] = [n.id for n in self.store.list_nodes(include_trashed=True)
                                     if n.metadata.get("thread_id") == object_id]
-            references["external_files_preserved"] = obj["context"]["files"]
+            references["external_files_preserved"] = list(obj["context"]["files"])
             for thread in self.store.list_threads(include_archived=True, include_trashed=True):
                 org = thread.context.extra.get("organization") or {}
                 if object_id in [org.get("parent_thread_id"), *(org.get("related_thread_ids") or [])]:
