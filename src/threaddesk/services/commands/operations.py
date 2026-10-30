@@ -108,11 +108,35 @@ def _bindings(svc):
     return BindingBook(svc)
 
 
-def _configure(svc, args):
-    args = dict(args)
-    identity = args.pop("thread_id")
-    _bindings(svc).save(identity, **args)
-    return _bindings(svc).view(identity)
+def _configure_authority(svc, args, *, command_transport):
+    """Remote controls cannot create or change local file/server authority."""
+    if command_transport in {"local", "cli"}:
+        return None
+    from threaddesk.core.errors import ManagementError
+    config = _bindings(svc).load(args["thread_id"])
+    if config is not None:
+        unchanged = all(args[key] == config[key] for key in ("url", "project_id", "root"))
+        unchanged = unchanged and (args["token"] == "" or args["token"] == config["token"])
+        unchanged = unchanged and all(args.get(key, config.get(key, [])) == config.get(key, [])
+                                      for key in ("owner_references", "approved_roots"))
+        if unchanged:
+            return config
+    raise ManagementError("local_owner_cli_required", "Changing sync authority requires the local owner CLI")
+
+
+def _configure(svc, args, *, command_transport=None):
+    book = _bindings(svc)
+    # Repeat policy against the current config in the same cross-process
+    # mutation unit as save; omitted grants never become stale authority.
+    with book._mutation(args["thread_id"]):
+        current = _configure_authority(svc, args, command_transport=command_transport)
+        args = dict(args)
+        identity = args.pop("thread_id")
+        if current is not None:
+            for key in ("owner_references", "approved_roots"):
+                args.setdefault(key, current.get(key, []))
+        _bindings(svc).save(identity, **args)
+        return _bindings(svc).view(identity)
 
 
 def _sync(svc, args):

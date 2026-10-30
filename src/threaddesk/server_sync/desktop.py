@@ -20,6 +20,7 @@ from threaddesk.server_sync.identity import (recover_binding_device_id, recover_
     recover_binding_transfers, validate_retired_transfers)
 
 _BOOK_LOCK = threading.RLock()
+_BOOK_MUTATIONS = threading.local()
 _RUN_LOCKS = {}
 
 
@@ -76,6 +77,43 @@ class BindingBook:
         if self.root.is_symlink():
             raise InvalidState('Unsafe sync directory')
 
+    @contextmanager
+    def _mutation(self, thread_id):
+        """Serialize one private binding's read/modify/write across processes."""
+        from threaddesk.storage.json_store import _lock_exclusive, _unlock
+
+        identity = _id(thread_id)
+        no_follow = getattr(os, 'O_NOFOLLOW', None)
+        if not no_follow:
+            raise InvalidState('Safe sync configuration locking is unavailable on this platform')
+        key = (os.getpid(), threading.get_ident(), str(self.root.resolve()), identity)
+        with _BOOK_LOCK:
+            held = getattr(_BOOK_MUTATIONS, 'held', None)
+            if held is None:
+                held = _BOOK_MUTATIONS.held = set()
+            if key in held:
+                yield
+                return
+            if self.root.is_symlink():
+                raise InvalidState('Unsafe sync configuration')
+            self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
+            self.root.chmod(0o700)
+            descriptor = os.open(self.root / ('.' + identity + '.config.lock'),
+                                 os.O_RDWR | os.O_CREAT | no_follow
+                                 | getattr(os, 'O_NONBLOCK', 0), 0o600)
+            with os.fdopen(descriptor, 'r+b') as lock:
+                info = os.fstat(lock.fileno())
+                if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
+                        or os.name != 'nt' and info.st_mode & 0o077):
+                    raise InvalidState('Unsafe sync configuration lock')
+                _lock_exclusive(lock)
+                held.add(key)
+                try:
+                    yield
+                finally:
+                    held.remove(key)
+                    _unlock(lock)
+
     def load(self, thread_id):
         with _BOOK_LOCK:
             return _read(self.root / (_id(thread_id) + '.json'))
@@ -123,7 +161,7 @@ class BindingBook:
                     or self.workspace.is_relative_to(path) or path.is_relative_to(self.workspace)):
                 raise InvalidState('Do not grant the home, filesystem or ThreadDesk workspace as a dependency root')
             approved.append(str(path))
-        with _BOOK_LOCK,ExitStack() as migration:
+        with self._mutation(thread_id),ExitStack() as migration:
             old = self.load(thread_id) or {}
             if old and old.get('root')!=str(selected):
                 run_lock=_RUN_LOCKS.setdefault((str(self.workspace),thread_id),threading.Lock())
@@ -170,7 +208,7 @@ class BindingBook:
             return config
 
     def update(self, thread_id, fields, *, config_id=None):
-        with _BOOK_LOCK:
+        with self._mutation(thread_id):
             config = self.load(thread_id)
             if not config or config_id and config['config_id'] != config_id:
                 return
@@ -194,7 +232,7 @@ class BindingBook:
 def record_owner_reference(core, thread_id, path, *, allowed=True):
     """Only explicit protected local file actions may amend source authority."""
     book = BindingBook(core)
-    with _BOOK_LOCK:
+    with book._mutation(thread_id):
         config = book.load(thread_id)
         if not config:
             return

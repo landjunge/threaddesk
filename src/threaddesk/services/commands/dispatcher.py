@@ -112,6 +112,9 @@ class CommandApplication:
                             invalid("Envelope and domain operation bindings differ", field=field)
                         args[field] = req[field]
         validate(spec.schema, args)
+        if spec.id == "server_sync.configure":
+            from threaddesk.services.commands.operations import _configure_authority
+            _configure_authority(self.service, args, command_transport=self.transport)
         return req, spec, args, current_revision
 
     def _call(self, request, *, read_only=False):
@@ -167,6 +170,8 @@ class CommandApplication:
             return self.reconcile(args["request"])
         if spec.id == "backup.create":
             return spec.handler(self.service, args, command_reservation=backup_reservation)
+        if spec.id == "server_sync.configure":
+            return spec.handler(self.service, args, command_transport=self.transport)
         return spec.handler(self.service, args)
 
     def _digest(self, req, spec, args):
