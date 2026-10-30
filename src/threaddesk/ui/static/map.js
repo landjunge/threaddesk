@@ -100,6 +100,11 @@
   };
   let selectedFocusId = null;
   let selectedNodeIds = new Set();
+  const orderedSelection = () => {
+    const selection = [...selectedNodeIds].filter(id => id !== selectedFocusId);
+    if (selectedNodeIds.has(selectedFocusId)) selection.push(selectedFocusId);
+    return selection;
+  };
   const focusSelectionControl = root.querySelector("[data-map-focus-selection]");
   const updateFocusControl = () => {
     if (!focusSelectionControl) return;
@@ -220,10 +225,10 @@
     root.querySelector("[data-map-arrange]").disabled = true;
   };
   const renderGPU = (graph, refreshing) => {
-    const previous = gpu ? {camera: gpu.camera(), positions: gpu.snapshotPositions(), selection: [...selectedNodeIds]} :
+    const previous = gpu ? {camera: gpu.camera(), positions: gpu.snapshotPositions(), selection: orderedSelection()} :
       placed.size ? {camera: {x: (VIEW_W / 2 - offsetX) / scale, y: (VIEW_H / 2 - offsetY) / scale, scale},
         positions: Object.fromEntries([...placed].map(([id, point]) => [id, {x: point.x, y: point.y, fixed: fixedIds.has(id)}])),
-        selection: [...selectedNodeIds]} : null;
+        selection: orderedSelection()} : null;
     if (previous) placed = new Map(Object.entries(previous.positions));
     if (gpu) { gpu.destroy(); gpu = null; }
     root.dataset.renderer = "sigma"; canvas.hidden = true; world.replaceChildren();
@@ -629,9 +634,9 @@
       x: offsetX + scale * placed.get(id).x, y: offsetY + scale * placed.get(id).y,
     } : null,
     labelMetrics: () => gpu ? gpu.labelMetrics() : null,
-    snapshot: () => ({camera: gpu ? gpu.camera() : {x: (VIEW_W / 2 - offsetX) / scale, y: (VIEW_H / 2 - offsetY) / scale, scale}, filters: {...activeFilter, ...(Array.isArray(activeFilter.node_ids) ? {node_ids: [...activeFilter.node_ids]} : {})},
+    snapshot: () => ({camera: gpu ? gpu.camera() : {x: (VIEW_W / 2 - offsetX) / scale, y: (VIEW_H / 2 - offsetY) / scale, scale}, filters: {...activeFilter, center: activeFilter.center || (activeFilter.hops ? selectedFocusId || "" : ""), ...(Array.isArray(activeFilter.node_ids) ? {node_ids: [...activeFilter.node_ids]} : {})},
       positions: gpu ? gpu.snapshotPositions() : Object.fromEntries([...placed].map(([id, point]) => [id, {x: point.x, y: point.y, fixed: fixedIds.has(id)}])),
-      selection: [...selectedNodeIds]}),
+      selection: orderedSelection()}),
     restore: async state => {
       if (workspace.invalidated) throw Error('workspace_conflict');
       if (!latestGraph) return;
@@ -639,7 +644,7 @@
       let wanted = [...new Set([...Object.keys(state.positions || {}), ...(state.selection || [])])];
       const filters = {...state.filters, mode: state.filters?.mode || 'work', limit: 1000, offset: 0};
       if (Array.isArray(filters.node_ids)) filters.node_ids = [...new Set(filters.node_ids)];
-      if (!filters.center && filters.hops && state.selection?.length) filters.center = state.selection[0];
+      if (!filters.center && filters.hops && state.selection?.length) filters.center = state.selection[state.selection.length - 1];
       if (!filters.center) delete filters.center;
       const hydrated = await readFilterContext(filters, wanted,
         Array.isArray(activeFilter.node_ids) && !Array.isArray(filters.node_ids));
@@ -660,7 +665,7 @@
       if (workspace.invalidated) throw Error('workspace_conflict');
       const ids = new Set(latestGraph.nodes.map(node => node.id));
       selectedNodeIds = new Set((state.selection || []).filter(id => ids.has(id)));
-      selectedFocusId = selectedNodeIds.values().next().value || null;
+      selectedFocusId = [...selectedNodeIds].pop() || null;
       const points = Object.entries(state.positions || {}).filter(([id]) => ids.has(id));
       if (gpu) placed = new Map(Object.entries(gpu.snapshotPositions()));
       points.forEach(([id, point]) => {
@@ -677,7 +682,18 @@
           throw Error("view_filter_mismatch");
         }
       };
-      if (gpu) { gpu.restore(state); applyFilter(); confirmFilter(); return; }
+      if (gpu) {
+        const renderer = gpu;
+        renderer.restore(state); applyFilter(); confirmFilter();
+        if (workspace.invalidated) throw Error('workspace_conflict');
+        if (gpu !== renderer) throw Error('view_renderer_changed');
+        root.dispatchEvent(new CustomEvent('threaddesk:graph-view-loaded', {detail: state}));
+        await renderer.restoreCamera(state.camera, () => {
+          if (workspace.invalidated) throw Error('workspace_conflict');
+          if (gpu !== renderer) throw Error('view_renderer_changed');
+        });
+        confirmFilter(); return;
+      }
       render(latestGraph, true);
       world.querySelectorAll(".is-selected").forEach(item => item.classList.remove("is-selected"));
       let additive = false;
@@ -690,6 +706,8 @@
       offsetX = VIEW_W / 2 - state.camera.x * scale; offsetY = VIEW_H / 2 - state.camera.y * scale;
       applyTransform();
       confirmFilter();
+      if (workspace.invalidated) throw Error('workspace_conflict');
+      root.dispatchEvent(new CustomEvent('threaddesk:graph-view-loaded', {detail: state}));
     },
   };
   // One bounded correction catches a late native WINDOW resize before input.

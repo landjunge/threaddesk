@@ -40,7 +40,6 @@
       const view = await read(`/api/graph/views/${encodeURIComponent(chooser.value)}`);
       loaded = view; title.value = view.title; pending = null;
       await root.graphController.restore(view.state);
-      root.dispatchEvent(new CustomEvent("threaddesk:graph-view-loaded", {detail: view.state}));
       message.hidden = true;
     } catch (_) { notify("map.view_failed"); }
     finally { setBusy(false); }

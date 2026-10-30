@@ -29,7 +29,6 @@
           observation = {operation_id: intent.operation_id, status: 'revision_conflict', error_code: 'revision_conflict'};
         } else {
           await root.graphController.restore(view.state);
-          root.dispatchEvent(new CustomEvent('threaddesk:graph-view-loaded', {detail: view.state}));
           await window.ThreadDeskMapViewport.stable(root.querySelector('[data-map-stage]'));
           await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
           observation = {operation_id: intent.operation_id, status: 'applied', observed_state: root.graphController.snapshot()};

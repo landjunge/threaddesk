@@ -7,10 +7,17 @@ import json
 from threaddesk.services.graph_views import validate_state
 
 
+def _effective_filters(state):
+    filters = dict(state["filters"])
+    if not filters["center"] and filters["hops"] > 0 and state["selection"]:
+        filters["center"] = state["selection"][-1]
+    return filters
+
+
 def observe(expected, observed):
     expected, observed = validate_state(expected), validate_state(observed)
     matched = (all(abs(expected["camera"][key] - observed["camera"][key]) <= 1e-5 for key in ("x", "y", "scale"))
-               and expected["filters"] == observed["filters"]
+               and _effective_filters(expected) == _effective_filters(observed)
                and set(expected["selection"]) == set(observed["selection"]))
     for identity, point in expected["positions"].items():
         actual = observed["positions"].get(identity)

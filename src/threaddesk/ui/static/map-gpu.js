@@ -121,6 +121,24 @@
     renderer.getCamera().on('updated', constrainCamera);
     return {
       select, camera, stopLayout,
+      async restoreCamera(value, assertCurrent) {
+        const ticket = layoutTicket;
+        const current = () => {
+          if (destroyed || ticket !== layoutTicket) throw Error('view_renderer_changed');
+          assertCurrent();
+        };
+        await window.ThreadDeskMapViewport.stable(container);
+        current();
+        renderer.resize(); renderer.refresh();
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        current();
+        moveCamera(value);
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        current();
+        const actual = camera();
+        if (['x', 'y', 'scale'].some(key => Math.abs(actual[key] - value[key]) > 1e-5))
+          throw Error('view_camera_mismatch');
+      },
       point: id => graph.hasNode(id) ? renderer.graphToViewport(graph.getNodeAttributes(id)) : null,
       selection: () => [...selected],
       labelMetrics: () => ({displayed: renderer.getNodeDisplayedLabels().size,
@@ -132,7 +150,7 @@
         selected.clear();
         for (const id of state.selection || []) if (byId.has(id)) selected.add(id);
         graph.updateEachNodeAttributes((id, attr) => ({...attr, selected: selected.has(id)}));
-        if (selected.size) options.select(byId.get([...selected][0]));
+        if (selected.size) options.select(byId.get([...selected].pop()));
         moveCamera(state.camera);
       },
       filter(ids) {
