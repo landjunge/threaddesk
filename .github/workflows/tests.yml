@@ -47,10 +47,10 @@ jobs:
   test:
     name: Complete suite including browser, twice
     runs-on: ubuntu-latest
-    # CI 40990321313 measured 1003s for the first expanded complete run.
-    # Twice that plus 52s setup leaves only 42s at 35min for JS/upload/jitter.
-    # Budget both required runs; individual deadlines and gates stay unchanged.
-    timeout-minutes: 40
+    # The previous whole run took 1009s; 14 new browser cases add 93.742s locally.
+    # Prior local/CI timings project ~155s more per run, plus further new cases.
+    # Budget both required runs and setup; individual deadlines/gates unchanged.
+    timeout-minutes: 45
     env:
       PYTHONPATH: src:tests
       PYTEST_PLUGINS: http_navigation_diagnostics
