@@ -8,22 +8,22 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/landjunge/KiraBridge/blob/main/README.de.md" title="KiraBridge"><picture>
+  <a href="https://github.com/landjunge/KiraBridge/blob/docs/product-family-readme-20261031/README.de.md" title="KiraBridge"><picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/readme/KiraBridge-dark-128.png">
     <img src="assets/readme/KiraBridge-light-128.png" alt="KiraBridge" width="48" height="48">
   </picture></a>
   &nbsp;
-  <a href="https://github.com/landjunge/4AllPass/blob/main/README.de.md" title="4AllPass"><picture>
+  <a href="https://github.com/landjunge/4AllPass/blob/docs/product-family-readme-20261031/README.de.md" title="4AllPass"><picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/readme/4AllPass-dark-128.png">
     <img src="assets/readme/4AllPass-light-128.png" alt="4AllPass" width="48" height="48">
   </picture></a>
   &nbsp;
-  <a href="https://github.com/landjunge/tollgate/blob/main/README.de.md" title="TollGate"><picture>
+  <a href="https://github.com/landjunge/tollgate/blob/docs/product-family-readme-20261031/README.de.md" title="TollGate"><picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/readme/TollGate-dark-128.png">
     <img src="assets/readme/TollGate-light-128.png" alt="TollGate" width="48" height="48">
   </picture></a>
   &nbsp;
-  <a href="https://github.com/landjunge/agent-authority-lab/blob/master/README.de.md" title="Agent Authority"><picture>
+  <a href="https://github.com/landjunge/agent-authority-lab/blob/docs/product-family-readme-20261031/README.de.md" title="Agent Authority"><picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/readme/Agent-Authority-dark-128.png">
     <img src="assets/readme/Agent-Authority-light-128.png" alt="Agent Authority" width="48" height="48">
   </picture></a>
@@ -66,11 +66,11 @@ Die fünf Produkte bleiben eigenständig. Geplant ist ein gemeinsamer Ablauf mit
 
 | Produkt | Aufgabe im gemeinsamen Ablauf |
 | --- | --- |
-| [ThreadDesk](https://github.com/landjunge/threaddesk/blob/main/README.de.md) | Bewahrt Projektstand, Wissen und Ergebnisse. |
-| [KiraBridge](https://github.com/landjunge/KiraBridge/blob/main/README.de.md) | Vermittelt Aufträge, Rückfragen und Antworten zwischen Chat, lokalen Agenten und Werkzeugen. |
-| [4AllPass](https://github.com/landjunge/4AllPass/blob/main/README.de.md) | Verwaltet Zugangsdaten; soll gezielt erlaubte Zugriffe ermöglichen. |
-| [TollGate](https://github.com/landjunge/tollgate/blob/main/README.de.md) | Prüft angeschlossene Aufrufe und setzt Verbrauchsgrenzen und Stopps durch. |
-| [Agent Authority](https://github.com/landjunge/agent-authority-lab/blob/master/README.de.md) | Zeigt Beobachtungen, Widersprüche und fehlende Belege; erteilt keine Freigaben. |
+| [ThreadDesk](https://github.com/landjunge/threaddesk/blob/docs/product-family-readme-20261031/README.de.md) | Bewahrt Projektstand, Wissen und Ergebnisse. |
+| [KiraBridge](https://github.com/landjunge/KiraBridge/blob/docs/product-family-readme-20261031/README.de.md) | Vermittelt Aufträge, Rückfragen und Antworten zwischen Chat, lokalen Agenten und Werkzeugen. |
+| [4AllPass](https://github.com/landjunge/4AllPass/blob/docs/product-family-readme-20261031/README.de.md) | Verwaltet Zugangsdaten; soll gezielt erlaubte Zugriffe ermöglichen. |
+| [TollGate](https://github.com/landjunge/tollgate/blob/docs/product-family-readme-20261031/README.de.md) | Prüft angeschlossene Aufrufe und setzt Verbrauchsgrenzen und Stopps durch. |
+| [Agent Authority](https://github.com/landjunge/agent-authority-lab/blob/docs/product-family-readme-20261031/README.de.md) | Zeigt Beobachtungen, Widersprüche und fehlende Belege; erteilt keine Freigaben. |
 
 Einzelne Schnittstellen sind vorhanden. Ein vollständig eingerichteter und geprüfter Ablauf aller fünf Produkte ist noch geplant. Freigaben bleiben beim zuständigen Werkzeug und beim Menschen. KiraBridge und Agent Authority benötigen Zugriff auf ihre privaten Repositorys.
 
