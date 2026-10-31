@@ -26,7 +26,7 @@ ThreadDesk hält Ideen, Entscheidungen, Notizen und Dateien bei ihrem Projekt. D
 
 Prüfsummen und Herkunftsbelege stehen bei den [Downloads](https://github.com/landjunge/threaddesk/releases/tag/v0.1.1rc1). Windows-Weiterentwicklung ist vorläufig pausiert; der vorhandene Download bleibt verfügbar.
 
-## Was heute vorhanden ist
+## Wobei ThreadDesk dir hilft
 
 - **Projektkontext:** Threads, Notizen, Zwischenstände, Wissenskarte und Whiteboards lokal verwalten.
 - **Lokale KI:** optional Ollama mit einem selbst gewählten Modell verwenden.
@@ -59,10 +59,10 @@ Die fünf Produkte bleiben eigenständig. Geplant ist ein gemeinsamer Ablauf mit
 
 Einzelne Schnittstellen sind vorhanden. Ein vollständig eingerichteter und geprüfter Ablauf aller fünf Produkte ist noch geplant. Freigaben bleiben beim zuständigen Werkzeug und beim Menschen. KiraBridge und Agent Authority benötigen Zugriff auf ihre privaten Repositorys.
 
-[Benutzeroberfläche](docs/UI.md) · [Lokale Inhaltssuche](docs/LOCAL-SEARCH.md) · [MCP und Entwicklerdokumentation](docs/DEVELOPERS.md) · [Produktseite](https://threaddesk.netzwerkpunkt.de/)
-
-## Lizenz und Mitwirkung
+## Lizenz
 
 Private, nicht geschäftliche Nutzung ist unter der [Netzwerkpunkt Personal Use License 1.0](LICENSE) kostenlos. Geschäftliche Nutzung benötigt eine gesonderte schriftliche Erlaubnis. Der deutsche Lizenztext ist maßgeblich; historische Lizenzrechte bleiben erhalten.
 
 Produktidee und Architektur: **Daniel Filipek (landjunge)**. KI unterstützt Implementierung und Dokumentation. Rückmeldungen und nachvollziehbare Reviews sind willkommen.
+
+[Benutzeroberfläche](docs/UI.md) · [Lokale Inhaltssuche](docs/LOCAL-SEARCH.md) · [MCP und Entwicklerdokumentation](docs/DEVELOPERS.md) · [Produktseite](https://threaddesk.netzwerkpunkt.de/)
