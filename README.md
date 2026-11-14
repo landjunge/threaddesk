@@ -355,6 +355,10 @@ Klicke auf „Neuer Thread“, gib deiner Idee einen Namen und speichere den ers
 
 ThreadDesk ist eine lokale Control-Layer; Übergabeweg zu Agenten ist KiraBridge. Die Grenze ist Teil des Produkts: Übergaben werden vorbereitet und von KiraBridge unter deren eigener Autorisierung über MCP abgerufen. ThreadDesk sendet oder führt sie nicht automatisch extern aus. Der ältere lokale Gnom-Hub-V1-Weg bleibt dokumentiert. Der optionale lokale Hausmeister ist davon getrennt und darf nur innerhalb der dokumentierten lokalen Grenzen arbeiten.
 
+**Whiteboard-Speicherung (Quellstand):** Direkte API-Aufrufe speichern neue Einträge und die Threadrevision gemeinsam in einer Transaktion, sowohl mit JSON als auch mit SQLite. Der Server-Endpunkt gibt Benachrichtigungen ebenfalls erst nach erfolgreichem Commit frei; ein Rollback verwirft sie. Wer eine eigene äußere Transaktion öffnet, muss sie mit `bus.defer_until_commit()` umschließen. Diese Benachrichtigungen sind kein dauerhaftes Zustellprotokoll.
+
+**Whiteboard persistence (current source):** Direct API calls save new entries and the thread revision in one transaction, with both JSON and SQLite. The server endpoint also publishes notifications only after a successful commit; rollback discards them. Callers opening an outer transaction must enclose it in `bus.defer_until_commit()`. These notifications are not a durable delivery log.
+
 ### Wichtige Befehle
 
 | Aufgabe | Befehl |

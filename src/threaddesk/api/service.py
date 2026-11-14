@@ -571,6 +571,11 @@ class ThreadService:
         return whiteboard_log.list_entries(self.store, thread.id)
 
     def append_whiteboard(self, key: str, **fields) -> dict:
+        # Direct API calls own persistence and notification together. Existing
+        # command/report callers already own both boundaries; never nest BEGIN.
+        if not self.store.in_transaction:
+            with self.bus.defer_until_commit(), self.store.transaction():
+                return self.append_whiteboard(key, **fields)
         thread = self.get(key)
         entry, duplicate = whiteboard_log.append(self.store, thread.id, **fields)
         if not duplicate:

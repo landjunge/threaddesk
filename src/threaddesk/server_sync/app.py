@@ -405,7 +405,7 @@ def create_app(data_dir: Path, *, public_origin: str, allow_http_loopback: bool 
         value = await body(request, {"content", "entry_type", "external_key"})
         def operation():
             _, core, lock = project(request, pid)
-            with lock, core.store.transaction():
+            with lock, core.bus.defer_until_commit(), core.store.transaction():
                 return core.append_whiteboard(pid, actor=request.state.user, actor_type="human",
                                               content=text(value["content"]), entry_type=text(value["entry_type"], 32),
                                               external_key=text(value["external_key"], 128))
