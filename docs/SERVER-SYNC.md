@@ -6,6 +6,20 @@ ThreadDesk-Kern für Projekt-Threads und Whiteboards. Er benötigt keinen Mac un
 keine laufende KiraBridge. Der vorhandene Desktop-Server und dessen lokale
 Zugriffsregeln bleiben getrennt.
 
+Die Projektansicht enthält eine Bibliothekssuche für bereits gespeicherte
+Bibliothekskopien. `GET /api/projects/{id}/library` liefert deren Liste oder mit
+`query` einen Suchausschnitt; `limit` und `offset` begrenzen die Seite.
+Suchseiten liefern `total: null`; ein begrenzter zusätzlicher Trefferabruf
+bestimmt `next_offset`, ohne einen unbekannten Gesamtumfang vorzutäuschen.
+Der Suchoffset reicht wie beim bestehenden Such-Owner von 0 bis 10000.
+`GET /api/projects/{id}/library/{record_id}` und die bestehende MCP-Adresse
+`/library/files/{record_id}` liefern nach Integritätsprüfung einen Download.
+Beide Wege verlangen dieselbe gültige Benutzeranmeldung wie die Projekt-API.
+Die Dateizuordnung muss zum angemeldeten Benutzer und zum ausgewählten Projekt
+gehören. HTML und andere aktive Formate werden ausschließlich als Anhänge mit
+`application/octet-stream` ausgeliefert. Lokale Originale und Papierkorbinhalte
+werden darüber nicht geöffnet; es wird keine Desktop-Oberfläche gemountet.
+
 Desktop-Anbindung, Linux-Installation, zertifikatsgeprüftes TLS und vollständige
 Wiederherstellung sind im isolierten Abnahmelauf geprüft. Der Linux-Nachweis
 verwendet ein frisch gebautes Linux/amd64-Image; der Browsernachweis umfasst

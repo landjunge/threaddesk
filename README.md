@@ -225,6 +225,19 @@ läuft laut damaligem Bericht nur auf Loopback; öffentliche Bereitstellung,
 Desktop-Integration und vollständige KiraBridge-Livekopplung bleiben offen.
 Ein historischer Server-Test ersetzt keine neue End-to-End-Abnahme.
 
+**Server-Bibliothek (Quellstand):** Der authentifizierte Server kann gespeicherte
+Bibliothekskopien pro Projekt auflisten, durchsuchen und als geprüfte Anhänge
+herunterladen. Die bestehende MCP-Adresse `/library/files/{id}` verwendet dieselbe
+Benutzergrenze. Lokale Originale werden dafür nicht geöffnet; Papierkorbeinträge
+und fremde Benutzer oder Projekte bleiben ausgeschlossen. Installation und
+öffentliche Abnahme dieses Quellstands erfolgen getrennt.
+
+**Server library (current source):** The authenticated server lists and searches
+stored library copies per project and downloads verified copies as attachments.
+The existing MCP `/library/files/{id}` address uses the same user boundary.
+Original local files are never opened; trashed records and other users or projects
+remain excluded. Installation and public acceptance of this source are separate.
+
 ### Deine Daten sichern
 
 Aktive Entwicklung und Abnahme laufen derzeit für Linux und macOS. Windows ist
