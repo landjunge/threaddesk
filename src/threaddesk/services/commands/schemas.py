@@ -6,6 +6,7 @@ REV = {"type": "integer", "minimum": 0}
 LIMIT = {"type": "integer", "minimum": 1, "maximum": 100}
 OFFSET = {"type": "integer", "minimum": 0, "maximum": 100000}
 PAGE = {"limit": LIMIT, "offset": OFFSET}
+WHITEBOARD_READ = {"metadata_only": BOOL, "entry_id": ID}
 
 
 def obj(properties=None, required=()):

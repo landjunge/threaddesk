@@ -22,6 +22,7 @@ from threaddesk.core.models import (
 )
 from threaddesk.core.provenance import SourceRecord
 from threaddesk.storage.lifecycle import JsonLifecycleStore
+from threaddesk.storage.whiteboard_read import metadata_row, page_result
 
 DEFAULT_ROOT = Path.home() / ".threaddesk"
 _WORKSPACE_LOCKS: dict[str, threading.RLock] = {}
@@ -618,6 +619,30 @@ class JsonStore(JsonLifecycleStore):
         ]
         entries.sort(key=lambda entry: (entry.created_at, entry.ordinal, entry.id))
         return entries
+
+    def read_whiteboard_page(
+        self, thread_id: str, *, metadata_only: bool = False,
+        entry_id: str | None = None, offset: int = 0, limit: int = 50,
+    ) -> dict[str, Any]:
+        self.get_thread(thread_id)
+        folder = self._whiteboard_dir(thread_id)
+        # O(N) file scan and O(N) small sort keys; never retain the full log's
+        # content. Files need parsing individually even in metadata mode.
+        rows = []
+        if folder.exists():
+            for path in self._graph_collection_paths(folder):
+                data = self._read_json(path)
+                if entry_id is not None and data['id'] != entry_id:
+                    continue
+                row = metadata_row(data)
+                rows.append((row, path))
+        rows.sort(key=lambda item: (item[0]['created_at'], item[0]['ordinal'], item[0]['id']))
+        selected = rows[offset:offset + limit]
+        items = [row for row, _ in selected] if metadata_only else [
+            WhiteboardEntry.from_dict(self._read_json(path)).to_dict()
+            for _, path in selected]
+        # No snapshot is promised across this scan/reread or separate pages.
+        return page_result(items, len(rows), offset=offset, limit=limit)
 
     def append_whiteboard_entry(self, entry: WhiteboardEntry) -> tuple[WhiteboardEntry, bool]:
         with self._locked():
