@@ -21,6 +21,7 @@ from threaddesk.core.models import (
 )
 from threaddesk.core.provenance import SourceRecord
 from threaddesk.storage.lifecycle import SQLiteLifecycleStore
+from threaddesk.storage.whiteboard_read import metadata_row, metadata_sql, page_result
 from threaddesk.storage.owner_documents import MigratedOwnerDocuments
 from threaddesk.storage.schema import FTS_SQL, MIGRATIONS, SCHEMA_SQL, SCHEMA_VERSION
 
@@ -268,6 +269,26 @@ class SQLiteStore(SQLiteLifecycleStore, MigratedOwnerDocuments):
         items = [WhiteboardEntry.from_dict(self._load(row)) for row in rows]
         items.sort(key=lambda item: (item.created_at, item.ordinal, item.id))
         return items
+
+    def read_whiteboard_page(
+        self, thread_id: str, *, metadata_only: bool = False,
+        entry_id: str | None = None, offset: int = 0, limit: int = 50,
+    ) -> dict[str, Any]:
+        self.get_thread(thread_id)
+        where, params = "thread_id = ?", [thread_id]
+        if entry_id is not None:
+            where += " AND id = ?"
+            params.append(entry_id)
+        total = self.connection.execute(
+            f"SELECT COUNT(*) FROM whiteboard_entries WHERE {where}", params).fetchone()[0]
+        projection = metadata_sql() if metadata_only else "payload"
+        rows = self.connection.execute(
+            f"SELECT {projection} AS payload FROM whiteboard_entries WHERE {where} "
+            "ORDER BY created_at, ordinal, id LIMIT ? OFFSET ?", [*params, limit, offset])
+        convert = (lambda data: metadata_row(data, sql_reference_pairs=True)) if metadata_only else (
+            lambda data: WhiteboardEntry.from_dict(data).to_dict())
+        items = [convert(self._load(row)) for row in rows]
+        return page_result(items, total, offset=offset, limit=limit)
 
     def append_whiteboard_entry(self, entry: WhiteboardEntry) -> tuple[WhiteboardEntry, bool]:
         if not self._transaction_depth:
