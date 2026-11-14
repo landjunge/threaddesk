@@ -138,7 +138,7 @@ def create_app(data_dir: Path, *, public_origin: str, allow_http_loopback: bool 
                     return JSONResponse({"error": "body_too_large"}, 413)
             except ValueError:
                 return JSONResponse({"error": "invalid_length"}, 400)
-        if request.url.path.startswith("/api/"):
+        if request.url.path.startswith(("/api/", "/library/files/")):
             if not getattr(app.state,'server_locked',False):
                 return JSONResponse({'error':'server_lifecycle_required'},503)
             auth = request.headers.get("authorization", "")
@@ -154,7 +154,7 @@ def create_app(data_dir: Path, *, public_origin: str, allow_http_loopback: bool 
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "no-referrer"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+        response.headers.setdefault("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
         if origin.scheme == "https":
             response.headers["Strict-Transport-Security"] = "max-age=31536000"
         return response
@@ -216,6 +216,8 @@ def create_app(data_dir: Path, *, public_origin: str, allow_http_loopback: bool 
     from threaddesk.server_sync.metadata import export_document, metadata_status
     from threaddesk.server_sync.metadata_routes import install_routes
     install_routes(app, project, body)
+    from threaddesk.server_sync.library_routes import install_routes as install_library_routes
+    install_library_routes(app, stores, project)
 
     @app.post('/api/projects/bind')
     async def bind_project(request: Request):

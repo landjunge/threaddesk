@@ -1,7 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 let csrf = '', selected = null, thread = null, editing = null;
-let selectionEpoch = 0;
+let selectionEpoch = 0, libraryEpoch = 0;
 const states = {metadata_only:'Nur Struktur und Metadaten',pending:'Abgleich ausstehend',blocked:'Dateien oder Zuordnungen fehlen',conflict:'Versionskonflikt – alle Fassungen erhalten',ready:'Offline bereit · gemeldeter Bestand geprüft'};
 function message(value) {$('message').textContent = value || '';}
 async function api(path, method='GET', value) {
@@ -25,11 +25,13 @@ async function listProjects() {
 }
 async function select(project) {
   const epoch=++selectionEpoch,pid=project.id;
+  ++libraryEpoch;
   selected=project; thread=null; editing=null; $('editor').hidden=true;
   for(const control of $('metadata-form').elements) control.disabled=true;
   $('description').value='';$('notes').value='';$('entry-content').value='';
   $('file-path').value='';$('file-upload').value='';$('offline').disabled=true;
   $('files').replaceChildren();$('entries').replaceChildren();$('metadata-conflict-list').replaceChildren();
+  $('library-files').replaceChildren();$('library-query').value='';
   $('project').hidden=false; $('project-title').textContent=project.title; $('project-id').textContent=project.id;
   const value=await api('/api/projects/'+pid+'/thread');
   if(selectionEpoch!==epoch||selected?.id!==pid)return;
@@ -49,7 +51,28 @@ async function status() {
   if(value.missing_files.length) $('sync').append(el('p','Fehlend: '+value.missing_files.join(', ')));
   for(const issue of value.issues) $('sync').append(el('p',issue));
 }
-async function refresh() {const epoch=selectionEpoch;await status();if(epoch!==selectionEpoch)return;await showFiles();if(epoch!==selectionEpoch)return;await showEntries();if(epoch!==selectionEpoch)return;await showMetadataConflicts();}
+async function refresh() {const epoch=selectionEpoch;await status();if(epoch!==selectionEpoch)return;await showFiles();if(epoch!==selectionEpoch)return;await showLibrary();if(epoch!==selectionEpoch)return;await showEntries();if(epoch!==selectionEpoch)return;await showMetadataConflicts();}
+async function showLibrary(offset=0,append=false,query=$('library-query').value,expectedGeneration=null) {
+  if(append&&expectedGeneration!==libraryEpoch)return;
+  const pid=selected.id,epoch=selectionEpoch,generation=++libraryEpoch;
+  const priorPager=document.getElementById('library-more');
+  if(priorPager){priorPager.disabled=true;priorPager.remove();}
+  if(!append)$('library-files').replaceChildren();
+  const result=await api('/api/projects/'+pid+'/library?query='+encodeURIComponent(query)+'&offset='+offset);
+  if(selected?.id!==pid||selectionEpoch!==epoch||generation!==libraryEpoch)return;
+  for(const record of result.records) {
+    const row=el('div');row.className='file';row.append(el('strong',record.filename),el('p',`${record.size} Bytes`));
+    if(record.snippet)row.append(el('p',record.snippet));
+    const link=el('a','Herunterladen');link.href=record.download_path;link.download=record.filename;row.append(link);
+    $('library-files').append(row);
+  }
+  if(!result.records.length)$('library-files').append(el('p','Keine Bibliotheksdateien gefunden.'));
+  if(result.next_offset!==null&&result.next_offset!==undefined) {
+    const more=button('Weitere anzeigen',()=>showLibrary(result.next_offset,true,query,generation));more.id='library-more';
+    $('library-files').append(more);
+  }
+}
+$('library-form').onsubmit=event=>{event.preventDefault();run(()=>showLibrary());};
 async function showMetadataConflicts() {
   const pid=selected.id,epoch=selectionEpoch,prefix='/api/projects/'+pid;
   const {conflicts}=await api(prefix+'/metadata/conflicts');if(selected?.id!==pid||selectionEpoch!==epoch)return;
